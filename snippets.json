@@ -1,0 +1,51 @@
+{
+  "Feature Block": {
+    "prefix": ["feature", "feat"],
+    "body": [
+      "Feature: ${1:Feature Name}",
+      "",
+      "  ${2:Feature Description}",
+      "",
+      "  $0"
+    ],
+    "description": "Scaffolds a standard Gherkin Feature block"
+  },
+  "Scenario Outline with Examples": {
+    "prefix": ["scenario outline", "outline", "sco"],
+    "body": [
+      "Scenario Outline: ${1:Scenario Name}",
+      "  Given ${2:a precondition is met}",
+      "  When ${3:an action occurs with <param1>}",
+      "  Then ${4:an expected outcome occurs with <param2>}",
+      "",
+      "  Examples:",
+      "    | param1 | param2 |",
+      "    | val1   | val2   |",
+      "    | val3   | val4   |",
+      "",
+      "  $0"
+    ],
+    "description": "Scaffolds a Scenario Outline with an Examples table"
+  },
+  "Scenario Block": {
+    "prefix": ["scenario", "sc"],
+    "body": [
+      "Scenario: ${1:Scenario Name}",
+      "  Given ${2:a precondition is met}",
+      "  When ${3:an action occurs}",
+      "  Then ${4:an expected outcome occurs}",
+      "",
+      "  $0"
+    ],
+    "description": "Scaffolds a standard Gherkin Scenario"
+  },
+  "Rule Block": {
+    "prefix": "rule",
+    "body": [
+      "Rule: ${1:Rule Name}",
+      "",
+      "  $0"
+    ],
+    "description": "Scaffolds a standard Gherkin Rule block"
+  }
+}
