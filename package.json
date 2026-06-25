@@ -7,7 +7,18 @@
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Formatters"
+    "Formatters",
+    "Other"
+  ],
+  "keywords": [
+    "gherkin",
+    "cucumber",
+    "bdd",
+    "feature",
+    "formatter",
+    "beautifier",
+    "alignment",
+    "carlos camara"
   ],
   "publisher": "carloscamara",
   "author": "Carlos Camara",
@@ -41,9 +52,41 @@
           "type": "boolean",
           "default": true,
           "description": "If true, tables align dynamically to the start of the step text. If false, tables simply indent slightly more than the step keyword."
+        },
+        "gherkinBeautifier.tags.format": {
+          "type": "string",
+          "enum": ["wrap", "singleLine"],
+          "default": "wrap",
+          "description": "How to format long lists of tags. 'wrap' splits them across multiple lines (max 80 chars), 'singleLine' keeps them all on one line."
+        },
+        "gherkinBeautifier.emptyLines.betweenScenarios": {
+          "type": "number",
+          "default": 1,
+          "description": "Number of empty lines to enforce between Scenario/Rule/Background blocks."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "gherkinBeautifier.format",
+        "title": "Format Gherkin Document"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "gherkinBeautifier.format",
+          "when": "resourceLangId == feature",
+          "group": "1_modification"
+        }
+      ]
+    },
+    "snippets": [
+      {
+        "language": "feature",
+        "path": "./snippets.json"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-25
+### Added
+- **Multi-language Support (i18n)**: Formatter now fully supports formatting, indenting, and Auto-Casing for English, Spanish, French, and German Gherkin keywords.
+- **Outline Provider**: Added an interactive tree view in the VS Code "Outline" panel for quick navigation between `Feature`, `Rule`, and `Scenario` blocks.
+- **Context Menu Command**: Added a "Format Gherkin Document" action to the editor's right-click context menu.
+- **Snippets**: Bundled comprehensive autocompletion snippets for common Gherkin blocks (`feature`, `scenario`, `outline`, `rule`).
+- **Configuration `gherkinBeautifier.tags.format`**: Added option to format tags either as `wrap` (80 chars max line length) or `singleLine`.
+- **Configuration `gherkinBeautifier.emptyLines.betweenScenarios`**: Added setting to customize the exact number of blank lines to enforce between major blocks.
+
+### Changed
+- Refactored internal formatting engine to use dynamic Regex mapping for multi-language support.
+- Excluded development dependencies and test artifacts (`.vscode-test`, `node_modules`) from the VSIX package via `.vscodeignore`.
+
 ## [1.4.0] - 2026-06-24
 ### Added
 - **Auto-Casing**: Formatter now automatically PascalCases Gherkin keywords (`Given`, `When`, `Then`, `Feature`, etc.) regardless of user input.

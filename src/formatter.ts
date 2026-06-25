@@ -1,17 +1,32 @@
 import * as vscode from 'vscode';
 
+/**
+ * Configuration options for the Gherkin formatter.
+ */
 export interface FormatterOptions {
     stepIndentation: number;
     alignTableToKeyword: boolean;
+    tagsFormat: 'wrap' | 'singleLine';
+    emptyLinesBetweenScenarios: number;
 }
 
+/**
+ * Provides formatting edits for Gherkin documents.
+ * Supports both full document formatting and range/selection formatting.
+ */
 export class GherkinFormattingEditProvider implements vscode.DocumentFormattingEditProvider, vscode.DocumentRangeFormattingEditProvider {
     
+    /**
+     * Retrieves the current user configuration for the formatter.
+     * @returns The FormatterOptions object based on workspace settings.
+     */
     private getOptions(): FormatterOptions {
         const config = vscode.workspace.getConfiguration('gherkinBeautifier');
         return {
             stepIndentation: config.get<number>('indentation.steps', 4),
-            alignTableToKeyword: config.get<boolean>('tables.alignToKeyword', true)
+            alignTableToKeyword: config.get<boolean>('tables.alignToKeyword', true),
+            tagsFormat: config.get<'wrap' | 'singleLine'>('tags.format', 'wrap'),
+            emptyLinesBetweenScenarios: config.get<number>('emptyLines.betweenScenarios', 1)
         };
     }
 
@@ -59,7 +74,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         let initialStepIndent = formatOptions.stepIndentation;
         if (startLine > 0) {
             const prevLine = document.lineAt(startLine - 1).text;
-            const match = prevLine.trimStart().match(/^(Given|When|Then|And|But|\*)\s+(.*)/i);
+            const match = prevLine.trimStart().match(/^(Given|When|Then|And|But|\*|Dado|Cuando|Entonces|Y|Pero|Soit|Quand|Alors|Et|Mais|Angenommen|Wenn|Dann|Und|Aber)\s+(.*)/i);
             if (match) {
                 const keywordLength = match[1].length;
                 const baseIndent = prevLine.length - prevLine.trimStart().length;
@@ -83,10 +98,18 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         return edits;
     }
 
+    /**
+     * The core formatting engine that processes an array of Gherkin lines.
+     * 
+     * @param lines Array of unformatted text lines.
+     * @param initialStepIndent The base indentation level to start with.
+     * @param options Formatting configuration.
+     * @returns Array of formatted text lines.
+     */
     public formatGherkin(
         lines: string[], 
         initialStepIndent: number = 4, 
-        options: FormatterOptions = { stepIndentation: 4, alignTableToKeyword: true }
+        options: FormatterOptions = { stepIndentation: 4, alignTableToKeyword: true, tagsFormat: 'wrap', emptyLinesBetweenScenarios: 1 }
     ): string[] {
         const result: string[] = [];
         let inTable = false;
@@ -124,19 +147,22 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                         if (result.length > 0) {
                             const lastLine = result[result.length - 1];
                             if (lastLine.trim() !== '') {
-                                result.push('');
+                                const emptyLinesNeeded = options.emptyLinesBetweenScenarios;
+                                for (let j = 0; j < emptyLinesNeeded; j++) {
+                                    result.push('');
+                                }
                             }
                         }
                         
-                        result.push(...this.formatTags(tagBuffer, tagIndent));
+                        result.push(...this.formatTags(tagBuffer, tagIndent, options));
                         tagBuffer = [];
                     }
 
                     const indentedLine = this.indentLine(line, options);
                     const lowerLine = line.toLowerCase();
                     
-                    if (lowerLine.match(/^(given|when|then|and|but|\*|examples:)/)) {
-                        const match = indentedLine.trimStart().match(/^(Given|When|Then|And|But|\*)\s+(.*)/i);
+                    if (lowerLine.match(/^(given|when|then|and|but|\*|examples:|dado|cuando|entonces|y|pero|ejemplos:|soit|quand|alors|et|mais|exemples:|angenommen|wenn|dann|und|aber|beispiele:)/)) {
+                        const match = indentedLine.trimStart().match(/^(Given|When|Then|And|But|\*|Dado|Cuando|Entonces|Y|Pero|Soit|Quand|Alors|Et|Mais|Angenommen|Wenn|Dann|Und|Aber)\s+(.*)/i);
                         const baseIndent = indentedLine.length - indentedLine.trimStart().length;
                         
                         if (options.alignTableToKeyword && match) {
@@ -147,15 +173,15 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                         }
                     }
 
-                    const isNewBlock = lowerLine.startsWith('scenario:') || 
-                                       lowerLine.startsWith('scenario outline:') || 
-                                       lowerLine.startsWith('background:') ||
-                                       lowerLine.startsWith('rule:');
+                    const isNewBlock = lowerLine.match(/^(scenario|scenario outline|background|rule|escenario|esquema del escenario|antecedentes|regla|scénario|plan du scénario|contexte|règle|szenario|szenariogrundriss|hintergrund|regel):/);
 
                     if (isNewBlock && result.length > 0) {
                         const lastLine = result[result.length - 1];
                         if (lastLine.trim() !== '' && !lastLine.trim().startsWith('@')) {
-                            result.push('');
+                            const emptyLinesNeeded = options.emptyLinesBetweenScenarios;
+                            for (let j = 0; j < emptyLinesNeeded; j++) {
+                                result.push('');
+                            }
                         }
                     }
 
@@ -170,7 +196,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         }
 
         if (tagBuffer.length > 0) {
-            result.push(...this.formatTags(tagBuffer, 2));
+            result.push(...this.formatTags(tagBuffer, 2, options));
         }
 
         if (inTable) {
@@ -185,10 +211,23 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         return result;
     }
 
-    private formatTags(tags: string[], indentSpaces: number): string[] {
+    /**
+     * Sorts, deduplicates, and wraps tags into multiple lines if they exceed 80 characters.
+     * 
+     * @param tags Array of Gherkin tags (e.g. ['@smoke', '@api']).
+     * @param indentSpaces Number of spaces to indent the resulting tag lines.
+     * @returns Array of formatted tag lines.
+     */
+    private formatTags(tags: string[], indentSpaces: number, options: FormatterOptions): string[] {
         const uniqueTags = [...new Set(tags)].sort();
         const result: string[] = [];
         const padding = ' '.repeat(indentSpaces);
+        
+        if (options.tagsFormat === 'singleLine') {
+            result.push(padding + uniqueTags.join(' '));
+            return result;
+        }
+
         let currentLine = padding;
         
         for (const tag of uniqueTags) {
@@ -207,37 +246,42 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         return result;
     }
 
+    /**
+     * Normalizes the capitalization of Gherkin keywords to standard Title Case.
+     * 
+     * @param line The string line to process.
+     * @returns The line with normalized keywords.
+     */
     private autoCase(line: string): string {
-        return line.replace(/^(feature|scenario outline|scenario|background|rule|examples|given|when|then|and|but|\*)(:|\s|$)/i, (match, p1, p2) => {
+        return line.replace(/^(feature|característica|fonction|funktionalität|scenario outline|esquema del escenario|plan du scénario|szenariogrundriss|scenario|escenario|scénario|szenario|background|antecedentes|contexte|hintergrund|rule|regla|règle|regel|examples|ejemplos|exemples|beispiele|given|dado|soit|angenommen|when|cuando|quand|wenn|then|entonces|alors|dann|and|y|et|und|but|pero|mais|aber|\*)(:|\s|$)/i, (match, p1, p2) => {
             const lower = p1.toLowerCase();
-            let cased = p1;
-            if (lower === 'feature') cased = 'Feature';
-            else if (lower === 'scenario') cased = 'Scenario';
-            else if (lower === 'scenario outline') cased = 'Scenario Outline';
-            else if (lower === 'background') cased = 'Background';
-            else if (lower === 'rule') cased = 'Rule';
-            else if (lower === 'examples') cased = 'Examples';
-            else if (lower === 'given') cased = 'Given';
-            else if (lower === 'when') cased = 'When';
-            else if (lower === 'then') cased = 'Then';
-            else if (lower === 'and') cased = 'And';
-            else if (lower === 'but') cased = 'But';
+            let cased = lower.charAt(0).toUpperCase() + lower.slice(1);
+            
+            if (lower === 'scenario outline') cased = 'Scenario Outline';
+            else if (lower === 'esquema del escenario') cased = 'Esquema del escenario';
+            else if (lower === 'plan du scénario') cased = 'Plan du scénario';
+            else if (lower === 'szenariogrundriss') cased = 'Szenariogrundriss';
+            
             return cased + p2;
         });
     }
 
+    /**
+     * Applies correct semantic indentation to a single Gherkin line based on its keyword.
+     * 
+     * @param line The line of text to indent.
+     * @param options Formatting options defining spacing preferences.
+     * @returns The properly indented line.
+     */
     private indentLine(line: string, options: FormatterOptions): string {
         line = this.autoCase(line);
         const lowerLine = line.toLowerCase();
         
-        if (lowerLine.startsWith('feature:')) {
+        if (lowerLine.match(/^(feature|característica|fonction|funktionalität):/)) {
             return line; // 0 spaces
         }
         if (
-            lowerLine.startsWith('rule:') || 
-            lowerLine.startsWith('background:') ||
-            lowerLine.startsWith('scenario:') ||
-            lowerLine.startsWith('scenario outline:') ||
+            lowerLine.match(/^(rule|background|scenario|scenario outline|regla|antecedentes|escenario|esquema del escenario|règle|contexte|scénario|plan du scénario|regel|hintergrund|szenario|szenariogrundriss):/) ||
             lowerLine.startsWith('@') 
         ) {
             return '  ' + line; // 2 spaces
@@ -245,10 +289,10 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         
         const stepIndentStr = ' '.repeat(options.stepIndentation);
 
-        if (lowerLine.startsWith('examples:')) {
+        if (lowerLine.match(/^(examples|ejemplos|exemples|beispiele):/)) {
             return stepIndentStr + line;
         }
-        if (lowerLine.match(/^(given|when|then|and|but|\*)\s/)) {
+        if (lowerLine.match(/^(given|when|then|and|but|\*|dado|cuando|entonces|y|pero|soit|quand|alors|et|mais|angenommen|wenn|dann|und|aber)\s/)) {
             return stepIndentStr + line;
         }
         if (line.startsWith('"""')) {
@@ -261,6 +305,14 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         return stepIndentStr + line;
     }
 
+    /**
+     * Aligns a block of Gherkin pipe-separated data table lines.
+     * Calculates the maximum width for each column to pad them consistently.
+     * 
+     * @param tableLines Array of raw table lines starting with `|`.
+     * @param indentSpaces Number of spaces to indent the entire table.
+     * @returns Array of aligned table lines.
+     */
     private alignTable(tableLines: string[], indentSpaces: number): string[] {
         const columnWidths: number[] = [];
         const parsedRows = tableLines.map(line => {

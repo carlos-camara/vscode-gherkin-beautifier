@@ -1,77 +1,47 @@
-# Gherkin Beautifier for Visual Studio Code
+# Gherkin Beautifier for VS Code
 
 <p align="center">
   <img src="./assets/logo.png" width="128" alt="Gherkin Beautifier Logo">
 </p>
 
-<p align="center">
-  <img alt="VS Code" src="https://img.shields.io/badge/VS%20Code-1.80+-blue?style=for-the-badge&logo=visualstudiocode">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.1-blue?style=for-the-badge&logo=typescript">
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge">
-</p>
-
-**Gherkin Beautifier** is a highly professional, native formatting extension for Visual Studio Code, meticulously designed for QA Engineers, SDETs, and BDD practitioners. It instantly transforms chaotic, misaligned `.feature` files into perfectly structured, beautifully aligned, and readable living documentation.
+A comprehensive, highly professional formatting extension for Visual Studio Code designed to format, align, and organize Gherkin (`.feature`) files. It ensures that your Behavioral Driven Development (BDD) documentation remains clean, readable, and standardized across your entire team.
 
 ---
 
-## 🌟 Key Features
+## Comprehensive Feature Set
 
-1. **Native VS Code Integration**: Hooks directly into the formatting API. Use `Shift+Alt+F` to format the whole document, or `Cmd+K Cmd+F` (`Ctrl+K Ctrl+F` on Windows) to format only a specific selection of text.
-2. **Deep Table Alignment Algorithm**: Automatically calculates the maximum width of every column in your Step Data Tables and `Examples:` tables, applying precise padding so that every `|` aligns vertically. 
-3. **Keyword-Relative Table Indentation**: Instead of fixed spacing, tables automatically detect the length of their preceding keyword (`Given`, `When`, `Then`) and perfectly align their left border with the first letter of your step description.
-4. **Auto-Casing**: Normalizes the capitalization of all keywords (`feature` -> `Feature`, `when` -> `When`, etc.), ensuring uniform standards across your `.feature` files regardless of how they were typed.
-5. **Tag Sorting & Wrapping**: Automatically sorts multiple tags alphabetically (`@smoke @api` -> `@api @smoke`) and wraps them cleanly if they exceed 80 characters in length.
-6. **Smart Whitespace Cleanup**: Automatically collapses multiple sequential empty lines down to a single line, and instantly trims all trailing whitespace to keep your git commits clean.
-4. **Smart Block Spacing**: Automatically ensures exactly one breathable blank line before major BDD blocks (`Scenario`, `Scenario Outline`, `Background`, `Rule`, `@tags`), preventing walls of text.
+### 1. Advanced Formatting Engine
+* **Native VS Code Integration**: Integrates directly with the VS Code formatting API. You can format via the standard `Shift+Alt+F` shortcut, the Command Palette, or the right-click context menu ("Format Gherkin Document").
+* **Multi-language Support (i18n)**: Fully supports formatting, indenting, and auto-casing keywords in **English**, **Spanish** (`Dado`, `Cuando`, `Escenario`), **French** (`Soit`, `Quand`, `Scénario`), and **German** (`Angenommen`, `Wenn`, `Szenario`).
+* **Auto-Casing**: Normalizes the capitalization of all keywords automatically (e.g., `feature` becomes `Feature`, `cuando` becomes `Cuando`). This ensures that regardless of how a user types the keyword, the repository maintains a strict standard.
+* **Tag Sorting & Formatting**: Sorts tags alphabetically (e.g., `@smoke @api` -> `@api @smoke`) and formats them based on user configuration. By default, it wraps tags if they exceed 80 characters, but this can be configured to remain on a single line.
+* **Whitespace Cleanup**: Automatically collapses consecutive empty lines into a standardized format and trims all trailing whitespace, preventing dirty git commits.
 
----
+### 2. Intelligent Table Alignment
+* **Max Column Width Calculation**: Calculates the maximum column width for Step Data Tables and `Examples:` tables, applying precise padding to align `|` characters vertically.
+* **Relative Table Indentation**: Data tables dynamically adapt to the length of their preceding keyword (`Given`, `When`, `Then`) to align their left border precisely with the start of the step description.
 
-## 🛠️ Architecture & Workflow
-
-For a detailed technical deep-dive into the formatter engine, including UML class diagrams and execution flowcharts, please refer to the **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** document.
-
-The extension is designed around a fast, memory-efficient line-parsing engine. All the technical diagrams and workflows have been moved to the `ARCHITECTURE.md` file to ensure full compatibility with the VS Code extension marketplace rendering engine.
-
----
-
-## 📖 Deep Dive: Formatting Rules
-
-### 1. Strict Semantic Indentation
-The engine applies standard Gherkin indentation rules:
-* `Feature:` ➜ 0 spaces
-* `Rule:`, `Background:`, `Scenario:`, `@tags` ➜ 2 spaces
-* `Examples:`, `Given`, `When`, `Then`, `And`, `But`, `*` ➜ 4 spaces
-* `"""` DocStrings ➜ 6 spaces
-* Comments (`#`) ➜ Aligns with the enclosing block (2 spaces).
-
-### 2. Keyword-Relative Table Alignment
-Data tables visually anchor themselves to the text of the preceding step. 
-
-```gherkin
-    # Notice how the table aligns with the "I" in "I enter"
-    When I enter my credentials
-         | username | password |
-         | admin    | secret   |
-```
+### 3. Editor Productivity Tools
+* **Outline Provider**: Contributes a hierarchical tree view to the native VS Code "Outline" panel. This allows developers to easily navigate massive `.feature` files by jumping between `Feature`, `Rule`, and `Scenario` blocks.
+* **Built-in Snippets**: Includes standard autocompletion snippets. Type `feature`, `scenario`, `outline`, or `rule` inside a blank document and press `Tab` to instantly scaffold properly formatted templates.
 
 ---
 
-## 🚀 Comprehensive Example
+## Detailed Formatting Example
 
-### Before Formatting (Chaotic & Unreadable)
+### Before Formatting (Unstructured)
 
 ```gherkin
 Feature: User Authentication
 @regression @login
 Scenario: Login with multiple user roles
-Given the system is running
-  When    I navigate to the login page
-And I enter my credentials
-|role|username|password|expected_status|
-|admin|admin_user|super_secret_123|success|
-|guest|guest_user|1234|failure|
-|locked_out_user|locked|abc|locked|
- Then I should see the appropriate dashboard
+Dado the system is running
+  Cuando I navigate to the login page
+Y I enter my credentials
+|role|username|password|
+|admin|admin_user|super_secret_123|
+|guest|guest_user|1234|
+ Entonces I should see the appropriate dashboard
 ```
 
 ### After Formatting (`Shift+Alt+F`)
@@ -79,55 +49,67 @@ And I enter my credentials
 ```gherkin
 Feature: User Authentication
 
-  @regression @login
+  @login @regression
   Scenario: Login with multiple user roles
-    Given the system is running
-    When I navigate to the login page
-    And I enter my credentials
-        | role            | username   | password         | expected_status |
-        | admin           | admin_user | super_secret_123 | success         |
-        | guest           | guest_user | 1234             | failure         |
-        | locked_out_user | locked     | abc              | locked          |
-    Then I should see the appropriate dashboard
+    Dado the system is running
+    Cuando I navigate to the login page
+    Y I enter my credentials
+      | role  | username   | password         |
+      | admin | admin_user | super_secret_123 |
+      | guest | guest_user | 1234             |
+    Entonces I should see the appropriate dashboard
 ```
+
+*(Note how the table's left pipe `|` perfectly aligns with the "I" in the preceding "Y" step, and how the Spanish keywords were respected and auto-cased).*
 
 ---
 
-## ⚙️ Installation
+## Extension Configuration
 
-### From Marketplace (Recommended)
+You can customize the formatter behavior by modifying your VS Code `settings.json`. The following configuration options are available:
+
+### `gherkinBeautifier.indentation.steps`
+* **Type:** `number`
+* **Default:** `4`
+* **Description:** Defines the number of spaces to indent steps (`Given`, `When`, `Then`, `Examples`, etc). Change to `2` if you prefer tighter code spacing.
+
+### `gherkinBeautifier.tables.alignToKeyword`
+* **Type:** `boolean`
+* **Default:** `true`
+* **Description:** If `true`, data tables dynamically align with the text of the preceding step. If `false`, tables fall back to fixed indentation.
+
+### `gherkinBeautifier.tags.format`
+* **Type:** `string` (`"wrap"` | `"singleLine"`)
+* **Default:** `"wrap"`
+* **Description:** Controls how lists of tags are formatted. Use `wrap` to split long tag lists across multiple lines (max 80 chars) or `singleLine` to keep all tags on a single line regardless of length.
+
+### `gherkinBeautifier.emptyLines.betweenScenarios`
+* **Type:** `number`
+* **Default:** `1`
+* **Description:** Specifies the exact number of blank lines to enforce between major code blocks (`Scenario`, `Rule`, `Background`).
+
+---
+
+## Installation & Setup
+
+### From Marketplace
 1. Open Visual Studio Code.
 2. Go to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
 3. Search for **"Gherkin Beautifier"**.
 4. Click **Install**.
 
-### Manual Installation (.vsix)
-If you want to use the extension locally without publishing it:
-1. Ensure you have the packaged `.vsix` file.
-2. Open VS Code and go to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
-3. Click the `...` (Views and More Actions) menu in the top right of the Extensions view.
-4. Select **"Install from VSIX..."**
-5. Locate and select the `vscode-gherkin-beautifier-1.4.0.vsix` file.
+### Recommended Settings
+To maximize productivity, we recommend enabling "Format On Save" for feature files by adding the following to your `settings.json`:
+```json
+"[feature]": {
+    "editor.formatOnSave": true
+}
+```
 
-### Settings
-*(Optional)* Add the following to your `settings.json` to format automatically on save:
-   ```json
-   "[feature]": {
-       "editor.formatOnSave": true
-   }
-   ```
+---
 
-## ⚙️ Configuration Settings
+## Contributing
+We welcome contributions from the community. Please review [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed instructions on how to set up the repository locally, run the comprehensive test suite, build the `.vsix` package from source, and submit Pull Requests.
 
-You can fully customize the behavior of the formatter in your VS Code `settings.json`:
-
-| Setting | Type | Default | Description |
-|---|---|---|---|
-| `gherkinBeautifier.indentation.steps` | `number` | `4` | Number of spaces to indent steps (`Given`, `When`, `Then`, `Examples`, etc). Change to `2` if you prefer tighter code. |
-| `gherkinBeautifier.tables.alignToKeyword` | `boolean` | `true` | If `true`, tables align dynamically to the start of the step text. If `false`, tables simply indent slightly more than the step keyword. |
-
-## 🤝 Contributing
-We welcome contributions! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to set up the repository locally, run the tests, build the `.vsix` from source, and submit Pull Requests.
-
-## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+## License
+This project is open-source and licensed under the MIT License. See the [LICENSE](./LICENSE) file for full details.
