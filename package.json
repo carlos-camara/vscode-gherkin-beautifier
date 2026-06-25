@@ -1,8 +1,8 @@
 {
   "name": "vscode-gherkin-beautifier",
   "displayName": "Gherkin Beautifier",
-  "description": "Professional Gherkin (.feature) formatter and table aligner",
-  "version": "1.4.0",
+  "description": "A highly professional, native formatting extension for Visual Studio Code, meticulously designed to format and align Gherkin (.feature) files.",
+  "version": "1.5.0",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -46,7 +46,7 @@
         "gherkinBeautifier.indentation.steps": {
           "type": "number",
           "default": 4,
-          "description": "Number of spaces to indent steps (Given, When, Then, And, But, Examples, *)."
+          "description": "Number of spaces to indent steps."
         },
         "gherkinBeautifier.tables.alignToKeyword": {
           "type": "boolean",
@@ -70,13 +70,22 @@
       {
         "command": "gherkinBeautifier.format",
         "title": "Format Gherkin Document"
+      },
+      {
+        "command": "gherkinBeautifier.showStatistics",
+        "title": "Gherkin: Show Project Statistics"
       }
     ],
     "menus": {
       "editor/context": [
         {
+          "when": "editorLangId == feature",
           "command": "gherkinBeautifier.format",
-          "when": "resourceLangId == feature",
+          "group": "1_modification"
+        },
+        {
+          "when": "editorLangId == feature",
+          "command": "gherkinBeautifier.showStatistics",
           "group": "1_modification"
         }
       ]

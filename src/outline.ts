@@ -66,6 +66,62 @@ export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvi
             }
         }
 
+        // Second pass: update ranges so parents contain their children correctly
+        // We know a feature spans from its start line to the end of the document
+        if (currentFeature) {
+            currentFeature.range = new vscode.Range(
+                currentFeature.range.start, 
+                new vscode.Position(document.lineCount - 1, document.lineAt(document.lineCount - 1).text.length)
+            );
+        }
+        
+        // Let's refine ranges: a rule spans until the next rule
+        let previousRule: vscode.DocumentSymbol | null = null;
+        if (currentFeature && currentFeature.children.length > 0) {
+            for (const child of currentFeature.children) {
+                if (child.kind === vscode.SymbolKind.Namespace) {
+                    // It's a Rule
+                    if (previousRule) {
+                        previousRule.range = new vscode.Range(
+                            previousRule.range.start,
+                            new vscode.Position(child.range.start.line - 1, 0)
+                        );
+                    }
+                    previousRule = child;
+                    
+                    // Also fix scenario ranges inside the rule
+                    let previousScenario: vscode.DocumentSymbol | null = null;
+                    for (const scenario of child.children) {
+                        if (previousScenario) {
+                            previousScenario.range = new vscode.Range(
+                                previousScenario.range.start,
+                                new vscode.Position(scenario.range.start.line - 1, 0)
+                            );
+                        }
+                        previousScenario = scenario;
+                    }
+                    if (previousScenario) {
+                        // The last scenario in a rule extends to the end of the rule (which we'll estimate as document end for now, or just leave it)
+                    }
+                } else {
+                    // It's a Scenario directly under Feature
+                    if (previousRule) {
+                        previousRule.range = new vscode.Range(
+                            previousRule.range.start,
+                            new vscode.Position(child.range.start.line - 1, 0)
+                        );
+                        previousRule = null;
+                    }
+                }
+            }
+            if (previousRule) {
+                previousRule.range = new vscode.Range(
+                    previousRule.range.start,
+                    new vscode.Position(document.lineCount - 1, document.lineAt(document.lineCount - 1).text.length)
+                );
+            }
+        }
+
         return symbols;
     }
 }

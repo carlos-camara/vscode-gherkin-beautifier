@@ -208,7 +208,77 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             result.pop();
         }
 
-        return result;
+        return this.alignInlineComments(result);
+    }
+
+    /**
+     * Extracts an inline comment from a line, respecting strings and quotes.
+     */
+    private extractInlineComment(line: string): { text: string, comment: string | null } {
+        let inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+            if (line[i] === '"') inQuote = !inQuote;
+            if (!inQuote && line[i] === '#' && i > 0 && /\s/.test(line[i-1])) {
+                return {
+                    text: line.substring(0, i).trimEnd(),
+                    comment: line.substring(i)
+                };
+            }
+        }
+        return { text: line, comment: null };
+    }
+
+    /**
+     * Post-processing step to align inline comments within contiguous blocks.
+     */
+    private alignInlineComments(lines: string[]): string[] {
+        const blocks: { start: number, end: number, maxLength: number, hasComments: boolean }[] = [];
+        let currentBlockStart = 0;
+        let maxLength = 0;
+        let blockHasComments = false;
+
+        for (let j = 0; j < lines.length; j++) {
+            const currentLine = lines[j];
+            
+            if (currentLine.trim() === '') {
+                if (j > currentBlockStart) {
+                    blocks.push({ start: currentBlockStart, end: j - 1, maxLength, hasComments: blockHasComments });
+                }
+                currentBlockStart = j + 1;
+                maxLength = 0;
+                blockHasComments = false;
+                continue;
+            }
+
+            if (!currentLine.trimStart().startsWith('#')) {
+                const { text, comment } = this.extractInlineComment(currentLine);
+                if (comment) {
+                    blockHasComments = true;
+                    if (text.length > maxLength) maxLength = text.length;
+                } else if (!currentLine.trimStart().startsWith('@') && !currentLine.includes('|')) {
+                    if (text.length > maxLength) maxLength = text.length;
+                }
+            }
+        }
+        if (lines.length > currentBlockStart) {
+            blocks.push({ start: currentBlockStart, end: lines.length - 1, maxLength, hasComments: blockHasComments });
+        }
+
+        for (const block of blocks) {
+            if (block.hasComments) {
+                for (let j = block.start; j <= block.end; j++) {
+                    const line = lines[j];
+                    if (!line.trimStart().startsWith('#')) {
+                        const { text, comment } = this.extractInlineComment(line);
+                        if (comment) {
+                            const paddingNeeded = block.maxLength - text.length + 2; 
+                            lines[j] = text + ' '.repeat(paddingNeeded) + comment;
+                        }
+                    }
+                }
+            }
+        }
+        return lines;
     }
 
     /**
@@ -287,7 +357,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             return '  ' + line; // 2 spaces
         }
         
-        const stepIndentStr = ' '.repeat(options.stepIndentation);
+        let stepIndentStr = ' '.repeat(options.stepIndentation);
 
         if (lowerLine.match(/^(examples|ejemplos|exemples|beispiele):/)) {
             return stepIndentStr + line;

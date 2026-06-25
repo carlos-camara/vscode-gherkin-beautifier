@@ -6,3 +6,6 @@ Feature: Account Withdrawal
     When the user requests $20
     Then the ATM should dispense $20
     And the account balance should be $80
+    And ddsdsds
+    And dsds
+    And dskdskds
