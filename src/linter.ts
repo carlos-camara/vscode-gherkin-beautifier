@@ -22,7 +22,6 @@ export class GherkinLinter {
 
         const diagnostics: vscode.Diagnostic[] = [];
         let inDocString = false;
-        let inTable = false;
 
         // Block keywords MUST end with a colon.
         // Step keywords MUST end with a space.

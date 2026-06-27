@@ -16,21 +16,21 @@ export class GherkinHighlighter {
     private actionRegex = /^(Given|Dado|Soit|Angenommen|When|Cuando|Quand|Wenn|Then|Entonces|Alors|Dann|And|Y|Et|Und|But|Pero|Mais|Aber|\*)\s/im;
 
     constructor() {
-        // Magenta for Structure
+        // Professional VS Code Native Purple for Structure
         this.structureDecoration = vscode.window.createTextEditorDecorationType({
-            color: '#FF00FF',
+            color: '#C586C0',
             fontWeight: 'bold'
         });
 
-        // Bright Blue for Actions
+        // Professional VS Code Native Blue for Actions
         this.actionDecoration = vscode.window.createTextEditorDecorationType({
-            color: '#1E90FF', // DodgerBlue
+            color: '#569CD6', 
             fontWeight: 'bold'
         });
 
-        // Optional: Subdued style for Tags
+        // Professional VS Code Native Cyan for Tags
         this.tagDecoration = vscode.window.createTextEditorDecorationType({
-            color: '#00CED1', // Dark Turquoise
+            color: '#4EC9B0', 
             fontStyle: 'italic'
         });
     }

@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 /**
  * Scans the workspace for Gherkin files and displays a visual statistics dashboard.
  */
-export async function showStatisticsDashboard(context: vscode.ExtensionContext) {
+export async function showStatisticsDashboard(_context: vscode.ExtensionContext) {
     const panel = vscode.window.createWebviewPanel(
         'gherkinStatistics',
         'Gherkin Statistics',

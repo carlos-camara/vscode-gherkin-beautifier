@@ -10,105 +10,107 @@ A comprehensive, highly professional formatting extension for Visual Studio Code
 ### 1. Advanced Formatting Engine
 * **Native VS Code Integration**: Integrates directly with the VS Code formatting API. You can format via the standard `Shift+Alt+F` shortcut, the Command Palette, or the right-click context menu ("Format Gherkin Document").
 * **Multi-language Support (i18n)**: Fully supports formatting, indenting, and auto-casing keywords in **English**, **Spanish** (`Dado`, `Cuando`, `Escenario`), **French** (`Soit`, `Quand`, `Scénario`), and **German** (`Angenommen`, `Wenn`, `Szenario`).
-* **Auto-Casing**: Normalizes the capitalization of all keywords automatically (e.g., `feature` becomes `Feature`, `cuando` becomes `Cuando`). This ensures that regardless of how a user types the keyword, the repository maintains a strict standard.
-* **Tag Sorting & Formatting**: Sorts tags alphabetically (e.g., `@smoke @api` -> `@api @smoke`) and formats them based on user configuration. By default, it wraps tags if they exceed 80 characters, but this can be configured to remain on a single line.
-* **Whitespace Cleanup**: Automatically collapses consecutive empty lines into a standardized format and trims all trailing whitespace, preventing dirty git commits.
-* **Inline Comment Alignment**: Dynamically aligns inline comments (`#`) to the same vertical column within the same code block, creating a beautiful and consistent reading experience.
-
-### 2. Intelligent Table Alignment
-* **Max Column Width Calculation**: Calculates the maximum column width for Step Data Tables and `Examples:` tables, applying precise padding to align `|` characters vertically.
-* **Relative Table Indentation**: Data tables dynamically adapt to the length of their preceding keyword (`Given`, `When`, `Then`) to align their left border precisely with the start of the step description.
-
-### 3. Editor Productivity Tools
-* **Go to Definition (Python/Behave)**: You can now `Cmd + Click` (or `F12`) on any Gherkin step (e.g. `Given I login`) and VS Code will automatically search your `steps/` folder and jump directly to the Python `.py` file where that `@given` or `@step` decorator is defined.
-* **Project Statistics Dashboard**: Execute `Gherkin: Show Project Statistics` from the Command Palette or Right-Click menu to open a beautiful HTML dashboard that visualizes your BDD coverage across the entire workspace.
-* **Beautiful Syntax Highlighting**: Overrides default VS Code themes to dynamically colorize Gherkin files. Features a stunning **Magenta** for structural keywords (`Feature`, `Scenario`, `Rule`) and **Blue** for action steps (`Given`, `When`, `Then`).
-* **Real-time Diagnostic Linter**: Includes a built-in Linter that monitors your feature files as you type. If you mistype a keyword or use invalid syntax, the editor will immediately underline it in red and provide an explanation.
-* **Outline Provider**: Contributes a hierarchical tree view to the native VS Code "Outline" panel. This allows developers to easily navigate massive `.feature` files by jumping between `Feature`, `Rule`, and `Scenario` blocks.
-* **Built-in Snippets**: Includes standard autocompletion snippets. Type `feature`, `scenario`, `outline`, or `rule` inside a blank document and press `Tab` to instantly scaffold properly formatted templates.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carloscamara/vscode-gherkin-beautifier/main/assets/logo.png" alt="Gherkin Beautifier Logo" width="128" />
+  <h1>Gherkin Beautifier</h1>
+  <p><em>The ultimate, professional formatting and productivity suite for Gherkin and BDD inside VS Code.</em></p>
+</div>
 
 ---
 
-## Detailed Formatting Example
+## 🌟 Overview
 
-### Before Formatting (Unstructured)
+**Gherkin Beautifier** is a meticulously crafted extension designed for teams using Behavior-Driven Development (BDD). It transforms chaotic `.feature` files into perfectly aligned, highly readable, and deeply integrated specifications.
 
-```gherkin
-Feature: User Authentication
-@regression @login
-Scenario: Login with multiple user roles
-Dado the system is running
-  Cuando I navigate to the login page
-Y I enter my credentials
-|role|username|password|
-|admin|admin_user|super_secret_123|
-|guest|guest_user|1234|
- Entonces I should see the appropriate dashboard
-```
-
-### After Formatting (`Shift+Alt+F`)
-
-```gherkin
-Feature: User Authentication
-
-  @login @regression
-  Scenario: Login with multiple user roles
-    Dado the system is running
-    Cuando I navigate to the login page
-    Y I enter my credentials
-      | role  | username   | password         |
-      | admin | admin_user | super_secret_123 |
-      | guest | guest_user | 1234             |
-    Entonces I should see the appropriate dashboard
-```
-
-*(Note how the table's left pipe `|` perfectly aligns with the "I" in the preceding "Y" step, and how the Spanish keywords were respected and auto-cased).*
+Whether you're using **Cucumber**, **Behave**, or any other BDD framework, Gherkin Beautifier supercharges your workflow with a native formatter, an interactive statistics dashboard, a real-time syntax linter, and seamless Python integration.
 
 ---
 
-## Extension Configuration
+## 🔥 Core Features
 
-You can customize the formatter behavior by modifying your VS Code `settings.json`. The following configuration options are available:
+### 1. Intelligent Formatter
+Say goodbye to manual spacing. The robust AST-based formatter parses your Gherkin syntax and aligns it automatically.
+- **Strict Flat Indentation**: Enforces consistent alignment where all steps (`Given`, `When`, `Then`, `And`) share the exact same starting column.
+- **Smart Table Alignment**: Data tables (Pipes `|`) dynamically pad themselves to align perfectly with the keyword of the preceding step.
+- **Auto-Casing**: Automatically capitalizes Gherkin keywords (`given` → `Given`) while supporting over 10 languages (English, Spanish, French, German, etc.).
+- **Tag Wrapping**: Keeps your files clean by intelligently wrapping long `@tags` lists that exceed 80 characters.
 
-### `gherkinBeautifier.indentation.steps`
-* **Type:** `number`
-* **Default:** `4`
-* **Description:** Number of spaces to indent steps (`Given`, `When`, `Then`, `And`, `But`).
+![Formatter Demonstration](https://raw.githubusercontent.com/carloscamara/vscode-gherkin-beautifier/main/assets/formatter.gif)
 
-### `gherkinBeautifier.tables.alignToKeyword`
-* **Type:** `boolean`
-* **Default:** `true`
-* **Description:** If `true`, data tables dynamically align with the text of the preceding step. If `false`, tables fall back to fixed indentation.
+### 2. Live Diagnostics (Linter)
+Writing Gherkin should be error-free before you even run the tests.
+- Real-time syntax validation.
+- Detects missing colons (e.g., `Scenario` instead of `Scenario:`).
+- Highlights structural errors in red, ensuring your keywords are perfectly formed.
 
-### `gherkinBeautifier.tags.format`
-* **Type:** `string` (`"wrap"` | `"singleLine"`)
-* **Default:** `"wrap"`
-* **Description:** Controls how lists of tags are formatted. Use `wrap` to split long tag lists across multiple lines (max 80 chars) or `singleLine` to keep all tags on a single line regardless of length.
+![Linter Demonstration](https://raw.githubusercontent.com/carloscamara/vscode-gherkin-beautifier/main/assets/linter.gif)
 
-### `gherkinBeautifier.emptyLines.betweenScenarios`
-* **Type:** `number`
-* **Default:** `1`
-* **Description:** Specifies the exact number of blank lines to enforce between major code blocks (`Scenario`, `Rule`, `Background`).
+### 3. Editor Productivity & Navigation
+- **Go To Definition (Behave / Python)**: Instantly jump from a `.feature` file to the exact Python definition. `Cmd + Click` (or `F12`) on a step like `Given I login`, and VS Code will search your `steps/` folder to find the matching `@given('I login')` decorator.
+- **Native Outline View**: Navigating massive `.feature` files is now a breeze. The extension contributes a hierarchical tree view to VS Code's Outline panel, breaking down your document into `Feature` > `Rule` > `Scenario`.
+
+![Go To Definition](https://raw.githubusercontent.com/carloscamara/vscode-gherkin-beautifier/main/assets/definition.gif)
+
+### 4. BDD Project Dashboard
+- **Statistics Webview**: Right-click anywhere in a `.feature` file (or use the Command Palette) to open the **Gherkin: Show Project Statistics** dashboard. 
+- Get instant, beautiful HTML metrics detailing how many Features, Rules, and Scenarios you have across your entire workspace, including unsaved buffers!
+
+![Dashboard Demonstration](https://raw.githubusercontent.com/carloscamara/vscode-gherkin-beautifier/main/assets/dashboard.gif)
+
+### 5. Professional Syntax Highlighting
+Replaces glaring, standard colors with a curated palette that looks absolutely stunning on dark themes (like Dark+):
+- **Structure** (`Feature`, `Scenario`): Elegant Purple (`#C586C0`).
+- **Actions** (`Given`, `When`): Crisp Blue (`#569CD6`).
+- **Tags** (`@smoke`): Soft Cyan (`#4EC9B0`).
+
+![Syntax Highlighting](https://raw.githubusercontent.com/carloscamara/vscode-gherkin-beautifier/main/assets/highlighting.png)
 
 ---
 
-## Installation & Setup
+## ⚙️ Configuration
 
-### From Marketplace
+Gherkin Beautifier works perfectly out-of-the-box, but you can tailor it to your team's style guide via your `settings.json`:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `gherkinBeautifier.indentation.steps` | `4` | Number of spaces to indent all steps (`Given`, `When`, `Then`, `And`, `But`). |
+| `gherkinBeautifier.tables.alignToKeyword` | `true` | If enabled, tables dynamically pad their left border to match the text length of the preceding step. |
+| `gherkinBeautifier.emptyLines.betweenScenarios` | `1` | Enforces the exact number of blank lines between `Scenario` and `Rule` blocks. |
+| `gherkinBeautifier.tags.format` | `"wrap"` | Choose `"wrap"` to split long tags across lines, or `"singleLine"` to keep them contiguous. |
+
+---
+
+## 🚀 Installation & Usage
+
 1. Open Visual Studio Code.
-2. Go to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
+2. Navigate to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
 3. Search for **"Gherkin Beautifier"**.
 4. Click **Install**.
 
-### Recommended Settings
-To maximize productivity, we recommend enabling "Format On Save" for feature files by adding the following to your `settings.json`:
+### Pro-Tip for Auto-Formatting
+To unleash the full power of the extension, we highly recommend enabling "Format on Save" in your VS Code settings specifically for Gherkin files:
+
 ```json
 "[feature]": {
+    "editor.defaultFormatter": "carloscamara.vscode-gherkin-beautifier",
     "editor.formatOnSave": true
 }
 ```
 
 ---
+
+## 💡 Future Roadmap
+
+We are constantly innovating. Here's a sneak peek of what's coming:
+- **Test Explorer Integration**: Run specific scenarios with a "Play" button directly from the editor.
+- **IntelliSense Autocomplete**: Dropdown suggestions for all available Python steps as you type.
+- **Quick Fixes**: Automatically generate missing Python step snippets with `Cmd + .`.
+
+---
+
+<div align="center">
+  Crafted with ❤️ by <strong>Carlos Camara</strong>
+</div>
 
 ## Contributing
 We welcome contributions from the community. Please review [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed instructions on how to set up the repository locally, run the comprehensive test suite, build the `.vsix` package from source, and submit Pull Requests.
