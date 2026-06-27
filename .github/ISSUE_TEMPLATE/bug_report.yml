@@ -1,0 +1,54 @@
+---
+name: "🐞 Bug Report"
+description: "Report a reproducible bug to help us improve."
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: description
+    attributes:
+      label: "Describe the bug"
+      description: "A clear and concise description of what the bug is."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Reproduction Steps"
+      description: "Steps to reproduce the behavior."
+      placeholder: |
+        1. Open a `.feature` file
+        2. Run 'Format Document' (Shift+Alt+F)
+        3. Observe the issue...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behavior"
+      description: "A clear description of what you expected to happen."
+    validations:
+      required: true
+  - type: textarea
+    id: feature-file
+    attributes:
+      label: "Feature File Content"
+      description: "Paste the `.feature` file content that triggers the bug."
+      render: gherkin
+  - type: input
+    id: version
+    attributes:
+      label: "Extension Version"
+      description: "e.g. 1.5.0"
+    validations:
+      required: true
+  - type: input
+    id: vscode-version
+    attributes:
+      label: "VS Code Version"
+      description: "e.g. 1.90.0"
+    validations:
+      required: true

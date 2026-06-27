@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — Community & Open Source Infrastructure
+- **Issue Templates**: Added `bug_report.yml` (with Gherkin-specific fields and VS Code version) and `feature_request.yml` via GitHub Issue Forms.
+- **Pull Request Template**: Added `pull_request_template.md` with testing matrix tailored for VS Code extension development.
+- **Dependabot**: Added `dependabot.yml` for automated weekly dependency updates (npm + GitHub Actions).
+- **CODE_OF_CONDUCT.md**: Added Contributor Covenant Code of Conduct.
+- **SECURITY.md**: Added security policy with coordinated disclosure process.
+- **`.editorconfig`**: Added EditorConfig with rules for TypeScript (4 spaces), JSON/YAML (2 spaces), and `.feature` files (2 spaces).
+
+### Added — CI/CD Pipelines
+- **PR Labeler** (`labeler.yml`): Auto-labels PRs based on changed file paths (core, documentation, testing, dependencies, DevOps, configuration, assets).
+- **PR Hygiene & Intelligence Gate** (`gate-check.yml`): Validates PR title/description and generates AI-powered summaries on every PR.
+- **Release** (`release.yml`): Automatically compiles TypeScript, packages `.vsix` with `@vscode/vsce`, and creates a GitHub Release on `v*` tags.
+- **Deploy Docs** (`pages.yml`): Deploys MkDocs Material documentation to GitHub Pages on pushes to `main`.
+
+### Added — Documentation Site (MkDocs Material)
+- **`mkdocs.yml`**: Full MkDocs Material configuration with deep purple theme, dark/light mode, search, code copy, and Mermaid diagrams.
+- **14 documentation pages**: Home, Installation, Configuration, 7 feature pages (Formatter, Linter, Go To Definition, Outline, Statistics, Highlighting, Snippets), Architecture (with Mermaid diagrams), Contributing, Code of Conduct, Security, and Changelog.
+- Documentation will be deployed to `https://carlos-camara.github.io/vscode-gherkin-beautifier/`.
+
+### Changed
+- **`src/formatter.ts`**: Prefixed unused parameters with underscore (`_options`, `_token`) to suppress TypeScript lint warnings.
+- **`src/highlighter.ts`**: Replaced raw hex colors with professional VS Code native palette (`#C586C0`, `#569CD6`, `#4EC9B0`).
+- **`src/definition.ts`**: Removed unused `path` import.
+- **`src/linter.ts`**: Removed unused `inTable` variable.
+- **`src/outline.ts`**: Prefixed unused `_token` param, narrowed return type to `DocumentSymbol[]`.
+- **`src/statistics.ts`**: Prefixed unused `_context` parameter.
+- **`README.md`**: Complete rewrite with modern layout, feature showcase with GIF/PNG demos, configuration table, roadmap section, and author footer.
+- **`CONTRIBUTING.md`**: Expanded with full architecture overview, local setup, testing guide, packaging steps, and PR workflow.
+
 ## [1.5.0] - 2026-06-25
 ### Added
 - **Multi-language Support (i18n)**: Formatter now fully supports formatting, indenting, and Auto-Casing for English, Spanish, French, and German Gherkin keywords.
