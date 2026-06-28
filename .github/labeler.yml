@@ -1,0 +1,47 @@
+# PR Auto-Labeler Configuration
+# Automatically assigns labels to Pull Requests based on changed file paths.
+
+'DevOps':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - '.husky/**'
+
+'dependencies':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - 'package-lock.json'
+
+'documentation':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**'
+
+'testing':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'test/**'
+          - '**/*.test.ts'
+          - '**/*.spec.ts'
+          - 'test.feature'
+
+'core':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/**'
+
+'configuration':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tsconfig.json'
+          - '.editorconfig'
+          - '.vscodeignore'
+          - '.gitignore'
+          - 'snippets.json'
+
+'assets':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'assets/**'

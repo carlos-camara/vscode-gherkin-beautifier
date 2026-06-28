@@ -32,8 +32,8 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
 
     public provideDocumentFormattingEdits(
         document: vscode.TextDocument,
-        options: vscode.FormattingOptions,
-        token: vscode.CancellationToken
+        _options: vscode.FormattingOptions,
+        _token: vscode.CancellationToken
     ): vscode.TextEdit[] {
         const edits: vscode.TextEdit[] = [];
         const lines: string[] = [];
@@ -57,8 +57,8 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
     public provideDocumentRangeFormattingEdits(
         document: vscode.TextDocument,
         range: vscode.Range,
-        options: vscode.FormattingOptions,
-        token: vscode.CancellationToken
+        _options: vscode.FormattingOptions,
+        _token: vscode.CancellationToken
     ): vscode.TextEdit[] {
         const edits: vscode.TextEdit[] = [];
         const lines: string[] = [];
@@ -121,7 +121,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             let line = lines[i].trim(); // This inherently trims trailing whitespace
             
             // Normalize Example Variables: < email > to <email>
-            line = line.replace(/< *([\w\s-]+?) *>/g, (match, inner) => '<' + inner.trim() + '>');
+            line = line.replace(/< *([\w\s-]+?) *>/g, (_, inner) => '<' + inner.trim() + '>');
 
             if (line.startsWith('|') && line.endsWith('|')) {
                 inTable = true;
@@ -323,7 +323,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
      * @returns The line with normalized keywords.
      */
     private autoCase(line: string): string {
-        return line.replace(/^(feature|característica|fonction|funktionalität|scenario outline|esquema del escenario|plan du scénario|szenariogrundriss|scenario|escenario|scénario|szenario|background|antecedentes|contexte|hintergrund|rule|regla|règle|regel|examples|ejemplos|exemples|beispiele|given|dado|soit|angenommen|when|cuando|quand|wenn|then|entonces|alors|dann|and|y|et|und|but|pero|mais|aber|\*)(:|\s|$)/i, (match, p1, p2) => {
+        return line.replace(/^(feature|característica|fonction|funktionalität|scenario outline|esquema del escenario|plan du scénario|szenariogrundriss|scenario|escenario|scénario|szenario|background|antecedentes|contexte|hintergrund|rule|regla|règle|regel|examples|ejemplos|exemples|beispiele|given|dado|soit|angenommen|when|cuando|quand|wenn|then|entonces|alors|dann|and|y|et|und|but|pero|mais|aber|\*)(:|\s|$)/i, (_, p1, p2) => {
             const lower = p1.toLowerCase();
             let cased = lower.charAt(0).toUpperCase() + lower.slice(1);
             

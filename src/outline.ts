@@ -6,8 +6,8 @@ import * as vscode from 'vscode';
 export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvider {
     public provideDocumentSymbols(
         document: vscode.TextDocument,
-        token: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.SymbolInformation[] | vscode.DocumentSymbol[]> {
+        _token: vscode.CancellationToken
+    ): vscode.DocumentSymbol[] {
         const symbols: vscode.DocumentSymbol[] = [];
         let currentFeature: vscode.DocumentSymbol | null = null;
         let currentRule: vscode.DocumentSymbol | null = null;

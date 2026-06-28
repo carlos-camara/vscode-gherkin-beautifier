@@ -1,0 +1,40 @@
+---
+name: 🛡️ Code Quality Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 🔍 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔨 Compile TypeScript (strict)
+        run: npm run compile
+
+      - name: 🧹 Lint Codebase (Markdown, YAML, Actions)
+        uses: carlos-camara/qa-hub-actions/lint-codebase@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

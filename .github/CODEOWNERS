@@ -1,0 +1,17 @@
+# This is a config file for defining code ownership.
+# It allows you to define who is responsible for specific parts of the codebase.
+#
+# Syntax:
+# pattern owner(s)
+
+# Global Owner (You own everything by default)
+*       @carlos-camara
+
+# Extension Core
+src/        @carlos-camara
+
+# Documentation
+docs/       @carlos-camara
+
+# DevOps & CI/CD
+.github/    @carlos-camara
