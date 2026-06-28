@@ -157,5 +157,10 @@ MIT © [Carlos Camara](https://github.com/carlos-camara)
 ---
 
 <div align="center">
-  <sub>Crafted by <a href="https://github.com/carlos-camara"><strong>Carlos Camara</strong></a></sub>
+
+  📖 [Documentation](https://carlos-camara.github.io/vscode-gherkin-beautifier/) &nbsp;·&nbsp;
+  🐛 [Report a Bug](https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=bug_report.yml) &nbsp;·&nbsp;
+  💡 [Request a Feature](https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=feature_request.yml) &nbsp;·&nbsp;
+  📋 [Changelog](./CHANGELOG.md)
+
 </div>
