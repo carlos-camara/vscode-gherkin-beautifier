@@ -18,4 +18,4 @@ The highlighter uses VS Code's `createTextEditorDecorationType` API to apply cus
 
 Syntax highlighting activates automatically when you open any `.feature` or `.gherkin` file. No configuration needed.
 
-![Syntax Highlighting](https://raw.githubusercontent.com/carloscamara/vscode-gherkin-beautifier/main/assets/highlighting.webp)
+![Syntax Highlighting](../../assets/highlighting.webp)
