@@ -22,17 +22,6 @@
     </a>
   </p>
 
-  <p>
-    <a href="https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier"><strong>⚡ Install</strong></a>
-    &nbsp;·&nbsp;
-    <a href="https://carlos-camara.github.io/vscode-gherkin-beautifier/"><strong>📖 Docs</strong></a>
-    &nbsp;·&nbsp;
-    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=bug_report.yml"><strong>🐛 Bug</strong></a>
-    &nbsp;·&nbsp;
-    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=feature_request.yml"><strong>💡 Feature</strong></a>
-    &nbsp;·&nbsp;
-    <a href="./CHANGELOG.md"><strong>📋 Changelog</strong></a>
-  </p>
 </div>
 
 ---
@@ -255,16 +244,3 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
 
 [MIT](./LICENSE) © [Carlos Camara](https://github.com/carlos-camara)
 
----
-
-<div align="center">
-  <a href="https://carlos-camara.github.io/vscode-gherkin-beautifier/">📖 Documentation</a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/issues">🐛 Issues</a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/discussions">💬 Discussions</a>
-  &nbsp;·&nbsp;
-  <a href="./CHANGELOG.md">📋 Changelog</a>
-  &nbsp;·&nbsp;
-  <a href="https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier">🛒 Marketplace</a>
-</div>
