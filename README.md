@@ -1,8 +1,8 @@
 # Gherkin Beautifier for VS Code
 
 [![Lint](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml)
-[![Release](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/release.yml)
-[![Docs](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/pages.yml)
+[![Release](https://img.shields.io/badge/Release-v1.5.0-brightgreen)](https://github.com/carlos-camara/vscode-gherkin-beautifier/releases)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://carlos-camara.github.io/vscode-gherkin-beautifier/)
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Marketplace-v1.5.0-0078d7)](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
