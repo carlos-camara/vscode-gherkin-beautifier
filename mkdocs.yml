@@ -1,13 +1,15 @@
+---
 site_name: Gherkin Beautifier
 site_url: https://carlos-camara.github.io/vscode-gherkin-beautifier/
-site_description: The ultimate professional formatting and productivity suite for Gherkin and BDD inside VS Code.
+site_description: >
+  The ultimate professional formatting and productivity suite
+  for Gherkin and BDD inside VS Code.
 site_author: Carlos Camara
 use_directory_urls: false
 
 theme:
   name: material
-  icon:
-    logo: material/file-tree
+  logo: assets/logo.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
