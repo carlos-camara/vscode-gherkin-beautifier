@@ -1,72 +1,101 @@
-# Gherkin Beautifier for VS Code
-
-[![Lint](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml)
-[![Release](https://img.shields.io/badge/Release-v1.5.0-brightgreen)](https://github.com/carlos-camara/vscode-gherkin-beautifier/releases)
-[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://carlos-camara.github.io/vscode-gherkin-beautifier/)
-[![VS Code Marketplace](https://img.shields.io/badge/VS%20Marketplace-v1.5.0-0078d7)](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-
-A comprehensive, highly professional formatting extension for Visual Studio Code designed to format, align, and organize Gherkin (`.feature`) files. It ensures that your Behavioral Driven Development (BDD) documentation remains clean, readable, and standardized across your entire team.
-
----
-
-## Comprehensive Feature Set
-
-### 1. Advanced Formatting Engine
-* **Native VS Code Integration**: Integrates directly with the VS Code formatting API. You can format via the standard `Shift+Alt+F` shortcut, the Command Palette, or the right-click context menu ("Format Gherkin Document").
-* **Multi-language Support (i18n)**: Fully supports formatting, indenting, and auto-casing keywords in **English**, **Spanish** (`Dado`, `Cuando`, `Escenario`), **French** (`Soit`, `Quand`, `Scénario`), and **German** (`Angenommen`, `Wenn`, `Szenario`).
 <div align="center">
-  <img src="assets/logo.png" alt="Gherkin Beautifier Logo" width="128" />
+  <img src="assets/logo.png" alt="Gherkin Beautifier Logo" width="96" />
   <h1>Gherkin Beautifier</h1>
-  <p><em>The ultimate, professional formatting and productivity suite for Gherkin and BDD inside VS Code.</em></p>
+  <p><strong>The ultimate formatting & productivity suite for Gherkin and BDD inside VS Code.</strong></p>
+
+  [![Lint](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml)
+  [![Release](https://img.shields.io/badge/Release-v1.5.0-brightgreen)](https://github.com/carlos-camara/vscode-gherkin-beautifier/releases)
+  [![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://carlos-camara.github.io/vscode-gherkin-beautifier/)
+  [![VS Code Marketplace](https://img.shields.io/badge/VS%20Marketplace-v1.5.0-0078d7)](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 </div>
 
 ---
 
-## 🌟 Overview
+## What is Gherkin Beautifier?
 
-**Gherkin Beautifier** is a meticulously crafted extension designed for teams using Behavior-Driven Development (BDD). It transforms chaotic `.feature` files into perfectly aligned, highly readable, and deeply integrated specifications.
+**Gherkin Beautifier** is a meticulously crafted VS Code extension for teams using Behavior-Driven Development (BDD). It transforms messy `.feature` files into perfectly aligned, readable, and deeply integrated specifications — with zero configuration required.
 
-Whether you're using **Cucumber**, **Behave**, or any other BDD framework, Gherkin Beautifier supercharges your workflow with a native formatter, an interactive statistics dashboard, a real-time syntax linter, and seamless Python integration.
+Works seamlessly with **Cucumber**, **Behave**, **SpecFlow**, and any other Gherkin-based BDD framework.
 
 ---
 
-## 🔥 Core Features
+## ✨ Features at a Glance
 
-### 1. Intelligent Formatter
-Say goodbye to manual spacing. The robust AST-based formatter parses your Gherkin syntax and aligns it automatically.
-- **Strict Flat Indentation**: Enforces consistent alignment where all steps (`Given`, `When`, `Then`, `And`) share the exact same starting column.
-- **Smart Table Alignment**: Data tables (Pipes `|`) dynamically pad themselves to align perfectly with the keyword of the preceding step.
-- **Auto-Casing**: Automatically capitalizes Gherkin keywords (`given` → `Given`) while supporting over 10 languages (English, Spanish, French, German, etc.).
-- **Tag Wrapping**: Keeps your files clean by intelligently wrapping long `@tags` lists that exceed 80 characters.
+| | Feature | Description |
+|---|---------|-------------|
+| 🎨 | **Intelligent Formatter** | Auto-indentation, table alignment, auto-casing, tag wrapping |
+| 🔍 | **Live Diagnostics** | Real-time syntax validation as you type |
+| 🧭 | **Go To Definition** | `Cmd+Click` to jump from `.feature` to Python step definitions |
+| 📊 | **Statistics Dashboard** | Visual metrics across your entire BDD workspace |
+| 🌐 | **i18n Support** | English, Spanish, French & German keywords |
+| 🎨 | **Syntax Highlighting** | Curated color palette for dark themes |
+| 📝 | **Snippets** | Autocompletion for `feature`, `scenario`, `outline`, `rule` |
+
+---
+
+## 🎨 Intelligent Formatter
+
+Say goodbye to manual spacing. The formatter parses your Gherkin syntax and aligns it automatically.
+
+- **Smart Table Alignment** — Tables dynamically align to the text of the preceding step keyword
+- **Auto-Casing** — Capitalizes keywords (`given` → `Given`) across 10+ languages
+- **Tag Wrapping** — Wraps long `@tag` lists beyond 80 characters
+- **Strict Flat Indentation** — Consistent alignment for all step types
 
 ![Formatter Demonstration](assets/formatter.webp)
 
-### 2. Live Diagnostics (Linter)
-Writing Gherkin should be error-free before you even run the tests.
-- Real-time syntax validation.
-- Detects missing colons (e.g., `Scenario` instead of `Scenario:`).
-- Highlights structural errors in red, ensuring your keywords are perfectly formed.
+---
+
+## 🔍 Live Diagnostics (Linter)
+
+The built-in linter monitors your `.feature` files in real-time. Errors are underlined immediately — no need to run your tests to catch syntax mistakes.
+
+- Detects missing colons (e.g., `Scenario` → `Scenario:`)
+- Flags misspelled or invalid Gherkin keywords
+- Integrates with VS Code's **Problems panel** and **gutter indicators**
 
 ![Linter Demonstration](assets/linter.webp)
 
-### 3. Editor Productivity & Navigation
-- **Go To Definition (Behave / Python)**: Instantly jump from a `.feature` file to the exact Python definition. `Cmd + Click` (or `F12`) on a step like `Given I login`, and VS Code will search your `steps/` folder to find the matching `@given('I login')` decorator.
-- **Native Outline View**: Navigating massive `.feature` files is now a breeze. The extension contributes a hierarchical tree view to VS Code's Outline panel, breaking down your document into `Feature` > `Rule` > `Scenario`.
+---
+
+## 🧭 Go To Definition
+
+`Cmd+Click` (or `F12`) on any step like `Given I login` to instantly jump to the matching Python decorator in your `steps/` folder.
+
+```gherkin
+# .feature file
+Given I login as "admin"
+```
+
+```python
+# steps/auth_steps.py  ← jumps here automatically
+@given('I login as "{user}"')
+def step_login(context, user):
+    ...
+```
 
 ![Go To Definition](assets/definition.webp)
 
-### 4. BDD Project Dashboard
-- **Statistics Webview**: Right-click anywhere in a `.feature` file (or use the Command Palette) to open the **Gherkin: Show Project Statistics** dashboard. 
-- Get instant, beautiful HTML metrics detailing how many Features, Rules, and Scenarios you have across your entire workspace, including unsaved buffers!
+---
+
+## 📊 BDD Project Dashboard
+
+Right-click inside any `.feature` file → **Gherkin: Show Project Statistics** to open an interactive HTML metrics dashboard across your entire workspace.
 
 ![Dashboard Demonstration](assets/dashboard.webp)
 
-### 5. Professional Syntax Highlighting
-Replaces glaring, standard colors with a curated palette that looks absolutely stunning on dark themes (like Dark+):
-- **Structure** (`Feature`, `Scenario`): Elegant Purple (`#C586C0`).
-- **Actions** (`Given`, `When`): Crisp Blue (`#569CD6`).
-- **Tags** (`@smoke`): Soft Cyan (`#4EC9B0`).
+---
+
+## 🎨 Syntax Highlighting
+
+Replaces VS Code's default colors with a curated palette that looks stunning on dark themes:
+
+| Category | Keywords | Color |
+|----------|----------|-------|
+| Structure | `Feature`, `Scenario`, `Rule` | Purple `#C586C0` |
+| Actions | `Given`, `When`, `Then` | Blue `#569CD6` |
+| Tags | `@smoke`, `@api` | Cyan `#4EC9B0` |
 
 ![Syntax Highlighting](assets/highlighting.webp)
 
@@ -74,26 +103,16 @@ Replaces glaring, standard colors with a curated palette that looks absolutely s
 
 ## ⚙️ Configuration
 
-Gherkin Beautifier works perfectly out-of-the-box, but you can tailor it to your team's style guide via your `settings.json`:
+Works perfectly out-of-the-box. Fine-tune it via `settings.json`:
 
 | Setting | Default | Description |
-|---------|---------|-------------|
-| `gherkinBeautifier.indentation.steps` | `4` | Number of spaces to indent all steps (`Given`, `When`, `Then`, `And`, `But`). |
-| `gherkinBeautifier.tables.alignToKeyword` | `true` | If enabled, tables dynamically pad their left border to match the text length of the preceding step. |
-| `gherkinBeautifier.emptyLines.betweenScenarios` | `1` | Enforces the exact number of blank lines between `Scenario` and `Rule` blocks. |
-| `gherkinBeautifier.tags.format` | `"wrap"` | Choose `"wrap"` to split long tags across lines, or `"singleLine"` to keep them contiguous. |
+|---------|:-------:|-------------|
+| `gherkinBeautifier.indentation.steps` | `4` | Spaces to indent steps |
+| `gherkinBeautifier.tables.alignToKeyword` | `true` | Align tables to preceding step text |
+| `gherkinBeautifier.emptyLines.betweenScenarios` | `1` | Blank lines between Scenario blocks |
+| `gherkinBeautifier.tags.format` | `"wrap"` | `"wrap"` or `"singleLine"` for long tag lists |
 
----
-
-## 🚀 Installation & Usage
-
-1. Open Visual Studio Code.
-2. Navigate to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`).
-3. Search for **"Gherkin Beautifier"**.
-4. Click **Install**.
-
-### Pro-Tip for Auto-Formatting
-To unleash the full power of the extension, we highly recommend enabling "Format on Save" in your VS Code settings specifically for Gherkin files:
+### Enable Format on Save
 
 ```json
 "[feature]": {
@@ -104,21 +123,39 @@ To unleash the full power of the extension, we highly recommend enabling "Format
 
 ---
 
-## 💡 Future Roadmap
+## 🚀 Installation
 
-We are constantly innovating. Here's a sneak peek of what's coming:
-- **Test Explorer Integration**: Run specific scenarios with a "Play" button directly from the editor.
-- **IntelliSense Autocomplete**: Dropdown suggestions for all available Python steps as you type.
-- **Quick Fixes**: Automatically generate missing Python step snippets with `Cmd + .`.
+1. Open VS Code and navigate to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+2. Search for **"Gherkin Beautifier"**
+3. Click **Install**
+
+Or install from a `.vsix` file:
+```bash
+code --install-extension gherkin-beautifier-1.5.0.vsix
+```
+
+---
+
+## 🗺️ Roadmap
+
+| Status | Feature |
+|--------|---------|
+| 🔜 | **Test Explorer** — Run scenarios with a Play button directly from the editor |
+| 🔜 | **IntelliSense Autocomplete** — Step suggestions as you type |
+| 🔜 | **Quick Fixes** — Auto-generate missing Python step definitions with `Cmd+.` |
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelines, and how to submit Pull Requests.
+
+## 📄 License
+
+MIT © [Carlos Camara](https://github.com/carlos-camara)
 
 ---
 
 <div align="center">
-  Crafted with by <strong>Carlos Camara</strong>
+  <sub>Crafted by <a href="https://github.com/carlos-camara"><strong>Carlos Camara</strong></a></sub>
 </div>
-
-## Contributing
-We welcome contributions from the community. Please review [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed instructions on how to set up the repository locally, run the comprehensive test suite, build the `.vsix` package from source, and submit Pull Requests.
-
-## License
-This project is open-source and licensed under the MIT License. See the [LICENSE](./LICENSE) file for full details.
