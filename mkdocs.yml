@@ -65,7 +65,7 @@ nav:
       - Statistics Dashboard: features/statistics.md
       - Syntax Highlighting: features/highlighting.md
       - Snippets: features/snippets.md
-  - Architecture: architecture.md
+  - Architecture: ARCHITECTURE.md
   - Community:
       - Contributing: contributing.md
       - Code of Conduct: code_of_conduct.md

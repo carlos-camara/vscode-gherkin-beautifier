@@ -22,4 +22,4 @@ The dashboard scans your entire workspace and displays:
 
 The dashboard is rendered as an interactive **HTML Webview** inside VS Code. It parses all `.feature` files in the workspace (including unsaved buffers) and generates a beautiful, responsive report.
 
-![Dashboard Demonstration](../../assets/dashboard.webp)
+![Dashboard Demonstration](../assets/dashboard.webp)
