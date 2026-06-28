@@ -1,5 +1,10 @@
 # Gherkin Beautifier for VS Code
 
+[![🛡️ Lint](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml/badge.svg)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml)
+[![📦 Release](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/release.yml/badge.svg)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/release.yml)
+[![🌐 Docs](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/pages.yml/badge.svg)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/pages.yml)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/carloscamara.vscode-gherkin-beautifier?label=VS%20Marketplace&color=0078d7)](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 A comprehensive, highly professional formatting extension for Visual Studio Code designed to format, align, and organize Gherkin (`.feature`) files. It ensures that your Behavioral Driven Development (BDD) documentation remains clean, readable, and standardized across your entire team.
 
@@ -109,7 +114,7 @@ We are constantly innovating. Here's a sneak peek of what's coming:
 ---
 
 <div align="center">
-  Crafted with ❤️ by <strong>Carlos Camara</strong>
+  Crafted with by <strong>Carlos Camara</strong>
 </div>
 
 ## Contributing
