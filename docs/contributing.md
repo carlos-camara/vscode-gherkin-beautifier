@@ -6,7 +6,7 @@ Thank you for your interest in contributing to **Gherkin Beautifier**! This docu
 
 ## Architecture Overview
 
-The extension is written in **TypeScript** and uses the native **VS Code Extension API**. See the full [Architecture](architecture.md) documentation for details.
+The extension is written in **TypeScript** and uses the native **VS Code Extension API**. See the full [Architecture](ARCHITECTURE.md) documentation for details.
 
 ## Local Setup
 

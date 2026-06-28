@@ -32,4 +32,4 @@ The provider recognizes all standard Behave/Cucumber Python decorators:
 - Python step files must be in a `steps/` directory (any depth)
 - Decorators must use `@given`, `@when`, `@then`, or `@step`
 
-![Go To Definition](../../assets/definition.webp)
+![Go To Definition](../assets/definition.webp)
