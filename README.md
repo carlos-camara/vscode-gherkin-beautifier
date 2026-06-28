@@ -1,59 +1,120 @@
 <div align="center">
-  <img src="assets/logo.png" alt="Gherkin Beautifier Logo" width="96" />
-  <h1>Gherkin Beautifier</h1>
-  <p><strong>The ultimate formatting & productivity suite for Gherkin and BDD inside VS Code.</strong></p>
+  <img src="assets/logo.png" alt="Gherkin Beautifier Logo" width="100" /><br/><br/>
 
-  [![Lint](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml)
-  [![Release](https://img.shields.io/badge/Release-v1.5.0-brightgreen)](https://github.com/carlos-camara/vscode-gherkin-beautifier/releases)
-  [![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://carlos-camara.github.io/vscode-gherkin-beautifier/)
-  [![VS Code Marketplace](https://img.shields.io/badge/VS%20Marketplace-v1.5.0-0078d7)](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+  <h1>Gherkin Beautifier</h1>
+  <p><em>The professional formatting & productivity suite for Gherkin <code>.feature</code> files in VS Code.</em></p>
+
+  <p>
+    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml">
+      <img src="https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml/badge.svg?branch=main" alt="Lint" />
+    </a>
+    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/releases">
+      <img src="https://img.shields.io/badge/Release-v1.5.0-brightgreen" alt="Release v1.5.0" />
+    </a>
+    <a href="https://carlos-camara.github.io/vscode-gherkin-beautifier/">
+      <img src="https://img.shields.io/badge/Docs-GitHub%20Pages-blue" alt="Documentation" />
+    </a>
+    <a href="https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier">
+      <img src="https://img.shields.io/badge/VS%20Marketplace-v1.5.0-0078d7" alt="VS Code Marketplace" />
+    </a>
+    <a href="./LICENSE">
+      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
+    </a>
+  </p>
+
+  <p>
+    <a href="https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier"><strong>⚡ Install</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://carlos-camara.github.io/vscode-gherkin-beautifier/"><strong>📖 Docs</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=bug_report.yml"><strong>🐛 Bug</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=feature_request.yml"><strong>💡 Feature</strong></a>
+    &nbsp;·&nbsp;
+    <a href="./CHANGELOG.md"><strong>📋 Changelog</strong></a>
+  </p>
 </div>
 
 ---
 
-## What is Gherkin Beautifier?
+**Gherkin Beautifier** transforms chaotic, hand-edited `.feature` files into perfectly aligned, professionally formatted BDD specifications — in milliseconds. Built natively for VS Code, it integrates directly with the editor's formatting API, linter, and navigation system.
 
-**Gherkin Beautifier** is a meticulously crafted VS Code extension for teams using Behavior-Driven Development (BDD). It transforms messy `.feature` files into perfectly aligned, readable, and deeply integrated specifications — with zero configuration required.
-
-Works seamlessly with **Cucumber**, **Behave**, **SpecFlow**, and any other Gherkin-based BDD framework.
+Works with any Gherkin-based framework: **Cucumber** · **Behave** · **SpecFlow** · **Karate** · **pytest-bdd**
 
 ---
 
-## ✨ Features at a Glance
+## ✨ What's inside
 
 | | Feature | Description |
-|---|---------|-------------|
-| 🎨 | **Intelligent Formatter** | Auto-indentation, table alignment, auto-casing, tag wrapping |
-| 🔍 | **Live Diagnostics** | Real-time syntax validation as you type |
-| 🧭 | **Go To Definition** | `Cmd+Click` to jump from `.feature` to Python step definitions |
-| 📊 | **Statistics Dashboard** | Visual metrics across your entire BDD workspace |
-| 🌐 | **i18n Support** | English, Spanish, French & German keywords |
-| 🎨 | **Syntax Highlighting** | Curated color palette for dark themes |
-| 📝 | **Snippets** | Autocompletion for `feature`, `scenario`, `outline`, `rule` |
+|:---:|---------|-------------|
+| 🎨 | **Formatter** | Auto-indent, table alignment, auto-casing, tag wrapping |
+| 🔍 | **Live Linter** | Real-time syntax errors before you run a single test |
+| 🧭 | **Go To Definition** | Jump from `.feature` steps to Python implementations |
+| 📊 | **Stats Dashboard** | Beautiful HTML metrics for your entire BDD workspace |
+| 💡 | **Syntax Highlighting** | Curated VS Code color palette for dark themes |
+| 📝 | **Snippets** | Instant scaffolding for `feature`, `scenario`, `outline`, `rule` |
+| 🌐 | **i18n** | Format keywords in English, Spanish, French & German |
 
 ---
 
-## 🎨 Intelligent Formatter
+## 🎨 Formatter
 
-Say goodbye to manual spacing. The formatter parses your Gherkin syntax and aligns it automatically.
+Press `Shift+Alt+F` — your messy feature file becomes clean and professional instantly.
 
-- **Smart Table Alignment** — Tables dynamically align to the text of the preceding step keyword
-- **Auto-Casing** — Capitalizes keywords (`given` → `Given`) across 10+ languages
-- **Tag Wrapping** — Wraps long `@tag` lists beyond 80 characters
-- **Strict Flat Indentation** — Consistent alignment for all step types
+**Before**
+
+```gherkin
+feature: user authentication
+@smoke @regression @login @security
+given i am on the login page
+when i enter "admin" as username
+and i enter "secret" as password
+then i should be redirected to dashboard
+  |field  |value |
+  |user   |admin |
+```
+
+**After**
+
+```gherkin
+Feature: User Authentication
+
+    @login @regression @security
+    @smoke
+    Scenario: Successful login
+        Given I am on the login page
+        When  I enter "admin" as username
+        And   I enter "secret" as password
+        Then  I should be redirected to dashboard
+              | field | value |
+              | user  | admin |
+```
+
+<details>
+<summary>See all formatting rules →</summary>
+
+| Rule | Behavior |
+|------|----------|
+| **Keyword casing** | `given` → `Given`, `feature` → `Feature` across 10+ languages |
+| **Step indentation** | All steps align to the same column (configurable, default 4 spaces) |
+| **Table alignment** | Pipe tables dynamically pad to align with the preceding step keyword |
+| **Tag wrapping** | Long `@tag` chains split across lines at 80 characters |
+| **Blank lines** | Enforces consistent spacing between `Scenario` / `Rule` blocks |
+
+</details>
 
 ![Formatter Demonstration](assets/formatter.webp)
 
 ---
 
-## 🔍 Live Diagnostics (Linter)
+## 🔍 Live Linter
 
-The built-in linter monitors your `.feature` files in real-time. Errors are underlined immediately — no need to run your tests to catch syntax mistakes.
+Catch mistakes the moment you type them — no test run required.
 
-- Detects missing colons (e.g., `Scenario` → `Scenario:`)
-- Flags misspelled or invalid Gherkin keywords
-- Integrates with VS Code's **Problems panel** and **gutter indicators**
+- **Missing colons** → `Scenario` flagged, `Scenario:` accepted
+- **Invalid keywords** → typos like `Givne` or `Wen` highlighted immediately
+- **Problems panel** integration → `Ctrl+Shift+M` / `Cmd+Shift+M`
+- **Gutter indicators** → red marks in the scroll bar for quick scanning
 
 ![Linter Demonstration](assets/linter.webp)
 
@@ -61,63 +122,89 @@ The built-in linter monitors your `.feature` files in real-time. Errors are unde
 
 ## 🧭 Go To Definition
 
-`Cmd+Click` (or `F12`) on any step like `Given I login` to instantly jump to the matching Python decorator in your `steps/` folder.
+`Cmd+Click` (macOS) or `Ctrl+Click` (Windows/Linux) on any Gherkin step to jump directly to its Python implementation.
 
 ```gherkin
-# .feature file
-Given I login as "admin"
+# features/login.feature
+Given I login as "admin"         ← Cmd+Click
 ```
 
 ```python
-# steps/auth_steps.py  ← jumps here automatically
+# steps/auth_steps.py            ← lands here instantly
 @given('I login as "{user}"')
 def step_login(context, user):
     ...
 ```
 
+> Works with **Behave** step decorators (`@given`, `@when`, `@then`, `@step`) in any `steps/` subdirectory.
+
 ![Go To Definition](assets/definition.webp)
 
 ---
 
-## 📊 BDD Project Dashboard
+## 📊 Statistics Dashboard
 
-Right-click inside any `.feature` file → **Gherkin: Show Project Statistics** to open an interactive HTML metrics dashboard across your entire workspace.
+**Right-click** inside any `.feature` file → *Gherkin: Show Project Statistics*, or open it from the Command Palette (`Ctrl+Shift+P`).
+
+Get a live HTML report across your entire workspace:
+
+| Metric | What it counts |
+|--------|---------------|
+| Features | All `Feature:` blocks |
+| Rules | All `Rule:` blocks |
+| Scenarios | All `Scenario:` and `Scenario Outline:` blocks |
+| Files | Total `.feature` files scanned, including unsaved buffers |
 
 ![Dashboard Demonstration](assets/dashboard.webp)
 
 ---
 
-## 🎨 Syntax Highlighting
+## 💡 Syntax Highlighting
 
-Replaces VS Code's default colors with a curated palette that looks stunning on dark themes:
+A hand-tuned color palette designed for VS Code dark themes. Every Gherkin token gets a distinct, readable color.
 
-| Category | Keywords | Color |
-|----------|----------|-------|
-| Structure | `Feature`, `Scenario`, `Rule` | Purple `#C586C0` |
-| Actions | `Given`, `When`, `Then` | Blue `#569CD6` |
-| Tags | `@smoke`, `@api` | Cyan `#4EC9B0` |
+| Token | Color | Preview |
+|-------|-------|---------|
+| `Feature`, `Scenario`, `Rule`, `Background` | Purple `#C586C0` | Structure |
+| `Given`, `When`, `Then`, `And`, `But` | Blue `#569CD6` | Actions |
+| `@smoke`, `@api`, `@wip` | Cyan `#4EC9B0` | Tags |
+| `"""` docstrings | Orange `#CE9178` | Strings |
 
 ![Syntax Highlighting](assets/highlighting.webp)
 
 ---
 
+## ⌨️ Keyboard Shortcuts
+
+| Action | macOS | Windows / Linux |
+|--------|:-----:|:---------------:|
+| Format document | `Shift+Alt+F` | `Shift+Alt+F` |
+| Go To Definition | `Cmd+Click` / `F12` | `Ctrl+Click` / `F12` |
+| Show Statistics | Command Palette | Command Palette |
+| Format on right-click | Context Menu | Context Menu |
+
+---
+
 ## ⚙️ Configuration
 
-Works perfectly out-of-the-box. Fine-tune it via `settings.json`:
+Works perfectly out-of-the-box. Fine-tune via `settings.json`:
 
 | Setting | Default | Description |
 |---------|:-------:|-------------|
-| `gherkinBeautifier.indentation.steps` | `4` | Spaces to indent steps |
-| `gherkinBeautifier.tables.alignToKeyword` | `true` | Align tables to preceding step text |
-| `gherkinBeautifier.emptyLines.betweenScenarios` | `1` | Blank lines between Scenario blocks |
-| `gherkinBeautifier.tags.format` | `"wrap"` | `"wrap"` or `"singleLine"` for long tag lists |
+| `gherkinBeautifier.indentation.steps` | `4` | Spaces to indent step lines |
+| `gherkinBeautifier.tables.alignToKeyword` | `true` | Align pipe tables to the preceding step column |
+| `gherkinBeautifier.emptyLines.betweenScenarios` | `1` | Blank lines between `Scenario` / `Rule` blocks |
+| `gherkinBeautifier.tags.format` | `"wrap"` | `"wrap"` splits at 80 chars · `"singleLine"` keeps on one line |
 
-### Enable Format on Save
+**Enable Format on Save (recommended):**
 
-```json
-"[feature]": {
+```jsonc
+// .vscode/settings.json
+{
+  "[feature]": {
     "editor.defaultFormatter": "carloscamara.vscode-gherkin-beautifier",
     "editor.formatOnSave": true
+  }
 }
 ```
 
@@ -125,11 +212,19 @@ Works perfectly out-of-the-box. Fine-tune it via `settings.json`:
 
 ## 🚀 Installation
 
-1. Open VS Code and navigate to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`)
-2. Search for **"Gherkin Beautifier"**
-3. Click **Install**
+**Via VS Code Marketplace** *(recommended)*
 
-Or install from a `.vsix` file:
+1. Open VS Code → Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+2. Search **"Gherkin Beautifier"** and click **Install**
+
+**Via CLI:**
+
+```bash
+code --install-extension carloscamara.vscode-gherkin-beautifier
+```
+
+**Via `.vsix` file:**
+
 ```bash
 code --install-extension gherkin-beautifier-1.5.0.vsix
 ```
@@ -138,29 +233,38 @@ code --install-extension gherkin-beautifier-1.5.0.vsix
 
 ## 🗺️ Roadmap
 
-| Status | Feature |
-|--------|---------|
-| 🔜 | **Test Explorer** — Run scenarios with a Play button directly from the editor |
-| 🔜 | **IntelliSense Autocomplete** — Step suggestions as you type |
-| 🔜 | **Quick Fixes** — Auto-generate missing Python step definitions with `Cmd+.` |
+| Status | Feature | Notes |
+|:------:|---------|-------|
+| ✅ | Native Formatter | AST-based, `Shift+Alt+F` |
+| ✅ | Live Linter | Real-time diagnostics |
+| ✅ | Go To Definition | Behave / Python |
+| ✅ | Statistics Dashboard | HTML Webview |
+| ✅ | Syntax Highlighting | Dark theme palette |
+| 🔜 | **Test Explorer** | ▶ Run scenarios from the editor gutter |
+| 🔜 | **IntelliSense** | Step autocomplete as you type |
+| 🔜 | **Quick Fixes** | Auto-generate missing Python step stubs |
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelines, and how to submit Pull Requests.
+All contributions are welcome — bug reports, feature requests, documentation, or code.
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
 
 ## 📄 License
 
-MIT © [Carlos Camara](https://github.com/carlos-camara)
+[MIT](./LICENSE) © [Carlos Camara](https://github.com/carlos-camara)
 
 ---
 
 <div align="center">
-
-  📖 [Documentation](https://carlos-camara.github.io/vscode-gherkin-beautifier/) &nbsp;·&nbsp;
-  🐛 [Report a Bug](https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=bug_report.yml) &nbsp;·&nbsp;
-  💡 [Request a Feature](https://github.com/carlos-camara/vscode-gherkin-beautifier/issues/new?template=feature_request.yml) &nbsp;·&nbsp;
-  📋 [Changelog](./CHANGELOG.md)
-
+  <a href="https://carlos-camara.github.io/vscode-gherkin-beautifier/">📖 Documentation</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/issues">🐛 Issues</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/discussions">💬 Discussions</a>
+  &nbsp;·&nbsp;
+  <a href="./CHANGELOG.md">📋 Changelog</a>
+  &nbsp;·&nbsp;
+  <a href="https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier">🛒 Marketplace</a>
 </div>
