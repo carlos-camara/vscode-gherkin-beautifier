@@ -5,20 +5,20 @@
   <p><em>The professional formatting & productivity suite for Gherkin <code>.feature</code> files in VS Code.</em></p>
 
   <p>
-    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml">
-      <img src="https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml/badge.svg?branch=main" alt="Lint" />
-    </a>
-    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/releases">
-      <img src="https://img.shields.io/badge/Release-v1.5.0-brightgreen" alt="Release v1.5.0" />
-    </a>
-    <a href="https://carlos-camara.github.io/vscode-gherkin-beautifier/">
-      <img src="https://img.shields.io/badge/Docs-GitHub%20Pages-blue" alt="Documentation" />
+    <a href="https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier">
+      <img src="https://img.shields.io/visual-studio-marketplace/v/carloscamara.vscode-gherkin-beautifier?style=for-the-badge&logo=visualstudiocode&logoColor=white&label=Marketplace&color=0078d7" alt="VS Code Marketplace" />
     </a>
     <a href="https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-beautifier">
-      <img src="https://img.shields.io/badge/VS%20Marketplace-v1.5.0-0078d7" alt="VS Code Marketplace" />
+      <img src="https://img.shields.io/visual-studio-marketplace/i/carloscamara.vscode-gherkin-beautifier?style=for-the-badge&logo=visualstudiocode&logoColor=white&label=Installs&color=blue" alt="Installs" />
+    </a>
+    <a href="https://github.com/carlos-camara/vscode-gherkin-beautifier/actions/workflows/lint.yml">
+      <img src="https://img.shields.io/github/actions/workflow/status/carlos-camara/vscode-gherkin-beautifier/lint.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Lint" alt="Lint" />
+    </a>
+    <a href="https://carlos-camara.github.io/vscode-gherkin-beautifier/">
+      <img src="https://img.shields.io/badge/Docs-MkDocs-purple?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Documentation" />
     </a>
     <a href="./LICENSE">
-      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
+      <img src="https://img.shields.io/github/license/carlos-camara/vscode-gherkin-beautifier?style=for-the-badge&color=yellow" alt="License: MIT" />
     </a>
   </p>
 
