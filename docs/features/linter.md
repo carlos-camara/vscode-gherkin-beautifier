@@ -22,4 +22,4 @@ Diagnostics appear in:
 - **Problems panel** — `Ctrl+Shift+M` / `Cmd+Shift+M`
 - **Minimap** — Red highlights for quick scanning
 
-![Linter Demonstration](../../assets/linter.webp)
+![Linter Demonstration](../assets/linter.webp)

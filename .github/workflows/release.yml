@@ -29,7 +29,9 @@ jobs:
         run: npm run compile
 
       - name: 📦 Package VSIX
-        run: npx -y @vscode/vsce package --out gherkin-beautifier-${GITHUB_REF_NAME#v}.vsix
+        run: >
+          npx -y @vscode/vsce package
+          --out "gherkin-beautifier-${GITHUB_REF_NAME#v}.vsix"
 
       - name: 🚀 Create GitHub Release
         uses: softprops/action-gh-release@v2

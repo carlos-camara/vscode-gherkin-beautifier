@@ -5,7 +5,6 @@
   - changed-files:
       - any-glob-to-any-file:
           - '.github/**'
-          - '.husky/**'
 
 'dependencies':
   - changed-files:
@@ -25,7 +24,6 @@
           - 'test/**'
           - '**/*.test.ts'
           - '**/*.spec.ts'
-          - 'test.feature'
 
 'core':
   - changed-files:

@@ -38,4 +38,4 @@ Fully supports formatting in **English**, **Spanish**, **French**, and **German*
 | Then | Entonces | Alors | Dann |
 | Scenario | Escenario | Scénario | Szenario |
 
-![Formatter Demonstration](../../assets/formatter.webp)
+![Formatter Demonstration](../assets/formatter.webp)

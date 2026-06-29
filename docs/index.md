@@ -1,7 +1,7 @@
 # Gherkin Beautifier
 
 <div align="center">
-  <img src="../assets/logo.png" alt="Gherkin Beautifier Logo" width="128" />
+  <img src="assets/logo.png" alt="Gherkin Beautifier Logo" width="128" />
   <p><em>The ultimate, professional formatting and productivity suite for Gherkin and BDD inside VS Code.</em></p>
 </div>
 
