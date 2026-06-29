@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Project Analytics V6 (Omega Squeeze)**: Completely redesigned the `Gherkin: Show Project Statistics` dashboard with a premium glassmorphism interface, CSS masonry layouts, and animated dynamic numbers.
+- **Scenario Intelligence**: Tracks vocabulary richness, average step conciseness, data density, and actively flags the "Most Complex Scenario" in your suite.
+- **Step Execution Breakdown**: Real-time progress bars charting the distribution of Given, When, Then, And/But usages.
+- **Behavioral Archetypes**: Scans step vocabulary to classify your project into UI, API, and DB operations.
+- **Expandable Metrics**: Added interactive UI for Top Tags and Top Repeated Steps, allowing text expansion with a click.
+- **Gherkin Quality Score (GQS)**: Added a proprietary algorithm to evaluate code quality based on BG Reuse, Tables, Comments, and Complexity penalties.
+- **Automation ROI Tracking**: Added a new metric to calculate the estimated manual hours saved by your automated tests, using the exact number of executable permutations.
+
 ## [1.6.0] - 2026-06-29
 
 ### Added — Community & Open Source Infrastructure

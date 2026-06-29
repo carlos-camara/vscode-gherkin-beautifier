@@ -141,10 +141,14 @@ Get a live HTML report across your entire workspace:
 
 | Metric | What it counts |
 |--------|---------------|
-| Features | All `Feature:` blocks |
-| Rules | All `Rule:` blocks |
-| Scenarios | All `Scenario:` and `Scenario Outline:` blocks |
-| Files | Total `.feature` files scanned, including unsaved buffers |
+| 🥇 **Gherkin Quality Score (GQS)** | A 0-100 score analyzing BG Reuse, Tables, Comments, and Complexity |
+| 🚀 **Automation ROI** | Estimated manual hours saved by your automated tests |
+| 🎯 **Executable Tests** | Total Scenarios + Data Permutations (table rows) |
+| 🧠 **Scenario Intelligence** | Vocabulary richness, step conciseness, data density, and most complex scenario detection |
+| 🧩 **Behavioral Archetypes** | Real-time classification of UI vs API vs Database steps |
+| 📈 **Step Execution Breakdown** | Distribution of Given, When, Then, And/But steps across your project |
+| 🏆 **Top Tags & Steps** | Expandable leaderboard of the most frequently used tags and steps |
+| 📦 **Code Density** | Empty lines vs code lines for formatting health |
 
 ![Dashboard Demonstration](assets/dashboard.webp)
 
