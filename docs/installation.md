@@ -1,4 +1,4 @@
-# Installation
+# 🚀 Installation
 
 ## From the VS Code Marketplace
 
@@ -12,18 +12,17 @@
 If you have a pre-built `.vsix` package (e.g., from a GitHub Release):
 
 ```bash
-code --install-extension gherkin-beautifier-1.5.0.vsix
+code --install-extension vscode-gherkin-beautifier-1.6.0.vsix
 ```
 
-## Pro-Tip: Auto-Formatting
+!!! tip "Pro-Tip: Auto-Formatting"
+    To unleash the full power of the extension, enable **Format on Save** specifically for Gherkin files:
 
-To unleash the full power of the extension, enable **Format on Save** specifically for Gherkin files:
+    ```json
+    "[feature]": {
+        "editor.defaultFormatter": "carloscamara.vscode-gherkin-beautifier",
+        "editor.formatOnSave": true
+    }
+    ```
 
-```json
-"[feature]": {
-    "editor.defaultFormatter": "carloscamara.vscode-gherkin-beautifier",
-    "editor.formatOnSave": true
-}
-```
-
-Add this to your `.vscode/settings.json` or your global User Settings.
+    Add this to your `.vscode/settings.json` or your global User Settings.

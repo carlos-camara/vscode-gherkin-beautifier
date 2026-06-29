@@ -1,4 +1,4 @@
-# Snippets
+# 📝 Snippets
 
 Built-in autocompletion snippets for common Gherkin blocks.
 
@@ -11,11 +11,10 @@ Built-in autocompletion snippets for common Gherkin blocks.
 | `outline` | Scenario Outline | Outline with Examples table |
 | `rule` | Rule block | Rule with nested Scenario |
 
-## How to Use
-
-1. Open a `.feature` file
-2. Type a snippet prefix (e.g., `scenario`)
-3. Press **Tab** to expand
+!!! tip "How to Use"
+    1. Open a `.feature` file
+    2. Type a snippet prefix (e.g., `scenario`)
+    3. Press **Tab** to expand
 
 ## Example
 

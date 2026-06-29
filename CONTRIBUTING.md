@@ -51,7 +51,8 @@ To run the test suite:
 npm test
 ```
 
-> **Note**: Always ensure that all tests pass before submitting a Pull Request. If you are adding a new feature, please add a corresponding test case in the `test/` directory.
+> [!IMPORTANT]
+> Always ensure that all tests pass before submitting a Pull Request. If you are adding a new feature, please add a corresponding test case in the `test/` directory.
 
 ---
 

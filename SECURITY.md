@@ -8,12 +8,13 @@ Currently, the following versions of the extension receive security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.5.x   | :white_check_mark: |
-| < 1.5.0 | :x:                |
+| 1.6.x   | :white_check_mark: |
+| < 1.6.0 | :x:                |
 
 ## Reporting a Vulnerability
 
-If you believe you have found a security vulnerability, please do **not** open a public issue. Instead, follow our coordinated disclosure process:
+> [!CAUTION]
+> If you believe you have found a security vulnerability, please do **not** open a public issue. Instead, follow our coordinated disclosure process:
 
 1. **Contact**: Send a detailed report to the maintainer via email.
 2. **Information Required**:

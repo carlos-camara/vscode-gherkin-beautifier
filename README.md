@@ -126,6 +126,7 @@ def step_login(context, user):
     ...
 ```
 
+> [!TIP]
 > Works with **Behave** step decorators (`@given`, `@when`, `@then`, `@step`) in any `steps/` subdirectory.
 
 ![Go To Definition](assets/definition.webp)
@@ -216,7 +217,7 @@ code --install-extension carloscamara.vscode-gherkin-beautifier
 **Via `.vsix` file:**
 
 ```bash
-code --install-extension gherkin-beautifier-1.5.0.vsix
+code --install-extension vscode-gherkin-beautifier-1.6.0.vsix
 ```
 
 ---

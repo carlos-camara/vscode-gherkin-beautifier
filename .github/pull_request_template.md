@@ -1,3 +1,6 @@
+> [!NOTE]
+> Thank you for contributing to Gherkin Beautifier! Please ensure you have read `CONTRIBUTING.md` before submitting this PR.
+
 # 🔍 Overview
 
 <!-- Provide a brief description of the changes in this PR -->

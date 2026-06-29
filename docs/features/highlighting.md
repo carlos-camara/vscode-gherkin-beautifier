@@ -1,4 +1,4 @@
-# Syntax Highlighting
+# 💡 Syntax Highlighting
 
 Replaces glaring, standard colors with a curated palette that looks stunning on dark themes.
 
@@ -14,8 +14,7 @@ Replaces glaring, standard colors with a curated palette that looks stunning on 
 
 The highlighter uses VS Code's `createTextEditorDecorationType` API to apply custom decorations. This means it works **on top of any theme** — including Dark+, Monokai, and One Dark Pro.
 
-## Automatic Activation
-
-Syntax highlighting activates automatically when you open any `.feature` or `.gherkin` file. No configuration needed.
+!!! note "Automatic Activation"
+    Syntax highlighting activates automatically when you open any `.feature` or `.gherkin` file. No configuration needed.
 
 ![Syntax Highlighting](../assets/highlighting.webp)
