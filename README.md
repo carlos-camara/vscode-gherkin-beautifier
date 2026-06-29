@@ -137,14 +137,16 @@ def step_login(context, user):
 
 **Right-click** inside any `.feature` file → *Gherkin: Show Project Statistics*, or open it from the Command Palette (`Ctrl+Shift+P`).
 
-Get a live HTML report across your entire workspace:
+Get a live HTML report across your entire workspace, now completely redesigned for **V4 Ultimate Squeeze**:
 
 | Metric | What it counts |
 |--------|---------------|
-| Features | All `Feature:` blocks |
-| Rules | All `Rule:` blocks |
-| Scenarios | All `Scenario:` and `Scenario Outline:` blocks |
-| Files | Total `.feature` files scanned, including unsaved buffers |
+| 🥇 **Gherkin Quality Score (GQS)** | A 0-100 score analyzing Reusability, Parametrization, Documentation, and Complexity |
+| 🚀 **Automation ROI** | Estimated manual hours saved by your automated tests |
+| 🎯 **Executable Tests** | Total Scenarios + Data Permutations (table rows) |
+| 🏆 **Top 5 Tags** | Leaderboard of the most frequently used tags in your workspace |
+| 📦 **Code Density** | Empty lines vs code lines for formatting health |
+| 🏗️ **Structural Blocks** | Features, Rules, Scenarios, and Backgrounds count |
 
 ![Dashboard Demonstration](assets/dashboard.webp)
 

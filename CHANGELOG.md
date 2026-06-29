@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Project Analytics V4 (Ultimate Squeeze)**: Completely redesigned the `Gherkin: Show Project Statistics` dashboard with a premium glassmorphism interface and animated dynamic numbers.
+- **Gherkin Quality Score (GQS)**: Added a proprietary algorithm to evaluate code quality based on Reusability (Backgrounds), Parametrization (Examples), Documentation (Comments), and Complexity (Avg Steps per Scenario).
+- **Automation ROI Tracking**: Added a new metric to calculate the estimated manual hours saved by your automated tests, using the exact number of executable permutations.
+- **Tags Intelligence**: Added in-memory tracking of all tags to display a "Top 5 Most Used Tags" leaderboard.
+- **Density Metrics**: The dashboard now calculates the exact line density of your feature files, checking empty lines vs code lines.
+
 ## [1.6.0] - 2026-06-29
 
 ### Added — Community & Open Source Infrastructure
