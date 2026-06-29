@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-29
+
 ### Added — Community & Open Source Infrastructure
 - **Issue Templates**: Added `bug_report.yml` (with Gherkin-specific fields and VS Code version) and `feature_request.yml` via GitHub Issue Forms.
 - **Pull Request Template**: Added `pull_request_template.md` with testing matrix tailored for VS Code extension development.
@@ -34,8 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`src/linter.ts`**: Removed unused `inTable` variable.
 - **`src/outline.ts`**: Prefixed unused `_token` param, narrowed return type to `DocumentSymbol[]`.
 - **`src/statistics.ts`**: Prefixed unused `_context` parameter.
-- **`README.md`**: Complete rewrite with modern layout, feature showcase with GIF/PNG demos, configuration table, roadmap section, and author footer.
-- **`CONTRIBUTING.md`**: Expanded with full architecture overview, local setup, testing guide, packaging steps, and PR workflow.
+- **`README.md` & `CONTRIBUTING.md`**: Complete rewrite with modern layout, feature showcase with GIF/PNG demos, configuration table, roadmap section, and author footer. Upgraded to use native GitHub Alerts (`> [!NOTE]`).
+- **Documentation (`docs/`)**: Upgraded all markdown pages to use MkDocs Admonitions (`!!! tip`) and visual emojis.
+- **Packaging**: Highly optimized `.vscodeignore` to exclude heavy `docs/` and `assets/` folders, dropping the `.vsix` payload size from 18 MB to 408 KB while maintaining functional URLs in the Marketplace.
+- **Testing**: Upgraded integration tests to run on Node 22 via `@vscode/test-electron@3.0.0`.
 
 ## [1.5.0] - 2026-06-25
 ### Added
