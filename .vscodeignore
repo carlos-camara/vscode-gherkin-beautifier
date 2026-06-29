@@ -11,3 +11,10 @@ vsc-extension-quickstart.md
 **/*.ts
 package-lock.json
 node_modules/**
+
+# Ignore heavy documentation and media assets to keep VSIX minimal
+docs/**
+assets/*.webp
+assets/*.mp4
+.github/**
+mkdocs.yml
