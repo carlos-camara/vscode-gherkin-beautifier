@@ -11,7 +11,7 @@ Navigate massive `.feature` files with ease using VS Code's native Outline panel
 
 The Outline panel displays a hierarchical tree:
 
-```
+```text
 📁 Feature: User Authentication
   📁 Rule: Login Flow
     📄 Scenario: Valid credentials

@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD046 -->
 # 🚀 Installation
 
 ## From the VS Code Marketplace

@@ -25,13 +25,13 @@ jobs:
           TAG="v$VERSION"
           if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
             echo "Tag $TAG already exists. Skipping release."
-            echo "is_new_version=false" >> $GITHUB_OUTPUT
+            echo "is_new_version=false" >> "$GITHUB_OUTPUT"
           else
             echo "New version detected. Creating tag $TAG."
-            git tag $TAG
-            git push origin $TAG
-            echo "is_new_version=true" >> $GITHUB_OUTPUT
-            echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+            echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 🟢 Setup Node.js

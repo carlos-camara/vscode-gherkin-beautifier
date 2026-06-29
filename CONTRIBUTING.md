@@ -6,7 +6,7 @@ Thank you for your interest in contributing to **Gherkin Beautifier**! This docu
 
 ## 🏗️ Architecture Overview
 
-The extension is written in **TypeScript** and uses the native **VS Code Extension API**. It is built with performance and maintainability in mind. 
+The extension is written in **TypeScript** and uses the native **VS Code Extension API**. It is built with performance and maintainability in mind.
 
 Here is a breakdown of the core modules located in the `src/` directory:
 
