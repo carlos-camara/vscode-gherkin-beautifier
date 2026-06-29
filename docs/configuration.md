@@ -1,4 +1,4 @@
-# Configuration
+# ⚙️ Configuration
 
 Gherkin Beautifier works perfectly out-of-the-box, but you can tailor it to your team's style guide via your `settings.json`.
 

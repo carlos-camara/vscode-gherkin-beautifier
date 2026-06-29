@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-beautifier",
   "displayName": "Gherkin Beautifier",
   "description": "A highly professional, native formatting extension for Visual Studio Code, meticulously designed to format and align Gherkin (.feature) files.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -36,8 +36,13 @@
     "languages": [
       {
         "id": "feature",
-        "extensions": [".feature"],
-        "aliases": ["Feature", "gherkin"]
+        "extensions": [
+          ".feature"
+        ],
+        "aliases": [
+          "Feature",
+          "gherkin"
+        ]
       }
     ],
     "configuration": {
@@ -55,7 +60,10 @@
         },
         "gherkinBeautifier.tags.format": {
           "type": "string",
-          "enum": ["wrap", "singleLine"],
+          "enum": [
+            "wrap",
+            "singleLine"
+          ],
           "default": "wrap",
           "description": "How to format long lists of tags. 'wrap' splits them across multiple lines (max 80 chars), 'singleLine' keeps them all on one line."
         },

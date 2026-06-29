@@ -1,4 +1,4 @@
-# Go To Definition
+# 🧭 Go To Definition
 
 Instantly jump from a `.feature` file to the exact Python step definition.
 
@@ -27,9 +27,8 @@ The provider recognizes all standard Behave/Cucumber Python decorators:
 @step('I perform an action')
 ```
 
-## Requirements
-
-- Python step files must be in a `steps/` directory (any depth)
-- Decorators must use `@given`, `@when`, `@then`, or `@step`
+!!! warning "Requirements"
+    - Python step files must be in a `steps/` directory (any depth)
+    - Decorators must use `@given`, `@when`, `@then`, or `@step`
 
 ![Go To Definition](../assets/definition.webp)

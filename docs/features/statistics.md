@@ -1,11 +1,10 @@
-# Statistics Dashboard
+# 📊 Statistics Dashboard
 
 Get instant, visual metrics about your entire BDD project.
 
-## How to Use
-
-- **Right-click** inside any `.feature` file → **Gherkin: Show Project Statistics**
-- Or open the **Command Palette** (`Cmd+Shift+P`) → **Gherkin: Show Project Statistics**
+!!! tip "How to Use"
+    - **Right-click** inside any `.feature` file → **Gherkin: Show Project Statistics**
+    - Or open the **Command Palette** (`Cmd+Shift+P`) → **Gherkin: Show Project Statistics**
 
 ## What It Shows
 

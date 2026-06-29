@@ -1,18 +1,17 @@
-# Outline Provider
+# 🌳 Outline Provider
 
 Navigate massive `.feature` files with ease using VS Code's native Outline panel.
 
-## How to Use
-
-1. Open any `.feature` file
-2. Open the **Outline** panel (sidebar or `Cmd+Shift+O` / `Ctrl+Shift+O`)
-3. Click any item to jump directly to it
+!!! tip "How to Use"
+    1. Open any `.feature` file
+    2. Open the **Outline** panel (sidebar or `Cmd+Shift+O` / `Ctrl+Shift+O`)
+    3. Click any item to jump directly to it
 
 ## Hierarchy
 
 The Outline panel displays a hierarchical tree:
 
-```
+```text
 📁 Feature: User Authentication
   📁 Rule: Login Flow
     📄 Scenario: Valid credentials
