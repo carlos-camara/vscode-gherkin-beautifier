@@ -3,8 +3,8 @@ name: 📦 Create Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 jobs:
   build:
@@ -15,27 +15,50 @@ jobs:
     steps:
       - name: 🔍 Checkout Code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 🏷️ Check Version and Create Tag
+        id: tag_check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
+            echo "Tag $TAG already exists. Skipping release."
+            echo "is_new_version=false" >> $GITHUB_OUTPUT
+          else
+            echo "New version detected. Creating tag $TAG."
+            git tag $TAG
+            git push origin $TAG
+            echo "is_new_version=true" >> $GITHUB_OUTPUT
+            echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+          fi
 
       - name: 🟢 Setup Node.js
+        if: steps.tag_check.outputs.is_new_version == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
 
       - name: 📦 Install Dependencies
+        if: steps.tag_check.outputs.is_new_version == 'true'
         run: npm ci
 
       - name: 🔨 Compile TypeScript
+        if: steps.tag_check.outputs.is_new_version == 'true'
         run: npm run compile
 
       - name: 📦 Package VSIX
-        run: >
-          npx -y @vscode/vsce package
-          --out "gherkin-beautifier-${GITHUB_REF_NAME#v}.vsix"
+        if: steps.tag_check.outputs.is_new_version == 'true'
+        run: |
+          npx -y @vscode/vsce package --out "gherkin-beautifier-${{ steps.tag_check.outputs.tag_name }}.vsix"
 
       - name: 🚀 Create GitHub Release
+        if: steps.tag_check.outputs.is_new_version == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag_check.outputs.tag_name }}
           files: gherkin-beautifier-*.vsix
           generate_release_notes: true
         env:
