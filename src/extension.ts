@@ -16,6 +16,7 @@ import { BehaveCodeLensProvider } from './codelens';
 import { showDiagnosticsReport } from './diagnostics';
 import { showOnboardingNotificationIfNeeded } from './onboarding';
 import { showCommandCenter } from './commandCenter';
+import { GherkinTestController } from './testController';
 
 import { ConfigurationService } from './configuration';
 
@@ -40,6 +41,9 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(configWatcher);
 
     discoveryService.configService = configService;
+
+    const testController = new GherkinTestController(configService);
+    context.subscriptions.push(testController);
 
     const formatter = new GherkinFormattingEditProvider(configService);
     const symbolProvider = new GherkinDocumentSymbolProvider();
