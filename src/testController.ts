@@ -171,18 +171,21 @@ export class GherkinTestController {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
         const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : path.dirname(uri.fsPath);
 
-        // Combine executable + args into a single shell command string.
-        // Using shell:true ensures the process inherits the user's shell environment
-        // (activated virtualenvs, PATH, etc.) exactly like the CodeLens "Run" button.
-        const allArgs = [...details.args, '-f', 'json', uri.fsPath];
-        const commandStr = [details.executable, ...allArgs].map(a => a.includes(' ') ? `"${a}"` : a).join(' ');
+        // resolveBehaveExecutionDetails already builds args exactly like the CodeLens "Run" button:
+        //   [baseArgs..., additionalArgs..., pathArg]
+        // pathArg is always the LAST element. We inject '-f json' right before it so
+        // behave sees: python -m behave [additionalArgs] -f json ./path/to/file.feature
+        const pathArg = details.args[details.args.length - 1];
+        const baseArgs = details.args.slice(0, -1);
+        const jsonArgs = [...baseArgs, '-f', 'json', pathArg];
 
-        logger.info(`[TestController] Spawning: ${commandStr} in ${cwd}`);
+        logger.info(`[TestController] Spawning: ${details.executable} ${jsonArgs.join(' ')} in ${cwd}`);
 
         return new Promise<void>((resolve) => {
-            const proc = child_process.spawn(commandStr, [], {
+            // Use the same executable as CodeLens — it's already the fully-resolved
+            // Python interpreter path (e.g. /path/to/.venv/bin/python), so shell:false is safe.
+            const proc = child_process.spawn(details.executable, jsonArgs, {
                 cwd,
-                shell: true,
                 env: { ...process.env }
             });
 
@@ -193,7 +196,7 @@ export class GherkinTestController {
             proc.stderr.on('data', chunk => stderr += chunk.toString());
 
             proc.on('error', (err) => {
-                const msg = `[TestController] Failed to start process: ${err.message}\nCommand: ${commandStr}\nCwd: ${cwd}`;
+                const msg = `[TestController] Failed to start process: ${err.message}\nCommand: ${details.executable} ${jsonArgs.join(' ')}\nCwd: ${cwd}`;
                 logger.error(msg);
                 vscode.window.showErrorMessage(`Gherkin PowerTools: Could not run Behave – ${err.message}. Check the Output panel.`);
                 // Mark all items in the file as errored
