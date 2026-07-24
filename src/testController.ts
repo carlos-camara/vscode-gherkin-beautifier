@@ -139,8 +139,13 @@ export class GherkinTestController {
             this.controller.items.forEach(test => queue.push(test));
         }
 
-        // We only support running full files or full workspaces for now to keep it simple,
-        // or we run specific files based on the include selection.
+        // Mark all queued items as enqueued so the tree shows a spinner
+        const markEnqueued = (item: vscode.TestItem) => {
+            run.enqueued(item);
+            item.children.forEach(child => markEnqueued(child));
+        };
+        queue.forEach(markEnqueued);
+
         const filesToRun = new Set<vscode.Uri>();
         const extractFiles = (item: vscode.TestItem) => {
             if (item.uri) { filesToRun.add(item.uri); }
@@ -166,10 +171,20 @@ export class GherkinTestController {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
         const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : path.dirname(uri.fsPath);
 
-        const args = [...details.args, '-f', 'json', uri.fsPath];
+        // Combine executable + args into a single shell command string.
+        // Using shell:true ensures the process inherits the user's shell environment
+        // (activated virtualenvs, PATH, etc.) exactly like the CodeLens "Run" button.
+        const allArgs = [...details.args, '-f', 'json', uri.fsPath];
+        const commandStr = [details.executable, ...allArgs].map(a => a.includes(' ') ? `"${a}"` : a).join(' ');
+
+        logger.info(`[TestController] Spawning: ${commandStr} in ${cwd}`);
 
         return new Promise<void>((resolve) => {
-            const proc = child_process.spawn(details.executable, args, { cwd });
+            const proc = child_process.spawn(commandStr, [], {
+                cwd,
+                shell: true,
+                env: { ...process.env }
+            });
 
             let stdout = '';
             let stderr = '';
@@ -177,28 +192,48 @@ export class GherkinTestController {
             proc.stdout.on('data', chunk => stdout += chunk.toString());
             proc.stderr.on('data', chunk => stderr += chunk.toString());
 
+            proc.on('error', (err) => {
+                const msg = `[TestController] Failed to start process: ${err.message}\nCommand: ${commandStr}\nCwd: ${cwd}`;
+                logger.error(msg);
+                vscode.window.showErrorMessage(`Gherkin PowerTools: Could not run Behave – ${err.message}. Check the Output panel.`);
+                // Mark all items in the file as errored
+                const fileItem = this.controller.items.get(uri.toString());
+                if (fileItem) {
+                    fileItem.children.forEach(feat => feat.children.forEach(sc => run.errored(sc, new vscode.TestMessage(msg))));
+                }
+                resolve();
+            });
+
             token.onCancellationRequested(() => {
                 proc.kill();
                 resolve();
             });
 
-            proc.on('close', () => {
+            proc.on('close', (code) => {
                 if (token.isCancellationRequested) return resolve();
                 
+                logger.info(`[TestController] Process closed with code ${code}. stdout length=${stdout.length} stderr=${stderr.substring(0, 500)}`);
+
                 try {
                     // Behave output can contain text before and after the JSON array
                     const jsonStart = stdout.indexOf('[');
                     const jsonEnd = stdout.lastIndexOf(']') + 1;
                     
-                    if (jsonStart !== -1 && jsonEnd !== -1) {
+                    if (jsonStart !== -1 && jsonEnd !== 0) {
                         const jsonStr = stdout.substring(jsonStart, jsonEnd);
                         const results = JSON.parse(jsonStr);
                         this.mapResultsToTestItems(uri, results, run);
                     } else {
-                        logger.error(`Could not find JSON array in Behave output. Stderr: ${stderr}`);
+                        const errorMsg = `Could not find JSON in Behave output.\nstdout: ${stdout.substring(0, 500)}\nstderr: ${stderr.substring(0, 500)}`;
+                        logger.error(`[TestController] ${errorMsg}`);
+                        // Mark all items as errored with a useful message
+                        const fileItem = this.controller.items.get(uri.toString());
+                        if (fileItem) {
+                            fileItem.children.forEach(feat => feat.children.forEach(sc => run.errored(sc, new vscode.TestMessage(errorMsg))));
+                        }
                     }
                 } catch (e) {
-                    logger.error(`Failed to parse Behave JSON output. Error: ${e}. Stderr: ${stderr}`);
+                    logger.error(`[TestController] Failed to parse Behave JSON output. Error: ${e}. Stderr: ${stderr}`);
                 }
                 resolve();
             });
