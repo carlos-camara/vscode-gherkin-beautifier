@@ -1,20 +1,32 @@
 import * as vscode from 'vscode';
 import { parseGherkin } from './parser';
 import { logger } from './logger';
-import { resolveBehaveExecutionDetails } from './execution';
-import * as child_process from 'child_process';
 import { ConfigurationService } from './configuration';
 import * as path from 'path';
 
+/** Extracts the scenario line number from a TestItem ID of the form `uri#scenario:LINE` */
+function extractLineFromId(id: string): number | undefined {
+    const match = id.match(/#scenario:(\d+)$/);
+    return match ? parseInt(match[1], 10) : undefined;
+}
+
+/** Returns whether a TestItem represents a scenario (has a line in its ID) */
+function isScenarioItem(item: vscode.TestItem): boolean {
+    return item.id.includes('#scenario:');
+}
+
+/** Returns whether a TestItem represents a file-level node */
+function isFileItem(item: vscode.TestItem): boolean {
+    return !item.id.includes('#');
+}
+
 export class GherkinTestController {
     private controller: vscode.TestController;
-    private configService: ConfigurationService;
     private fileWatcher?: vscode.FileSystemWatcher;
 
-    constructor(configService: ConfigurationService) {
-        this.configService = configService;
+    constructor(_configService: ConfigurationService) {
         this.controller = vscode.tests.createTestController('gherkin-tests', 'Gherkin / Behave');
-        
+
         this.controller.resolveHandler = async (item) => {
             if (!item) {
                 await this.discoverAllFilesInWorkspace();
@@ -23,11 +35,28 @@ export class GherkinTestController {
             }
         };
 
+        // --- Run profile: delegates to gherkinPowerTools.runScenario / runFeature ---
         this.controller.createRunProfile(
-            'Run Behave Tests',
+            '▶ Run',
             vscode.TestRunProfileKind.Run,
-            (request, token) => this.runHandler(request, token),
+            (request, token) => this.runHandler(request, token, 'run'),
             true
+        );
+
+        // --- Debug profile: delegates to gherkinPowerTools.debugScenario / debugFeature ---
+        this.controller.createRunProfile(
+            '🐞 Debug',
+            vscode.TestRunProfileKind.Debug,
+            (request, token) => this.runHandler(request, token, 'debug'),
+            true
+        );
+
+        // --- Edit & Run profile: delegates to runWithArgs prompt, then runs ---
+        this.controller.createRunProfile(
+            '$(edit) Edit & Run',
+            vscode.TestRunProfileKind.Run,
+            (request, token) => this.runHandler(request, token, 'edit'),
+            false
         );
 
         this.startWatchingWorkspace();
@@ -46,9 +75,7 @@ export class GherkinTestController {
     }
 
     private async discoverAllFilesInWorkspace() {
-        if (!vscode.workspace.workspaceFolders) {
-            return;
-        }
+        if (!vscode.workspace.workspaceFolders) { return; }
         for (const workspaceFolder of vscode.workspace.workspaceFolders) {
             const pattern = new vscode.RelativePattern(workspaceFolder, '**/*.feature');
             const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
@@ -60,9 +87,7 @@ export class GherkinTestController {
 
     private getOrCreateFile(uri: vscode.Uri): vscode.TestItem {
         const existing = this.controller.items.get(uri.toString());
-        if (existing) {
-            return existing;
-        }
+        if (existing) { return existing; }
         const file = this.controller.createTestItem(uri.toString(), path.basename(uri.fsPath), uri);
         this.controller.items.add(file);
         file.canResolveChildren = true;
@@ -70,41 +95,35 @@ export class GherkinTestController {
     }
 
     private async parseTestsInFileContents(fileItem: vscode.TestItem) {
-        if (!fileItem.uri) return;
-        
+        if (!fileItem.uri) { return; }
         try {
             const doc = await vscode.workspace.openTextDocument(fileItem.uri);
-            const text = doc.getText();
-            const { document } = await parseGherkin(text);
-            
-            // Clear existing children
+            const { document } = await parseGherkin(doc.getText());
             fileItem.children.replace([]);
-
-            if (!document || !document.feature) {
-                return;
-            }
+            if (!document?.feature) { return; }
 
             const feature = document.feature;
-            const featureId = `${fileItem.uri.toString()}#feature`;
-            const featureItem = this.controller.createTestItem(featureId, `Feature: ${feature.name}`, fileItem.uri);
-            
-            const startLine = feature.location.line - 1;
-            const startChar = feature.location.column ? feature.location.column - 1 : 0;
-            featureItem.range = new vscode.Range(startLine, startChar, startLine, startChar + 10);
-            
+            const featureItem = this.controller.createTestItem(
+                `${fileItem.uri.toString()}#feature`,
+                `Feature: ${feature.name}`,
+                fileItem.uri
+            );
+            const fLine = feature.location.line - 1;
+            featureItem.range = new vscode.Range(fLine, 0, fLine, 100);
             fileItem.children.add(featureItem);
 
             for (const child of feature.children) {
                 if (child.scenario) {
                     this.addScenario(featureItem, child.scenario, fileItem.uri);
                 } else if (child.rule) {
-                    const ruleId = `${fileItem.uri.toString()}#rule:${child.rule.name}`;
-                    const ruleItem = this.controller.createTestItem(ruleId, `Rule: ${child.rule.name}`, fileItem.uri);
+                    const ruleItem = this.controller.createTestItem(
+                        `${fileItem.uri.toString()}#rule:${child.rule.location.line}`,
+                        `Rule: ${child.rule.name}`,
+                        fileItem.uri
+                    );
                     const rLine = child.rule.location.line - 1;
-                    const rCol = child.rule.location.column ? child.rule.location.column - 1 : 0;
-                    ruleItem.range = new vscode.Range(rLine, rCol, rLine, rCol + 10);
+                    ruleItem.range = new vscode.Range(rLine, 0, rLine, 100);
                     featureItem.children.add(ruleItem);
-
                     for (const ruleChild of child.rule.children) {
                         if (ruleChild.scenario) {
                             this.addScenario(ruleItem, ruleChild.scenario, fileItem.uri);
@@ -118,179 +137,136 @@ export class GherkinTestController {
     }
 
     private addScenario(parentItem: vscode.TestItem, scenario: any, uri: vscode.Uri) {
-        const scenarioId = `${uri.toString()}#scenario:${scenario.location.line}`;
-        const name = scenario.name ? scenario.name : `Line ${scenario.location.line}`;
-        const scenarioItem = this.controller.createTestItem(scenarioId, `Scenario: ${name}`, uri);
-        
-        const line = scenario.location.line - 1;
-        const col = scenario.location.column ? scenario.location.column - 1 : 0;
-        scenarioItem.range = new vscode.Range(line, col, line, col + 10);
-        
+        const line = scenario.location.line;
+        const scenarioItem = this.controller.createTestItem(
+            `${uri.toString()}#scenario:${line}`,
+            `Scenario: ${scenario.name || `Line ${line}`}`,
+            uri
+        );
+        scenarioItem.range = new vscode.Range(line - 1, 0, line - 1, 100);
         parentItem.children.add(scenarioItem);
     }
 
-    private async runHandler(request: vscode.TestRunRequest, token: vscode.CancellationToken) {
+    private async runHandler(
+        request: vscode.TestRunRequest,
+        token: vscode.CancellationToken,
+        mode: 'run' | 'debug' | 'edit'
+    ) {
         const run = this.controller.createTestRun(request);
-        const queue: vscode.TestItem[] = [];
+
+        // Collect all leaf (scenario) items that should run
+        const scenarioItems: vscode.TestItem[] = [];
+        const fileItems: vscode.TestItem[] = [];
+
+        const collectItems = (item: vscode.TestItem) => {
+            if (isScenarioItem(item)) {
+                scenarioItems.push(item);
+            } else if (isFileItem(item)) {
+                fileItems.push(item);
+                // Also collect all scenario children
+                item.children.forEach(feat => feat.children.forEach(child => {
+                    if (isScenarioItem(child)) { scenarioItems.push(child); }
+                    else { child.children.forEach(sc => { if (isScenarioItem(sc)) { scenarioItems.push(sc); } }); }
+                }));
+            } else {
+                // Feature or Rule node: collect all scenario children
+                item.children.forEach(child => collectItems(child));
+            }
+        };
 
         if (request.include) {
-            request.include.forEach(test => queue.push(test));
+            request.include.forEach(item => collectItems(item));
         } else {
-            this.controller.items.forEach(test => queue.push(test));
+            this.controller.items.forEach(item => collectItems(item));
         }
 
-        // Mark all queued items as enqueued so the tree shows a spinner
-        const markEnqueued = (item: vscode.TestItem) => {
-            run.enqueued(item);
-            item.children.forEach(child => markEnqueued(child));
-        };
-        queue.forEach(markEnqueued);
+        // Mark them all as enqueued (shows spinner)
+        scenarioItems.forEach(item => run.enqueued(item));
 
-        const filesToRun = new Set<vscode.Uri>();
-        const extractFiles = (item: vscode.TestItem) => {
-            if (item.uri) { filesToRun.add(item.uri); }
-            item.children.forEach(extractFiles);
-        };
-        queue.forEach(extractFiles);
+        if (token.isCancellationRequested) {
+            run.end();
+            return;
+        }
 
-        for (const uri of filesToRun) {
+        // For "edit" mode: show the args prompt once before running
+        if (mode === 'edit') {
+            const firstUri = scenarioItems[0]?.uri || fileItems[0]?.uri;
+            if (firstUri) {
+                // The prompt updates memoryAdditionalArgs; then we fall through to 'run'
+                await vscode.commands.executeCommand(
+                    'gherkinPowerTools.runScenarioWithArgs',
+                    firstUri,
+                    undefined
+                );
+            }
+            run.end();
+            return;
+        }
+
+        // Execute each item using the same commands as CodeLens
+        for (const item of scenarioItems) {
             if (token.isCancellationRequested) { break; }
-            await this.runBehaveOnFile(uri, run, token);
+            if (!item.uri) { continue; }
+
+            const line = extractLineFromId(item.id);
+            run.started(item);
+
+            const taskDone = this.waitForTaskEnd(item.uri, line);
+
+            if (mode === 'debug') {
+                await vscode.commands.executeCommand(
+                    line !== undefined ? 'gherkinPowerTools.debugScenario' : 'gherkinPowerTools.debugFeature',
+                    item.uri,
+                    line
+                );
+            } else {
+                await vscode.commands.executeCommand(
+                    line !== undefined ? 'gherkinPowerTools.runScenario' : 'gherkinPowerTools.runFeature',
+                    item.uri,
+                    line
+                );
+            }
+
+            // Wait for the task to finish and get exit code
+            const exitCode = await taskDone;
+            if (exitCode === 0) {
+                run.passed(item);
+            } else if (exitCode !== null) {
+                run.failed(item, new vscode.TestMessage(`Behave exited with code ${exitCode}`));
+            }
+            // If exitCode is null it means the debug session ended (no exit code available)
+        }
+
+        // If no individual scenarios were run (feature-level), run at file level
+        if (scenarioItems.length === 0) {
+            for (const fileItem of fileItems) {
+                if (token.isCancellationRequested) { break; }
+                if (!fileItem.uri) { continue; }
+                await vscode.commands.executeCommand('gherkinPowerTools.runFeature', fileItem.uri);
+            }
         }
 
         run.end();
     }
 
-    private async runBehaveOnFile(uri: vscode.Uri, run: vscode.TestRun, token: vscode.CancellationToken) {
-        const details = await resolveBehaveExecutionDetails(uri, undefined, this.configService);
-        if (!details) {
-            logger.error(`Could not resolve behave execution for ${uri.fsPath}`);
-            return;
-        }
+    /**
+     * Returns a promise that resolves with the exit code when the next gherkin task finishes.
+     * Resolves with null for debug sessions.
+     */
+    private waitForTaskEnd(_uri: vscode.Uri, _line: number | undefined): Promise<number | null> {
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                taskDisposable?.dispose();
+                resolve(null);
+            }, 5 * 60 * 1000); // 5 minute safety timeout
 
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-        const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : path.dirname(uri.fsPath);
-
-        // resolveBehaveExecutionDetails already builds args exactly like the CodeLens "Run" button:
-        //   [baseArgs..., additionalArgs..., pathArg]
-        // pathArg is always the LAST element. We inject '-f json' right before it so
-        // behave sees: python -m behave [additionalArgs] -f json ./path/to/file.feature
-        const pathArg = details.args[details.args.length - 1];
-        const baseArgs = details.args.slice(0, -1);
-        const jsonArgs = [...baseArgs, '-f', 'json', pathArg];
-
-        logger.info(`[TestController] Spawning: ${details.executable} ${jsonArgs.join(' ')} in ${cwd}`);
-
-        return new Promise<void>((resolve) => {
-            // Use the same executable as CodeLens — it's already the fully-resolved
-            // Python interpreter path (e.g. /path/to/.venv/bin/python), so shell:false is safe.
-            const proc = child_process.spawn(details.executable, jsonArgs, {
-                cwd,
-                env: { ...process.env }
-            });
-
-            let stdout = '';
-            let stderr = '';
-
-            proc.stdout.on('data', chunk => stdout += chunk.toString());
-            proc.stderr.on('data', chunk => stderr += chunk.toString());
-
-            proc.on('error', (err) => {
-                const msg = `[TestController] Failed to start process: ${err.message}\nCommand: ${details.executable} ${jsonArgs.join(' ')}\nCwd: ${cwd}`;
-                logger.error(msg);
-                vscode.window.showErrorMessage(`Gherkin PowerTools: Could not run Behave – ${err.message}. Check the Output panel.`);
-                // Mark all items in the file as errored
-                const fileItem = this.controller.items.get(uri.toString());
-                if (fileItem) {
-                    fileItem.children.forEach(feat => feat.children.forEach(sc => run.errored(sc, new vscode.TestMessage(msg))));
+            const taskDisposable = vscode.tasks.onDidEndTaskProcess(e => {
+                if (e.execution.task.source === 'Gherkin PowerTools') {
+                    clearTimeout(timeout);
+                    taskDisposable.dispose();
+                    resolve(e.exitCode ?? null);
                 }
-                resolve();
-            });
-
-            token.onCancellationRequested(() => {
-                proc.kill();
-                resolve();
-            });
-
-            proc.on('close', (code) => {
-                if (token.isCancellationRequested) return resolve();
-                
-                logger.info(`[TestController] Process closed with code ${code}. stdout length=${stdout.length} stderr=${stderr.substring(0, 500)}`);
-
-                try {
-                    // Behave output can contain text before and after the JSON array
-                    const jsonStart = stdout.indexOf('[');
-                    const jsonEnd = stdout.lastIndexOf(']') + 1;
-                    
-                    if (jsonStart !== -1 && jsonEnd !== 0) {
-                        const jsonStr = stdout.substring(jsonStart, jsonEnd);
-                        const results = JSON.parse(jsonStr);
-                        this.mapResultsToTestItems(uri, results, run);
-                    } else {
-                        const errorMsg = `Could not find JSON in Behave output.\nstdout: ${stdout.substring(0, 500)}\nstderr: ${stderr.substring(0, 500)}`;
-                        logger.error(`[TestController] ${errorMsg}`);
-                        // Mark all items as errored with a useful message
-                        const fileItem = this.controller.items.get(uri.toString());
-                        if (fileItem) {
-                            fileItem.children.forEach(feat => feat.children.forEach(sc => run.errored(sc, new vscode.TestMessage(errorMsg))));
-                        }
-                    }
-                } catch (e) {
-                    logger.error(`[TestController] Failed to parse Behave JSON output. Error: ${e}. Stderr: ${stderr}`);
-                }
-                resolve();
             });
         });
-    }
-
-    private mapResultsToTestItems(uri: vscode.Uri, results: any[], run: vscode.TestRun) {
-        const fileItem = this.controller.items.get(uri.toString());
-        if (!fileItem) return;
-
-        // results is an array of features
-        for (const featureResult of results) {
-            const elements = featureResult.elements || [];
-            for (const element of elements) {
-                if (element.type === 'scenario') {
-                    // Behave JSON formatter uses "location": "file.feature:line"
-                    let line: number | undefined;
-                    if (element.location) {
-                        const parts = element.location.split(':');
-                        if (parts.length > 1) {
-                            line = parseInt(parts[parts.length - 1], 10);
-                        }
-                    } else if (element.line) {
-                        // Standard Cucumber format fallback
-                        line = element.line;
-                    }
-
-                    if (line !== undefined) {
-                        const scenarioItem = this.findScenarioItemByLine(fileItem, line);
-                        
-                        if (scenarioItem) {
-                            const status = element.status;
-                            if (status === 'passed') {
-                                run.passed(scenarioItem);
-                            } else if (status === 'failed') {
-                                run.failed(scenarioItem, new vscode.TestMessage('Scenario failed'));
-                            } else if (status === 'skipped') {
-                                run.skipped(scenarioItem);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private findScenarioItemByLine(item: vscode.TestItem, line: number): vscode.TestItem | undefined {
-        if (item.id.includes(`#scenario:${line}`)) {
-            return item;
-        }
-        for (const [_, child] of item.children) {
-            const found = this.findScenarioItemByLine(child, line);
-            if (found) return found;
-        }
-        return undefined;
     }
 }
