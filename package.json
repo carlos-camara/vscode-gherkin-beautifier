@@ -16,7 +16,9 @@
     "cucumber",
     "bdd",
     "behave",
-    "python"
+    "python",
+    "cucumberautocomplete",
+    "gherkin autocomplete"
   ],
   "publisher": "carloscamara",
   "author": "Carlos Camara",
