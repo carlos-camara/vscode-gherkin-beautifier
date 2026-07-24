@@ -186,11 +186,19 @@ export class GherkinTestController {
                 if (token.isCancellationRequested) return resolve();
                 
                 try {
-                    // Try to parse json output
-                    const results = JSON.parse(stdout);
-                    this.mapResultsToTestItems(uri, results, run);
+                    // Behave output can contain text before and after the JSON array
+                    const jsonStart = stdout.indexOf('[');
+                    const jsonEnd = stdout.lastIndexOf(']') + 1;
+                    
+                    if (jsonStart !== -1 && jsonEnd !== -1) {
+                        const jsonStr = stdout.substring(jsonStart, jsonEnd);
+                        const results = JSON.parse(jsonStr);
+                        this.mapResultsToTestItems(uri, results, run);
+                    } else {
+                        logger.error(`Could not find JSON array in Behave output. Stderr: ${stderr}`);
+                    }
                 } catch (e) {
-                    logger.error(`Failed to parse Behave JSON output. Stderr: ${stderr}`);
+                    logger.error(`Failed to parse Behave JSON output. Error: ${e}. Stderr: ${stderr}`);
                 }
                 resolve();
             });
@@ -206,17 +214,30 @@ export class GherkinTestController {
             const elements = featureResult.elements || [];
             for (const element of elements) {
                 if (element.type === 'scenario') {
-                    const line = element.line;
-                    const scenarioItem = this.findScenarioItemByLine(fileItem, line);
-                    
-                    if (scenarioItem) {
-                        const status = element.status;
-                        if (status === 'passed') {
-                            run.passed(scenarioItem);
-                        } else if (status === 'failed') {
-                            run.failed(scenarioItem, new vscode.TestMessage('Scenario failed'));
-                        } else if (status === 'skipped') {
-                            run.skipped(scenarioItem);
+                    // Behave JSON formatter uses "location": "file.feature:line"
+                    let line: number | undefined;
+                    if (element.location) {
+                        const parts = element.location.split(':');
+                        if (parts.length > 1) {
+                            line = parseInt(parts[parts.length - 1], 10);
+                        }
+                    } else if (element.line) {
+                        // Standard Cucumber format fallback
+                        line = element.line;
+                    }
+
+                    if (line !== undefined) {
+                        const scenarioItem = this.findScenarioItemByLine(fileItem, line);
+                        
+                        if (scenarioItem) {
+                            const status = element.status;
+                            if (status === 'passed') {
+                                run.passed(scenarioItem);
+                            } else if (status === 'failed') {
+                                run.failed(scenarioItem, new vscode.TestMessage('Scenario failed'));
+                            } else if (status === 'skipped') {
+                                run.skipped(scenarioItem);
+                            }
                         }
                     }
                 }
