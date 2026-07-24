@@ -35,14 +35,6 @@ export class GherkinTestController {
             }
         };
 
-        // --- Run profile: delegates to gherkinPowerTools.runScenario / runFeature ---
-        this.controller.createRunProfile(
-            '▶ Run',
-            vscode.TestRunProfileKind.Run,
-            (request, token) => this.runHandler(request, token, 'run'),
-            true
-        );
-
         // --- Debug profile: delegates to gherkinPowerTools.debugScenario / debugFeature ---
         this.controller.createRunProfile(
             '🐞 Debug',
@@ -56,7 +48,7 @@ export class GherkinTestController {
             '$(edit) Edit & Run',
             vscode.TestRunProfileKind.Run,
             (request, token) => this.runHandler(request, token, 'edit'),
-            false
+            true
         );
 
         this.startWatchingWorkspace();
@@ -138,13 +130,38 @@ export class GherkinTestController {
 
     private addScenario(parentItem: vscode.TestItem, scenario: any, uri: vscode.Uri) {
         const line = scenario.location.line;
+        const isOutline = scenario.keyword?.trim().toLowerCase().includes('outline');
+        const label = `${isOutline ? 'Scenario Outline' : 'Scenario'}: ${scenario.name || `Line ${line}`}`;
+
         const scenarioItem = this.controller.createTestItem(
             `${uri.toString()}#scenario:${line}`,
-            `Scenario: ${scenario.name || `Line ${line}`}`,
+            label,
             uri
         );
         scenarioItem.range = new vscode.Range(line - 1, 0, line - 1, 100);
         parentItem.children.add(scenarioItem);
+
+        // Expand each Examples table row as a child TestItem so they can be run individually
+        if (isOutline && scenario.examples) {
+            for (const examplesBlock of scenario.examples) {
+                const tableRows: any[] = examplesBlock.tableBody || [];
+                const headerCells: string[] = (examplesBlock.tableHeader?.cells || []).map((c: any) => c.value);
+
+                for (const row of tableRows) {
+                    const rowLine = row.location.line;
+                    const cellValues: string[] = (row.cells || []).map((c: any) => c.value);
+                    // Build a readable label using first two columns as preview
+                    const preview = cellValues.slice(0, 2).map((v, i) => `${headerCells[i]}=${v}`).join(', ');
+                    const exampleItem = this.controller.createTestItem(
+                        `${uri.toString()}#scenario:${rowLine}`,
+                        `Example: ${preview || `Row ${rowLine}`}`,
+                        uri
+                    );
+                    exampleItem.range = new vscode.Range(rowLine - 1, 0, rowLine - 1, 100);
+                    scenarioItem.children.add(exampleItem);
+                }
+            }
+        }
     }
 
     private async runHandler(

@@ -12,7 +12,7 @@ import { GherkinCompletionProvider } from './completion';
 import { GherkinHoverProvider } from './hover';
 import { discoveryService } from './discovery';
 import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
-import { BehaveCodeLensProvider } from './codelens';
+
 import { showDiagnosticsReport } from './diagnostics';
 import { showOnboardingNotificationIfNeeded } from './onboarding';
 import { showCommandCenter } from './commandCenter';
@@ -283,10 +283,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 {
                     providedCodeActionKinds: GherkinCodeActionProvider.providedCodeActionKinds
                 }
-            ),
-            vscode.languages.registerCodeLensProvider(
-                { language },
-                new BehaveCodeLensProvider()
             )
         );
     });
