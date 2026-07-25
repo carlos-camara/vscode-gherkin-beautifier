@@ -40,6 +40,9 @@
     "onLanguage:feature"
   ],
   "main": "./dist/extension.js",
+  "configurationDefaults": {
+    "testing.showCoverageInExplorer": false
+  },
   "contributes": {
     "languages": [
       {
