@@ -35,6 +35,14 @@ export class GherkinTestController {
             }
         };
 
+        // --- Run profile: delegates to gherkinPowerTools.runScenario / runFeature ---
+        this.controller.createRunProfile(
+            '▶ Run',
+            vscode.TestRunProfileKind.Run,
+            (request, token) => this.runHandler(request, token, 'run'),
+            true  // default
+        );
+
         // --- Debug profile: delegates to gherkinPowerTools.debugScenario / debugFeature ---
         this.controller.createRunProfile(
             '🐞 Debug',
@@ -43,12 +51,12 @@ export class GherkinTestController {
             true
         );
 
-        // --- Edit & Run profile: delegates to runWithArgs prompt, then runs ---
+        // --- Edit & Run profile: shows args prompt before running (pencil icon like CodeLens) ---
         this.controller.createRunProfile(
-            '$(edit) Edit & Run',
+            '$(edit) Edit args & Run',
             vscode.TestRunProfileKind.Run,
             (request, token) => this.runHandler(request, token, 'edit'),
-            true
+            false
         );
 
         this.startWatchingWorkspace();
