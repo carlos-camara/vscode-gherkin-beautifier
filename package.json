@@ -125,11 +125,13 @@
             "type": "string"
           },
           "default": [],
-          "description": "Additional arguments to pass to Behave when executing via CodeLens."
+          "scope": "resource",
+          "description": "Additional arguments to pass to Behave when executing via the Test Explorer or CodeLens."
         },
         "gherkinPowerTools.behave.command": {
           "type": "string",
           "default": "behave",
+          "scope": "resource",
           "description": "The base command to run Behave."
         }
       }
