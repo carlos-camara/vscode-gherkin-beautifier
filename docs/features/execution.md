@@ -2,10 +2,6 @@
 
 Run and debug your Behave tests directly from VS Code's built-in **Testing** sidebar, without switching to the terminal.
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via Test Explorer" width="600" />
-</div>
-
 ---
 
 ## How to Open the Test Explorer
@@ -20,24 +16,13 @@ Run and debug your Behave tests directly from VS Code's built-in **Testing** sid
 
 ## Tree Structure
 
-Gherkin PowerTools registers a native `GherkinTestController` that maps your entire workspace into the following hierarchy inside the Testing panel:
+Gherkin PowerTools registers a native `GherkinTestController` that maps your entire workspace into a structured hierarchy inside the Testing panel. Every `.feature` file, every `Feature`, `Scenario`, `Scenario Outline`, and individual `Example` row becomes an independently executable node.
 
-```
-🗂 TESTING
-└─ 📄 login.feature
-    └─ 📁 Feature: User Authentication
-        ├─ 📄 Scenario: Login with valid credentials
-        └─ 📁 Scenario Outline: Login with multiple roles
-            ├─ 📄 Example: username=admin, role=super
-            └─ 📄 Example: username=guest, role=read
-└─ 📄 checkout.feature
-    └─ 📁 Feature: Shopping Cart
-        ├─ 📄 Rule: Guest Checkout
-        │   └─ 📄 Scenario: Guest adds item to cart
-        └─ 📄 Scenario: Authenticated checkout
-```
+<div align="center">
+  <img src="../../assets/test-explorer-tree.png" alt="Test Explorer tree — feature files, scenarios, and example rows as independently runnable nodes" width="600" />
+</div>
 
-Every node in the tree is independently executable. Click `▶` next to any item to run only that file, feature, rule, scenario, or individual example row.
+Every node in the tree is independently executable. Click `▶` next to any item to run only that file, feature, rule, scenario, or individual example row. Hover a row to reveal its `▶ Run` and `🐞 Debug` inline action buttons.
 
 ---
 
@@ -65,8 +50,27 @@ Executes the selected feature or scenario in a VS Code **Background Task** (visi
 3. **Line-level targeting** — The exact line number is appended to the path argument (e.g. `["./features/login.feature:12"]`), so Behave executes only that specific scenario.
 4. **Duplicate guard** — If the same scenario is already running, the extension shows a warning instead of launching a duplicate process.
 
+While the test runs, the tree shows a spinning indicator and the Terminal panel streams Behave's live output:
+
+<div align="center">
+  <img src="../../assets/test-explorer-running.png" alt="Test Explorer — spinning indicator on a running scenario, with live Behave output in the Terminal panel" width="600" />
+</div>
+
 > [!IMPORTANT]
 > A workspace folder **must be open** for execution to work safely. The extension uses `vscode.workspace.getWorkspaceFolder(uri)` to resolve relative paths. Opening a lone `.feature` file without a workspace will show an error.
+
+---
+
+### Test Results — Passed & Failed Badges
+
+Once execution completes, each node updates to show its result. Green ✅ means the scenario passed; red ❌ means it failed. The summary row below the tree shows how many tests passed and failed, and the Terminal shows the full Behave output with the exact assertion error.
+
+<div align="center">
+  <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="600" />
+</div>
+
+> [!TIP]
+> Click any ❌ failed node and use the **▶ Run** button to re-run only that failing test. This makes it extremely fast to iterate on a broken scenario without re-running the entire suite.
 
 ---
 
@@ -80,12 +84,11 @@ Launches a Behave debug session using the official VS Code Python debugger, allo
 2. It launches the session using `vscode.debug.startDebugging()` — no `launch.json` needed.
 3. Your breakpoints in `steps/*.py` will pause execution, letting you inspect `context`, step arguments, and call stacks.
 
-```python
-@given('I login as "{role}"')
-def step_login(context, role):
-    # 🔴 Breakpoint here → execution pauses, you can inspect `role`
-    context.client.login(role)
-```
+When the debugger pauses at a breakpoint, VS Code opens the matching Python step file at the exact line. The orange status bar confirms the debug session is active. You can inspect variables, evaluate expressions in the Debug Console, and use step-over/step-into controls to trace execution:
+
+<div align="center">
+  <img src="../../assets/test-explorer-debug.png" alt="VS Code debug session paused at a Python step — breakpoint at line 20, variables panel showing username and password values" width="700" />
+</div>
 
 > [!IMPORTANT]
 > The **Python extension** (`ms-python.python`) or **Debugpy extension** (`ms-python.debugpy`) must be installed. If neither is found, the extension will show an error with a direct link to the Marketplace install page.
@@ -123,10 +126,14 @@ The controller uses VS Code's `TestRun` API to transition each item through thes
 
 The tree refreshes **as you type** — no save required.
 
-The controller subscribes to `vscode.workspace.onDidChangeTextDocument` with a **400 ms debounce** per file URI. After 400 ms of inactivity, it re-parses the in-memory document buffer and updates the tree atomically.
+The controller subscribes to `vscode.workspace.onDidChangeTextDocument` with a **400 ms debounce** per file URI. After 400 ms of inactivity, it re-parses the in-memory document buffer and updates the tree atomically. This means you see new scenario nodes appear in the Testing panel the moment you finish typing their name — no Ctrl+S needed.
+
+<div align="center">
+  <img src="../../assets/test-explorer-realtime.png" alt="Split view — user types a new Scenario in the editor (left), the Testing tree updates instantly without saving (right)" width="700" />
+</div>
 
 | Action | Tree behavior |
-|--------|--------------| 
+|--------|--------------|
 | Type a new `Scenario:` line | New node appears within ~400 ms |
 | Rename a scenario | Label updates without saving |
 | Delete a scenario block | Node disappears without saving |
