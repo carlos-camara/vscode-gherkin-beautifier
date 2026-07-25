@@ -196,6 +196,25 @@ export async function activate(context: vscode.ExtensionContext) {
             return showDiagnosticsReport(context, symbolCache, featureCache, configService);
         })
     );
+
+    // "Edit args & Run" button in the Testing panel toolbar (pencil icon via view/title menu)
+    // Shows the Behave args prompt, contextualized to the active feature file if open.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.testExplorerEditAndRun', async () => {
+            const activeEditor = vscode.window.activeTextEditor;
+            const uri = activeEditor?.document.uri;
+            if (uri && (activeEditor.document.languageId === 'feature' || uri.fsPath.endsWith('.feature'))) {
+                await runBehaveWithPrompt(uri, undefined, configService);
+            } else {
+                const folders = vscode.workspace.workspaceFolders;
+                if (folders && folders.length > 0) {
+                    await runBehaveWithPrompt(folders[0].uri, undefined, configService);
+                } else {
+                    vscode.window.showWarningMessage('Open a .feature file to edit Behave arguments.');
+                }
+            }
+        })
+    );
     
     context.subscriptions.push(linter);
 
