@@ -14,8 +14,8 @@ Gherkin PowerTools works out-of-the-box, but you can tailor it to your team's st
 | `gherkinPowerTools.tags.sort` | `"preserve"` | Choose `"preserve"` to keep their original source order, or `"alphabetical"` to sort them A-Z. |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", "**/features/steps/**/*.py"]` | An array of glob patterns pointing to Python files that contain Behave steps. Used for linking, hovers, linting, and autocomplete. |
 | `gherkinPowerTools.behave.ignoreGlobs` | `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]` | An array of glob patterns to exclude from step discovery. |
-| `gherkinPowerTools.behave.additionalArguments` | `[]` | Additional flags passed to Behave when executing via CodeLens. **Tip:** You can edit these interactively at runtime by clicking the `✎ Edit` CodeLens above any scenario, which can save them here for you (fully DevContainer compatible). |
-| `gherkinPowerTools.behave.command` | `"behave"` | The base command used to run Behave when executing via CodeLens. |
+| `gherkinPowerTools.behave.additionalArguments` | `[]` | Additional flags passed to Behave when executing via the Test Explorer. |
+| `gherkinPowerTools.behave.command` | `"behave"` | The base command used to run Behave when executing via the Test Explorer. |
 
 <br>
 

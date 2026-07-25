@@ -1,60 +1,68 @@
-# 🚀 Behave Execution & Test Explorer
+# 🚀 Behave Execution via Test Explorer
 
-Stop switching between editor and terminal. Gherkin PowerTools gives you **two deeply integrated ways** to execute your Behave tests without leaving VS Code.
+Run and debug your Behave tests directly from VS Code's built-in **Testing** sidebar, without switching to the terminal.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via CodeLens — One-click isolated execution and custom arguments" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via Test Explorer" width="600" />
 </div>
 
 ---
 
-## Overview: Two Execution Surfaces
+## How to Open the Test Explorer
 
-| Surface | Best For | Access |
-|---------|----------|--------|
-| **CodeLens** | Run or debug the scenario/feature you are currently editing | Inline buttons above each `Feature`, `Scenario`, and `Examples` row |
-| **Test Explorer** | Run multiple tests, view pass/fail history, re-run failures | <kbd>⌘⇧T</kbd> (macOS) · <kbd>Ctrl+Shift+T</kbd> (Windows/Linux) |
+| Method | Action |
+|--------|--------|
+| **Keyboard** | <kbd>⌘⇧T</kbd> (macOS) · <kbd>Ctrl+Shift+T</kbd> (Windows/Linux) |
+| **Activity Bar** | Click the **🧪 beaker icon** on the left sidebar |
+| **Command Palette** | `View: Show Test Explorer` |
 
-Both surfaces share the same underlying execution engine and respect your configured interpreter, additional arguments, and environment.
+---
+
+## Tree Structure
+
+Gherkin PowerTools registers a native `GherkinTestController` that maps your entire workspace into the following hierarchy inside the Testing panel:
+
+```
+🗂 TESTING
+└─ 📄 login.feature
+    └─ 📁 Feature: User Authentication
+        ├─ 📄 Scenario: Login with valid credentials
+        └─ 📁 Scenario Outline: Login with multiple roles
+            ├─ 📄 Example: username=admin, role=super
+            └─ 📄 Example: username=guest, role=read
+└─ 📄 checkout.feature
+    └─ 📁 Feature: Shopping Cart
+        ├─ 📄 Rule: Guest Checkout
+        │   └─ 📄 Scenario: Guest adds item to cart
+        └─ 📄 Scenario: Authenticated checkout
+```
+
+Every node in the tree is independently executable. Click `▶` next to any item to run only that file, feature, rule, scenario, or individual example row.
 
 ---
 
-## Part 1 — CodeLens Execution
+## Run Profiles
 
-### What You'll See in the Editor
+The Test Explorer exposes two run profiles selectable from the Testing panel toolbar:
 
-Above every `Feature`, `Scenario`, and `Scenario Outline` in your `.feature` files, three inline action buttons appear:
-
-```
-Feature: User Authentication                           ▶ Run Feature  🐞 Debug  ✎ Edit
-  Scenario: Login with valid credentials               ▶ Run Scenario  🐞 Debug  ✎ Edit
-```
-
-Inside `Examples` tables, each **individual data row** also gets its own minimal run/debug icons, perfectly aligned to the left of the table:
-
-```
-  Examples:
-    | username | role  |
-  ▶ 🐞 | admin    | super |
-  ▶ 🐞 | guest    | read  |
-```
-
-This lets you execute or debug a single parameter set from a `Scenario Outline` without running the entire outline!
-
-> [!NOTE]
-> **Resilient CodeLens Engine:** The button provider uses a dialect-aware **text scanner** rather than a strict AST parser. This guarantees that Run/Debug buttons **always appear** even when there are severe syntax errors elsewhere in the file. Both `feature` and `gherkin` VS Code language IDs are fully supported.
+| Profile | Icon | Behavior |
+|---------|------|----------|
+| **▶ Run** | ▶ | Executes selected tests as Behave Tasks (visible in the Terminal panel). Shows pass ✅ / fail ❌ badges after completion. |
+| **🐞 Debug** | 🐞 | Launches the Python debugger. Breakpoints in your `steps/*.py` files are fully respected. Badge updates after the session terminates. |
 
 ---
+
+## How Execution Works
 
 ### `▶ Run`
 
-Executes the feature or scenario directly in a VS Code **Background Task** (visible in the Terminal panel → **Tasks**).
+Executes the selected feature or scenario in a VS Code **Background Task** (visible in the Terminal panel → **Tasks**).
 
-**How it works:**
+**Internal steps:**
 
 1. **Interpreter resolution** — The extension queries the `ms-python.python` extension for the currently active Python interpreter. This guarantees that your virtual environment, `conda` environment, or DevContainer Python is used automatically. Falls back to the configured `behave.command` if the Python extension is not available.
 2. **Secure argument construction** — Arguments are built as an **array** and passed to `vscode.ProcessExecution` directly — never via a raw shell string. This completely prevents shell injection attacks, even for file paths containing spaces, quotes, or special characters.
-3. **Line-level targeting** — When running a scenario, the exact line number is appended to the path argument (e.g. `["./features/login.feature:12"]`), so Behave executes only that specific scenario.
+3. **Line-level targeting** — The exact line number is appended to the path argument (e.g. `["./features/login.feature:12"]`), so Behave executes only that specific scenario.
 4. **Duplicate guard** — If the same scenario is already running, the extension shows a warning instead of launching a duplicate process.
 
 > [!IMPORTANT]
@@ -66,7 +74,7 @@ Executes the feature or scenario directly in a VS Code **Background Task** (visi
 
 Launches a Behave debug session using the official VS Code Python debugger, allowing you to **set breakpoints in your Python step definitions** and pause execution mid-test.
 
-**How it works:**
+**Internal steps:**
 
 1. The extension dynamically constructs a `DebugConfiguration` of type `python` targeting Behave via `-m behave`.
 2. It launches the session using `vscode.debug.startDebugging()` — no `launch.json` needed.
@@ -91,96 +99,7 @@ def step_login(context, role):
 
 ---
 
-### `✎ Edit` — Interactive Arguments
-
-Use the **Edit** button whenever you need to pass temporary flags to Behave without permanently changing your configuration — for example, to run only `@wip` scenarios or suppress output during a debugging session.
-
-**Workflow:**
-
-1. Click **`✎ Edit`** above any Feature or Scenario.
-2. An input box opens, pre-filled with your current `additionalArguments` (or the last session's custom arguments).
-3. Add, remove, or modify flags inline:
-
-   ```
-   --tags=@wip --no-capture --format progress
-   ```
-
-4. Press **Enter**. A prompt asks how to persist the changes:
-
-| Choice | Behavior |
-|--------|----------|
-| **Save to Workspace** | Parses arguments and writes them permanently to `.vscode/settings.json` under `gherkinPowerTools.behave.additionalArguments`, scoped to the active Workspace Folder. Fully compatible with DevContainers and multi-root workspaces. |
-| **Just for this session** | Stores arguments in volatile memory. Applied to all subsequent executions until VS Code is restarted or another Edit is confirmed. |
-
-> [!TIP]
-> **Session arguments survive multiple runs.** Once set, they remain active for all subsequent CodeLens clicks (Run and Debug) until you explicitly change them again via Edit. The input box will always be pre-filled with the latest session value.
-
----
-
-## Part 2 — Test Explorer Integration
-
-The **Test Explorer** (VS Code's built-in Testing sidebar) provides a structured, persistent view of your entire test suite — with run history, pass/fail badges, and the ability to re-run failed tests.
-
-### How to Open
-
-| Method | Action |
-|--------|--------|
-| **Keyboard** | <kbd>⌘⇧T</kbd> (macOS) · <kbd>Ctrl+Shift+T</kbd> (Windows/Linux) |
-| **Activity Bar** | Click the **🧪 beaker icon** on the left sidebar |
-| **Command Palette** | `View: Show Test Explorer` |
-
-### Tree Structure
-
-Gherkin PowerTools registers a native `GherkinTestController` that maps your workspace to the following hierarchy:
-
-```
-🗂 TESTING
-└─ 📄 login.feature
-    └─ 📁 Feature: User Authentication
-        ├─ 📄 Scenario: Login with valid credentials
-        └─ 📁 Scenario Outline: Login with multiple roles
-            ├─ 📄 Example: username=admin, role=super
-            └─ 📄 Example: username=guest, role=read
-└─ 📄 checkout.feature
-    └─ 📁 Feature: Shopping Cart
-        ├─ 📄 Rule: Guest Checkout
-        │   └─ 📄 Scenario: Guest adds item to cart
-        └─ 📄 Scenario: Authenticated checkout
-```
-
-Every node in the tree is independently executable. Click `▶` next to any item to run only that file, feature, rule, scenario, or individual example row.
-
----
-
-### Real-Time Tree Updates
-
-The tree refreshes **as you type** — no save required.
-
-The controller subscribes to `vscode.workspace.onDidChangeTextDocument` with a **400 ms debounce** per file URI. After 400 ms of inactivity, it re-parses the in-memory document buffer and updates the tree atomically.
-
-| Action | Tree behavior |
-|--------|--------------|
-| Type a new `Scenario:` line | New node appears within ~400 ms |
-| Rename a scenario | Label updates without saving |
-| Delete a scenario block | Node disappears without saving |
-| Create a new `.feature` file | Node added (via `FileSystemWatcher`) |
-| Delete a `.feature` file on disk | Node removed (via `FileSystemWatcher`) |
-
-> [!NOTE]
-> The `FileSystemWatcher` (`**/*.feature`) handles **disk-level** events (external tools, git checkouts, file renames). The `onDidChangeTextDocument` listener handles **in-editor** changes. Both are active simultaneously and complement each other.
-
----
-
-### Run Profiles
-
-The Test Explorer exposes two run profiles selectable from the Testing panel toolbar:
-
-| Profile | Icon | Behavior |
-|---------|------|----------|
-| **▶ Run** | ▶ | Executes selected tests as Behave Tasks. Shows pass ✅ / fail ❌ badges after completion. |
-| **🐞 Debug** | 🐞 | Launches the Python debugger. Breakpoints in step files are respected. Badge shows after session terminates. |
-
-### Test State Lifecycle
+## Test State Lifecycle
 
 ```
 [Enqueued 🔄] → [Running ⏳] → [Passed ✅]
@@ -196,7 +115,26 @@ The controller uses VS Code's `TestRun` API to transition each item through thes
 | `🐞 Debug` | `onDidTerminateDebugSession` | Debug sessions emit a separate event, never `onDidEndTaskProcess`. Using the wrong event would leave the spinner active for 5 minutes. |
 
 > [!TIP]
-> **Cancellation:** Press the **⏹ Stop** button in the Testing panel toolbar at any time. The extension respects VS Code's `CancellationToken` and immediately stops launching new scenarios. Any already-running Behave process must be stopped from the Terminal panel.
+> **Cancellation:** Press the **⏹ Stop** button in the Testing panel toolbar at any time. The extension respects VS Code's `CancellationToken` and immediately stops launching new scenarios. Any already-running Behave process can also be stopped from the Terminal panel.
+
+---
+
+## Real-Time Tree Updates
+
+The tree refreshes **as you type** — no save required.
+
+The controller subscribes to `vscode.workspace.onDidChangeTextDocument` with a **400 ms debounce** per file URI. After 400 ms of inactivity, it re-parses the in-memory document buffer and updates the tree atomically.
+
+| Action | Tree behavior |
+|--------|--------------| 
+| Type a new `Scenario:` line | New node appears within ~400 ms |
+| Rename a scenario | Label updates without saving |
+| Delete a scenario block | Node disappears without saving |
+| Create a new `.feature` file | Node added (via `FileSystemWatcher`) |
+| Delete a `.feature` file on disk | Node removed (via `FileSystemWatcher`) |
+
+> [!NOTE]
+> The `FileSystemWatcher` (`**/*.feature`) handles **disk-level** events (external tools, git checkouts, file renames). The `onDidChangeTextDocument` listener handles **in-editor** changes. Both are active simultaneously and complement each other.
 
 ---
 
@@ -237,9 +175,6 @@ Extra flags appended to every Behave invocation.
   "gherkinPowerTools.behave.additionalArguments": ["--format", "progress", "--verbose"]
   ```
 
-> [!TIP]
-> Use the `✎ Edit` CodeLens button to override these arguments **interactively at runtime** without editing `settings.json`. Session overrides are applied to all subsequent executions until VS Code restarts.
-
 ---
 
 ### Full Configuration Example
@@ -274,7 +209,7 @@ Extra flags appended to every Behave invocation.
 
 ## Troubleshooting
 
-### ❓ The Run button launches the wrong Python environment
+### ❓ Tests run with the wrong Python environment
 
 **Cause:** The extension picks the interpreter from the `ms-python.python` extension. If you have multiple environments, the wrong one may be active.
 
@@ -291,8 +226,6 @@ Extra flags appended to every Behave invocation.
 ---
 
 ### ❓ The debug session launches but no breakpoints are hit
-
-**Causes and fixes:**
 
 | Cause | Fix |
 |-------|-----|

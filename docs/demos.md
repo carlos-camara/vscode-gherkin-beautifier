@@ -83,11 +83,11 @@ Hover over any tag to see how many scenarios across the workspace are affected.
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover on a tag — shows the number of scenarios it affects across the workspace" width="600" />
 </div>
 
-### Run & Debug via CodeLens
-Execute or debug features/scenarios with 1 click using the editor CodeLens header.
+### Run & Debug via Test Explorer
+Execute or debug features, scenarios, and individual example rows from the VS Code Testing sidebar (<kbd>⌘⇧T</kbd> / <kbd>Ctrl+Shift+T</kbd>).
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via CodeLens" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via Test Explorer" width="600" />
 </div>
 
 ### Generate Missing Step Stub

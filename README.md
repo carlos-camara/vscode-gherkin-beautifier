@@ -50,8 +50,7 @@ AST-powered formatting, validation, navigation, execution, debugging and analyti
 | Project Statistics & Tag Telemetry | ✅ | ✅ | Interactive HTML Dashboard |
 | Go to Definition | — | ✅ | Jump from step to `@step` decorator |
 | Step IntelliSense Autocomplete | — | ✅ | Context-aware by step keyword |
-| Run & Debug via CodeLens | — | ✅ | 1-click execution & breakpoint debugging |
-| Test Explorer Integration | — | ✅ | Native VS Code Testing sidebar with real-time tree updates |
+| Run & Debug via Test Explorer | — | ✅ | Testing sidebar with pass/fail history, real-time tree, and 1-click re-run |
 | Undefined Step Stub Generator | — | ✅ | Generates Python function stub |
 
 ---
@@ -123,11 +122,11 @@ AST-powered formatting, validation, navigation, execution, debugging and analyti
 
 ---
 
-### 4. 🚀 1-Click Execution & Debugging (CodeLens + Test Explorer)
+### 4. 🚀 1-Click Execution & Debugging (Test Explorer)
 **Problem:** Switching context between the editor and terminal to run isolated scenarios or attach debuggers breaks focus.  
-**Solution:** Interactive `▶ Run`, `🐞 Debug`, and `✏️ Edit` buttons appear directly above Features and Scenarios. Additionally, minimal `▶` and `🐞` icons appear next to individual `Examples` data rows. Execute tests using your active VS Code Python environment or step through Python step definitions with breakpoints.
+**Solution:** Execute tests using your active VS Code Python environment or step through Python step definitions with breakpoints, all from the native VS Code **Testing** sidebar (<kbd>⌘⇧T</kbd> / <kbd>Ctrl+Shift+T</kbd>).
 
-Gherkin PowerTools also registers a native **VS Code Test Controller** that populates the **Testing** sidebar (`⌘⇧T` / `Ctrl+Shift+T`) with a structured, live-updating tree of all your `.feature` files. The tree updates **as you type** (400 ms debounce) — no save required.
+Gherkin PowerTools registers a native **VS Code Test Controller** that populates the Testing sidebar with a structured, live-updating tree of all your `.feature` files. The tree updates **as you type** (400 ms debounce) — no save required.
 
 <div align="center">
 
@@ -191,7 +190,7 @@ Gherkin PowerTools is built for QA engineers, developers, and BDD teams working 
 * **Any `.feature` file (Cucumber.js, Playwright BDD, SpecFlow, Karate, etc.):**
   Zero-configuration AST-based formatting, real-time syntax linting, 70+ language i18n support, AST range selection formatting, tag telemetry, and workspace statistics work out-of-the-box for **every** Gherkin project.
 * **Python / Behave Workspaces:**
-  Unlocks deep step definition indexing (Go to Definition, Hover, IntelliSense), missing step stub generator, and 1-click test **Execution & Debugging** via CodeLens directly inside VS Code.
+  Unlocks deep step definition indexing (Go to Definition, Hover, IntelliSense), missing step stub generator, and 1-click test **Execution & Debugging** via the Test Explorer directly inside VS Code.
 
 ---
 
@@ -206,8 +205,7 @@ Both extensions can coexist peacefully and serve complementary purposes:
 | Real-time structural linting | ✅ AST-based | ✅ Syntax + undefined steps |
 | Keyword Quick Fixes | ✅ | — |
 | Python / Behave Navigation | ✅ First-class | — |
-| 1-Click Run & Debug | ✅ CodeLens | — |
-| Test Explorer Integration | ✅ Native Testing sidebar | — |
+| 1-Click Run & Debug | ✅ Test Explorer (pass/fail badges, real-time tree) | — |
 | Workspace Statistics Dashboard | ✅ | — |
 | Language Server Protocol (LSP) | — | ✅ (all frameworks) |
 
@@ -251,7 +249,7 @@ Or enable **Format on Save** in your VS Code settings:
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", "**/features/steps/**/*.py"]` | Glob patterns for Python step files |
 | `gherkinPowerTools.behave.ignoreGlobs` | `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]` | Paths to exclude from step indexing |
 | `gherkinPowerTools.behave.additionalArguments` | `[]` | Additional flags passed to Behave |
-| `gherkinPowerTools.behave.command` | `"behave"` | Base command used to run Behave via CodeLens |
+| `gherkinPowerTools.behave.command` | `"behave"` | Base command used to run Behave via the Test Explorer |
 
 📖 [Full Configuration Reference & Documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/)
 
