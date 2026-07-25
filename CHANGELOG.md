@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Examples Execution CodeLens**: You can now execute and debug individual rows within `Examples` tables! The extension injects non-intrusive `▶` (Run) and `🐞` (Debug) icons strictly aligned to the left of each data row. When clicked, it passes the exact line number to Behave so that only that specific parameter set runs, saving time when debugging large scenario outlines.
 - **Security & Reliability Hardening for Execution**: Execution and debugging CodeLens actions now use VS Code Tasks and array-based `ProcessExecution` APIs, entirely eliminating shell injection vulnerabilities for malicious or celomplex file paths.
   Additionally, interpreter detection now dynamically and aggressively prioritizes your active `ms-python.python` environment to guarantee reliability.
+- **Test Explorer Real-Time Tree Updates**: The Testing sidebar tree now refreshes **as you type** in a `.feature` file, without requiring a save.
+  The `GherkinTestController` subscribes to `vscode.workspace.onDidChangeTextDocument` with a 400 ms debounce, so new, renamed, or deleted scenarios appear in the tree instantly during editing.
 
 - **Instant Activation (O(1))**: The extension now activates instantly upon opening VS Code.
   Heavy workspace parsing (Python steps and Feature file tagging) has been successfully offloaded
@@ -29,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This guarantees that all valid scenarios will always display execution buttons, even if previous syntax errors in the file break the parser.
 - **CodeLens Compatibility**: Fixed a bug where CodeLenses would silently fail to appear if the VS Code language identifier was set to `gherkin` instead of `feature`. The extension now fully supports both language IDs for all CodeLens actions.
 - **DevContainer Compatibility**: Fixed a bug where saving interactive execution arguments permanently to Workspace Settings would fail to apply inside DevContainers or multi-root workspaces. The settings are now correctly scoped to the active Workspace Folder's `.vscode/settings.json`.
+- **Test Explorer Debug Spinner**: Fixed a bug where running a scenario in **debug mode** from the Testing panel would leave the item spinner active until a 5-minute safety timeout expired, even though the Behave debug session had already finished.
+  The root cause was that `waitForTaskEnd()` listened to `onDidEndTaskProcess`, which is only dispatched for VS Code Tasks — not debug sessions. The controller now uses a dedicated `waitForDebugEnd()` that listens to `onDidTerminateDebugSession` and resolves immediately when the session ends.
 
 ## [1.7.7] - 2026-07-23
 

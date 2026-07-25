@@ -62,6 +62,52 @@ When you click **Debug**:
   To avoid this, ensure your scenarios have unique names.
 - **Rule Backgrounds**: If the scenario is inside a `Rule`, Behave's execution engine might exhibit similar grouping behaviors when launched via a debug adapter.
 
+---
+
+## Test Explorer Integration
+
+Gherkin PowerTools registers a native **VS Code Test Controller** (`GherkinTestController`) that populates the built-in **Testing** sidebar panel with a live tree of your `.feature` files.
+
+The tree is structured as:
+
+```
+📄 login.feature
+ └─ Feature: User Authentication
+     ├─ Scenario: Login with valid credentials
+     └─ Scenario Outline: Login with multiple roles
+         ├─ Example: role=admin, status=200
+         └─ Example: role=guest, status=403
+```
+
+Each node can be run or debugged directly from the Testing panel using the `▶ Run` and `🐞 Debug` run profiles.
+
+### Real-Time Tree Updates
+
+The feature tree updates **as you type** in a `.feature` file, without needing to save first.
+
+The controller listens to `vscode.workspace.onDidChangeTextDocument` and re-parses the in-memory buffer with a **400 ms debounce**. This means:
+
+- New scenarios appear in the tree within ~400 ms of being typed.
+- Renamed scenarios refresh their label without a file save.
+- Deleted scenarios are removed from the tree instantly.
+
+The `FileSystemWatcher` still handles file creation and deletion on disk (e.g., when files are created externally or by scripts).
+
+### Debug Session State Tracking
+
+When you run a scenario in **debug mode** from the Testing panel, the tree correctly reflects the running/passed/failed state of the item using VS Code's native Test Run API.
+
+Internally, the controller waits for the appropriate completion event depending on the execution mode:
+
+| Mode | VS Code event waited | Resolves when |
+|------|----------------------|---------------|
+| `▶ Run` | `onDidEndTaskProcess` | The Behave background task exits |
+| `🐞 Debug` | `onDidTerminateDebugSession` | The debug session is terminated |
+
+> **Note:** The two events are dispatched by completely different VS Code subsystems. Using `onDidEndTaskProcess` for a debug session would cause the spinner to remain active for up to 5 minutes (the safety timeout). The controller uses `waitForDebugEnd()` for debug runs to clear the state immediately.
+
+---
+
 ## Configuration
 
 You can customize the execution behavior using the following settings:
