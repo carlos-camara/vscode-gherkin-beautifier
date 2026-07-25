@@ -35,12 +35,21 @@ export class GherkinTestController {
             }
         };
 
-        // --- Run profile: delegates to gherkinPowerTools.runScenario / runFeature ---
+        // --- Edit & Run profile (DEFAULT): pencil icon like CodeLens "$(edit) Edit" ---
+        // This is the primary action — shows the args prompt first, then runs.
+        this.controller.createRunProfile(
+            '✏️ Edit & Run',
+            vscode.TestRunProfileKind.Run,
+            (request, token) => this.runHandler(request, token, 'edit'),
+            true  // default — shows the ✏️ inline button in the Test Explorer tree
+        );
+
+        // --- Run profile: quick run without prompt (secondary) ---
         this.controller.createRunProfile(
             '▶ Run',
             vscode.TestRunProfileKind.Run,
             (request, token) => this.runHandler(request, token, 'run'),
-            true  // default
+            false
         );
 
         // --- Debug profile: delegates to gherkinPowerTools.debugScenario / debugFeature ---
@@ -49,14 +58,6 @@ export class GherkinTestController {
             vscode.TestRunProfileKind.Debug,
             (request, token) => this.runHandler(request, token, 'debug'),
             true
-        );
-
-        // --- Edit & Run profile: shows args prompt before running (pencil icon like CodeLens) ---
-        this.controller.createRunProfile(
-            '$(edit) Edit args & Run',
-            vscode.TestRunProfileKind.Run,
-            (request, token) => this.runHandler(request, token, 'edit'),
-            false
         );
 
         this.startWatchingWorkspace();
