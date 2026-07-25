@@ -75,8 +75,7 @@ You can create a standalone configuration file named `.gherkin-powertoolsrc.json
 
 The extension provides full JSON schema validation, autocompletion, and hover documentation when editing this file in VS Code.
 
-> [!WARNING]
-> Unlike VS Code's `settings.json`, properties inside `.gherkin-powertoolsrc.json` **do not** use the `gherkinPowerTools.` prefix and are formatted as nested objects instead of flat keys. Rely on VS Code's autocompletion (`Ctrl + Space`) inside the file to guide you.
+> **⚠️ Warning:** Unlike VS Code's `settings.json`, properties inside `.gherkin-powertoolsrc.json` **do not** use the `gherkinPowerTools.` prefix and are formatted as nested objects instead of flat keys. Rely on VS Code's autocompletion (`Ctrl + Space`) inside the file to guide you.
 
 **Example `.gherkin-powertoolsrc.json`:**
 ```json
@@ -110,6 +109,5 @@ The extension provides full JSON schema validation, autocompletion, and hover do
 }
 ```
 
-> [!TIP]
-> **Team Standardization**
+> **💡 Tip:** **Team Standardization**
 > Commit a `.gherkin-powertoolsrc.json` to your repository so all contributors share the same formatting rules and step discovery paths!

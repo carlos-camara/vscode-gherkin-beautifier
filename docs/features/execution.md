@@ -56,8 +56,7 @@ While the test runs, the tree shows a spinning indicator and the Terminal panel 
   <img src="../../assets/test-explorer-running.png" alt="Test Explorer — spinning indicator on a running scenario, with live Behave output in the Terminal panel" width="600" />
 </div>
 
-> [!IMPORTANT]
-> A workspace folder **must be open** for execution to work safely. The extension uses `vscode.workspace.getWorkspaceFolder(uri)` to resolve relative paths. Opening a lone `.feature` file without a workspace will show an error.
+> **⚠️ Important:** A workspace folder **must be open** for execution to work safely. The extension uses `vscode.workspace.getWorkspaceFolder(uri)` to resolve relative paths. Opening a lone `.feature` file without a workspace will show an error.
 
 ---
 
@@ -69,8 +68,7 @@ Once execution completes, each node updates to show its result. Green ✅ means 
   <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="600" />
 </div>
 
-> [!TIP]
-> Click any ❌ failed node and use the **▶ Run** button to re-run only that failing test. This makes it extremely fast to iterate on a broken scenario without re-running the entire suite.
+> **💡 Tip:** Click any ❌ failed node and use the **▶ Run** button to re-run only that failing test. This makes it extremely fast to iterate on a broken scenario without re-running the entire suite.
 
 ---
 
@@ -90,12 +88,11 @@ When the debugger pauses at a breakpoint, VS Code opens the matching Python step
   <img src="../../assets/test-explorer-debug.png" alt="VS Code debug session paused at a Python step — breakpoint at line 20, variables panel showing username and password values" width="700" />
 </div>
 
-> [!IMPORTANT]
-> The **Python extension** (`ms-python.python`) or **Debugpy extension** (`ms-python.debugpy`) must be installed. If neither is found, the extension will show an error with a direct link to the Marketplace install page.
+> **⚠️ Important:** The **Python extension** (`ms-python.python`) or **Debugpy extension** (`ms-python.debugpy`) must be installed. If neither is found, the extension will show an error with a direct link to the Marketplace install page.
 
 #### Debugging Limitations
 
-> [!WARNING]
+> **⚠️ Warning:**
 > **Scenario Outlines:** When debugging an individual example row, Behave resolves the scenario by **line number**. If Behave's line-number resolution is disabled, it falls back to name matching — which may match multiple scenarios with the same name across files. Ensure your scenario names are unique.
 >
 > **Rule Backgrounds:** Scenarios nested inside a `Rule` block may trigger grouping behaviors in Behave's runner when launched via a debug adapter, potentially executing more scenarios than intended.
@@ -117,8 +114,7 @@ The controller uses VS Code's `TestRun` API to transition each item through thes
 | `▶ Run` | `onDidEndTaskProcess` | VS Code Tasks emit this event with an exit code when the process terminates. |
 | `🐞 Debug` | `onDidTerminateDebugSession` | Debug sessions emit a separate event, never `onDidEndTaskProcess`. Using the wrong event would leave the spinner active for 5 minutes. |
 
-> [!TIP]
-> **Cancellation:** Press the **⏹ Stop** button in the Testing panel toolbar at any time. The extension respects VS Code's `CancellationToken` and immediately stops launching new scenarios. Any already-running Behave process can also be stopped from the Terminal panel.
+> **💡 Tip:** **Cancellation:** Press the **⏹ Stop** button in the Testing panel toolbar at any time. The extension respects VS Code's `CancellationToken` and immediately stops launching new scenarios. Any already-running Behave process can also be stopped from the Terminal panel.
 
 ---
 
@@ -140,15 +136,13 @@ The controller subscribes to `vscode.workspace.onDidChangeTextDocument` with a *
 | Create a new `.feature` file | Node added (via `FileSystemWatcher`) |
 | Delete a `.feature` file on disk | Node removed (via `FileSystemWatcher`) |
 
-> [!NOTE]
-> The `FileSystemWatcher` (`**/*.feature`) handles **disk-level** events (external tools, git checkouts, file renames). The `onDidChangeTextDocument` listener handles **in-editor** changes. Both are active simultaneously and complement each other.
+> **📝 Note:** The `FileSystemWatcher` (`**/*.feature`) handles **disk-level** events (external tools, git checkouts, file renames). The `onDidChangeTextDocument` listener handles **in-editor** changes. Both are active simultaneously and complement each other.
 
 ---
 
 ## Configuration Reference
 
-> [!NOTE]
-> All settings also accept project-level overrides via `.gherkin-powertoolsrc.json`. See the [Configuration documentation](../configuration.md) for the full precedence rules.
+> **📝 Note:** All settings also accept project-level overrides via `.gherkin-powertoolsrc.json`. See the [Configuration documentation](../configuration.md) for the full precedence rules.
 
 ### `gherkinPowerTools.behave.command`
 
