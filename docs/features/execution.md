@@ -68,6 +68,11 @@ When you click **Debug**:
 
 Gherkin PowerTools registers a native **VS Code Test Controller** (`GherkinTestController`) that populates the built-in **Testing** sidebar panel with a live tree of your `.feature` files.
 
+> **How to open the Testing panel:**
+> - **macOS:** <kbd>⌘⇧T</kbd>
+> - **Windows / Linux:** <kbd>Ctrl+Shift+T</kbd>
+> - Or click the **beaker icon** (🧪) in the Activity Bar on the left.
+
 The tree is structured as:
 
 ```
@@ -105,6 +110,8 @@ Internally, the controller waits for the appropriate completion event depending 
 | `🐞 Debug` | `onDidTerminateDebugSession` | The debug session is terminated |
 
 > **Note:** The two events are dispatched by completely different VS Code subsystems. Using `onDidEndTaskProcess` for a debug session would cause the spinner to remain active for up to 5 minutes (the safety timeout). The controller uses `waitForDebugEnd()` for debug runs to clear the state immediately.
+
+> **Cancellation:** You can cancel any running test from the Testing panel's toolbar (the **Stop** button ⏹) at any time. The extension respects VS Code's `CancellationToken` and will not start additional scenarios after cancellation is requested.
 
 ---
 

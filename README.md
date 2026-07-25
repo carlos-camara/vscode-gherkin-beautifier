@@ -51,6 +51,7 @@ AST-powered formatting, validation, navigation, execution, debugging and analyti
 | Go to Definition | — | ✅ | Jump from step to `@step` decorator |
 | Step IntelliSense Autocomplete | — | ✅ | Context-aware by step keyword |
 | Run & Debug via CodeLens | — | ✅ | 1-click execution & breakpoint debugging |
+| Test Explorer Integration | — | ✅ | Native VS Code Testing sidebar with real-time tree updates |
 | Undefined Step Stub Generator | — | ✅ | Generates Python function stub |
 
 ---
@@ -75,6 +76,7 @@ AST-powered formatting, validation, navigation, execution, debugging and analyti
 | Quick Fix | <kbd>⌘.</kbd> | <kbd>Ctrl+.</kbd> |
 | Go to Definition | <kbd>⌘Click</kbd> | <kbd>Ctrl+Click</kbd> / <kbd>F12</kbd> |
 | Trigger Completion | <kbd>⌃Space</kbd> | <kbd>Ctrl+Space</kbd> |
+| Open Testing Panel | <kbd>⌘⇧T</kbd> | <kbd>Ctrl+Shift+T</kbd> |
 | Diagnose Workspace | `Gherkin: Diagnose Workspace` | `Gherkin: Diagnose Workspace` |
 
 ---
@@ -121,9 +123,11 @@ AST-powered formatting, validation, navigation, execution, debugging and analyti
 
 ---
 
-### 4. 🚀 1-Click Execution & Debugging (CodeLens)
+### 4. 🚀 1-Click Execution & Debugging (CodeLens + Test Explorer)
 **Problem:** Switching context between the editor and terminal to run isolated scenarios or attach debuggers breaks focus.  
 **Solution:** Interactive `▶ Run`, `🐞 Debug`, and `✏️ Edit` buttons appear directly above Features and Scenarios. Additionally, minimal `▶` and `🐞` icons appear next to individual `Examples` data rows. Execute tests using your active VS Code Python environment or step through Python step definitions with breakpoints.
+
+Gherkin PowerTools also registers a native **VS Code Test Controller** that populates the **Testing** sidebar (`⌘⇧T` / `Ctrl+Shift+T`) with a structured, live-updating tree of all your `.feature` files. The tree updates **as you type** (400 ms debounce) — no save required.
 
 <div align="center">
 
@@ -203,6 +207,7 @@ Both extensions can coexist peacefully and serve complementary purposes:
 | Keyword Quick Fixes | ✅ | — |
 | Python / Behave Navigation | ✅ First-class | — |
 | 1-Click Run & Debug | ✅ CodeLens | — |
+| Test Explorer Integration | ✅ Native Testing sidebar | — |
 | Workspace Statistics Dashboard | ✅ | — |
 | Language Server Protocol (LSP) | — | ✅ (all frameworks) |
 
