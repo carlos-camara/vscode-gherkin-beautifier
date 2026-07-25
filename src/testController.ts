@@ -23,6 +23,8 @@ function isFileItem(item: vscode.TestItem): boolean {
 export class GherkinTestController {
     private controller: vscode.TestController;
     private fileWatcher?: vscode.FileSystemWatcher;
+    private textChangeDisposable?: vscode.Disposable;
+    private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
     constructor(_configService: ConfigurationService) {
         this.controller = vscode.tests.createTestController('gherkin-tests', 'Gherkin / Behave');
@@ -55,11 +57,15 @@ export class GherkinTestController {
         // via package.json contributes.menus > view/title (see gherkinPowerTools.testExplorerEditAndRun)
 
         this.startWatchingWorkspace();
+        this.startWatchingTextChanges();
     }
 
     public dispose() {
         this.controller.dispose();
         this.fileWatcher?.dispose();
+        this.textChangeDisposable?.dispose();
+        for (const timer of this.debounceTimers.values()) { clearTimeout(timer); }
+        this.debounceTimers.clear();
     }
 
     private startWatchingWorkspace() {
@@ -67,6 +73,28 @@ export class GherkinTestController {
         this.fileWatcher.onDidCreate(uri => this.getOrCreateFile(uri));
         this.fileWatcher.onDidChange(uri => this.parseTestsInFileContents(this.getOrCreateFile(uri)));
         this.fileWatcher.onDidDelete(uri => this.controller.items.delete(uri.toString()));
+    }
+
+    /** Refreshes the tree as the user types in .feature files (debounced 400 ms). */
+    private startWatchingTextChanges() {
+        this.textChangeDisposable = vscode.workspace.onDidChangeTextDocument(event => {
+            const { uri } = event.document;
+            if (!uri.fsPath.endsWith('.feature')) { return; }
+
+            const key = uri.toString();
+            const existing = this.debounceTimers.get(key);
+            if (existing) { clearTimeout(existing); }
+
+            const timer = setTimeout(() => {
+                this.debounceTimers.delete(key);
+                const fileItem = this.getOrCreateFile(uri);
+                // Use the in-memory text directly so the tree stays in sync
+                // even before the file is saved.
+                this.parseTestsInDocumentContent(fileItem, event.document.getText());
+            }, 400);
+
+            this.debounceTimers.set(key, timer);
+        });
     }
 
     private async discoverAllFilesInWorkspace() {
@@ -93,7 +121,16 @@ export class GherkinTestController {
         if (!fileItem.uri) { return; }
         try {
             const doc = await vscode.workspace.openTextDocument(fileItem.uri);
-            const { document } = await parseGherkin(doc.getText());
+            await this.parseTestsInDocumentContent(fileItem, doc.getText());
+        } catch (e) {
+            logger.error(`Error parsing file for Test Explorer: ${e}`);
+        }
+    }
+
+    private async parseTestsInDocumentContent(fileItem: vscode.TestItem, text: string) {
+        if (!fileItem.uri) { return; }
+        try {
+            const { document } = await parseGherkin(text);
             fileItem.children.replace([]);
             if (!document?.feature) { return; }
 
@@ -231,7 +268,11 @@ export class GherkinTestController {
             const line = extractLineFromId(item.id);
             run.started(item);
 
-            const taskDone = this.waitForTaskEnd(item.uri, line);
+            // Use the right event source: Tasks fire onDidEndTaskProcess,
+            // debug sessions fire onDidTerminateDebugSession.
+            const done = mode === 'debug'
+                ? this.waitForDebugEnd()
+                : this.waitForTaskEnd(item.uri, line);
 
             if (mode === 'debug') {
                 await vscode.commands.executeCommand(
@@ -247,8 +288,8 @@ export class GherkinTestController {
                 );
             }
 
-            // Wait for the task to finish and get exit code
-            const exitCode = await taskDone;
+            // Wait for the task/debug session to finish and get exit code
+            const exitCode = await done;
             if (exitCode === 0) {
                 run.passed(item);
             } else if (exitCode !== null) {
@@ -270,8 +311,8 @@ export class GherkinTestController {
     }
 
     /**
-     * Returns a promise that resolves with the exit code when the next gherkin task finishes.
-     * Resolves with null for debug sessions.
+     * Returns a promise that resolves with the exit code when the next gherkin
+     * task (ProcessExecution) finishes. Only suitable for `run` mode.
      */
     private waitForTaskEnd(_uri: vscode.Uri, _line: number | undefined): Promise<number | null> {
         return new Promise((resolve) => {
@@ -285,6 +326,28 @@ export class GherkinTestController {
                     clearTimeout(timeout);
                     taskDisposable.dispose();
                     resolve(e.exitCode ?? null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Returns a promise that resolves (with null) when the next Behave debug
+     * session terminates. Used in `debug` mode so the spinner clears immediately
+     * instead of waiting for the 5-minute task timeout.
+     */
+    private waitForDebugEnd(): Promise<null> {
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                debugDisposable?.dispose();
+                resolve(null);
+            }, 5 * 60 * 1000); // 5 minute safety timeout
+
+            const debugDisposable = vscode.debug.onDidTerminateDebugSession(session => {
+                if (session.name === 'Debug Behave (PowerTools)') {
+                    clearTimeout(timeout);
+                    debugDisposable.dispose();
+                    resolve(null);
                 }
             });
         });
