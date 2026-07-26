@@ -263,7 +263,7 @@ export class GherkinTestController {
             return;
         }
 
-        // Execute each item using the same commands as CodeLens
+        // Execute each item using the core execution commands
         for (const item of scenarioItems) {
             if (token.isCancellationRequested) { break; }
             if (!item.uri) { continue; }

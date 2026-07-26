@@ -826,7 +826,7 @@ def step_impl(context):
         const document = await vscode.workspace.openTextDocument(fixtureUri);
         await vscode.window.showTextDocument(document);
 
-        // Give the extension a moment to activate CodeLens etc
+        // Give the extension a moment to activate Test Explorer etc
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         let errorThrown = false;
@@ -838,5 +838,58 @@ def step_impl(context):
         }
 
         assert.strictEqual(errorThrown, false, 'runFeature command threw an error');
+    });
+    test('Simulate Run Scenario Execution (ProcessExecution via Task)', async () => {
+        if (!vscode.workspace.workspaceFolders) {
+            assert.fail('No workspace folder open for E2E test');
+        }
+
+        const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
+        const fixtureUri = vscode.Uri.joinPath(workspaceUri, 'src', 'test', 'fixtures', 'behave', 'features', 'hello.feature');
+        
+        let errorThrown = false;
+        try {
+            await vscode.commands.executeCommand('gherkinPowerTools.runScenario', fixtureUri, 3);
+        } catch (e) {
+            errorThrown = true;
+        }
+
+        assert.strictEqual(errorThrown, false, 'runScenario command threw an error');
+    });
+
+    test('Simulate Debug Feature Execution', async () => {
+        if (!vscode.workspace.workspaceFolders) {
+            assert.fail('No workspace folder open for E2E test');
+        }
+
+        const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
+        const fixtureUri = vscode.Uri.joinPath(workspaceUri, 'src', 'test', 'fixtures', 'behave', 'features', 'hello.feature');
+        
+        let errorThrown = false;
+        try {
+            await vscode.commands.executeCommand('gherkinPowerTools.debugFeature', fixtureUri);
+        } catch (e) {
+            errorThrown = true;
+        }
+
+        assert.strictEqual(errorThrown, false, 'debugFeature command threw an error');
+    });
+
+    test('Simulate Debug Scenario Execution', async () => {
+        if (!vscode.workspace.workspaceFolders) {
+            assert.fail('No workspace folder open for E2E test');
+        }
+
+        const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
+        const fixtureUri = vscode.Uri.joinPath(workspaceUri, 'src', 'test', 'fixtures', 'behave', 'features', 'hello.feature');
+        
+        let errorThrown = false;
+        try {
+            await vscode.commands.executeCommand('gherkinPowerTools.debugScenario', fixtureUri, 3);
+        } catch (e) {
+            errorThrown = true;
+        }
+
+        assert.strictEqual(errorThrown, false, 'debugScenario command threw an error');
     });
 });
