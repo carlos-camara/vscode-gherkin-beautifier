@@ -110,7 +110,7 @@ Launches a Behave debug session using the official VS Code Python debugger, allo
 When the debugger pauses at a breakpoint, VS Code opens the matching Python step file at the exact line. The orange status bar confirms the debug session is active. You can inspect variables, evaluate expressions in the Debug Console, and use step-over/step-into controls to trace execution:
 
 <div align="center">
-  <img src="../../assets/test-explorer-debug.png" alt="VS Code debug session paused at a Python step — breakpoint at line 20, variables panel showing username and password values" width="700" />
+  <img src="../../assets/debug-demo.gif" alt="Debug session from Test Explorer — click 🐞, breakpoint hit in step definition, variables panel, debug console output" width="700" />
 </div>
 
 > **⚠️ Important:** The **Python extension** (`ms-python.python`) or **Debugpy extension** (`ms-python.debugpy`) must be installed. If neither is found, the extension will show an error with a direct link to the Marketplace install page.

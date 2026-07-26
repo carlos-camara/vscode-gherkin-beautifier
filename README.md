@@ -129,9 +129,7 @@ AST-powered formatting, validation, navigation, execution, debugging and analyti
 Gherkin PowerTools registers a native **VS Code Test Controller** that populates the Testing sidebar with a structured, live-updating tree of all your `.feature` files. The tree updates **as you type** (400 ms debounce) — no save required.
 
 <div align="center">
-
-<img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via CodeLens — One-click isolated execution and custom arguments" width="600" />
-
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/fix/test-explorer-realtime-updates/assets/debug-demo.gif" alt="Debug a Behave scenario from Test Explorer — click 🐞, breakpoint hit, variables panel, debug console" width="700" />
 </div>
 
 <sub>📖 [Execution & Debugging documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/execution.html)</sub>
