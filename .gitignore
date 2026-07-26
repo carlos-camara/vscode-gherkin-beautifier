@@ -11,7 +11,3 @@ site/
 .venv/
 venv/
 
-# Local analysis & scratch files — never commit
-docs/analysis/
-scratch/
-test-profile.js
