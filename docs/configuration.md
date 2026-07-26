@@ -1,58 +1,150 @@
 # ⚙️ Configuration
 
-Gherkin PowerTools works out-of-the-box, but you can tailor it to your team's style guide via your `settings.json`.
+Gherkin PowerTools works out of the box with zero configuration. Every setting below is optional — change only what you need.
 
-## Available Settings
+---
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `gherkinPowerTools.profile` | `"custom"` | Select a configuration profile (`custom`, `strict`, `team`, `minimal`, `legacy`). Individual settings override the profile defaults. |
-| `gherkinPowerTools.indentation.steps` | `4` | Number of spaces to indent all steps (`Given`, `When`, `Then`, `And`, `But`). |
-| `gherkinPowerTools.tables.alignToKeyword` | `true` | If enabled, tables dynamically pad their left border to match the text length of the preceding step. |
-| `gherkinPowerTools.emptyLines.betweenScenarios` | `1` | Enforces the exact number of blank lines between `Scenario` and `Rule` blocks. |
-| `gherkinPowerTools.tags.format` | `"wrap"` | Choose `"wrap"` to split long tags across lines, or `"singleLine"` to keep them contiguous. |
-| `gherkinPowerTools.tags.sort` | `"preserve"` | Choose `"preserve"` to keep their original source order, or `"alphabetical"` to sort them A-Z. |
-| `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", "**/features/steps/**/*.py"]` | An array of glob patterns pointing to Python files that contain Behave steps. Used for linking, hovers, linting, and autocomplete. |
-| `gherkinPowerTools.behave.ignoreGlobs` | `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]` | An array of glob patterns to exclude from step discovery. |
-| `gherkinPowerTools.behave.additionalArguments` | `[]` | Additional flags passed to Behave when executing via the Test Explorer. |
-| `gherkinPowerTools.behave.command` | `"behave"` | The base command used to run Behave when executing via the Test Explorer. |
+## Quick Reference
 
-<br>
+| Setting | Default | What it controls |
+|---------|---------|-----------------|
+| `gherkinPowerTools.profile` | `"custom"` | Baseline configuration profile |
+| `gherkinPowerTools.indentation.steps` | `4` | Spaces before step keywords |
+| `gherkinPowerTools.tables.alignToKeyword` | `true` | Align table left edge to preceding step text |
+| `gherkinPowerTools.emptyLines.betweenScenarios` | `1` | Blank lines between Scenario/Rule blocks |
+| `gherkinPowerTools.tags.format` | `"wrap"` | `"wrap"` or `"singleLine"` tag layout |
+| `gherkinPowerTools.tags.sort` | `"preserve"` | `"preserve"` or `"alphabetical"` tag order |
+| `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", "**/features/steps/**/*.py"]` | Python step file discovery patterns |
+| `gherkinPowerTools.behave.ignoreGlobs` | `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]` | Paths excluded from discovery |
+| `gherkinPowerTools.behave.command` | `"behave"` | Base command for running Behave |
+| `gherkinPowerTools.behave.additionalArguments` | `[]` | Extra flags passed to every Behave invocation |
 
-**ℹ️ NOTE:** *Changes to the `behave.stepGlobs` or `behave.ignoreGlobs` settings take effect immediately. The extension will automatically reload its step cache and live watchers without requiring you to restart VS Code.*
+> **Note:** Changes to `behave.stepGlobs` or `behave.ignoreGlobs` take effect **immediately** — the extension reloads its step cache and file watchers without requiring a VS Code restart.
 
-<br>
+---
 
 ## Configuration Profiles
 
-To simplify the onboarding experience, Gherkin PowerTools provides built-in configuration profiles. You can select a profile to establish a baseline set of formatting rules, and then selectively override any individual setting you prefer.
+Profiles let you establish a formatting baseline and then selectively override individual settings.
 
-* **`custom` (Default)**: Uses the extension's default settings.
-* **`strict`**: Enforces strict formatting and consistency. Alphabetically sorts tags and uses 4 spaces indentation.
-* **`team`**: A standard baseline designed for large teams to ensure formatting consistency without being overly restrictive.
-* **`minimal`**: Minimal interference for quick edits. Uses 2 spaces indentation, disables table keyword alignment, keeps tags on a single line, and doesn't enforce empty lines between scenarios.
-* **`legacy`**: Targets older codebases or SpecFlow defaults. Uses 2 spaces indentation and disables table keyword alignment.
+| Profile | Description |
+|---------|-------------|
+| `custom` *(default)* | Uses the extension's own defaults — a sensible starting point for any project |
+| `strict` | Strict consistency: 4-space indentation, alphabetically sorted tags, 1 blank line between scenarios |
+| `team` | Standard baseline for large teams — enforces consistency without being overly restrictive |
+| `minimal` | Low interference: 2-space indentation, table alignment disabled, tags on a single line, no blank line enforcement |
+| `legacy` | Targets older Gherkin codebases or SpecFlow defaults: 2-space indentation, table alignment disabled |
 
-## Automated First-Run Onboarding
+Set a profile in `settings.json`:
 
-When you open a workspace containing Python Behave files, Gherkin PowerTools automatically inspects your workspace layout. If step definitions (Python files with `@given`, `@when`, `@then`, `@step` decorators or `environment.py`) exist in non-standard folders not currently matched by `behave.stepGlobs`, a non-blocking notification offers 1-click actions:
+```json
+"gherkinPowerTools.profile": "strict"
+```
 
-* **⚙️ Settings:** Safely appends the recommended glob patterns to `.vscode/settings.json`.
-* **📄 Config:** Creates or merges the recommended patterns into `.gherkin-powertoolsrc.json`.
-* **🩺 Diagnostics:** Triggers `Gherkin: Diagnose Workspace` report.
+Individual settings always override the profile defaults.
 
-## Example Configuration
+---
+
+## Settings Detail
+
+### Formatting
+
+#### `gherkinPowerTools.indentation.steps`
+Number of spaces used to indent step keywords (`Given`, `When`, `Then`, `And`, `But`).
+
+```json
+"gherkinPowerTools.indentation.steps": 4
+```
+
+#### `gherkinPowerTools.tables.alignToKeyword`
+When `true`, the left border of Data Tables and Examples tables is dynamically padded to align with the text start of the preceding step — not just to a fixed column.
+
+```json
+"gherkinPowerTools.tables.alignToKeyword": true
+```
+
+#### `gherkinPowerTools.emptyLines.betweenScenarios`
+Enforces exactly this number of blank lines between `Scenario`, `Scenario Outline`, and `Rule` blocks.
+
+```json
+"gherkinPowerTools.emptyLines.betweenScenarios": 1
+```
+
+#### `gherkinPowerTools.tags.format`
+- `"wrap"` — Splits tag lines that exceed the wrap column across multiple lines
+- `"singleLine"` — Keeps all tags on one line regardless of length
+
+```json
+"gherkinPowerTools.tags.format": "wrap"
+```
+
+#### `gherkinPowerTools.tags.sort`
+- `"preserve"` — Keeps tags in their original source order
+- `"alphabetical"` — Sorts tags A–Z on every format
+
+```json
+"gherkinPowerTools.tags.sort": "preserve"
+```
+
+---
+
+### Behave / Execution
+
+#### `gherkinPowerTools.behave.stepGlobs`
+An array of glob patterns pointing to Python files containing Behave step definitions. Used for IntelliSense, Hover, Go to Definition, and undefined step detection.
+
+```json
+"gherkinPowerTools.behave.stepGlobs": [
+    "**/steps/**/*.py",
+    "**/features/steps/**/*.py"
+]
+```
+
+#### `gherkinPowerTools.behave.ignoreGlobs`
+Patterns excluded from step discovery. Always exclude virtual environments and dependency folders.
+
+```json
+"gherkinPowerTools.behave.ignoreGlobs": [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/env/**"
+]
+```
+
+#### `gherkinPowerTools.behave.command`
+The base command used to invoke Behave. Customize this when using `pipenv`, `poetry`, or a virtual environment.
+
+```json
+"gherkinPowerTools.behave.command": "poetry run behave"
+```
+
+#### `gherkinPowerTools.behave.additionalArguments`
+Extra flags appended to every Behave execution from the Test Explorer. Useful for persistent flags like `--no-capture` or `-D env=staging`.
+
+```json
+"gherkinPowerTools.behave.additionalArguments": ["--no-capture"]
+```
+
+---
+
+## Full Example Configuration
 
 ```json
 {
-    "gherkinPowerTools.indentation.steps": 2,
+    "gherkinPowerTools.profile": "strict",
+    "gherkinPowerTools.indentation.steps": 4,
     "gherkinPowerTools.tables.alignToKeyword": true,
     "gherkinPowerTools.emptyLines.betweenScenarios": 1,
     "gherkinPowerTools.tags.format": "wrap",
-    "gherkinPowerTools.tags.sort": "preserve",
+    "gherkinPowerTools.tags.sort": "alphabetical",
     "gherkinPowerTools.behave.stepGlobs": [
         "**/steps/**/*.py",
-        "**/other_steps/**/*.py"
+        "**/features/steps/**/*.py"
+    ],
+    "gherkinPowerTools.behave.ignoreGlobs": [
+        "**/node_modules/**",
+        "**/.venv/**"
     ],
     "gherkinPowerTools.behave.command": "poetry run behave",
     "gherkinPowerTools.behave.additionalArguments": [
@@ -61,23 +153,26 @@ When you open a workspace containing Python Behave files, Gherkin PowerTools aut
 }
 ```
 
-## Workspace vs User Settings
+---
 
-Gherkin PowerTools supports configuration at three levels, in the following order of precedence:
+## Configuration Precedence
 
-1. **Project Settings (`.gherkin-powertoolsrc.json`)**: Apply only to the current project and can be committed to source control for team standardization.
-2. **Workspace Settings (`.vscode/settings.json`)**: Apply only to the current workspace in VS Code.
-3. **User Settings (`settings.json`)**: Apply globally to all your projects.
+Settings are resolved in the following order (highest to lowest priority):
 
-### Shared Project Configuration
+1. **`.gherkin-powertoolsrc.json`** — Project-level file committed to source control; applies to all contributors
+2. **`.vscode/settings.json`** — Workspace-level settings; applies only to your local VS Code instance
+3. **User `settings.json`** — Global settings; applies to all workspaces
 
-You can create a standalone configuration file named `.gherkin-powertoolsrc.json` in the root of your project. This is highly recommended for teams to ensure everyone uses the same formatting and discovery rules, regardless of their editor.
+---
 
-The extension provides full JSON schema validation, autocompletion, and hover documentation when editing this file in VS Code.
+## Shared Project Configuration (`.gherkin-powertoolsrc.json`)
 
-> **⚠️ Warning:** Unlike VS Code's `settings.json`, properties inside `.gherkin-powertoolsrc.json` **do not** use the `gherkinPowerTools.` prefix and are formatted as nested objects instead of flat keys. Rely on VS Code's autocompletion (`Ctrl + Space`) inside the file to guide you.
+Commit a `.gherkin-powertoolsrc.json` to the repository root to standardize formatting and discovery for the whole team — regardless of individual VS Code settings.
 
-**Example `.gherkin-powertoolsrc.json`:**
+The extension provides full **JSON Schema validation**, **autocompletion**, and **hover documentation** when editing this file in VS Code.
+
+> **Important:** Properties inside `.gherkin-powertoolsrc.json` do **not** use the `gherkinPowerTools.` prefix. They use a nested object structure. Use <kbd>Ctrl+Space</kbd> inside the file to trigger autocompletion.
+
 ```json
 {
     "profile": "strict",
@@ -89,7 +184,7 @@ The extension provides full JSON schema validation, autocompletion, and hover do
     },
     "tags": {
         "format": "wrap",
-        "sort": "preserve"
+        "sort": "alphabetical"
     },
     "emptyLines": {
         "betweenScenarios": 1
@@ -109,5 +204,18 @@ The extension provides full JSON schema validation, autocompletion, and hover do
 }
 ```
 
-> **💡 Tip:** **Team Standardization**
-> Commit a `.gherkin-powertoolsrc.json` to your repository so all contributors share the same formatting rules and step discovery paths!
+> **Tip:** Commit this file alongside your `.vscode/settings.json` so both the team config and VS Code preferences are tracked in source control.
+
+---
+
+## Automated First-Run Onboarding
+
+When you open a workspace containing Python Behave files, Gherkin PowerTools silently inspects your structure. If step files exist in locations not covered by `stepGlobs`, a single non-blocking notification offers:
+
+| Action | Effect |
+|--------|--------|
+| **⚙️ Settings** | Appends recommended glob patterns to `.vscode/settings.json` |
+| **📄 Config** | Creates or merges recommended patterns into `.gherkin-powertoolsrc.json` |
+| **🩺 Diagnostics** | Opens the `Gherkin: Diagnose Workspace` report |
+
+See [Onboarding](features/onboarding.md) for full details.
