@@ -10,7 +10,7 @@ Open the Testing sidebar with `Cmd+Shift+T` (macOS) or `Ctrl+Shift+T` (Windows/L
 
 The sidebar shows a **real-time, structured tree** of your entire workspace:
 
-```
+```text
 📁 features/
   📄 login.feature
     ├─ ▶ Scenario: Successful login

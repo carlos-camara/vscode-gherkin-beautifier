@@ -8,7 +8,7 @@ The extension watches your workspace for `.py` files matching your configured gl
 
 **Default step globs:**
 
-```
+```text
 **/steps/**/*.py
 **/features/steps/**/*.py
 ```

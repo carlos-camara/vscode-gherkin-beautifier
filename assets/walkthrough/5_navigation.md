@@ -28,7 +28,7 @@ Hover over any `@tag` to see its **blast radius** — the number of scenarios ac
 
 ## IntelliSense Completions
 
-After typing `Given `, `When `, `Then `, `And `, or `But `, the extension suggests matching step definitions from your Python cache.
+After typing `Given`, `When`, `Then`, `And`, or `But` plus a space, the extension suggests matching step definitions from your Python cache.
 
 Inside a `Scenario Outline`, type `<` to trigger **parameter autocompletion** — the extension reads your `Examples:` table headers and inserts the correct `<column>` placeholder.
 
@@ -38,7 +38,7 @@ Inside a `Scenario Outline`, type `<` to trigger **parameter autocompletion** �
 
 Open the VS Code **Outline** sidebar (`View → Open View → Outline`) to see a structured tree of your `.feature` file:
 
-```
+```text
 Feature: User Authentication
   ├─ Scenario: Successful login
   ├─ Scenario: Failed login — wrong password

@@ -66,9 +66,9 @@ Once execution completes, each node updates to show its result. Green ✅ means 
 
 #### Viewing Historical Execution Output (New)
 
-With Gherkin PowerTools, you don't need to scroll endlessly through a terminal to find out why an older test failed. Every failed execution automatically captures the precise terminal output and embeds it inside the Test Explorer history. 
+With Gherkin PowerTools, you don't need to scroll endlessly through a terminal to find out why an older test failed. Every failed execution automatically captures the precise terminal output and embeds it inside the Test Explorer history.
 
-Simply click on any ❌ failed node in the tree to open the **Test Results** panel natively in VS Code. 
+Simply click on any ❌ failed node in the tree to open the **Test Results** panel natively in VS Code.
 
 <div align="center">
   <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="700" />
@@ -126,7 +126,7 @@ When the debugger pauses at a breakpoint, VS Code opens the matching Python step
 
 ## Test State Lifecycle
 
-```
+```text
 [Enqueued 🔄] → [Running ⏳] → [Passed ✅]
                              ↘ [Failed ❌]
                              ↘ [Cancelled —]

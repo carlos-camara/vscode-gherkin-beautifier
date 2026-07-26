@@ -54,8 +54,7 @@ graph LR
 | `execution.ts` | Orchestrates VS Code Tasks via array-based `ProcessExecution` APIs for secure Behave test runs without shell injection risks |
 
 | `configuration.ts`| Provides typesafe access to user and workspace configuration settings |
-| `testController.ts` | Registers the native VS Code Test Controller (`GherkinTestController`). Populates the Testing sidebar with a live feature/scenario tree, listens to `onDidChangeTextDocument` (400 ms debounce) for real-time updates before save, and uses mode-aware session tracking (`waitForTaskEnd` / `waitForDebugEnd`) to reflect run/pass/fail state correctly for both task and debug executions |
-
+| `testController.ts` | Registers the native VS Code Test Controller (`GherkinTestController`). Populates the Testing sidebar with a live feature/scenario tree. Listens to `onDidChangeTextDocument` (400 ms debounce) for real-time updates before save, and uses mode-aware session tracking to reflect run/pass/fail state correctly for both task and debug executions |
 ## Hot-Reloading Configuration
 
 The extension is designed to respond to configuration changes instantly without requiring a window reload.
