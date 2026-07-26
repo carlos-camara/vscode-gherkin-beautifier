@@ -125,7 +125,7 @@ If breaking changes exist, use this table:
 
 <!-- Thank everyone who contributed to this release. -->
 
-Thanks to everyone who filed issues, left reviews, and contributed code! ❤️
+Thanks to everyone who filed issues, left reviews, and contributed code.
 
 ---
 
