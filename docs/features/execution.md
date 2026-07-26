@@ -19,7 +19,7 @@ Run and debug your Behave tests directly from VS Code's built-in **Testing** sid
 Gherkin PowerTools registers a native `GherkinTestController` that maps your entire workspace into a structured hierarchy inside the Testing panel. Every `.feature` file, every `Feature`, `Scenario`, `Scenario Outline`, and individual `Example` row becomes an independently executable node.
 
 <div align="center">
-  <img src="../../assets/test-explorer-tree.png" alt="Test Explorer tree — feature files, scenarios, and example rows as independently runnable nodes" width="600" />
+  <img src="../../assets/test-explorer-tree.png" alt="Test Explorer tree — feature files, scenarios, and example rows as independently runnable nodes" width="700" />
 </div>
 
 Every node in the tree is independently executable. Click `▶` next to any item to run only that file, feature, rule, scenario, or individual example row. Hover a row to reveal its `▶ Run` and `🐞 Debug` inline action buttons.
@@ -71,7 +71,7 @@ With Gherkin PowerTools, you don't need to scroll endlessly through a terminal t
 Simply click on any ❌ failed node in the tree to open the **Test Results** panel natively in VS Code. 
 
 <div align="center">
-  <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="600" />
+  <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="700" />
 </div>
 
 **Simulation of Embedded Test Output:**
