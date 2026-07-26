@@ -29,7 +29,7 @@ graph LR
     A --> N[dialect.ts]
     A --> O[discovery.ts]
     A --> P[execution.ts]
-    A --> Q[codelens.ts]
+
     A --> R[configuration.ts]
     A --> S[testController.ts]
 ```
@@ -52,7 +52,7 @@ graph LR
 | `dialect.ts`   | Provides i18n support by matching localized Gherkin keywords |
 | `discovery.ts` | Centralized Behave file discovery service handling glob normalization and reactive file watchers |
 | `execution.ts` | Orchestrates VS Code Tasks via array-based `ProcessExecution` APIs for secure Behave test runs without shell injection risks |
-| `codelens.ts`  | Injects Run/Debug/Edit lenses above features/scenarios using a resilient, dialect-aware text scanner (avoids AST crashes) |
+
 | `configuration.ts`| Provides typesafe access to user and workspace configuration settings |
 | `testController.ts` | Registers the native VS Code Test Controller (`GherkinTestController`). Populates the Testing sidebar with a live feature/scenario tree, listens to `onDidChangeTextDocument` (400 ms debounce) for real-time updates before save, and uses mode-aware session tracking (`waitForTaskEnd` / `waitForDebugEnd`) to reflect run/pass/fail state correctly for both task and debug executions |
 
