@@ -16,9 +16,7 @@
     "cucumber",
     "bdd",
     "behave",
-    "python",
-    "cucumberautocomplete",
-    "gherkin autocomplete"
+    "python"
   ],
   "publisher": "carloscamara",
   "author": "Carlos Camara",
@@ -61,19 +59,32 @@
       "properties": {
         "gherkinPowerTools.profile": {
           "type": "string",
-          "enum": ["custom", "strict", "team", "minimal", "legacy"],
+          "enum": [
+            "custom",
+            "strict",
+            "team",
+            "minimal",
+            "legacy"
+          ],
           "default": "custom",
-          "description": "Select a configuration profile. Individual settings override the profile defaults."
+          "markdownDescription": "Select a configuration profile. Individual settings override the profile defaults.",
+          "markdownEnumDescriptions": [
+            "Custom configuration (default)",
+            "Strict formatting rules",
+            "Team shared configuration",
+            "Minimal formatting rules",
+            "Legacy formatting rules"
+          ]
         },
         "gherkinPowerTools.indentation.steps": {
           "type": "number",
           "default": 4,
-          "description": "Number of spaces to indent steps."
+          "markdownDescription": "Number of spaces to indent steps."
         },
         "gherkinPowerTools.tables.alignToKeyword": {
           "type": "boolean",
           "default": true,
-          "description": "If true, tables align dynamically to the start of the step text. If false, tables simply indent slightly more than the step keyword."
+          "markdownDescription": "If true, tables align dynamically to the start of the step text. If false, tables simply indent slightly more than the step keyword."
         },
         "gherkinPowerTools.tags.format": {
           "type": "string",
@@ -82,7 +93,11 @@
             "singleLine"
           ],
           "default": "wrap",
-          "description": "How to format long lists of tags. 'wrap' splits them across multiple lines (max 80 chars), 'singleLine' keeps them all on one line."
+          "markdownDescription": "How to format long lists of tags. 'wrap' splits them across multiple lines (max 80 chars), 'singleLine' keeps them all on one line.",
+          "markdownEnumDescriptions": [
+            "Splits tags across multiple lines (max 80 chars)",
+            "Keeps all tags on one line"
+          ]
         },
         "gherkinPowerTools.tags.sort": {
           "type": "string",
@@ -91,12 +106,16 @@
             "alphabetical"
           ],
           "default": "preserve",
-          "description": "How to sort tags. 'preserve' keeps their original source order, 'alphabetical' sorts them A-Z."
+          "markdownDescription": "How to sort tags. 'preserve' keeps their original source order, 'alphabetical' sorts them A-Z.",
+          "markdownEnumDescriptions": [
+            "Keeps their original source order",
+            "Sorts them A-Z"
+          ]
         },
         "gherkinPowerTools.emptyLines.betweenScenarios": {
           "type": "number",
           "default": 1,
-          "description": "Number of empty lines to enforce between Scenario/Rule/Background blocks."
+          "markdownDescription": "Number of empty lines to enforce between Scenario/Rule/Background blocks."
         },
         "gherkinPowerTools.behave.stepGlobs": {
           "type": "array",
@@ -107,7 +126,7 @@
             "**/steps/**/*.py",
             "**/features/steps/**/*.py"
           ],
-          "description": "Glob patterns to locate Python/Behave step definition files."
+          "markdownDescription": "Glob patterns to locate Python/Behave step definition files."
         },
         "gherkinPowerTools.behave.ignoreGlobs": {
           "type": "array",
@@ -120,7 +139,7 @@
             "**/venv/**",
             "**/env/**"
           ],
-          "description": "Glob patterns to ignore when locating Python/Behave step definition files."
+          "markdownDescription": "Glob patterns to ignore when locating Python/Behave step definition files."
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",
@@ -129,13 +148,13 @@
           },
           "default": [],
           "scope": "resource",
-          "description": "Additional arguments to pass to Behave when executing via the Test Explorer."
+          "markdownDescription": "Additional arguments to pass to Behave when executing via the Test Explorer."
         },
         "gherkinPowerTools.behave.command": {
           "type": "string",
           "default": "behave",
           "scope": "resource",
-          "description": "The base command to run Behave."
+          "markdownDescription": "The base command to run Behave."
         }
       }
     },
@@ -143,55 +162,57 @@
       {
         "command": "gherkinPowerTools.commandCenter",
         "title": "Gherkin PowerTools: Command Center",
-        "category": "Gherkin"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.format",
-        "title": "Format Gherkin Document"
+        "title": "Format Gherkin Document",
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.showStatistics",
-        "title": "Gherkin: Show Project Statistics"
+        "title": "Show Project Statistics",
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.runFeature",
         "title": "Run Feature",
-        "category": "Gherkin"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.runScenario",
         "title": "Run Scenario",
-        "category": "Gherkin"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.runFeatureWithArgs",
         "title": "Edit Feature...",
-        "category": "Gherkin"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.runScenarioWithArgs",
         "title": "Edit Scenario...",
-        "category": "Gherkin"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.debugFeature",
         "title": "Debug Feature",
-        "category": "Gherkin"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.debugScenario",
         "title": "Debug Scenario",
-        "category": "Gherkin"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.diagnoseWorkspace",
-        "title": "Gherkin: Diagnose Workspace",
-        "category": "Gherkin"
+        "title": "Diagnose Workspace",
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.testExplorerEditAndRun",
         "title": "Edit Behave args & Run",
-        "category": "Gherkin",
+        "category": "Gherkin PowerTools",
         "icon": "$(edit)"
       }
     ],
@@ -199,13 +220,8 @@
       "editor/context": [
         {
           "when": "editorLangId == feature",
-          "command": "gherkinPowerTools.format",
-          "group": "1_modification"
-        },
-        {
-          "when": "editorLangId == feature",
           "command": "gherkinPowerTools.showStatistics",
-          "group": "1_modification"
+          "group": "navigation"
         }
       ],
       "view/title": [
