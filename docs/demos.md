@@ -13,6 +13,15 @@ Discover all extension capabilities from a single, unified interface!
 
 ---
 
+### Test Explorer Integration
+Run, debug, and view history directly from the native VS Code Test Explorer.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/test-explorer-demo.gif" alt="Test Explorer Integration" width="600" />
+</div>
+
+---
+
 ## Setup & Onboarding Demos
 
 ### Zero-Configuration Onboarding & Diagnostics
