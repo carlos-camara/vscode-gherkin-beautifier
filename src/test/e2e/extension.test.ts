@@ -868,8 +868,9 @@ def step_impl(context):
         let errorThrown = false;
         try {
             await vscode.commands.executeCommand('gherkinPowerTools.debugFeature', fixtureUri);
-        } catch (e) {
+        } catch (e: any) {
             errorThrown = true;
+            console.error('debugFeature error:', e);
         }
 
         assert.strictEqual(errorThrown, false, 'debugFeature command threw an error');
@@ -886,8 +887,9 @@ def step_impl(context):
         let errorThrown = false;
         try {
             await vscode.commands.executeCommand('gherkinPowerTools.debugScenario', fixtureUri, 3);
-        } catch (e) {
+        } catch (e: any) {
             errorThrown = true;
+            console.error('debugScenario error:', e);
         }
 
         assert.strictEqual(errorThrown, false, 'debugScenario command threw an error');

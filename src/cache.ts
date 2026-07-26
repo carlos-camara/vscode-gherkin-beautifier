@@ -26,7 +26,7 @@ export class SymbolCache {
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
 
-    public initialize(): Promise<void> {
+    public ensureInitialized(): Promise<void> {
         if (this.state === 'initializing' || this.state === 'ready') {
             return this.initPromise!;
         }
@@ -184,7 +184,7 @@ export class SymbolCache {
     }
 
     public async getStepDefinitions(stepText: string, semanticType?: 'given' | 'when' | 'then' | 'step'): Promise<StepDefinition[]> {
-        await this.initialize();
+        await this.ensureInitialized();
         const matches: StepDefinition[] = [];
         for (const [_, definitions] of this.cache) {
             for (const def of definitions) {
@@ -200,7 +200,7 @@ export class SymbolCache {
     }
 
     public async getAllStepDefinitions(semanticType?: 'given' | 'when' | 'then' | 'step'): Promise<StepDefinition[]> {
-        await this.initialize();
+        await this.ensureInitialized();
         const definitions: StepDefinition[] = [];
         for (const [_, defs] of this.cache) {
             for (const def of defs) {
@@ -228,7 +228,7 @@ export class FeatureCache {
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
 
-    public initialize(): Promise<void> {
+    public ensureInitialized(): Promise<void> {
         if (this.state === 'ready' || this.state === 'initializing') {
             return this.initPromise!;
         }
@@ -405,7 +405,8 @@ export class FeatureCache {
         }
     }
 
-    public getTagBlastRadius(tag: string): number {
+    public async getTagBlastRadius(tag: string): Promise<number> {
+        await this.ensureInitialized();
         return this.globalTagCount.get(tag) || 0;
     }
 
@@ -413,7 +414,8 @@ export class FeatureCache {
         return this.fileTagCounts.get(uri.toString());
     }
 
-    public hasStaleOrPartialFilesForTag(tag: string): boolean {
+    public async hasStaleOrPartialFilesForTag(tag: string): Promise<boolean> {
+        await this.ensureInitialized();
         for (const state of this.fileTagCounts.values()) {
             if ((state.status === 'stale' || state.status === 'partial') && state.counts.has(tag)) {
                 return true;

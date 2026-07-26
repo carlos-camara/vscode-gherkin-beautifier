@@ -19,6 +19,8 @@ import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
 
 import { ConfigurationService } from './configuration';
+import { performance } from 'perf_hooks';
+import * as fs from 'fs';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 
@@ -29,6 +31,7 @@ const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
  * @param context The extension context provided by VS Code.
  */
 export async function activate(context: vscode.ExtensionContext) {
+    const t0 = performance.now();
     logger.info('Extension "vscode-gherkin-powertools" is now active.');
     
     registerExecutionListeners(context);
@@ -50,17 +53,11 @@ export async function activate(context: vscode.ExtensionContext) {
     
     // Initialize Symbol Cache for definitions
     const symbolCache = new SymbolCache();
-    const symbolInit = symbolCache.initialize();
 
     // Initialize Feature Cache for workspace-wide tag statistics
     const featureCache = new FeatureCache();
-    featureCache.initialize().catch(err => {
-        logger.error(`Error during initial feature cache load: ${err}`);
-    });
 
-    // Non-blocking activation: initialize caches in the background
-    // symbolInit and featureInit are Promises that run asynchronously
-
+    // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache);
 
     const reLintOpenFiles = () => {
@@ -71,14 +68,6 @@ export async function activate(context: vscode.ExtensionContext) {
         });
     };
 
-    // Once the symbol cache finishes its initial background load, re-lint 
-    // all open files so that "undefined step" diagnostics appear.
-    symbolInit.then(() => {
-        reLintOpenFiles();
-    }).catch(err => {
-        logger.error(`Error during initial symbol cache load: ${err}`);
-    });
-
     // Watch for changes in Python step files
     const setupStepWatchers = () => {
         const watchers = discoveryService.setupWatchers(
@@ -88,12 +77,10 @@ export async function activate(context: vscode.ExtensionContext) {
         );
         watchers.forEach(w => context.subscriptions.push(w));
     };
-    setupStepWatchers();
-
     const rebuildDiscovery = async () => {
         configService.invalidateCache();
         setupStepWatchers();
-        await symbolCache.initialize();
+        await symbolCache.ensureInitialized();
         reLintOpenFiles();
     };
 
@@ -113,12 +100,21 @@ export async function activate(context: vscode.ExtensionContext) {
     configWatcher.onDidCreate(rebuildDiscovery);
     configWatcher.onDidDelete(rebuildDiscovery);
     
-    // Watch for changes in feature files to update tag statistics
-    const featureWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
-    featureWatcher.onDidCreate(async uri => { await featureCache.updateFile(uri); });
-    featureWatcher.onDidChange(async uri => { await featureCache.updateFile(uri); });
-    featureWatcher.onDidDelete(uri => { featureCache.removeFile(uri); });
-    context.subscriptions.push(featureWatcher);
+    // Defer heavy I/O scanning and watcher setup to allow VS Code to start up quickly
+    setTimeout(() => {
+        symbolCache.ensureInitialized().then(() => {
+            setupStepWatchers();
+            reLintOpenFiles();
+        }).catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
+
+        featureCache.ensureInitialized().then(() => {
+            const featureWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
+            featureWatcher.onDidCreate(async uri => { await featureCache.updateFile(uri); });
+            featureWatcher.onDidChange(async uri => { await featureCache.updateFile(uri); });
+            featureWatcher.onDidDelete(uri => { featureCache.removeFile(uri); });
+            context.subscriptions.push(featureWatcher);
+        }).catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
+    }, 2000);
     
     // Asynchronously trigger onboarding recommendation check
     showOnboardingNotificationIfNeeded(context, configService).catch(err => {
@@ -153,14 +149,14 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.runFeature', (uri?: vscode.Uri) => {
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
-            if (finalUri) runBehave(finalUri, undefined, configService);
+            if (finalUri) return runBehave(finalUri, undefined, configService);
         })
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.runScenario', (uri?: vscode.Uri, line?: number) => {
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             const finalLine = line !== undefined ? line : vscode.window.activeTextEditor?.selection.active.line;
-            if (finalUri) runBehave(finalUri, finalLine, configService);
+            if (finalUri) return runBehave(finalUri, finalLine, configService);
         })
     );
     context.subscriptions.push(
@@ -180,13 +176,13 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('gherkinPowerTools.debugScenario', (uri?: vscode.Uri, line?: number) => {
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             const finalLine = line !== undefined ? line : vscode.window.activeTextEditor?.selection.active.line;
-            if (finalUri) debugBehave(finalUri, finalLine, configService);
+            if (finalUri) return debugBehave(finalUri, finalLine, configService);
         })
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.debugFeature', (uri?: vscode.Uri) => {
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
-            if (finalUri) debugBehave(finalUri, undefined, configService);
+            if (finalUri) return debugBehave(finalUri, undefined, configService);
         })
     );
 
@@ -305,6 +301,12 @@ export async function activate(context: vscode.ExtensionContext) {
             )
         );
     });
+
+    const tEnd = performance.now();
+    const duration = tEnd - t0;
+    fs.appendFileSync('/tmp/vscode-gherkin-perf.log', `Activation: ${duration}ms\n`);
+    logger.info(`Activation finished in ${duration}ms`);
+    console.log(`Gherkin PowerTools Activation: ${duration}ms`);
 }
 
 /**
