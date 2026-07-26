@@ -8,7 +8,7 @@
 
 ## 🎥 Visual Demo
 <!-- Insert a GIF or screenshot demonstrating the biggest feature -->
-![Demo](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif)
+![Demo](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif)
 
 ## 🚀 New Capabilities
 <!-- Highlight brand new features. (The auto-generated PR list will go below) -->
