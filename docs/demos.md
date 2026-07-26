@@ -17,7 +17,7 @@ Discover all extension capabilities from a single, unified interface!
 Run, debug, and view history directly from the native VS Code Test Explorer.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/test-explorer-demo.webp" alt="Test Explorer Integration" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/fix/test-explorer-realtime-updates/assets/debug-demo.gif" alt="Test Explorer Integration — run, debug, inspect variables and call stack" width="700" />
 </div>
 
 ---
@@ -96,7 +96,7 @@ Hover over any tag to see how many scenarios across the workspace are affected.
 Execute or debug features, scenarios, and individual example rows from the VS Code Testing sidebar (<kbd>⌘⇧T</kbd> / <kbd>Ctrl+Shift+T</kbd>).
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via Test Explorer" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/fix/test-explorer-realtime-updates/assets/debug-demo.gif" alt="Debug a Behave scenario — breakpoint, variables, call stack, debug console" width="700" />
 </div>
 
 ### Generate Missing Step Stub
