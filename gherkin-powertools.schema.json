@@ -87,7 +87,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "Additional arguments to pass to Behave when executing via CodeLens."
+          "description": "Additional arguments to pass to Behave when executing via the Test Explorer."
         },
         "command": {
           "type": "string",

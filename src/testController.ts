@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { parseGherkin } from './parser';
 import { logger } from './logger';
 import { ConfigurationService } from './configuration';
+import { runBehaveForTestRun } from './execution';
 import * as path from 'path';
 
 /** Extracts the scenario line number from a TestItem ID of the form `uri#scenario:LINE` */
@@ -22,11 +23,13 @@ function isFileItem(item: vscode.TestItem): boolean {
 
 export class GherkinTestController {
     private controller: vscode.TestController;
+    private configService: ConfigurationService;
     private fileWatcher?: vscode.FileSystemWatcher;
     private textChangeDisposable?: vscode.Disposable;
     private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-    constructor(_configService: ConfigurationService) {
+    constructor(configService: ConfigurationService) {
+        this.configService = configService;
         this.controller = vscode.tests.createTestController('gherkin-tests', 'Gherkin / Behave');
 
         this.controller.resolveHandler = async (item) => {
@@ -268,34 +271,50 @@ export class GherkinTestController {
             const line = extractLineFromId(item.id);
             run.started(item);
 
-            // Use the right event source: Tasks fire onDidEndTaskProcess,
-            // debug sessions fire onDidTerminateDebugSession.
-            const done = mode === 'debug'
-                ? this.waitForDebugEnd()
-                : this.waitForTaskEnd(item.uri, line);
-
             if (mode === 'debug') {
+                // Debug mode: launch via the existing debug command (output goes
+                // to the integrated terminal / debug console, not TEST RESULTS)
+                const done = this.waitForDebugEnd();
                 await vscode.commands.executeCommand(
                     line !== undefined ? 'gherkinPowerTools.debugScenario' : 'gherkinPowerTools.debugFeature',
                     item.uri,
                     line
                 );
-            } else {
-                await vscode.commands.executeCommand(
-                    line !== undefined ? 'gherkinPowerTools.runScenario' : 'gherkinPowerTools.runFeature',
-                    item.uri,
-                    line
-                );
-            }
-
-            // Wait for the task/debug session to finish and get exit code
-            const exitCode = await done;
-            if (exitCode === 0) {
+                await done;
+                // For debug we can't reliably get an exit code, mark as passed
+                // (the user can inspect the debug console for details)
                 run.passed(item);
-            } else if (exitCode !== null) {
-                run.failed(item, new vscode.TestMessage(`Behave exited with code ${exitCode}`));
+            } else {
+                // Run mode: spawn Behave directly so we can capture its output
+                // and feed it into the TEST RESULTS panel via run.appendOutput()
+                run.appendOutput(
+                    `\r\n▶ Running: ${item.label}\r\n`,
+                    undefined,
+                    item
+                );
+
+                const exitCode = await runBehaveForTestRun(
+                    item.uri,
+                    line,
+                    this.configService,
+                    (text) => run.appendOutput(text, undefined, item),
+                    token
+                );
+
+                if (exitCode === 0) {
+                    run.passed(item);
+                } else if (exitCode !== null) {
+                    // Surface the exit code as a TestMessage so it appears in the
+                    // Test Results panel when the user clicks on the failed node
+                    run.failed(
+                        item,
+                        new vscode.TestMessage(`Behave exited with code ${exitCode}. See output above for details.`)
+                    );
+                } else {
+                    // Cancelled or timed out
+                    run.skipped(item);
+                }
             }
-            // If exitCode is null it means the debug session ended (no exit code available)
         }
 
         // If no individual scenarios were run (feature-level), run at file level
@@ -310,26 +329,7 @@ export class GherkinTestController {
         run.end();
     }
 
-    /**
-     * Returns a promise that resolves with the exit code when the next gherkin
-     * task (ProcessExecution) finishes. Only suitable for `run` mode.
-     */
-    private waitForTaskEnd(_uri: vscode.Uri, _line: number | undefined): Promise<number | null> {
-        return new Promise((resolve) => {
-            const timeout = setTimeout(() => {
-                taskDisposable?.dispose();
-                resolve(null);
-            }, 5 * 60 * 1000); // 5 minute safety timeout
 
-            const taskDisposable = vscode.tasks.onDidEndTaskProcess(e => {
-                if (e.execution.task.source === 'Gherkin PowerTools') {
-                    clearTimeout(timeout);
-                    taskDisposable.dispose();
-                    resolve(e.exitCode ?? null);
-                }
-            });
-        });
-    }
 
     /**
      * Returns a promise that resolves (with null) when the next Behave debug

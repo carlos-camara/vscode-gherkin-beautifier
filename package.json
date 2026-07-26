@@ -129,7 +129,7 @@
           },
           "default": [],
           "scope": "resource",
-          "description": "Additional arguments to pass to Behave when executing via the Test Explorer or CodeLens."
+          "description": "Additional arguments to pass to Behave when executing via the Test Explorer."
         },
         "gherkinPowerTools.behave.command": {
           "type": "string",
@@ -294,7 +294,7 @@
           {
             "id": "execution",
             "title": "Execute Behave Tests",
-            "description": "Run and Edit your features directly from the editor using CodeLens. [Run Feature](command:gherkinPowerTools.runFeature)",
+            "description": "Run and Edit your features directly from the Test Explorer. [Run Feature](command:gherkinPowerTools.runFeature)",
             "media": {
               "markdown": "assets/walkthrough/8_execution.md"
             },
