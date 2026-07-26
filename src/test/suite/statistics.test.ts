@@ -145,9 +145,21 @@ suite('Statistics Core Logic Test Suite', () => {
           | b    |
         `;
         
-        await vscode.workspace.openTextDocument({ language: 'feature', content: docContent });
+        const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: docContent });
+        
+        // Isolate this test from other tests' open documents and workspace files
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', { get: () => [doc], configurable: true });
+        
+        const originalFindFiles = vscode.workspace.findFiles;
+        vscode.workspace.findFiles = async () => [];
         
         const stats = await calculateStatistics();
+        
+        if (originalTextDocuments) {
+            Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+        }
+        vscode.workspace.findFiles = originalFindFiles;
         assert.ok(stats);
         if (stats) {
             assert.strictEqual(stats.totalFeatures, 1, 'Should find 1 Feature');
@@ -193,9 +205,20 @@ suite('Statistics Core Logic Test Suite', () => {
           * I do something undefined
         `;
         
-        await vscode.workspace.openTextDocument({ language: 'feature', content: docContent });
+        const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: docContent });
+        
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', { get: () => [doc], configurable: true });
+        
+        const originalFindFiles = vscode.workspace.findFiles;
+        vscode.workspace.findFiles = async () => [];
         
         const stats = await calculateStatistics();
+        
+        if (originalTextDocuments) {
+            Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+        }
+        vscode.workspace.findFiles = originalFindFiles;
         assert.ok(stats);
         if (stats) {
             assert.ok(stats.totalAnd > 0, 'Should fall back to totalAnd for * or unknown keywords');
