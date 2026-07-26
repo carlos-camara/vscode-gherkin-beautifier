@@ -1,55 +1,66 @@
 # 🌳 Outline Provider
 
-Navigate massive `.feature` files with ease using VS Code's native **Outline** panel. Powered by the `@cucumber/gherkin` AST Parser, the Outline faithfully represents the exact semantic structure of your Gherkin document.
+Navigate massive `.feature` files with ease using VS Code's native **Outline** panel and **Breadcrumb** navigation. Powered by the official `@cucumber/gherkin` AST Parser, the Outline faithfully represents the exact semantic structure of your Gherkin document.
 
-Unlike regex-based parsers, our AST implementation guarantees it will never get confused by keywords hidden inside comments, docstrings, or data tables.
-
-<div style="border-radius: 8px; overflow: hidden; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 1px solid #d1d5db;">
-  <div style="background: #1f2937; padding: 10px 16px; display: flex; align-items: center; gap: 8px;">
-    <span style="font-size: 16px;">💡</span>
-    <span style="color: #f9fafb; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">How to Access</span>
-  </div>
-  <div style="background-color: #ffffff; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
-    <div style="display: flex; align-items: flex-start; gap: 12px;">
-      <span style="background: #1f2937; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; line-height: 20px; text-align: center;">1</span>
-      <span style="color: #374151; font-size: 13px; padding-top: 2px;">Open any <code style="background:#f3f4f6; padding: 1px 5px; border-radius: 3px; color: #1f2937;">.feature</code> file in your workspace.</span>
-    </div>
-    <div style="display: flex; align-items: flex-start; gap: 12px;">
-      <span style="background: #1f2937; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; line-height: 20px; text-align: center;">2</span>
-      <span style="color: #374151; font-size: 13px; padding-top: 2px;">Open the
-        <strong style="color: #111827;">Outline</strong> panel (Explorer sidebar) or press
-        <kbd style="background:#f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 1px 5px; font-size: 11px; color: #1f2937;">⌘⇧O</kbd> /
-        <kbd style="background:#f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; padding: 1px 5px; font-size: 11px; color: #1f2937;">Ctrl+Shift+O</kbd>.
-      </span>
-    </div>
-    <div style="display: flex; align-items: flex-start; gap: 12px;">
-      <span style="background: #1f2937; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; line-height: 20px; text-align: center;">3</span>
-      <span style="color: #374151; font-size: 13px; padding-top: 2px;">Click any item in the tree to jump directly to it.</span>
-    </div>
-  </div>
-</div>
-
+Unlike regex-based parsers, the AST implementation is never confused by keywords hidden inside comments, docstrings, or data tables.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif" alt="Outline Provider Demo" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif" alt="Outline Provider Demo" width="700" />
 </div>
 
+---
+
+## ⚡ How to Access
+
+**Outline Panel:**
+
+Open the Explorer sidebar (`Cmd+Shift+E` / `Ctrl+Shift+E`) and look for the **Outline** section at the bottom.
+
+**Symbol Picker (fastest):**
+
+Press <kbd>Cmd+Shift+O</kbd> (macOS) or <kbd>Ctrl+Shift+O</kbd> (Windows/Linux) to open a fuzzy-searchable symbol picker — type a few letters of a scenario name and jump to it instantly.
+
+**Breadcrumb Navigation:**
+
+The full Feature → Rule → Scenario hierarchy is always visible in the VS Code **breadcrumb bar** at the top of the editor. Click any crumb to navigate directly to that node.
+
+---
 
 ## 🗺️ Hierarchical Structure
 
-The Outline panel displays a perfectly nested hierarchical tree mirroring your BDD specifications:
+The Outline panel displays a perfectly nested tree that mirrors your BDD specification:
 
 ```text
 📁 Feature: User Authentication
   📁 Rule: Login Flow
-    📄 Scenario: Valid credentials
-    📄 Scenario: Invalid password
+    📄 Scenario: Successful login with valid credentials
+    📄 Scenario: Failed login — wrong password
+    📄 Scenario: Account locked after 3 failed attempts
   📁 Rule: Registration
-    📄 Scenario Outline: New user signup
+    📄 Scenario Outline: New user signup with multiple roles
+         📄 Examples Row: admin / full-access
+         📄 Examples Row: editor / read-only
+  📄 Background: Common preconditions
 ```
+
+Every `Examples` table row in a `Scenario Outline` is exposed as an **individual, independently navigable node** — so you can jump directly to a specific parameterized case.
+
+---
 
 ## 🚀 Workflow Benefits
 
-- **Rapid Navigation**: Instantly jump between scenarios and rules without mindless scrolling.
-- **Structural Overview**: Get a bird's-eye view of your feature's complexity and coverage at a glance.
-- **Breadcrumb Integration**: The semantic hierarchy is automatically injected into VS Code's breadcrumb navigation bar at the top of the editor, keeping you oriented in large files.
+| Benefit | Detail |
+|---------|--------|
+| **Rapid navigation** | Click any item to jump there — no scrolling |
+| **Structural overview** | See the full complexity of a feature at a glance before diving in |
+| **Breadcrumb integration** | Always know where you are in the file hierarchy |
+| **Symbol search** | Fuzzy-search across all scenarios with `Cmd+Shift+O` |
+| **AST accuracy** | No false positives from keyword text inside steps, comments, or docstrings |
+
+---
+
+## 🧩 Integration with Test Explorer
+
+Each node in the Outline corresponds directly to a node in the **Test Explorer** (`Cmd+Shift+T`). Use the Outline for navigation within a file, and the Test Explorer to run or debug any node across your entire workspace.
+
+> **Tip:** The outline updates live as you type — within 400 ms and without saving. Adding a new scenario is reflected in the outline immediately.

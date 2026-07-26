@@ -1,61 +1,68 @@
 # 🛠️ Command Center
 
-Stop hunting through menus and memorizing keyboard shortcuts. The **Command Center** is a unified interactive QuickPick menu that surfaces every Gherkin PowerTools capability from a single, searchable interface.
+Stop hunting through menus and memorizing keyboard shortcuts. The **Command Center** is a unified, searchable QuickPick interface that surfaces every Gherkin PowerTools capability from one place.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif" alt="Command Center" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif" alt="Command Center" width="700" />
 </div>
 
 ---
 
 ## ⚡ How to Open
 
-1. Open the VS Code Command Palette:
-   - **macOS:** <kbd>Cmd+Shift+P</kbd> (<kbd>⌘⇧P</kbd>)
-   - **Windows / Linux:** <kbd>Ctrl+Shift+P</kbd>
-2. Type **`Gherkin PowerTools: Command Center`** and press **Enter**.
+| Platform | Shortcut |
+|----------|----------|
+| **macOS** | <kbd>Cmd+Shift+P</kbd> → type `Gherkin PowerTools: Command Center` |
+| **Windows / Linux** | <kbd>Ctrl+Shift+P</kbd> → type `Gherkin PowerTools: Command Center` |
 
 ---
 
 ## 📋 Available Actions
 
-The Command Center groups all capabilities into the following categories:
-
 ### 🎨 Formatting
+
 | Action | Description |
 |--------|-------------|
-| **Format Document** | Formats the entire active `.feature` file using the AST-powered engine. |
-| **Format Selection** | Formats only the highlighted selection, respecting AST node boundaries. |
+| **Format Document** | Reformat the entire active `.feature` file using the full Cucumber AST engine — indentation, tables, tags, and blank lines normalized in one pass. |
+| **Format Selection** | Reformat only the highlighted range, respecting AST node boundaries. |
 
 ### ▶️ Execution
+
 | Action | Description |
 |--------|-------------|
-| **Run Feature** | Executes the entire active `.feature` file with Behave via a VS Code Task. |
-| **Run Scenario** | Executes the scenario at the current cursor position via its line number. |
-| **Debug Feature** | Launches the active `.feature` file in the VS Code Python debugger. |
-| **Debug Scenario** | Attaches the Python debugger to the scenario at the current cursor position. |
-| **Edit & Run** | Opens an interactive argument editor before executing, letting you customize flags for the current session or save them permanently. |
+| **Run Feature** | Execute the entire active `.feature` file via a VS Code Task using `behave <path>`. Live output streams to the Terminal panel. |
+| **Run Scenario** | Execute only the scenario at the current cursor position by passing its line number to Behave: `behave <path>:<line>`. |
+| **Debug Feature** | Launch the entire feature in a `debugpy` debug session. Breakpoints in Python step files are respected — Variables, Call Stack, and Debug Console all available. |
+| **Debug Scenario** | Launch only the scenario at the cursor in a `debugpy` debug session. |
+| **Edit & Run** | Open the **custom arguments dialog** before running. Enter extra Behave flags (e.g. `--tags=@wip`, `-D env=staging`) and choose to save them to Workspace Settings or keep them for the current session only. |
 
 ### 🛠️ Step Definitions
+
 | Action | Description |
 |--------|-------------|
-| **Go to Definition** | Navigates to the Python `@given`/`@when`/`@then` decorator matching the step at the cursor. |
+| **Go to Definition** | Navigate from any Gherkin step to its Python `@given`, `@when`, or `@then` decorator. Resolves `And`/`But` chains by context. |
+| **Create Step Definition** | Generate a Python stub for the undefined step at the cursor, placed in your `steps/` folder. |
 
 ### 📊 Analysis
+
 | Action | Description |
 |--------|-------------|
-| **Show Project Statistics** | Opens the interactive BDD Analytics Dashboard Webview. |
-| **Diagnose Workspace** | Runs a full environment and configuration diagnostic report in the Output Channel. |
+| **Show Project Statistics** | Open the interactive BDD Analytics Dashboard — scenario counts, tag distribution, step coverage, and more. |
+| **Diagnose Workspace** | Run a full diagnostic: step cache status, glob coverage, Python interpreter, extension health, and configuration errors. Output appears in the `Gherkin Diagnostics` Output Channel. |
 
 ### ⚙️ Configuration
+
 | Action | Description |
 |--------|-------------|
-| **Open Extension Settings** | Opens VS Code Settings pre-filtered to the `gherkinPowerTools` namespace. |
+| **Open Extension Settings** | Open VS Code Settings pre-filtered to the `gherkinPowerTools` namespace — all options in one place. |
 
 ---
 
 ## 💡 Why Use It?
 
-- **Discoverability**: No need to remember specific command names or keyboard shortcuts. Every capability is one search away.
-- **Keyboard-First**: Navigate the QuickPick with arrow keys and confirm with `Enter` — no mouse required.
-- **Context-Aware**: Execution commands target the currently active `.feature` file and cursor position automatically.
+- **Discoverability** — No need to remember command names or keyboard shortcuts. Every capability is one search away.
+- **Keyboard-first** — Navigate the QuickPick with arrow keys and confirm with <kbd>Enter</kbd>. No mouse required.
+- **Context-aware** — Execution commands automatically target the currently active `.feature` file and the cursor's current position.
+- **Single entry point** — Ideal for new team members who need to learn what the extension can do without reading documentation.
+
+> **Tip:** Every action in the Command Center is also available as a standalone VS Code command. You can bind any of them to a custom keyboard shortcut via **Keyboard Shortcuts** (<kbd>Cmd+K Cmd+S</kbd> / <kbd>Ctrl+K Ctrl+S</kbd>).

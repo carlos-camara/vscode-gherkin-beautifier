@@ -1,9 +1,41 @@
-# 🔍 Python Behave Discovery
+# 🔍 Behave Step Discovery
 
-Do you keep your Python step definitions in a custom folder?
+Gherkin PowerTools automatically indexes your Python step definitions and makes them available for **hover documentation**, **Go to Definition**, **IntelliSense completions**, and **undefined step detection**.
 
-By default, we look inside `**/steps/**/*.py` and `**/features/steps/**/*.py`.
+**How it works:**
 
-Gherkin PowerTools automatically detects Python Behave projects and suggests workspace configurations whenever step files exist outside standard globs.
+The extension watches your workspace for `.py` files matching your configured globs and builds an in-memory symbol cache. The cache updates **reactively** — add a new step function, and IntelliSense reflects it within seconds without reloading.
 
-If your repository has a unique structure, accept the automated recommendation prompt or update the **Step Globs** setting.
+**Default step globs:**
+
+```
+**/steps/**/*.py
+**/features/steps/**/*.py
+```
+
+**Custom project layouts:**
+
+If your steps live in a non-standard location (e.g. `src/automation/steps/`), the extension **automatically detects this** on startup and prompts you with a recommended glob configuration.
+
+You can also configure it manually:
+
+```json
+"gherkinPowerTools.behave.stepGlobs": [
+    "**/steps/**/*.py",
+    "**/src/automation/**/*.py"
+]
+```
+
+**Exclusions:**
+
+Exclude noise (e.g. virtual environments) to keep the cache fast:
+
+```json
+"gherkinPowerTools.behave.stepGlobsExclude": [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/venv/**"
+]
+```
+
+> **Tip:** Open the **Command Center** and select **Diagnose Workspace** to see exactly which files are in the cache, which steps were parsed, and whether any globs are misconfigured.

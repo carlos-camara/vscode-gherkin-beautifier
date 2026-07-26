@@ -1,52 +1,55 @@
 # 🩺 Workspace Diagnostics
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/diagnostics.gif" alt="Workspace Diagnostics Demo" width="600" />
-</div>
+When something is not working as expected — step navigation broken, undefined steps not detected, debug not launching — the **Diagnose Workspace** command gives you a complete, structured health report in seconds.
 
-Troubleshoot setup, discovery, step navigation, test execution, and debugging issues instantly using the **`Gherkin: Diagnose Workspace`** command.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/diagnostics.gif" alt="Workspace Diagnostics Demo" width="700" />
+</div>
 
 ---
 
 ## ⚡ How to Trigger
 
-1. Open the VS Code Command Palette:
-   - **macOS:** <kbd>Cmd+Shift+P</kbd> (<kbd>⌘⇧P</kbd>)
-   - **Windows / Linux:** <kbd>Ctrl+Shift+P</kbd>
-2. Type **`Gherkin: Diagnose Workspace`** and press **Enter**.
+| Method | Steps |
+|--------|-------|
+| **Command Palette** | <kbd>Cmd+Shift+P</kbd> / <kbd>Ctrl+Shift+P</kbd> → `Gherkin: Diagnose Workspace` |
+| **Command Center** | Open the Command Center → **Diagnose Workspace** |
+| **Onboarding Prompt** | Click **Diagnostics** on the first-run notification |
 
 ---
 
-## 📊 Diagnostic Report Output
+## 📊 What the Report Covers
 
-The command generates a formatted diagnostic report inside a dedicated Output Channel named **`Gherkin Diagnostics`**.
+The report is written to a dedicated **`Gherkin Diagnostics`** Output Channel and covers every layer of the extension:
 
-### Included Information
-
-| Section | Diagnostic Items |
-|---------|------------------|
-| **Environment** | Extension version, VS Code version, OS platform & architecture, workspace folder count. |
-| **Discovery & Indexing** | Total `.feature` files found, Python step files discovered, total indexed step definitions in `SymbolCache`, active `stepGlobs` and `ignoreGlobs`. |
-| **Python & Behave** | Official Python extension (`ms-python.python`) status, selected Python interpreter path, configured Behave command (`behave.command`), and `.gherkin-powertoolsrc.json` status & JSON validity. |
-| **Warnings & Actions** | Automated alerts for missing feature files, unindexed custom step directories, missing Python extension for debugging, or JSON schema syntax errors. |
+| Section | What is checked |
+|---------|----------------|
+| **Extension Environment** | Extension version, VS Code version, OS platform and architecture, number of workspace folders |
+| **Feature File Discovery** | Total `.feature` files found across all workspace folders |
+| **Step Definition Indexing** | Number of `.py` files discovered, total step definitions indexed in the in-memory Symbol Cache, active `stepGlobs` and `ignoreGlobs` |
+| **Python & Behave Setup** | Presence and version of the `ms-python.python` extension, selected Python interpreter path, configured `behave.command`, working directory |
+| **Configuration Files** | Presence and JSON validity of `.gherkin-powertoolsrc.json`, active configuration source (workspace settings vs. JSON file) |
+| **Automated Warnings** | Actionable alerts for any of the common issues below |
 
 ---
 
 ## 🔒 Privacy & Path Redaction
 
-Your privacy is protected. When you click **`📋 Copy Sanitized Report`**, the extension automatically sanitizes personal path information before placing the text onto your clipboard.
+When you click **Copy Sanitized Report** to share the report with the team or post it in a GitHub Issue:
 
-- **Username Redaction:** Personal account names in paths (e.g. `/Users/johndoe/...` or `C:\Users\johndoe\...`) are automatically replaced with `/Users/<redacted>/...`.
-- **Zero Script Execution:** Operates 100% in memory; never executes arbitrary workspace scripts or network requests.
+- **Username redaction** — Personal account names in file paths (e.g. `/Users/johndoe/...` or `C:\Users\johndoe\...`) are automatically replaced with `/Users/<redacted>/...`
+- **Zero script execution** — The diagnostic runs 100% in memory; it never executes workspace scripts or makes network requests
 
 ---
 
 ## 💡 Troubleshooting Common Warnings
 
-### ⚠️ "No Python step definition files (.py) were discovered using current stepGlobs"
-**Solution:** If your Python step files live in custom directories (e.g. `custom_steps/**/*.py`), update `gherkinPowerTools.behave.stepGlobs` in your VS Code settings or `.gherkin-powertoolsrc.json`:
+### ⚠️ "No Python step definition files (.py) were discovered"
+
+Your step files are in a directory not covered by the current `stepGlobs`. Update your configuration:
 
 ```json
+// .gherkin-powertoolsrc.json
 {
   "behave": {
     "stepGlobs": [
@@ -57,12 +60,39 @@ Your privacy is protected. When you click **`📋 Copy Sanitized Report`**, the 
 }
 ```
 
+Or add the same to `.vscode/settings.json` under `gherkinPowerTools.behave.stepGlobs`.
+
 ---
 
 ### ⚠️ "The official Python extension (ms-python.python) is not installed"
-**Solution:** Install `ms-python.python` from the VS Code Marketplace to enable interactive 1-click scenario debugging via the **Test Explorer** (`🐞 Debug` profile).
+
+Install the [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) from the VS Code Marketplace to enable interactive 1-click debugging via the **Test Explorer** (🐞 Debug profile).
 
 ---
 
-### ⚠️ "Your project .gherkin-powertoolsrc.json file contains syntax errors"
-**Solution:** Open `.gherkin-powertoolsrc.json` and fix JSON syntax errors (such as trailing commas or unquoted keys).
+### ⚠️ "Your .gherkin-powertoolsrc.json contains syntax errors"
+
+Open the file and fix JSON syntax issues (trailing commas, unquoted keys, missing brackets). The file is validated against the published JSON schema — enable schema validation in VS Code for real-time feedback:
+
+```json
+// .vscode/settings.json
+{
+  "json.schemas": [
+    {
+      "fileMatch": [".gherkin-powertoolsrc.json"],
+      "url": "./gherkin-powertools.schema.json"
+    }
+  ]
+}
+```
+
+---
+
+### ⚠️ "0 step definitions indexed"
+
+This typically means either:
+1. The `stepGlobs` patterns do not match any files — check paths and glob syntax
+2. The step files exist but contain no `@given`/`@when`/`@then`/`@step` decorators
+3. The Python files are excluded by `ignoreGlobs` (e.g. accidentally matching `.venv`)
+
+Run the diagnostic again after adjusting globs — the cache rebuilds automatically on configuration change.

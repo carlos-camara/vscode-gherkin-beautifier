@@ -1,11 +1,66 @@
-# ▶️ Execute Tests from Editor
+# ▶️ Execute Tests from the Test Explorer
 
-Stop switching to the terminal. Gherkin PowerTools lets you run your Behave tests with a single click.
+Gherkin PowerTools integrates natively with the **VS Code Testing sidebar** — no terminal commands needed.
 
-Above every `Feature`, `Scenario`, and `Scenario Outline`, you will see **Run**, **Debug**, and **Edit** buttons.
+Open the Testing sidebar with `Cmd+Shift+T` (macOS) or `Ctrl+Shift+T` (Windows/Linux), or click the flask icon in the Activity Bar.
 
-- **Run**: Instantly executes the scenario in the dedicated Behave terminal panel.
-- **Edit**: Set persistent custom arguments (like `--tags=@wip` or `-D env=test`). These arguments are saved in memory and will be applied to all subsequent executions when you click **Run** during this session.
-- **Debug**: Visually debug Python step definitions for the specific scenario using the official VS Code Python debugger. Includes support for pausing at breakpoints.
+---
 
-If you use a virtual environment, `pipenv`, or `poetry`, you can change the base command via the `gherkinPowerTools.behave.command` setting.
+## Live Feature Tree
+
+The sidebar shows a **real-time, structured tree** of your entire workspace:
+
+```
+📁 features/
+  📄 login.feature
+    ├─ ▶ Scenario: Successful login
+    ├─ ▶ Scenario: Failed login — wrong password
+    └─ ▶ Scenario Outline: Login with roles
+         ├─ ▶ Row: admin / read-write
+         └─ ▶ Row: editor / read-only
+```
+
+The tree updates **as you type** (with a 400 ms debounce) — no save required. Add a new scenario and it appears in the sidebar instantly.
+
+---
+
+## Running Tests
+
+Click **▶** next to any item to run it:
+
+- **Feature file** — runs the entire file with `behave <path>`
+- **Scenario** — runs only that scenario by line number: `behave <path>:<line>`
+- **Example row** — runs only that specific parameterized case
+
+Live output streams to the integrated **Terminal** panel. After completion, each item receives a **pass ✅** or **fail ❌** badge.
+
+---
+
+## Debugging Tests
+
+Click **🐞** next to any item to launch a full VS Code debug session:
+
+- Behave runs under **`debugpy`** — the official Python debug adapter
+- Set a breakpoint in any Python step definition file and execution pauses there
+- Inspect **variables**, **call stack**, and use the **Debug Console** to evaluate expressions
+- The spinner clears automatically when the session ends
+
+---
+
+## Custom Arguments (Edit Mode)
+
+Click **✏️** to open the **Edit Args** dialog before running:
+
+- Enter extra Behave arguments (e.g. `--tags=@wip`, `-D env=staging`)
+- Choose **Save to Workspace** to persist them in `settings.json`, or **Keep for Session** to apply them only to the current VS Code session
+- Saved args are applied automatically to every subsequent run until explicitly cleared
+
+---
+
+**Custom Behave command:**
+
+If you use `pipenv`, `poetry`, or a virtual environment, configure the base command:
+
+```json
+"gherkinPowerTools.behave.command": "pipenv run behave"
+```

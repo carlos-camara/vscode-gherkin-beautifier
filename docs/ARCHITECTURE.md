@@ -8,7 +8,7 @@ The extension is built around three foundational pillars:
 
 1. **Hybrid Parsing Engine** — A dual-mode parser combining the official `@cucumber/gherkin` AST for strict validation with a resilient text-based fallback scanner that keeps all features working even when the user is mid-keystroke on a malformed line.
 2. **In-Memory Symbol Cache** — An asynchronous, debounced indexing engine that resolves Python step definitions in RAM for sub-millisecond lookups across Go-To-Definition, Hover, IntelliSense, and the Linter.
-3. **Native VS Code Integration** — Registers standard VS Code extension points (formatting providers, diagnostic providers, code lens providers, test controllers) to deliver a first-class editor experience without proprietary protocols.
+3. **Native VS Code Integration** — Registers standard VS Code extension points (formatting providers, diagnostic providers, test controllers, code action providers) to deliver a first-class editor experience without proprietary protocols.
 
 ### Module Map
 

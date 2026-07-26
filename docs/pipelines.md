@@ -1,43 +1,96 @@
-# ⚙️ CI/CD Pipelines Architecture
+# ⚙️ CI/CD Pipelines
 
-This repository uses **GitHub Actions** for Continuous Integration and Continuous Deployment (CI/CD). Our workflows ensure code quality, prevent regressions, maintain documentation integrity, and secure our dependencies.
+This repository uses **GitHub Actions** for Continuous Integration and Deployment. All workflows ensure code quality, prevent regressions, maintain documentation integrity, and automate releases.
 
-Here is a detailed breakdown of all the active pipelines in this project:
+---
 
-## 1. 🧪 Unit Test & Coverage (`test.yml`)
-**Triggers:** Push to `main`, Pull Requests
-- **Matrix Strategy:** Runs concurrently across three operating systems (`ubuntu-latest`, `macos-latest`, `windows-latest`) to ensure full cross-platform compatibility of the VS Code extension.
-- **Node.js:** Compiles the TypeScript codebase using strict typing.
-- **Reporting & Coverage**: On Linux, it generates an LCOV coverage report and a JUnit XML test report. It uses native GitHub Check Runs to silently report test execution results, rather than spamming PR comments.
+## Pipeline Overview
 
-## 2. 🎭 End-to-End (E2E) UI Tests (`e2e.yml`)
-**Triggers:** Push to `main`, Pull Requests
-- **Matrix Strategy:** Runs natively across `ubuntu-latest`, `macos-latest`, and `windows-latest` to guarantee cross-platform UI stability.
-- **VS Code Bootstrapping:** Uses `@vscode/test-electron` to download, install, and execute a real VS Code instance within a virtual Linux framebuffer (`xvfb`).
-- **Simulated GUI Workflows:** Validates core extension functionalities by acting exactly as a user would:
-  - Opening documents and dynamically assigning them the `feature` language ID.
-  - Automatically injecting faulty or unformatted Gherkin texts.
-  - Using `vscode.commands.executeCommand('editor.action.formatDocument')` to invoke the native formatter.
-  - Querying native `vscode.executeDocumentSymbolProvider` commands to assert the Outline tree generates correctly.
-  - Asserting the `Linter` creates real-time `Diagnostic` instances in response to active text modifications.
-- **Reporting:** Automatically generates JUnit XML test results and posts a native Check Run attached to the commit.
+| Workflow | File | Trigger | Purpose |
+|----------|------|---------|---------|
+| 🧪 Unit Tests & Coverage | `test.yml` | Pull Requests | Build, test, and measure coverage across 3 OSes |
+| 🎭 E2E Tests | `e2e.yml` | Pull Requests | Full VS Code instance tests (real UI automation) |
+| 🛡️ Code Quality Lint | `lint.yml` | Push to `main`, Pull Requests | Lint Markdown, YAML, and GitHub Actions files |
+| 📚 Docs Audit | `docs.yml` | Push to `main`, Pull Requests touching `*.md` or `docs/` | MkDocs strict build to catch broken links/references |
+| 🏷️ PR Labeler | `labeler.yml` | Pull Requests | Auto-label by semantic type and PR size |
+| 🌐 Pages Deployment | `pages.yml` | Release published, Manual dispatch | Build and deploy MkDocs site to GitHub Pages |
+| 📦 Release & Packaging | `release.yml` | Push to `main` | Package `.vsix`, create GitHub Release |
+
+---
+
+## 1. 🧪 Unit Tests & Coverage (`test.yml`)
+
+**Triggers:** Pull Requests (excluding `.md`, `docs/`, `mkdocs.yml` changes)
+
+- **Matrix strategy:** Runs concurrently on `ubuntu-latest`, `macos-latest`, and `windows-latest`
+- **Build:** Compiles the TypeScript codebase via the `setup-build` composite action
+- **Tests:** Runs the Mocha unit and integration test suite (`npm test`)
+- **Coverage:** On Linux, runs `npm run coverage` which produces an LCOV report
+- **Reporting:** Coverage is posted as a PR comment; JUnit XML results are published as native GitHub Check Runs (no noisy PR comments)
+
+---
+
+## 2. 🎭 E2E Tests (`e2e.yml`)
+
+**Triggers:** Pull Requests (excluding `.md`, `docs/`, `mkdocs.yml` changes)
+
+- **Matrix strategy:** `ubuntu-latest`, `macos-latest`, `windows-latest`
+- **VS Code bootstrapping:** Uses `@vscode/test-electron` to download and run a real VS Code instance inside a virtual framebuffer (`xvfb-run -a` on Linux)
+- **Caching:** The VS Code test binary is cached per OS + architecture + `package-lock.json` hash to avoid redundant downloads
+- **What is tested (simulated real user workflows):**
+  - Opening documents and assigning them the `feature` language ID
+  - Injecting malformed Gherkin and invoking `editor.action.formatDocument`
+  - Querying `vscode.executeDocumentSymbolProvider` and asserting the Outline tree is correct
+  - Asserting the Linter creates real-time `Diagnostic` objects in response to text changes
+  - Invoking `gherkinPowerTools.runFeature`, `runScenario`, `debugFeature`, and `debugScenario` commands
+  - Testing the Onboarding Engine's workspace analysis
+- **Reporting:** JUnit XML results published as GitHub Check Runs per OS
+
+---
 
 ## 3. 🛡️ Code Quality Lint (`lint.yml`)
+
 **Triggers:** Push to `main`, Pull Requests
-- **Codebase Linting:** Runs `carlos-camara/qa-hub-actions/lint-codebase`.
-- **Scope:** It strictly lints Markdown files, YAML configurations, and GitHub Actions definitions to enforce consistency across the repository.
 
-## 4. 🏷️ PR Labeler (`labeler.yml`)
+- Runs `carlos-camara/qa-hub-actions/lint-codebase`
+- Lints: Markdown files, YAML configurations, GitHub Actions workflow files
+- Enforces consistent formatting and structure across the repository's meta-files
+
+---
+
+## 4. 📚 Docs Audit (`docs.yml`)
+
+**Triggers:** Push to `main` or Pull Requests that touch `**/*.md`, `docs/**`, or `mkdocs.yml`
+
+- Installs MkDocs and `mkdocs-material` (pinned to Python 3.12)
+- Runs `mkdocs build --strict` — any broken internal links, missing assets, or invalid references fail the build
+- This ensures every documentation change is validated before it can be merged
+
+---
+
+## 5. 🏷️ PR Labeler (`labeler.yml`)
+
 **Triggers:** `pull_request`
-- **Semantic Labeling:** Analyzes the PR title and automatically assigns labels like `bug`, `enhancement`, or `documentation`.
-- **Size Labeling:** Calculates the number of lines added/deleted in the PR and automatically assigns a size label (`size/S`, `size/M`, `size/L`, `size/XL`) to help maintainers prioritize code reviews.
 
-## 5. 🌐 Pages Deployment (`pages.yml`)
-**Triggers:** Release (`published`) or Manual Dispatch (`workflow_dispatch`)
-- **MkDocs Compilation:** Builds the static documentation site using `mkdocs-material` (pinned to avoid upstream breaking changes).
-- **Deployment:** Automatically pushes the generated HTML site to GitHub Pages.
+- **Semantic labeling:** Analyzes the PR title and assigns labels such as `bug`, `enhancement`, `documentation`, or `chore`
+- **Size labeling:** Calculates total lines changed and assigns `size/XS`, `size/S`, `size/M`, `size/L`, or `size/XL` — helps reviewers prioritize code reviews
 
-## 6. 📦 Release & Packaging (`release.yml`)
+---
+
+## 6. 🌐 Pages Deployment (`pages.yml`)
+
+**Triggers:** Release published or Manual Dispatch (`workflow_dispatch`)
+
+- Builds the static documentation site with `mkdocs-material`
+- Deploys the output to GitHub Pages at `https://carlos-camara.github.io/vscode-gherkin-powertools/`
+- MkDocs version is pinned to prevent upstream breaking changes from affecting the live site
+
+---
+
+## 7. 📦 Release & Packaging (`release.yml`)
+
 **Triggers:** Push to `main`
-- **Version Detection:** Validates test execution, packages the `.vsix` deterministically, and validates asset content before proceeding.
-- **Idempotent Recoverability:** Uses the GitHub CLI (`gh release`) to verify tag and release existence step-by-step. If a network timeout occurs during asset upload, re-running the workflow safely resumes where it left off without duplicating tags or failing on previous states.
+
+- **Validation:** Verifies all tests pass before packaging
+- **Packaging:** Builds the `.vsix` extension bundle deterministically and validates asset content
+- **Idempotent recovery:** Uses the GitHub CLI (`gh release`) to check tag and release existence step by step — if a network timeout occurs mid-upload, re-running the workflow safely resumes without duplicating tags or corrupting release state
