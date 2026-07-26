@@ -293,11 +293,15 @@ export class GherkinTestController {
                     item
                 );
 
+                let capturedOutput = '';
                 const exitCode = await runBehaveForTestRun(
                     item.uri,
                     line,
                     this.configService,
-                    (text) => run.appendOutput(text, undefined, item),
+                    (text) => {
+                        capturedOutput += text;
+                        run.appendOutput(text, undefined, item);
+                    },
                     token
                 );
 
@@ -305,11 +309,12 @@ export class GherkinTestController {
                     run.passed(item);
                 } else if (exitCode !== null) {
                     // Surface the exit code as a TestMessage so it appears in the
-                    // Test Results panel when the user clicks on the failed node
-                    run.failed(
-                        item,
-                        new vscode.TestMessage(`Behave exited with code ${exitCode}. See output above for details.`)
-                    );
+                    // Test Results panel when the user clicks on the failed node.
+                    // We append the stripped output inside a markdown block so that
+                    // older test results correctly display the full failure log.
+                    const cleanOutput = capturedOutput.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+                    const md = new vscode.MarkdownString(`**Behave exited with code ${exitCode}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
+                    run.failed(item, new vscode.TestMessage(md));
                 } else {
                     // Cancelled or timed out
                     run.skipped(item);
@@ -322,7 +327,38 @@ export class GherkinTestController {
             for (const fileItem of fileItems) {
                 if (token.isCancellationRequested) { break; }
                 if (!fileItem.uri) { continue; }
-                await vscode.commands.executeCommand('gherkinPowerTools.runFeature', fileItem.uri);
+                run.started(fileItem);
+                
+                if (mode === 'debug') {
+                    const done = this.waitForDebugEnd();
+                    await vscode.commands.executeCommand('gherkinPowerTools.debugFeature', fileItem.uri);
+                    await done;
+                    run.passed(fileItem);
+                } else {
+                    run.appendOutput(`\r\n▶ Running Feature: ${fileItem.label}\r\n`, undefined, fileItem);
+                    
+                    let capturedOutput = '';
+                    const exitCode = await runBehaveForTestRun(
+                        fileItem.uri,
+                        undefined,
+                        this.configService,
+                        (text) => {
+                            capturedOutput += text;
+                            run.appendOutput(text, undefined, fileItem);
+                        },
+                        token
+                    );
+                    
+                    if (exitCode === 0) {
+                        run.passed(fileItem);
+                    } else if (exitCode !== null) {
+                        const cleanOutput = capturedOutput.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+                        const md = new vscode.MarkdownString(`**Behave exited with code ${exitCode}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
+                        run.failed(fileItem, new vscode.TestMessage(md));
+                    } else {
+                        run.skipped(fileItem);
+                    }
+                }
             }
         }
 
