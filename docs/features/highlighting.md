@@ -1,29 +1,47 @@
 # 💡 Syntax Highlighting
 
-Replaces glaring, standard colors with a curated palette that looks stunning on dark themes.
+Gherkin PowerTools replaces VS Code's generic token colors with a **curated, semantic palette** designed for maximum readability on both dark and light themes.
 
-## Color Palette
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/highlighting.gif" alt="Syntax Highlighting" width="700" />
+</div>
+
+---
+
+## 🎨 Color Palette
 
 | Category | Keywords | Color | Hex |
 |----------|----------|-------|-----|
-| **Structure** | `Feature`, `Scenario`, `Rule`, `Background` | Elegant Purple | `#C586C0` |
-| **Actions** | `Given`, `When`, `Then`, `And`, `But` | Crisp Blue | `#569CD6` |
-| **Tags** | `@smoke`, `@api`, `@wip` | Soft Cyan | `#4EC9B0` |
+| **Structure** | `Feature`, `Scenario`, `Scenario Outline`, `Rule`, `Background`, `Examples` | Elegant Purple | `#C586C0` |
+| **Steps** | `Given`, `When`, `Then`, `And`, `But` | Crisp Blue | `#569CD6` |
+| **Tags** | `@smoke`, `@api`, `@wip`, `@regression` | Soft Cyan | `#4EC9B0` |
+| **Outline Parameters** | `<username>`, `<role>`, `<amount>` | Warm Orange | `#CE9178` |
+| **Comments** | `# language: es`, `# Author: ...` | Muted Green | `#6A9955` |
+| **Docstrings** | `"""..."""` multi-line blocks | Italic Gray | `#9CDCFE` |
 
-## How It Works
+---
 
-The highlighter uses VS Code's `createTextEditorDecorationType` API to apply custom decorations. This means it works **on top of any theme** — including Dark+, Monokai, and One Dark Pro.
+## ⚙️ How It Works
 
-<div style="border-radius: 8px; overflow: hidden; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 1px solid #d1d5db;">
-  <div style="background: #1f2937; padding: 10px 16px; display: flex; align-items: center; gap: 8px;">
-    <span style="font-size: 16px;">💡</span>
-    <span style="color: #f9fafb; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase;">Automatic Activation</span>
-  </div>
-  <div style="background-color: #ffffff; padding: 14px 16px;">
-    <span style="color: #374151; font-size: 13px;">Syntax highlighting activates automatically when you open any <code style="background:#f3f4f6; padding: 1px 5px; border-radius: 3px; color: #1f2937;">.feature</code> or <code style="background:#f3f4f6; padding: 1px 5px; border-radius: 3px; color: #1f2937;">.gherkin</code> file. No configuration needed.</span>
-  </div>
-</div>
+The highlighter uses VS Code's `createTextEditorDecorationType` API to apply **semantic decorations on top of any theme** — Dark+, Monokai, One Dark Pro, or any custom theme you use.
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/highlighting.gif" alt="Syntax Highlighting" width="600" />
-</div>
+This means the colors are always consistent and do not depend on what the theme defines for the `feature` language grammar. You get the same beautiful palette everywhere.
+
+**Two layers of highlighting:**
+
+1. **Grammar-based** — Keywords, tags, and comments are tokenized via the bundled `gherkin.tmLanguage` TextMate grammar. This provides correct scoped tokenization that integrates with VS Code's semantic token system.
+2. **Dynamic decoration** — Outline parameters (`<param>`) inside step text are detected at runtime and highlighted with a distinct color, making it immediately obvious which values will be substituted from the `Examples:` table.
+
+---
+
+## 🔄 Real-Time Updates
+
+Highlighting updates instantly as you type — no save required. The highlighter listens to `onDidChangeTextDocument` and `onDidChangeActiveTextEditor` events, so the decorations are always in sync with the document's current content.
+
+---
+
+## ✅ Zero Configuration
+
+Syntax highlighting activates automatically when you open any `.feature` or `.gherkin` file. No settings, no configuration files, no reload needed.
+
+> **Tip:** If you use a light theme, the colors are still readable — the palette was designed with sufficient contrast for both dark and light backgrounds.
