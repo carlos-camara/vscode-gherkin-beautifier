@@ -320,7 +320,7 @@ export async function runBehaveForTestRun(
 
         const handleData = (data: Buffer) => {
             // Normalize line endings; VS Code TEST RESULTS panel expects \r\n
-            const text = data.toString('utf8').replace(/\r\n/g, '\r\n').replace(/(?<!\r)\n/g, '\r\n');
+            const text = data.toString('utf8').replace(/(?<!\r)\n/g, '\r\n');
             onOutput(text);
         };
 
