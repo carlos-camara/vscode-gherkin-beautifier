@@ -11,12 +11,14 @@ Everything Gherkin PowerTools can do, from a single searchable menu.
 ## Available Actions
 
 ### 🎨 Formatting
+
 | Action | What it does |
 |--------|-------------|
 | **Format Document** | Reformat the entire active `.feature` file using the AST engine |
 | **Format Selection** | Reformat only the selected range |
 
 ### ▶️ Execution
+
 | Action | What it does |
 |--------|-------------|
 | **Run Feature** | Execute the entire active `.feature` file with Behave via a VS Code Task |
@@ -26,11 +28,13 @@ Everything Gherkin PowerTools can do, from a single searchable menu.
 | **Run with Custom Args** | Prompt for extra Behave arguments before running |
 
 ### 🛠️ Step Definitions
+
 | Action | What it does |
 |--------|-------------|
 | **Create Step Definition** | Generate a Python stub for the undefined step at the cursor |
 
 ### 📊 Analysis
+
 | Action | What it does |
 |--------|-------------|
 | **Show Statistics** | Open the interactive BDD statistics dashboard |

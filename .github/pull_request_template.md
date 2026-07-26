@@ -95,7 +95,7 @@
 - [ ] Rapid typing → debounce fires correctly — no stale diagnostics
 
 #### IntelliSense & Navigation
-- [ ] `Given ` + space shows step completions from Python cache
+- [ ] `Given` + space shows step completions from Python cache
 - [ ] `<` triggers `<param>` completions from Examples table columns
 - [ ] Hovering a Gherkin step shows the Python function name + signature
 - [ ] Hovering a `@tag` shows the blast-radius count
