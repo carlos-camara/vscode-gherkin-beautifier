@@ -53,7 +53,7 @@ Executes the selected feature or scenario in a VS Code **Background Task** (visi
 While the test runs, the tree shows a spinning indicator and the Terminal panel streams Behave's live output:
 
 <div align="center">
-  <img src="../../assets/test-explorer-running.png" alt="Test Explorer — spinning indicator on a running scenario, with live Behave output in the Terminal panel" width="600" />
+  <img src="../../assets/run-demo.gif" alt="Test Explorer ▶ Run — spinner while running, live behave output in Terminal, pass ✅ / fail ❌ badges" width="700" />
 </div>
 
 > **⚠️ Important:** A workspace folder **must be open** for execution to work safely. The extension uses `vscode.workspace.getWorkspaceFolder(uri)` to resolve relative paths. Opening a lone `.feature` file without a workspace will show an error.

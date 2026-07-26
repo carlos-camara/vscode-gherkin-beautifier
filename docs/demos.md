@@ -95,6 +95,14 @@ Hover over any tag to see how many scenarios across the workspace are affected.
 ### Run & Debug via Test Explorer
 Execute or debug features, scenarios, and individual example rows from the VS Code Testing sidebar (<kbd>⌘⇧T</kbd> / <kbd>Ctrl+Shift+T</kbd>).
 
+**▶ Run** — live terminal output, pass ✅/fail ❌ badges:
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/fix/test-explorer-realtime-updates/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer — click ▶, live terminal output, pass/fail badges" width="700" />
+</div>
+
+**🐞 Debug** — breakpoints, variables panel, debug console:
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/fix/test-explorer-realtime-updates/assets/debug-demo.gif" alt="Debug a Behave scenario — breakpoint, variables, call stack, debug console" width="700" />
 </div>
