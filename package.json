@@ -16,7 +16,9 @@
     "cucumber",
     "bdd",
     "behave",
-    "python"
+    "python",
+    "cucumberautocomplete",
+    "gherkin autocomplete"
   ],
   "publisher": "carloscamara",
   "author": "Carlos Camara",
@@ -38,6 +40,9 @@
     "onLanguage:feature"
   ],
   "main": "./dist/extension.js",
+  "configurationDefaults": {
+    "testing.showCoverageInExplorer": false
+  },
   "contributes": {
     "languages": [
       {
@@ -123,11 +128,13 @@
             "type": "string"
           },
           "default": [],
-          "description": "Additional arguments to pass to Behave when executing via CodeLens."
+          "scope": "resource",
+          "description": "Additional arguments to pass to Behave when executing via the Test Explorer."
         },
         "gherkinPowerTools.behave.command": {
           "type": "string",
           "default": "behave",
+          "scope": "resource",
           "description": "The base command to run Behave."
         }
       }
@@ -180,6 +187,12 @@
         "command": "gherkinPowerTools.diagnoseWorkspace",
         "title": "Gherkin: Diagnose Workspace",
         "category": "Gherkin"
+      },
+      {
+        "command": "gherkinPowerTools.testExplorerEditAndRun",
+        "title": "Edit Behave args & Run",
+        "category": "Gherkin",
+        "icon": "$(edit)"
       }
     ],
     "menus": {
@@ -193,6 +206,13 @@
           "when": "editorLangId == feature",
           "command": "gherkinPowerTools.showStatistics",
           "group": "1_modification"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "gherkinPowerTools.testExplorerEditAndRun",
+          "when": "view == workbench.view.testing",
+          "group": "navigation"
         }
       ]
     },
@@ -274,7 +294,7 @@
           {
             "id": "execution",
             "title": "Execute Behave Tests",
-            "description": "Run and Edit your features directly from the editor using CodeLens. [Run Feature](command:gherkinPowerTools.runFeature)",
+            "description": "Run and Edit your features directly from the Test Explorer. [Run Feature](command:gherkinPowerTools.runFeature)",
             "media": {
               "markdown": "assets/walkthrough/8_execution.md"
             },

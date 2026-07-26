@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as cp from 'child_process';
 import { ConfigurationService } from './configuration';
 
 let memoryAdditionalArgs: string | undefined = undefined;
@@ -286,4 +287,71 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
         });
         setTimeout(() => disposable.dispose(), 5000);
     }
+}
+
+/**
+ * Spawns Behave as a child process for the Test Explorer run handler.
+ * Unlike runBehave() (which uses a VS Code Task), this function captures
+ * stdout and stderr and delivers them line-by-line via `onOutput`, allowing
+ * the TestController to pipe output into `run.appendOutput()` so that the
+ * TEST RESULTS panel shows the full Behave output instead of
+ * "The test case did not report any output."
+ *
+ * @returns A promise that resolves with the process exit code (or null on timeout/cancel).
+ */
+export async function runBehaveForTestRun(
+    uri: vscode.Uri,
+    line: number | undefined,
+    configService: ConfigurationService,
+    onOutput: (text: string) => void,
+    token: vscode.CancellationToken
+): Promise<number | null> {
+    const details = await resolveBehaveExecutionDetails(uri, line, configService);
+    if (!details) { return null; }
+
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    const cwd = workspaceFolder?.uri.fsPath;
+
+    return new Promise<number | null>((resolve) => {
+        const child = cp.spawn(details.executable, details.args, {
+            cwd,
+            shell: false,
+        });
+
+        const handleData = (data: Buffer) => {
+            // Normalize line endings; VS Code TEST RESULTS panel expects \r\n
+            const text = data.toString('utf8').replace(/\r\n/g, '\r\n').replace(/(?<!\r)\n/g, '\r\n');
+            onOutput(text);
+        };
+
+        child.stdout?.on('data', handleData);
+        child.stderr?.on('data', handleData);
+
+        // Respect cancellation: kill the child process
+        const cancelDisposable = token.onCancellationRequested(() => {
+            child.kill();
+            cancelDisposable.dispose();
+            resolve(null);
+        });
+
+        // Safety timeout: 5 minutes
+        const timeout = setTimeout(() => {
+            child.kill();
+            cancelDisposable.dispose();
+            resolve(null);
+        }, 5 * 60 * 1000);
+
+        child.on('close', (code) => {
+            clearTimeout(timeout);
+            cancelDisposable.dispose();
+            resolve(code ?? null);
+        });
+
+        child.on('error', (err) => {
+            clearTimeout(timeout);
+            cancelDisposable.dispose();
+            onOutput(`[Gherkin PowerTools] Failed to start Behave: ${err.message}\r\n`);
+            resolve(null);
+        });
+    });
 }

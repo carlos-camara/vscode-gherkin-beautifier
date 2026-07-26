@@ -53,6 +53,10 @@ When a diagnostic appears, click the lightbulb or press `Cmd+.` (macOS) / `Ctrl+
 - **Insert missing ':'**: When a block keyword (`Feature`, `Scenario`, etc.) is missing a colon, this action instantly appends it.
 - **Dynamic Keyword Auto-Complete**: Start typing a keyword (e.g., `whe`, `give`, `scen`) and the extension uses prefix-matching to suggest the full keyword (`When`, `Given`, `Scenario`) instantly.
 - **Advanced Typo Correction (Levenshtein Distance)**: If you misspell a keyword with mixed letters (e.g., `Givn`, `Wehn`, `Fature`), our built-in Levenshtein distance algorithm automatically calculates the closest valid Gherkin keyword and offers a one-click fix to replace it.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif" alt="Quick Fix — correct keyword typos with one keypress" width="600" />
+</div>
 - **Hidden Typo Detection**: Gherkin parsers often ignore misspelled keywords by silently treating them as string descriptions. Our linter actively scans all free-text descriptions under scenarios and features to hunt down hidden typos and flag them for correction.
 - **Convert to 'Scenario Outline'**: A standard `Scenario` cannot contain an `Examples:` block. If you accidentally add one, this action instantly converts the block to a `Scenario Outline`.
 - **Intelligent Table Row Closure**: Gherkin parsers often assign cell inconsistency errors to the wrong row if a header is missing a closing pipe `|`. The extension actively scans the entire table upwards and downwards to pinpoint the exact unclosed row, and appends the pipe `|` for you.

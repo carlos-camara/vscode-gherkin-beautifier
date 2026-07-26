@@ -60,7 +60,7 @@ Your privacy is protected. When you click **`📋 Copy Sanitized Report`**, the 
 ---
 
 ### ⚠️ "The official Python extension (ms-python.python) is not installed"
-**Solution:** Install `ms-python.python` from the VS Code Marketplace to enable interactive 1-click scenario debugging (`🐞 Debug` CodeLens).
+**Solution:** Install `ms-python.python` from the VS Code Marketplace to enable interactive 1-click scenario debugging via the **Test Explorer** (`🐞 Debug` profile).
 
 ---
 

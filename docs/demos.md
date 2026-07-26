@@ -13,6 +13,15 @@ Discover all extension capabilities from a single, unified interface!
 
 ---
 
+### Test Explorer Integration
+Run, debug, and view history directly from the native VS Code Test Explorer.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Test Explorer Integration — run, debug, inspect variables and call stack" width="700" />
+</div>
+
+---
+
 ## Setup & Onboarding Demos
 
 ### Zero-Configuration Onboarding & Diagnostics
@@ -83,11 +92,19 @@ Hover over any tag to see how many scenarios across the workspace are affected.
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover on a tag — shows the number of scenarios it affects across the workspace" width="600" />
 </div>
 
-### Run & Debug via CodeLens
-Execute or debug features/scenarios with 1 click using the editor CodeLens header.
+### Run & Debug via Test Explorer
+Execute or debug features, scenarios, and individual example rows from the VS Code Testing sidebar (<kbd>⌘⇧T</kbd> / <kbd>Ctrl+Shift+T</kbd>).
+
+**▶ Run** — live terminal output, pass ✅/fail ❌ badges:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-debug.gif" alt="Execute Scenarios via CodeLens" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer — click ▶, live terminal output, pass/fail badges" width="700" />
+</div>
+
+**🐞 Debug** — breakpoints, variables panel, debug console:
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Debug a Behave scenario — breakpoint, variables, call stack, debug console" width="700" />
 </div>
 
 ### Generate Missing Step Stub

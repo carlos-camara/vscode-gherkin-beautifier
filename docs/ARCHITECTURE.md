@@ -4,9 +4,11 @@ This document describes the internal architecture of the **Gherkin PowerTools** 
 
 ## High-Level Architecture
 
-The extension is built on a Hybrid Parsing Engine.
-While formatting is traditionally difficult for whitespace-sensitive languages, we use the official `@cucumber/gherkin` Abstract Syntax Tree (AST) to perform structural analysis.
-If the AST fails due to catastrophic syntax errors (e.g., a user currently typing a malformed line), our Live Diagnostics Linter seamlessly falls back to a custom text-based scanner to ensure the extension continues to function.
+The extension is built around three foundational pillars:
+
+1. **Hybrid Parsing Engine** — A dual-mode parser combining the official `@cucumber/gherkin` AST for strict validation with a resilient text-based fallback scanner that keeps all features working even when the user is mid-keystroke on a malformed line.
+2. **In-Memory Symbol Cache** — An asynchronous, debounced indexing engine that resolves Python step definitions in RAM for sub-millisecond lookups across Go-To-Definition, Hover, IntelliSense, and the Linter.
+3. **Native VS Code Integration** — Registers standard VS Code extension points (formatting providers, diagnostic providers, code lens providers, test controllers) to deliver a first-class editor experience without proprietary protocols.
 
 ### Module Map
 
@@ -27,8 +29,9 @@ graph LR
     A --> N[dialect.ts]
     A --> O[discovery.ts]
     A --> P[execution.ts]
-    A --> Q[codelens.ts]
+
     A --> R[configuration.ts]
+    A --> S[testController.ts]
 ```
 
 | Module | Responsibility |
@@ -49,13 +52,55 @@ graph LR
 | `dialect.ts`   | Provides i18n support by matching localized Gherkin keywords |
 | `discovery.ts` | Centralized Behave file discovery service handling glob normalization and reactive file watchers |
 | `execution.ts` | Orchestrates VS Code Tasks via array-based `ProcessExecution` APIs for secure Behave test runs without shell injection risks |
-| `codelens.ts`  | Injects Run/Debug/Edit lenses above features/scenarios using a resilient, dialect-aware text scanner (avoids AST crashes) |
+
 | `configuration.ts`| Provides typesafe access to user and workspace configuration settings |
+| `testController.ts` | Registers the native VS Code Test Controller (`GherkinTestController`). Populates the Testing sidebar with a live feature/scenario tree, listens to `onDidChangeTextDocument` (400 ms debounce) for real-time updates before save, and uses mode-aware session tracking (`waitForTaskEnd` / `waitForDebugEnd`) to reflect run/pass/fail state correctly for both task and debug executions |
 
 ## Hot-Reloading Configuration
 
 The extension is designed to respond to configuration changes instantly without requiring a window reload.
 When settings like `gherkinPowerTools.behave.stepGlobs` are modified, `extension.ts` interacts with `discovery.ts` to immediately tear down old file system watchers, instantiate new ones, and instruct the `SymbolCache` to re-index the workspace and trigger live re-linting of all open feature documents.
+
+---
+
+## Test Controller Architecture
+
+The `GherkinTestController` (`testController.ts`) bridges the standard VS Code Testing API with the Gherkin workspace:
+
+```mermaid
+sequenceDiagram
+    participant E as extension.ts
+    participant TC as GherkinTestController
+    participant VSC as VS Code Testing API
+    participant P as parser.ts
+    participant Behave
+
+    E->>TC: new GherkinTestController()
+    TC->>VSC: createTestController('gherkin-tests')
+    TC->>VSC: createRunProfile('Run')
+    TC->>VSC: createRunProfile('Debug')
+    TC->>VSC: FileSystemWatcher (*.feature)
+    TC->>VSC: onDidChangeTextDocument (debounced 400ms)
+
+    VSC-->>TC: resolveHandler()
+    TC->>P: parseGherkin(text)
+    P-->>TC: GherkinDocument
+    TC->>VSC: controller.items.add(featureItem)
+
+    VSC-->>TC: runHandler(request)
+    TC->>VSC: run.started(item)
+    TC->>Behave: executeCommand('runScenario')
+    Behave-->>TC: onDidEndTaskProcess / onDidTerminateDebugSession
+    TC->>VSC: run.passed(item) | run.failed(item)
+    TC->>VSC: run.end()
+```
+
+### Key Design Decisions
+
+- **Two-event model**: `waitForTaskEnd()` listens to `onDidEndTaskProcess` (Tasks only); `waitForDebugEnd()` listens to `onDidTerminateDebugSession` (debug sessions only). Using the wrong event causes the spinner to linger for 5 minutes.
+- **Debounced text change listener**: `onDidChangeTextDocument` fires on every keystroke. A 400 ms timer is reset on each event per URI, so the tree is only re-parsed when the user pauses typing.
+- **In-memory text over disk reads**: The text-change listener passes `event.document.getText()` directly to `parseTestsInDocumentContent()`, bypassing the disk. This keeps the tree in sync with unsaved edits.
+- **Safety timeout**: Both wait methods include a 5-minute `setTimeout` fallback to guarantee `run.end()` is always called, even if an external process hangs.
 
 
 ## Semantic Step Matching
