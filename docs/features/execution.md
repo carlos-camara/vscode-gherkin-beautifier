@@ -62,11 +62,36 @@ While the test runs, the tree shows a spinning indicator and the Terminal panel 
 
 ### Test Results — Passed & Failed Badges
 
-Once execution completes, each node updates to show its result. Green ✅ means the scenario passed; red ❌ means it failed. The summary row below the tree shows how many tests passed and failed, and the Terminal shows the full Behave output with the exact assertion error.
+Once execution completes, each node updates to show its result. Green ✅ means the scenario passed; red ❌ means it failed. The summary row below the tree shows how many tests passed and failed.
+
+#### Viewing Historical Execution Output (New)
+
+With Gherkin PowerTools, you don't need to scroll endlessly through a terminal to find out why an older test failed. Every failed execution automatically captures the precise terminal output and embeds it inside the Test Explorer history. 
+
+Simply click on any ❌ failed node in the tree to open the **Test Results** panel natively in VS Code. 
 
 <div align="center">
   <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="600" />
 </div>
+
+**Simulation of Embedded Test Output:**
+
+```text
+TEST RESULTS (❌ Invalid login credentials)
+---------------------------------------------------------
+Behave exited with code 1. Output captured below:
+
+Feature: User Login
+  Scenario: Invalid login credentials
+    Given I am on the login page ... passed
+    When I enter invalid credentials ... passed
+    Then I should see an error message ... failed
+    
+    AssertionError: Expected 'Invalid user', but got 'Unknown Error'
+      File "features/steps/login_steps.py", line 12, in step_impl
+        assert error == "Invalid user"
+---------------------------------------------------------
+```
 
 > **💡 Tip:** Click any ❌ failed node and use the **▶ Run** button to re-run only that failing test. This makes it extremely fast to iterate on a broken scenario without re-running the entire suite.
 
