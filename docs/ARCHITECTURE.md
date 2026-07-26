@@ -7,7 +7,7 @@ This document describes the internal architecture of the **Gherkin PowerTools** 
 The extension is built around three foundational pillars:
 
 1. **Hybrid Parsing Engine** — A dual-mode parser combining the official `@cucumber/gherkin` AST for strict validation with a resilient text-based fallback scanner that keeps all features working even when the user is mid-keystroke on a malformed line.
-2. **In-Memory Symbol Cache** — An asynchronous, debounced indexing engine that resolves Python step definitions in RAM for sub-millisecond lookups across Go-To-Definition, Hover, IntelliSense, and the Linter.
+2. **Lazy-Initialized In-Memory Symbol Cache** — An asynchronous, on-demand indexing engine that resolves Python step definitions in RAM for sub-millisecond lookups across Go-To-Definition, Hover, IntelliSense, and the Linter. Initialization is deferred until after VS Code startup to guarantee near-zero extension host activation time.
 3. **Native VS Code Integration** — Registers standard VS Code extension points (formatting providers, diagnostic providers, test controllers, code action providers) to deliver a first-class editor experience without proprietary protocols.
 
 ### Module Map
@@ -29,38 +29,81 @@ graph LR
     A --> N[dialect.ts]
     A --> O[discovery.ts]
     A --> P[execution.ts]
-
     A --> R[configuration.ts]
     A --> S[testController.ts]
+    A --> T[onboarding.ts]
+    A --> U[commandCenter.ts]
+    A --> V[tokenizer.ts]
 ```
 
 | Module | Responsibility |
 |--------|---------------|
-| `extension.ts` | Entry point. Bundled via **Esbuild** for fast activation. Registers all commands, providers, and diagnostics. |
+| `extension.ts` | Entry point. Bundled via **Esbuild** for fast activation. Registers all commands, providers, and diagnostics. Defers heavy I/O to a 2-second background timer. |
 | `formatter.ts` | Core formatting engine: indentation, table alignment, tag wrapping |
 | `highlighter.ts` | Custom semantic syntax highlighting via `createTextEditorDecorationType` |
-| `linter.ts` | Real-time syntax checking via `@cucumber/gherkin` AST, with fallback text scanning. |
-| `definition.ts` | Go-To-Definition provider: accesses `cache.ts` for instant lookups |
+| `linter.ts` | Real-time syntax checking via `@cucumber/gherkin` AST, with fallback text scanning. Semantic (undefined step) checks are skipped until the Symbol Cache is ready. |
+| `definition.ts` | Go-To-Definition provider: calls `ensureInitialized()` then queries `cache.ts` |
 | `outline.ts` | Hierarchical tree of `Feature > Rule > Scenario` for the Outline panel |
 | `statistics.ts` | Interactive HTML Webview dashboard displaying heuristic workspace metrics |
 | `codeAction.ts`| Generates quick fixes (💡) for undefined steps or syntax typos |
-| `completion.ts`| Smart IntelliSense autocompletion parsing regex into Snippets |
-| `cache.ts`     | Asynchronous incremental caching engine with debounce, live un-saved document preference, and partial AST fallback. Indexes the workspace via `vscode.workspace.findFiles` and listens to `vscode.workspace.fs` |
+| `completion.ts`| Smart IntelliSense autocompletion parsing regex into Snippets; calls `ensureInitialized()` on demand |
+| `cache.ts`     | Lazy-initialized asynchronous caching engine with `ensureInitialized()` guard, debounce, live un-saved document preference, and partial AST fallback. Indexes the workspace via `vscode.workspace.findFiles` and listens to `vscode.workspace.fs`. Contains both `SymbolCache` (Python step definitions) and `FeatureCache` (tag blast radius data). |
 | `logger.ts`    | Native VS Code Output Channel for tracing |
-| `hover.ts`     | Provides hover information (function signatures, docstrings, tag blast radius with partial/stale warnings) |
+| `hover.ts`     | Provides hover information (function signatures, docstrings, tag blast radius); calls `ensureInitialized()` on demand |
 | `parser.ts`    | Handles AST parsing and caching of Gherkin documents |
 | `dialect.ts`   | Provides i18n support by matching localized Gherkin keywords |
 | `discovery.ts` | Centralized Behave file discovery service handling glob normalization and reactive file watchers |
 | `execution.ts` | Orchestrates VS Code Tasks via array-based `ProcessExecution` APIs for secure Behave test runs without shell injection risks |
-
 | `configuration.ts`| Provides typesafe access to user and workspace configuration settings |
-| `testController.ts` | Registers the native VS Code Test Controller (`GherkinTestController`). Populates the Testing sidebar with a live feature/scenario tree. Listens to `onDidChangeTextDocument` (400 ms debounce) for real-time updates before save, and uses mode-aware session tracking to reflect run/pass/fail state correctly for both task and debug executions |
+| `testController.ts` | Registers the native VS Code Test Controller (`GherkinTestController`). Populates the Testing sidebar with a live feature/scenario tree. Listens to `onDidChangeTextDocument` (400 ms debounce) for real-time updates before save. |
+| `onboarding.ts` | Detects misconfigured step globs on workspace open and surfaces a single non-blocking notification with 1-click fix options |
+| `commandCenter.ts` | Unified QuickPick interface exposing all extension capabilities from a single searchable entry point |
+| `tokenizer.ts` | Custom bounded Python tokenizer for extracting step patterns from decorator literals without a full Python AST |
 ## Hot-Reloading Configuration
 
 The extension is designed to respond to configuration changes instantly without requiring a window reload.
 When settings like `gherkinPowerTools.behave.stepGlobs` are modified, `extension.ts` interacts with `discovery.ts` to immediately tear down old file system watchers, instantiate new ones, and instruct the `SymbolCache` to re-index the workspace and trigger live re-linting of all open feature documents.
 
 ---
+
+## Lazy Initialization Architecture
+
+To guarantee near-zero extension host activation time, Gherkin PowerTools defers all heavy I/O until after VS Code has fully started up.
+
+### Startup Sequence
+
+```text
+activate()  ─────────────────────────────────────────────────────────────────────────►
+  │
+  ├─ Register formatters, linters, language providers (instant, no I/O)
+  │
+  ├─ Register commands (instant)
+  │
+  └─ setTimeout(2000ms) ─────────────────────────────────────────────────────────────►
+                              │
+                              ├─ SymbolCache.ensureInitialized()   (scan *.py files)
+                              │    └─ Watchers registered after index is ready
+                              │
+                              └─ FeatureCache.ensureInitialized()  (scan *.feature files)
+                                   └─ FileSystemWatcher registered after index is ready
+```
+
+### On-Demand Provider Pattern
+
+All language providers use `ensureInitialized()` — a guard method that:
+- Returns the cached result immediately if initialization has already completed.
+- Awaits the background initialization promise if it is still in progress.
+- Triggers initialization if the cache was never started (e.g. a provider was invoked before the 2-second timer fired).
+
+```typescript
+// Example: hover provider
+public async provideHover(...) {
+    const blastRadius = await this.featureCache.getTagBlastRadius(tagName);
+    // FeatureCache internally calls ensureInitialized() before returning data
+}
+```
+
+This means the extension is always responsive — if a user types in a `.feature` file immediately after opening VS Code, the cache initializes on-demand without any manual trigger.
 
 ## Test Controller Architecture
 

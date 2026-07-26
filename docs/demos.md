@@ -1,6 +1,6 @@
 # Demo Gallery
 
-Interactive visual demonstrations of Gherkin PowerTools features.
+Interactive visual demonstrations of every Gherkin PowerTools feature. All GIFs are recorded from real VS Code sessions.
 
 ## General
 

@@ -78,6 +78,7 @@ nav:
       - Hover Preview: features/hover.md
   - Architecture:
       - Core Architecture: ARCHITECTURE.md
+      - Performance & Lazy Init: features/performance.md
       - CI/CD Pipelines: pipelines.md
   - Community:
       - Contributing: contributing.md

@@ -19,6 +19,8 @@ The built-in linter monitors your `.feature` files **in real-time** using the of
 | **Undefined Step** | Cross-references the Symbol Cache | `Given I do magic` (no Python match) → ⚠️ |
 | **Ambiguous Step** | Detects overlapping Python decorators | Step matches multiple `@given` regexes → ⚠️ |
 
+> **📝 Note:** **Lazy Semantic Checks:** Syntax and structural diagnostics (Missing Colon, Invalid Keyword, Semantic Error, Table Inconsistency) are available **immediately** from the first keystroke. Undefined Step and Ambiguous Step diagnostics require the Symbol Cache to be ready, which typically takes 2–5 seconds after opening VS Code. During this brief window, no false "undefined step" warnings are shown.
+
 ## 🛡️ Fault-Tolerant Hybrid Parsing
 
 Gherkin parsers are notoriously strict and often crash completely (failing to return an Abstract Syntax Tree) if they encounter severe typos or structural malformations.

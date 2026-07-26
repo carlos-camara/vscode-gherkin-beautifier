@@ -54,9 +54,11 @@ Stop searching for step implementations manually. Gherkin PowerTools allows you 
 
 ## 🧠 How It Works (The Symbol Cache & Live Watchers)
 
-When you open a workspace containing Gherkin files, the extension asynchronously builds a non-blocking **In-Memory Symbol Cache** by scanning your `.py` files using your configured step globs.
+Gherkin PowerTools uses a **lazy-initialized In-Memory Symbol Cache** that guarantees near-zero VS Code startup time. When the extension activates, it registers all language providers immediately — but defers the heavy file I/O of scanning your Python step files by approximately 2 seconds after startup.
 
-Dynamic file watchers monitor file creation, modification, deletion, and rename events across multi-root workspaces. File events are debounced (100ms) and filtered against `ignoreGlobs` to keep your symbol index instantaneously in sync without CPU overhead.
+On first use (or when VS Code has just opened), any provider that needs the cache (`Go to Definition`, `Hover`, `IntelliSense`) calls `ensureInitialized()`, which either returns the already-completed index immediately or transparently awaits the background scan. In practice, the index is ready within a few seconds of opening a workspace.
+
+Dynamic file watchers monitor file creation, modification, deletion, and rename events across multi-root workspaces. File events are debounced (100 ms) and filtered against `ignoreGlobs` to keep your symbol index instantaneously in sync without CPU overhead.
 
 When you request a definition (e.g., clicking on `Given I login as "admin"`):
 

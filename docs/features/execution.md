@@ -56,7 +56,10 @@ While the test runs, the tree shows a spinning indicator and the Terminal panel 
   <img src="../../assets/run-demo.gif" alt="Test Explorer ▶ Run — spinner while running, live behave output in Terminal, pass ✅ / fail ❌ badges" width="700" />
 </div>
 
+
 > **⚠️ Important:** A workspace folder **must be open** for execution to work safely. The extension uses `vscode.workspace.getWorkspaceFolder(uri)` to resolve relative paths. Opening a lone `.feature` file without a workspace will show an error.
+
+> **📝 Note:** **Minimum VS Code version:** `1.93.0`. The Test Explorer API features used by the extension require this version or later.
 
 ---
 

@@ -56,7 +56,7 @@ Committing this to `.vscode/settings.json` ensures every contributor automatical
 
 | Requirement | Details |
 |-------------|---------|
-| **VS Code** | Version 1.85.0 or later |
+| **VS Code** | Version 1.93.0 or later |
 | **Python extension** | [`ms-python.python`](https://marketplace.visualstudio.com/items?itemName=ms-python.python) — required only for the 🐞 **Debug** feature in the Test Explorer |
 | **Behave** | Required only for test execution. Install via `pip install behave` |
 

@@ -12,8 +12,10 @@ Gherkin PowerTools monitors your `.feature` files **as you type** using the offi
 | **Misspelled keyword** | Error | `Givn I login` → did you mean `Given`? |
 | **Semantic structure error** | Error | `Examples:` inside a plain `Scenario` (not `Scenario Outline`) |
 | **Malformed data table** | Error | Row missing closing `\|` pipe |
-| **Undefined step** | Warning | Step has no matching Python `@given`/`@when`/`@then` decorator |
-| **Ambiguous step** | Warning | Step matches more than one Python regex — Behave would fail at runtime |
+| **Undefined step** | Warning | Step has no matching Python `@given`/`@when`/`@then` decorator \* |
+| **Ambiguous step** | Warning | Step matches more than one Python regex — Behave would fail at runtime \* |
+
+\* *Requires the Symbol Cache to be ready — typically 2–5 seconds after VS Code opens. Syntax and structural diagnostics are always available immediately.*
 
 Errors appear as **red underlines** in the editor, **red markers** in the scrollbar minimap, and **entries in the Problems panel** (`Cmd+Shift+M` / `Ctrl+Shift+M`).
 
