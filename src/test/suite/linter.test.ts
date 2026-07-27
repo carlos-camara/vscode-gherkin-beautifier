@@ -24,7 +24,14 @@ suite('Linter Test Suite', () => {
             return Promise.resolve([{ rawPattern: stepText, regex: new RegExp(stepText), decoratorRange: new vscode.Range(0,0,0,0) } as any]);
         };
         mockCache.state = 'ready';
-        linter = new GherkinLinter(mockCache);
+        
+        const mockConfigService = {
+            getConfiguration: () => ({
+                linter: { enabled: true, enabledRules: [] }
+            })
+        } as any;
+        
+        linter = new GherkinLinter(mockCache, mockConfigService);
     });
 
     test('Valid Gherkin should have zero diagnostics', async () => {

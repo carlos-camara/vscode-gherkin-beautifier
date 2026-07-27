@@ -68,5 +68,5 @@ HTML-escaped before rendering. This safeguards the editor environment from poten
 vectors when rendering external or untrusted `.feature` data.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Dashboard Demonstration" width="800" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Dashboard Demonstration" width="600" />
 </div>

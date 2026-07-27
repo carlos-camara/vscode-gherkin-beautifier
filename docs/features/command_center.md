@@ -3,7 +3,7 @@
 Stop hunting through menus and memorizing keyboard shortcuts. The **Command Center** is a unified, searchable QuickPick interface that surfaces every Gherkin PowerTools capability from one place.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif" alt="Command Center" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif" alt="Command Center" width="600" />
 </div>
 
 ---

@@ -26,7 +26,7 @@
 
 ---
 
-**Jump to:** [See it in action](#see-it-in-action) · [Why PowerTools?](#why-powertools) · [All Features](#features-that-set-us-apart) · [Compatibility](#who-is-this-for) · [vs. Cucumber](#compared-to-cucumber-official) · [Quick Start](#quick-start) · [Configuration](#configuration) · [Full Docs](https://carlos-camara.github.io/vscode-gherkin-powertools/)
+**Jump to:** [See it in action](#see-it-in-action) · [Why PowerTools?](#why-powertools) · [All Features](#features) · [Compatibility](#who-is-this-for) · [vs. Cucumber](#compared-to-cucumber-official) · [Quick Start](#quick-start) · [Configuration](#configuration) · [Full Docs](https://carlos-camara.github.io/vscode-gherkin-powertools/)
 
 ---
 
@@ -57,19 +57,13 @@ Most Gherkin extensions stop at syntax highlighting. **PowerTools goes all the w
 
 ---
 
-## Features That Set Us Apart
+## Features
 
-### ⚡ 1-Click Step Generation — The "Aha!" Moment
+### ⚡ 1-Click Step Generation
 
-Write a Gherkin step. The linter underlines it — the Python implementation is missing. Press `⌘.` / `Ctrl+.`. Done: a valid Python stub with the correct decorator and extracted regex parameters appears in your `steps/` folder. No boilerplate. No copy-pasting from documentation.
+Write a Gherkin step. The linter underlines it — the Python implementation is missing. Press `⌘.` / `Ctrl+.`. A valid Python stub with the correct decorator and extracted regex parameters appears in your `steps/` folder. No boilerplate. No copy-pasting.
 
-<div align="center">
-
-![Step Generation — press Cmd+. on an undefined step to get a Python stub instantly](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif)
-
-</div>
-
-<sub>📖 [Code Actions documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/code_actions.html)</sub>
+> 📖 [Code Actions documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/code_actions.html)
 
 ---
 
@@ -78,132 +72,65 @@ Write a Gherkin step. The linter underlines it — the Python implementation is 
 Hover over any `@tag`. PowerTools instantly calculates and displays **exactly how many Scenarios, Backgrounds, and Example rows** that tag affects across all your feature files. No more accidentally triggering a 500-test run when you meant to run 5.
 
 <div align="center">
-
-![Tag Blast Radius — hover over a tag, see exactly how many scenarios it covers workspace-wide](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif)
-
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Tag Blast Radius — hover over a tag, see exactly how many scenarios it covers workspace-wide" width="600" />
 </div>
 
 > 💡 **This feature exists in no other VS Code extension for Gherkin.**
 
-<sub>📖 [Hover documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/hover.html)</sub>
+> 📖 [Hover documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/hover.html)
 
 ---
 
 ### 📊 Workspace BDD Analytics — No Allure Required
 
-Stop context-switching to external dashboards just to understand the size and health of your test suite. PowerTools parses every `.feature` file in your workspace and renders a **live analytics dashboard** with:
-
-- Total Features, Scenarios, Scenario Outlines, and **effective test cases** (expanded Example rows)
-- Step breakdown by type: Given / When / Then / And / But
-- Tag frequency distribution
-- Most repeated steps and most complex scenarios ranked by step count
+Stop context-switching to external dashboards. PowerTools parses every `.feature` file and renders a **live analytics dashboard** with total features, scenarios, step breakdowns, tag frequency, and most-complex scenarios ranked by step count.
 
 <div align="center">
-
-![BDD Analytics Dashboard — workspace-wide metrics generated live from the Cucumber AST](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif)
-
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="BDD Analytics Dashboard — workspace-wide metrics generated live from the Cucumber AST" width="600" />
 </div>
 
 > 📌 **No external tools. No CI pipeline. No Allure server. It lives inside VS Code.**
 
-<sub>📖 [Statistics documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/statistics.html)</sub>
+> 📖 [Statistics documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/statistics.html)
 
 ---
 
 ### 🚀 Native Test Explorer — Run & Debug from the Sidebar
 
-Open the Testing panel (`⌘⇧T` / `Ctrl+Shift+T`). A structured live tree of every Feature, Rule, Scenario, and Example row appears — updated **as you type**, no save needed.
-
-**▶ Run** — streams live output to the Terminal; pass ✅ / fail ❌ badges update after completion:
+Open the Testing panel (`⌘⇧T` / `Ctrl+Shift+T`). A live tree of every Feature, Rule, Scenario, and Example row appears — updated **as you type**, no save needed. Click ▶ to run, 🐞 to debug with full breakpoint and variable inspection support.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer — live terminal output, pass/fail badges" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer — live terminal output, pass/fail badges" width="600" />
 </div>
 
-<br/>
+**You can run:** entire Feature · individual Scenario · single Example row · all workspace tests at once.
 
-**🐞 Debug** — hit breakpoints, inspect Variables, navigate the Call Stack, use the Debug Console — all native VS Code:
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Debug a Behave scenario from Test Explorer — breakpoint hit, variables, call stack" width="700" />
-</div>
-
-**What you can run from the sidebar:** entire Feature · individual Scenario · single Example row from a parameterized table · all tests in the workspace at once.
-
-**✏️ Custom Args** — set Behave flags (`--tags=@wip`, `-D env=staging`) before running. Keep them volatile for the current session or persist them for the team.
-
-<sub>📖 [Execution & Debugging documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/execution.html)</sub>
+> 📖 [Execution & Debugging documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/execution.html)
 
 ---
 
 ### 🛡️ Real-Time Linter — Catch Errors Before CI Does
 
-A **dialect-aware AST linter** flags structural errors across **70+ Gherkin languages** as you type. No save required. Quick Fixes (`⌘.` / `Ctrl+.`) auto-correct the most common mistakes in one keystroke.
+A **dialect-aware AST linter** flags structural errors across **70+ Gherkin languages** as you type. Quick Fixes (`⌘.` / `Ctrl+.`) auto-correct the most common mistakes in one keystroke.
 
-**What the linter catches:**
+| What the linter catches | |
+|---|---|
+| Missing `:` on block keywords | `Feature`, `Scenario`, `Background`, `Examples`... |
+| Misspelled keywords | Levenshtein-based smart suggestion |
+| Wrong block structure | `Examples:` inside a plain `Scenario` |
+| Malformed tables | Unclosed `\|` pipes, inconsistent column count |
+| Undefined steps | No matching Python decorator found |
+| Ambiguous steps | Multiple regex patterns match simultaneously |
 
-- Missing `:` on `Feature`, `Scenario`, `Scenario Outline`, `Rule`, `Background`, `Examples`
-- Misspelled Gherkin keywords (Levenshtein-based smart suggestion)
-- `Examples:` block inside a plain `Scenario` (wrong block structure)
-- Malformed table rows (unclosed `|` pipes, inconsistent column count)
-- Undefined steps with no matching Python decorator
-- Ambiguous steps matching multiple regex patterns simultaneously
-
-<div align="center">
-
-![Linter — flags structural Gherkin errors in real-time, before you even save](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/linter.gif)
-
-</div>
-
-<div align="center">
-
-![Quick Fix — auto-corrects missing colons, keyword typos, and malformed blocks](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif)
-
-</div>
-
-<sub>📖 [Linter & Quick Fixes documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/linter.html)</sub>
+> 📖 [Linter & Quick Fixes documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/linter.html)
 
 ---
 
 ### 🔍 IntelliSense & Navigation — Zero Config Required
 
-As you type, PowerTools suggests matching steps from your Python backend — **context-aware by keyword** (Given suggestions only appear while writing a Given line). `⌘+Click` / `Ctrl+Click` any step to jump to its Python decorator. Hover to preview the implementation without leaving the editor.
+As you type, PowerTools suggests matching steps from your Python backend — **context-aware by keyword**. `⌘+Click` / `Ctrl+Click` any step to jump to its Python decorator. Hover to preview the function signature and docstring without leaving the editor.
 
-**Step IntelliSense — context-aware, tab-through variables:**
-
-<div align="center">
-
-![IntelliSense — type-ahead step completions from your Python step library, context-aware by keyword](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif)
-
-</div>
-
-**Go to Definition — `⌘+Click` any step:**
-
-<div align="center">
-
-![Go to Definition — Cmd-click a Gherkin step and land directly on the Python decorator](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif)
-
-</div>
-
-**Hover — preview the Python function signature and docstring:**
-
-<div align="center">
-
-![Hover on a step — shows the Python function signature, regex, and docstring inline](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-step.gif)
-
-</div>
-
-**Scenario Outline parameter completion — type `<` to autocomplete column headers:**
-
-<div align="center">
-
-![Outline parameter completion — type < inside a step to get column headers from the Examples table](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline-completion.gif)
-
-</div>
-
-> 🔑 **No language server setup. No `settings.json` tweaking. IntelliSense works the moment you open your project.**
-
-<sub>📖 [Go to Definition](https://carlos-camara.github.io/vscode-gherkin-powertools/features/definition.html) · [Hover](https://carlos-camara.github.io/vscode-gherkin-powertools/features/hover.html) · [IntelliSense](https://carlos-camara.github.io/vscode-gherkin-powertools/features/snippets.html)</sub>
+> 📖 [Go to Definition](https://carlos-camara.github.io/vscode-gherkin-powertools/features/definition.html) · [Hover](https://carlos-camara.github.io/vscode-gherkin-powertools/features/hover.html) · [IntelliSense](https://carlos-camara.github.io/vscode-gherkin-powertools/features/snippets.html)
 
 ---
 
@@ -212,9 +139,7 @@ As you type, PowerTools suggests matching steps from your Python backend — **c
 Tables snap to the step text column. Tags wrap cleanly. Indentation is standardized across the whole file. **100% idempotent** — run it ten times, get the same result. Say goodbye to whitespace noise in pull requests.
 
 <div align="center">
-
-![Formatter — aligns tables, wraps tags, and enforces indentation in one keystroke](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif)
-
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif" alt="Formatter — aligns tables, wraps tags, and enforces indentation in one keystroke" width="600" />
 </div>
 
 Enable **Format on Save** for your whole team in two lines:
@@ -227,61 +152,21 @@ Enable **Format on Save** for your whole team in two lines:
 }
 ```
 
-<sub>📖 [Formatter documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/formatter.html)</sub>
+> 📖 [Formatter documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/formatter.html)
 
 ---
 
-### 🎨 Semantic Syntax Highlighting
+### And More...
 
-A curated colour palette layers on top of **any VS Code theme** — keywords, tags, parameters, doc strings, and table cells each get a distinct, readable colour without overwhelming the eye.
+| Feature | Description |
+|---|---|
+| 🎨 **Semantic Syntax Highlighting** | Curated colour palette for keywords, tags, parameters, and table cells — works on any VS Code theme |
+| 🗂️ **Document Outline** | Collapsible Feature → Rule → Scenario → Example Row tree with breadcrumb navigation |
+| 🤖 **Automated Onboarding** | Detects your Behave project on first open and configures step discovery in one click |
+| 🎛️ **Command Center** | Searchable quick-pick for all extension capabilities — no shortcut memorization needed |
+| 🩺 **Workspace Diagnostics** | Full structured health report — Python path, step files found, extension config status |
 
-<div align="center">
-
-![Syntax Highlighting — semantic colour palette that works on top of any VS Code theme](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/highlighting.gif)
-
-</div>
-
-<sub>📖 [Highlighting documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/highlighting.html)</sub>
-
----
-
-### 🗂️ Document Outline & Breadcrumb Navigation
-
-The VS Code Outline panel shows a collapsible **Feature → Rule → Scenario → Example Row** tree. Use breadcrumbs to jump instantly to any block in large feature files.
-
-<div align="center">
-
-![Outline — Feature, Rule, Scenario, and Example Row tree in the VS Code sidebar](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif)
-
-</div>
-
-<sub>📖 [Outline documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/outline.html)</sub>
-
----
-
-### 🤖 Zero-Config Automated Onboarding
-
-Open a Python/Behave project for the first time. PowerTools silently scans the workspace, detects your step files, and **offers to configure everything automatically** — with a single click. No JSON editing. No documentation diving.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/onboarding.gif" alt="Automated onboarding — PowerTools detects a Behave project and configures the workspace in one click" width="600" />
-</div>
-
-<sub>📖 [Automated Onboarding](https://carlos-camara.github.io/vscode-gherkin-powertools/features/onboarding.html) · [Diagnostics](https://carlos-camara.github.io/vscode-gherkin-powertools/features/diagnostics.html)</sub>
-
----
-
-### 🎛️ Command Center — Everything in One Place
-
-Forget memorizing keyboard shortcuts. Open the Command Center (`⌘⇧P` → `Command Center`) for instant, searchable access to Formatting, Execution, Statistics, Diagnostics, and Step Generation.
-
-<div align="center">
-
-![Command Center — all capabilities in one searchable quick-pick menu](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif)
-
-</div>
-
-<sub>📖 [Command Center documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/command_center.html)</sub>
+> 📖 [Full Demo Gallery](https://carlos-camara.github.io/vscode-gherkin-powertools/demos/)
 
 ---
 
@@ -322,7 +207,7 @@ Works seamlessly with: **Behave · Cucumber.js · Playwright BDD · SpecFlow · 
 Both extensions coexist peacefully and are complementary:
 
 | Capability | Gherkin PowerTools | Official Cucumber |
-|-----------|:-----------------:|:-----------------:|
+|---|:---:|:---:|
 | Table alignment (dynamic to step) | ✅ | ✅ Basic |
 | Tag wrapping & sorting | ✅ | — |
 | Real-time structural linting | ✅ AST-based, 70+ dialects | ✅ Syntax + undefined steps |
@@ -339,7 +224,7 @@ Both extensions coexist peacefully and are complementary:
 | Automated onboarding & diagnostics | ✅ | — |
 | Language Server Protocol (LSP) | — | ✅ (all frameworks) |
 
-> **Pro tip:** Install both. PowerTools handles formatting, linting, Python/Behave navigation, execution, and analytics. The official Cucumber extension provides generic LSP support for JavaScript and Java frameworks.
+> 💡 **Pro tip:** Install both. PowerTools handles formatting, linting, Python/Behave navigation, execution, and analytics. The official Cucumber extension provides generic LSP support for JavaScript and Java frameworks.
 
 ---
 
@@ -354,15 +239,15 @@ For Python/Behave projects, the onboarding engine handles everything else automa
 ### Key Shortcuts
 
 | Action | macOS | Windows / Linux |
-|--------|-------|-----------------|
-| Format Document | <kbd>⇧⌥F</kbd> | <kbd>Shift+Alt+F</kbd> |
-| Format Selection | <kbd>⌘K ⌘F</kbd> | <kbd>Ctrl+K Ctrl+F</kbd> |
-| Quick Fix (generate step / fix error) | <kbd>⌘.</kbd> | <kbd>Ctrl+.</kbd> |
-| Go to Definition | <kbd>⌘Click</kbd> | <kbd>Ctrl+Click</kbd> / <kbd>F12</kbd> |
-| Trigger Completion | <kbd>⌃Space</kbd> | <kbd>Ctrl+Space</kbd> |
-| Open Test Explorer | <kbd>⌘⇧T</kbd> | <kbd>Ctrl+Shift+T</kbd> |
-| Command Center | <kbd>⌘⇧P</kbd> → `Command Center` | <kbd>Ctrl+Shift+P</kbd> → `Command Center` |
-| Diagnose Workspace | Command Palette → `Gherkin: Diagnose Workspace` | Command Palette → `Gherkin: Diagnose Workspace` |
+|---|---|---|
+| Format Document | `⇧⌥F` | `Shift+Alt+F` |
+| Format Selection | `⌘K ⌘F` | `Ctrl+K Ctrl+F` |
+| Quick Fix (generate step / fix error) | `⌘.` | `Ctrl+.` |
+| Go to Definition | `⌘Click` | `Ctrl+Click` / `F12` |
+| Trigger Completion | `⌃Space` | `Ctrl+Space` |
+| Open Test Explorer | `⌘⇧T` | `Ctrl+Shift+T` |
+| Command Center | `⌘⇧P` → `Command Center` | `Ctrl+Shift+P` → `Command Center` |
+| Diagnose Workspace | `⌘⇧P` → `Gherkin: Diagnose Workspace` | `Ctrl+Shift+P` → `Gherkin: Diagnose Workspace` |
 
 ---
 
@@ -385,7 +270,7 @@ Commit a `.gherkin-powertoolsrc.json` to your project root to share formatting a
 ### Key Settings
 
 | Setting | Default | Description |
-|---------|---------|-------------|
+|---|---|---|
 | `gherkinPowerTools.profile` | `"custom"` | Base formatting profile: `strict`, `team`, `minimal`, `legacy` |
 | `gherkinPowerTools.indentation.steps` | `4` | Spaces to indent step keywords |
 | `gherkinPowerTools.tables.alignToKeyword` | `true` | Align table pipes to the preceding step text column |
@@ -397,7 +282,7 @@ Commit a `.gherkin-powertoolsrc.json` to your project root to share formatting a
 | `gherkinPowerTools.behave.command` | `"behave"` | Base Behave command (e.g. `"poetry run behave"`) |
 | `gherkinPowerTools.behave.additionalArguments` | `[]` | Extra flags added to every Behave invocation |
 
-📖 [Full Configuration Reference](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/) · [Full Documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/)
+> 📖 [Full Configuration Reference](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/) · [Full Documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/)
 
 ---
 

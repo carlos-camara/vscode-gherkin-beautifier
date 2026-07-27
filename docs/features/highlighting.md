@@ -3,7 +3,7 @@
 Gherkin PowerTools replaces VS Code's generic token colors with a **curated, semantic palette** designed for maximum readability on both dark and light themes.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/highlighting.gif" alt="Syntax Highlighting" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/highlighting.gif" alt="Syntax Highlighting" width="600" />
 </div>
 
 ---

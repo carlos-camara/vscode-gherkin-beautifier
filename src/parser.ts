@@ -10,9 +10,8 @@ let cucumberModulesPromise: Promise<any> | null = null;
 async function getCucumberModules() {
     if (!cucumberModulesPromise) {
         cucumberModulesPromise = (async () => {
-            const dynamicImport = new Function('specifier', 'return import(specifier)');
-            const gherkin = await dynamicImport('@cucumber/gherkin');
-            const messages = await dynamicImport('@cucumber/messages');
+            const gherkin = await import('@cucumber/gherkin');
+            const messages = await import('@cucumber/messages');
             return { gherkin, messages };
         })();
     }

@@ -53,7 +53,7 @@ graph LR
 | `parser.ts`    | Handles AST parsing and caching of Gherkin documents |
 | `dialect.ts`   | Provides i18n support by matching localized Gherkin keywords |
 | `discovery.ts` | Centralized Behave file discovery service handling glob normalization and reactive file watchers |
-| `execution.ts` | Orchestrates VS Code Tasks via array-based `ProcessExecution` APIs for secure Behave test runs without shell injection risks |
+| `execution.ts` | Orchestrates VS Code Tasks via array-based `ProcessExecution` APIs for secure Behave test runs. Provides `runBehaveForTestRun()` (captures stdout/stderr for the Test Results panel) and `debugBehave()` (launches a debug session without creating a TestRun, preserving previous test history). |
 | `configuration.ts`| Provides typesafe access to user and workspace configuration settings |
 | `testController.ts` | Registers the native VS Code Test Controller (`GherkinTestController`). Populates the Testing sidebar with a live feature/scenario tree. Listens to `onDidChangeTextDocument` (400 ms debounce) for real-time updates before save. |
 | `onboarding.ts` | Detects misconfigured step globs on workspace open and surfaces a single non-blocking notification with 1-click fix options |
@@ -139,10 +139,14 @@ sequenceDiagram
 
 ### Key Design Decisions
 
+- **Split Run/Debug model**: The `▶ Run` profile creates a `TestRun` and reports pass/fail results to the Test Results panel. The `🐞 Debug` profile bypasses `TestRun` entirely — it calls `debugBehave()` directly, so the debug session **never overwrites previous test history**. Existing green ✅ badges remain intact after debugging.
+- **Pre-registered start listener**: `onDidStartDebugSession` is registered **before** `await startDebugging()` to eliminate a race condition where a fast-starting debug session fires the event before the extension's listener is attached.
+- **Object-identity session tracking**: The debug termination listener matches sessions by object reference (`session === activeSession`), not by name string. This prevents false-negative detection when the Python extension (`ms-python.debugpy`) internally renames the debug session.
+- **Debug Console auto-focus**: After `startDebugging()` succeeds, `workbench.panel.repl.view.focus` is executed to switch the user's view to the Debug Console immediately.
 - **Two-event model**: `waitForTaskEnd()` listens to `onDidEndTaskProcess` (Tasks only); `waitForDebugEnd()` listens to `onDidTerminateDebugSession` (debug sessions only). Using the wrong event causes the spinner to linger for 5 minutes.
 - **Debounced text change listener**: `onDidChangeTextDocument` fires on every keystroke. A 400 ms timer is reset on each event per URI, so the tree is only re-parsed when the user pauses typing.
 - **In-memory text over disk reads**: The text-change listener passes `event.document.getText()` directly to `parseTestsInDocumentContent()`, bypassing the disk. This keeps the tree in sync with unsaved edits.
-- **Safety timeout**: Both wait methods include a 5-minute `setTimeout` fallback to guarantee `run.end()` is always called, even if an external process hangs.
+- **Safety timeout**: Both wait methods include a 10-minute `setTimeout` fallback to guarantee `run.end()` is always called, even if an external process hangs.
 
 
 ## Semantic Step Matching

@@ -3,7 +3,7 @@
 When something is not working as expected — step navigation broken, undefined steps not detected, debug not launching — the **Diagnose Workspace** command gives you a complete, structured health report in seconds.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/diagnostics.gif" alt="Workspace Diagnostics Demo" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/diagnostics.gif" alt="Workspace Diagnostics Demo" width="600" />
 </div>
 
 ---

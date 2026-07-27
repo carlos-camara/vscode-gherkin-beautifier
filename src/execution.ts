@@ -268,25 +268,71 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
         request: "launch",
         module: "behave",
         args: [...additionalArgs, pathArg],
-        console: "integratedTerminal",
-        justMyCode: false
+        console: "internalConsole",
+        justMyCode: true
     };
     
     if (!workspaceFolder) {
         vscode.window.showErrorMessage('A workspace folder must be open to start debugging.');
         return;
     }
+    return new Promise<void>(async (resolve) => {
+        let activeSession: vscode.DebugSession | undefined;
+        let isResolved = false;
 
-    const started = await vscode.debug.startDebugging(workspaceFolder, debugConfig);
-    if (started) {
-        const disposable = vscode.debug.onDidStartDebugSession(session => {
-            if (session.name === debugConfig.name) {
+        const safeResolve = () => {
+            if (!isResolved) {
+                isResolved = true;
+                resolve();
+            }
+        };
+
+        const startDisposable = vscode.debug.onDidStartDebugSession(session => {
+            // Match the session by name or if it's a python session running behave with our pathArg
+            if (
+                session.name === debugConfig.name ||
+                (session.configuration.type === 'python' && session.configuration.module === 'behave' && session.configuration.args?.includes(pathArg))
+            ) {
+                activeSession = session;
                 activeExecutions.set(signature, session);
-                disposable.dispose();
+                startDisposable.dispose();
             }
         });
-        setTimeout(() => disposable.dispose(), 5000);
-    }
+        
+        // Safety timeout for the start listener
+        setTimeout(() => startDisposable.dispose(), 5000);
+
+        const terminateDisposable = vscode.debug.onDidTerminateDebugSession(session => {
+            if (activeSession && session === activeSession) {
+                terminateDisposable.dispose();
+                safeResolve();
+            } else if (
+                !activeSession && 
+                (session.name === debugConfig.name || (session.configuration.type === 'python' && session.configuration.module === 'behave' && session.configuration.args?.includes(pathArg)))
+            ) {
+                terminateDisposable.dispose();
+                safeResolve();
+            }
+        });
+
+        const started = await vscode.debug.startDebugging(workspaceFolder, debugConfig);
+        if (!started) {
+            startDisposable.dispose();
+            terminateDisposable.dispose();
+            safeResolve();
+            return;
+        }
+
+        // Force focus to the Debug Console
+        vscode.commands.executeCommand('workbench.panel.repl.view.focus');
+
+        // 10 minute absolute fallback timeout to prevent infinite hanging
+        setTimeout(() => {
+            startDisposable.dispose();
+            terminateDisposable.dispose();
+            safeResolve();
+        }, 10 * 60 * 1000);
+    });
 }
 
 /**

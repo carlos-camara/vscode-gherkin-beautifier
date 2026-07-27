@@ -3,6 +3,7 @@ import { SymbolCache } from './cache';
 import { dialectService } from './dialect';
 import { parseGherkin } from './parser';
 import type { GherkinDocument, Step } from '@cucumber/messages';
+import { ConfigurationService } from './configuration';
 
 /**
  * Diagnostic Provider that acts as a realtime Linter for Gherkin files.
@@ -14,7 +15,7 @@ export class GherkinLinter {
     private pendingRequests: Map<string, { timer?: NodeJS.Timeout, requestId: number }> = new Map();
     private nextRequestId: number = 0;
 
-    constructor(symbolCache: SymbolCache) {
+    constructor(symbolCache: SymbolCache, private configService: ConfigurationService) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('gherkin');
         this.symbolCache = symbolCache;
     }
@@ -60,6 +61,13 @@ export class GherkinLinter {
      */
     public async lint(document: vscode.TextDocument, requestId: number = ++this.nextRequestId, version: number = document.version) {
         if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
+            return;
+        }
+
+        const config = this.configService.getConfiguration(document.uri);
+        if (!config.linter.enabled) {
+            vscode.window.showInformationMessage("Linter is currently DISABLED by configuration.");
+            this.diagnosticCollection.delete(document.uri);
             return;
         }
 
@@ -301,6 +309,7 @@ export class GherkinLinter {
             // the AST is null and we can't detect SCENARIO_WITH_EXAMPLES via AST.
             // Let's do a fallback text scan just for this specific semantic error.
             this.fallbackCheckScenarioExamples(document, diagnostics, dialect);
+            this.fallbackCheckMisspelledKeywords(document, diagnostics, dialect);
         }
 
         // Before publishing, verify we are still the most recent request for this document,
@@ -314,8 +323,12 @@ export class GherkinLinter {
         if (pending && pending.requestId !== requestId) {
             return;
         }
+        let finalDiagnostics = diagnostics;
+        if (config.linter.enabledRules && config.linter.enabledRules.length > 0) {
+            finalDiagnostics = diagnostics.filter(d => typeof d.code === 'string' && config.linter.enabledRules.includes(d.code));
+        }
 
-        this.diagnosticCollection.set(document.uri, diagnostics);
+        this.diagnosticCollection.set(document.uri, finalDiagnostics);
     }
 
     private fallbackCheckScenarioExamples(document: vscode.TextDocument, diagnostics: vscode.Diagnostic[], dialect: any) {
@@ -369,6 +382,86 @@ export class GherkinLinter {
                     diagnostics.push(diagnostic);
                     
                     currentScenarioLine = -1;
+                }
+            }
+        }
+    }
+
+    private fallbackCheckMisspelledKeywords(document: vscode.TextDocument, diagnostics: vscode.Diagnostic[], dialect: any) {
+        const expectedKeywords = [...dialect.given, ...dialect.when, ...dialect.then, ...dialect.and, ...dialect.but, ...dialect.examples, ...dialect.scenario, ...dialect.scenarioOutline, ...dialect.background, ...dialect.feature, ...dialect.rule].map((k: string) => k.trim());
+        const blockKeywords = dialectService.getBlockKeywords(dialect);
+        
+        for (let i = 0; i < document.lineCount; i++) {
+            const line = document.lineAt(i).text;
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            if (trimmed.startsWith('|') || trimmed.startsWith('@') || trimmed.startsWith('"""') || trimmed.startsWith("'''")) continue;
+            
+            const firstWord = trimmed.split(/\s+/)[0];
+            
+            // If it already exactly matches a valid keyword (with or without colon for blocks), it's either correct or will be flagged by syntax parser.
+            if (expectedKeywords.includes(firstWord) || expectedKeywords.some((k: string) => firstWord === k + ':')) {
+                continue;
+            }
+
+            let bestMatch = '';
+            let lowestDistance = 999;
+            const normalizedFirst = firstWord.toLowerCase();
+
+            for (const kw of expectedKeywords) {
+                const normalizedKw = kw.toLowerCase();
+                if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
+                    bestMatch = kw;
+                    break;
+                }
+                const dist = getLevenshteinDistance(normalizedFirst, normalizedKw);
+                const threshold = normalizedKw.length <= 4 ? 1 : 2;
+                if (dist < lowestDistance && dist <= threshold) {
+                    lowestDistance = dist;
+                    bestMatch = kw;
+                }
+            }
+
+            if (bestMatch) {
+                const firstNonWhitespace = line.search(/\S/);
+                const startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
+                const endChar = startChar + firstWord.length;
+                const range = new vscode.Range(i, startChar, i, endChar);
+                const isBlockKeyword = blockKeywords.includes(bestMatch);
+                
+                let code = 'MISSPELLED_KEYWORD';
+                let message = '';
+                let suggestedEdit = '';
+
+                if (normalizedFirst === bestMatch.toLowerCase()) {
+                    if (isBlockKeyword) {
+                        code = 'MISSING_COLON';
+                        message = `Missing colon (':') after ${bestMatch}`;
+                        suggestedEdit = bestMatch + ':';
+                    } else {
+                        message = `Incorrect casing: '${firstWord}'. Did you mean '${bestMatch}'?`;
+                        suggestedEdit = bestMatch;
+                    }
+                } else {
+                    if (isBlockKeyword) {
+                        message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
+                        suggestedEdit = bestMatch + ':';
+                    } else {
+                        message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
+                        suggestedEdit = bestMatch;
+                    }
+                }
+
+                // Check if the syntax error loop ALREADY added an error overlapping this exact range
+                const alreadyHasError = diagnostics.some((d: vscode.Diagnostic) => d.range.intersection(range));
+                if (!alreadyHasError) {
+                    const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
+                    diagnostic.source = 'Gherkin Semantic';
+                    diagnostic.code = code;
+                    diagnostic.relatedInformation = [
+                        new vscode.DiagnosticRelatedInformation(new vscode.Location(document.uri, range), suggestedEdit)
+                    ];
+                    diagnostics.push(diagnostic);
                 }
             }
         }

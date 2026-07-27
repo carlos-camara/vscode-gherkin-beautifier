@@ -19,7 +19,7 @@ Run and debug your Behave tests directly from VS Code's built-in **Testing** sid
 Gherkin PowerTools registers a native `GherkinTestController` that maps your entire workspace into a structured hierarchy inside the Testing panel. Every `.feature` file, every `Feature`, `Scenario`, `Scenario Outline`, and individual `Example` row becomes an independently executable node.
 
 <div align="center">
-  <img src="../../assets/test-explorer-tree.png" alt="Test Explorer tree — feature files, scenarios, and example rows as independently runnable nodes" width="700" />
+  <img src="../../assets/test-explorer-tree.png" alt="Test Explorer tree — feature files, scenarios, and example rows as independently runnable nodes" width="600" />
 </div>
 
 Every node in the tree is independently executable. Click `▶` next to any item to run only that file, feature, rule, scenario, or individual example row. Hover a row to reveal its `▶ Run` and `🐞 Debug` inline action buttons.
@@ -32,8 +32,8 @@ The Test Explorer exposes two run profiles selectable from the Testing panel too
 
 | Profile | Icon | Behavior |
 |---------|------|----------|
-| **▶ Run** | ▶ | Executes selected tests as Behave Tasks (visible in the Terminal panel). Shows pass ✅ / fail ❌ badges after completion. |
-| **🐞 Debug** | 🐞 | Launches the Python debugger. Breakpoints in your `steps/*.py` files are fully respected. Badge updates after the session terminates. |
+| **▶ Run** | ▶ | Executes selected tests via `runBehaveForTestRun()`, capturing full Behave output into the **Test Results** panel. Shows pass ✅ / fail ❌ badges after completion. |
+| **🐞 Debug** | 🐞 | Launches the Python debugger directly via `vscode.debug.startDebugging()`. Breakpoints in your `steps/*.py` files are fully respected. **Does not write to the Test Results panel** — existing pass/fail history is preserved. Automatically switches focus to the **Debug Console**. |
 
 ---
 
@@ -53,7 +53,7 @@ Executes the selected feature or scenario in a VS Code **Background Task** (visi
 While the test runs, the tree shows a spinning indicator and the Terminal panel streams Behave's live output:
 
 <div align="center">
-  <img src="../../assets/run-demo.gif" alt="Test Explorer ▶ Run — spinner while running, live behave output in Terminal, pass ✅ / fail ❌ badges" width="700" />
+  <img src="../../assets/run-demo.gif" alt="Test Explorer ▶ Run — spinner while running, live behave output in Terminal, pass ✅ / fail ❌ badges" width="600" />
 </div>
 
 
@@ -74,7 +74,7 @@ With Gherkin PowerTools, you don't need to scroll endlessly through a terminal t
 Simply click on any ❌ failed node in the tree to open the **Test Results** panel natively in VS Code.
 
 <div align="center">
-  <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="700" />
+  <img src="../../assets/test-explorer-results.png" alt="Test Explorer — green passed and red failed badges with AssertionError detail in the Terminal" width="600" />
 </div>
 
 **Simulation of Embedded Test Output:**
@@ -107,13 +107,18 @@ Launches a Behave debug session using the official VS Code Python debugger, allo
 **Internal steps:**
 
 1. The extension dynamically constructs a `DebugConfiguration` of type `python` targeting Behave via `-m behave`.
-2. It launches the session using `vscode.debug.startDebugging()` — no `launch.json` needed.
-3. Your breakpoints in `steps/*.py` will pause execution, letting you inspect `context`, step arguments, and call stacks.
+2. The `onDidStartDebugSession` listener is registered **before** `startDebugging()` is awaited to prevent a race condition where the session starts before the listener is ready.
+3. It launches the session using `vscode.debug.startDebugging()` — no `launch.json` needed.
+4. VS Code automatically switches focus to the **Debug Console** panel, where Behave output streams in real-time.
+5. Your breakpoints in `steps/*.py` will pause execution, letting you inspect `context`, step arguments, and call stacks.
+6. The `onDidTerminateDebugSession` listener detects the end of the session by **object identity** (not by session name), ensuring reliable detection even when the Python extension internally renames the session.
+
+> **📝 Important:** Debug sessions launched from the Test Explorer are handled as a **pure debugging workflow** and do **not** write to the **Test Results** panel. Your existing ✅ pass / ❌ fail history for any given scenario is preserved after a debug run.
 
 When the debugger pauses at a breakpoint, VS Code opens the matching Python step file at the exact line. The orange status bar confirms the debug session is active. You can inspect variables, evaluate expressions in the Debug Console, and use step-over/step-into controls to trace execution:
 
 <div align="center">
-  <img src="../../assets/debug-demo.gif" alt="Debug session from Test Explorer — click 🐞, breakpoint hit in step definition, variables panel, debug console output" width="700" />
+  <img src="../../assets/debug-demo.gif" alt="Debug session from Test Explorer — click 🐞, breakpoint hit in step definition, variables panel, debug console output" width="600" />
 </div>
 
 > **⚠️ Important:** The **Python extension** (`ms-python.python`) or **Debugpy extension** (`ms-python.debugpy`) must be installed. If neither is found, the extension will show an error with a direct link to the Marketplace install page.
@@ -129,18 +134,27 @@ When the debugger pauses at a breakpoint, VS Code opens the matching Python step
 
 ## Test State Lifecycle
 
+### `▶ Run` profile
+
 ```text
-[Enqueued 🔄] → [Running ⏳] → [Passed ✅]
-                             ↘ [Failed ❌]
+[Enqueued 🔄] → [Running ⏳] → [Passed ✅]  (result recorded in Test Results)
+                             ↘ [Failed ❌]  (output captured in Test Results)
                              ↘ [Cancelled —]
 ```
 
-The controller uses VS Code's `TestRun` API to transition each item through these states. Internally, it waits for the correct platform event depending on the active profile:
+### `🐞 Debug` profile
 
-| Profile | Event listened | Why |
-|---------|----------------|-----|
-| `▶ Run` | `onDidEndTaskProcess` | VS Code Tasks emit this event with an exit code when the process terminates. |
-| `🐞 Debug` | `onDidTerminateDebugSession` | Debug sessions emit a separate event, never `onDidEndTaskProcess`. Using the wrong event would leave the spinner active for 5 minutes. |
+```text
+Debugger started → [Debug Console focused] → Breakpoints hit → Session ends
+                                                             ↘ Test Results: unchanged
+```
+
+The `▶ Run` profile uses VS Code's `TestRun` API to transition each item through states and capture Behave output. The `🐞 Debug` profile bypasses `TestRun` entirely — it only tracks the debug session lifecycle via `onDidTerminateDebugSession`.
+
+| Profile | Event listened | Test Results panel |
+|---------|----------------|--------------------|
+| `▶ Run` | `onDidEndTaskProcess` | Updated with pass/fail result and captured output |
+| `🐞 Debug` | `onDidTerminateDebugSession` | **Not modified** — previous results preserved |
 
 > **💡 Tip:** **Cancellation:** Press the **⏹ Stop** button in the Testing panel toolbar at any time. The extension respects VS Code's `CancellationToken` and immediately stops launching new scenarios. Any already-running Behave process can also be stopped from the Terminal panel.
 
@@ -153,7 +167,7 @@ The tree refreshes **as you type** — no save required.
 The controller subscribes to `vscode.workspace.onDidChangeTextDocument` with a **400 ms debounce** per file URI. After 400 ms of inactivity, it re-parses the in-memory document buffer and updates the tree atomically. This means you see new scenario nodes appear in the Testing panel the moment you finish typing their name — no Ctrl+S needed.
 
 <div align="center">
-  <img src="../../assets/test-explorer-realtime.png" alt="Split view — user types a new Scenario in the editor (left), the Testing tree updates instantly without saving (right)" width="700" />
+  <img src="../../assets/test-explorer-realtime.png" alt="Split view — user types a new Scenario in the editor (left), the Testing tree updates instantly without saving (right)" width="600" />
 </div>
 
 | Action | Tree behavior |
@@ -260,14 +274,23 @@ Extra flags appended to every Behave invocation.
 |-------|-----|
 | Python extension not installed | Install `ms-python.python` from the Marketplace |
 | Wrong interpreter active | Switch interpreter via the status bar |
-| `justMyCode: true` filtering out Behave internals | The extension sets `justMyCode: false` automatically |
+| `justMyCode: true` filtering out Behave internals | The extension sets `justMyCode: true` by default; set it to `false` in a custom launch config if needed |
 | Breakpoint in an uncovered step | Verify that the step text matches a `@given`/`@when`/`@then` decorator |
 
 ---
 
 ### ❓ The test spinner doesn't clear after debugging
 
-This is a known resolved issue. Ensure you are on the latest version of Gherkin PowerTools. In older versions, `onDidEndTaskProcess` was incorrectly used for debug sessions (which never fire that event). The fix introduces `onDidTerminateDebugSession` for debug runs.
+This is a known resolved issue (fixed in v1.7.8). In older versions, `onDidEndTaskProcess` was incorrectly used for debug sessions (which never fire that event). Additionally, a race condition could cause `onDidStartDebugSession` to fire before the listener was registered. Both issues are resolved in the current release via:
+
+1. Pre-registering the start listener **before** `startDebugging()` is awaited.
+2. Using `onDidTerminateDebugSession` with **object-identity** tracking (not name matching) for reliable session detection.
+
+---
+
+### ❓ After a debug session, my green ✅ badge turned grey
+
+This is a known resolved issue (fixed in v1.7.8). In older versions, debug runs were incorrectly wrapped in a `TestRun`, which caused them to overwrite previous test results. Debug sessions now bypass `TestRun` entirely and never modify the Test Results panel.
 
 ---
 

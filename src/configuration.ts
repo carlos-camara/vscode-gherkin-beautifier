@@ -7,6 +7,8 @@ export interface Configuration {
     tables: { alignToKeyword: boolean; };
     tags: { format: 'wrap' | 'singleLine'; sort: 'preserve' | 'alphabetical'; };
     emptyLines: { betweenScenarios: number; };
+    formatter: { enabled: boolean; };
+    linter: { enabled: boolean; enabledRules: string[]; };
     behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; command: string; };
 }
 
@@ -15,6 +17,8 @@ export const DEFAULT_CONFIG: Configuration = {
     tables: { alignToKeyword: true },
     tags: { format: 'wrap', sort: 'preserve' },
     emptyLines: { betweenScenarios: 1 },
+    formatter: { enabled: true },
+    linter: { enabled: true, enabledRules: [] },
     behave: {
         stepGlobs: ["**/steps/**/*.py", "**/features/steps/**/*.py"],
         ignoreGlobs: ["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"],
@@ -62,7 +66,7 @@ export function validateAndMergeConfig(parsed: any, baseConfig?: Configuration):
         return { errors, config };
     }
 
-    const validSections = ['profile', 'indentation', 'tables', 'tags', 'emptyLines', 'behave'];
+    const validSections = ['profile', 'indentation', 'tables', 'tags', 'emptyLines', 'formatter', 'linter', 'behave'];
 
     for (const key of Object.keys(parsed)) {
         if (!validSections.includes(key)) {
@@ -136,6 +140,37 @@ export function validateAndMergeConfig(parsed: any, baseConfig?: Configuration):
                     }
                 } else {
                     errors.push({ key: subKey, message: `Unknown property in emptyLines: "${subKey}".` });
+                }
+            }
+        } else if (key === 'formatter') {
+            for (const subKey of Object.keys(section)) {
+                if (subKey === 'enabled') {
+                    if (typeof section[subKey] !== 'boolean') {
+                        errors.push({ key: subKey, message: `"formatter.enabled" must be a boolean.` });
+                    } else {
+                        config.formatter.enabled = section[subKey];
+                    }
+                } else {
+                    errors.push({ key: subKey, message: `Unknown property in formatter: "${subKey}".` });
+                }
+            }
+        } else if (key === 'linter') {
+            for (const subKey of Object.keys(section)) {
+                if (subKey === 'enabled') {
+                    if (typeof section[subKey] !== 'boolean') {
+                        errors.push({ key: subKey, message: `"linter.enabled" must be a boolean.` });
+                    } else {
+                        config.linter.enabled = section[subKey];
+                    }
+                } else if (subKey === 'enabledRules') {
+                    const validRules = ['MISSING_COLON', 'INVALID_KEYWORD', 'SEMANTIC_ERROR', 'TABLE_INCONSISTENCY', 'UNDEFINED_STEP', 'AMBIGUOUS_STEP'];
+                    if (!Array.isArray(section[subKey]) || !section[subKey].every((r: any) => typeof r === 'string' && validRules.includes(r))) {
+                        errors.push({ key: subKey, message: `"linter.enabledRules" must be an array of valid rule IDs: ${validRules.join(', ')}.` });
+                    } else {
+                        config.linter.enabledRules = section[subKey];
+                    }
+                } else {
+                    errors.push({ key: subKey, message: `Unknown property in linter: "${subKey}".` });
                 }
             }
         } else if (key === 'behave') {
@@ -291,6 +326,22 @@ export class ConfigurationService {
         const emptyLinesBetween = getOverride<number>('emptyLines.betweenScenarios');
         if (emptyLinesBetween !== undefined && typeof emptyLinesBetween === 'number') {
             config.emptyLines.betweenScenarios = emptyLinesBetween;
+        }
+
+        const formatterEnabled = getOverride<boolean>('formatter.enabled');
+        if (formatterEnabled !== undefined && typeof formatterEnabled === 'boolean') {
+            config.formatter.enabled = formatterEnabled;
+        }
+
+        const linterEnabled = getOverride<boolean>('linter.enabled');
+        if (linterEnabled !== undefined && typeof linterEnabled === 'boolean') {
+            config.linter.enabled = linterEnabled;
+        }
+
+        const linterEnabledRules = getOverride<string[]>('linter.enabledRules');
+        const validRules = ['MISSING_COLON', 'INVALID_KEYWORD', 'SEMANTIC_ERROR', 'TABLE_INCONSISTENCY', 'UNDEFINED_STEP', 'AMBIGUOUS_STEP'];
+        if (linterEnabledRules !== undefined && Array.isArray(linterEnabledRules) && linterEnabledRules.every(r => validRules.includes(r))) {
+            config.linter.enabledRules = linterEnabledRules;
         }
 
         const stepGlobs = getOverride<string[]>('behave.stepGlobs');

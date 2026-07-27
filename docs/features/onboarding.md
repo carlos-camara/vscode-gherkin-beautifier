@@ -1,7 +1,7 @@
 # 🚀 Automated First-Run Onboarding
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/onboarding.gif" alt="Automated First-Run Onboarding Demo" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/onboarding.gif" alt="Automated First-Run Onboarding Demo" width="600" />
 </div>
 
 Getting started with a new Behave project should be instant. Gherkin PowerTools **automatically detects your project structure** on first open, analyzes step coverage, and configures your workspace with a single click.

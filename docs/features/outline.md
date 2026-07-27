@@ -5,7 +5,7 @@ Navigate massive `.feature` files with ease using VS Code's native **Outline** p
 Unlike regex-based parsers, the AST implementation is never confused by keywords hidden inside comments, docstrings, or data tables.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif" alt="Outline Provider Demo" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif" alt="Outline Provider Demo" width="600" />
 </div>
 
 ---

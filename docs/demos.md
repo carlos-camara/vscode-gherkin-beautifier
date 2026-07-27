@@ -17,7 +17,7 @@ Discover all extension capabilities from a single, unified interface!
 Run, debug, and view history directly from the native VS Code Test Explorer.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Test Explorer Integration — run, debug, inspect variables and call stack" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Test Explorer Integration — run, debug, inspect variables and call stack" width="600" />
 </div>
 
 ---
@@ -98,13 +98,13 @@ Execute or debug features, scenarios, and individual example rows from the VS Co
 **▶ Run** — live terminal output, pass ✅/fail ❌ badges:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer — click ▶, live terminal output, pass/fail badges" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer — click ▶, live terminal output, pass/fail badges" width="600" />
 </div>
 
 **🐞 Debug** — breakpoints, variables panel, debug console:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Debug a Behave scenario — breakpoint, variables, call stack, debug console" width="700" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Debug a Behave scenario — breakpoint, variables, call stack, debug console" width="600" />
 </div>
 
 ### Generate Missing Step Stub

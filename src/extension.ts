@@ -58,7 +58,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const featureCache = new FeatureCache();
 
     // Non-blocking activation: initialize caches lazily after VS Code startup
-    const linter = new GherkinLinter(symbolCache);
+    const linter = new GherkinLinter(symbolCache, configService);
 
     const reLintOpenFiles = () => {
         vscode.workspace.textDocuments.forEach(doc => {
@@ -92,6 +92,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 e.affectsConfiguration('gherkinPowerTools.behave.ignoreGlobs')) {
                 await rebuildDiscovery();
             }
+            // Unconditionally relint open files when any setting changes
+            // This ensures linter toggles and rule changes apply instantly.
+            reLintOpenFiles();
         }
     }));
     
@@ -123,8 +126,26 @@ export async function activate(context: vscode.ExtensionContext) {
     
     // Register the context menu command to format the document
     context.subscriptions.push(
-        vscode.commands.registerCommand('gherkinPowerTools.format', () => {
-            vscode.commands.executeCommand('editor.action.formatDocument');
+        vscode.commands.registerCommand('gherkinPowerTools.format', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+            
+            const config = configService.getConfiguration(editor.document.uri);
+            if (config.formatter?.enabled === false) {
+                vscode.window.showWarningMessage("Gherkin PowerTools: Formatter is disabled in settings ('gherkinPowerTools.formatter.enabled' is false).");
+                return;
+            }
+
+            const edits = await formatter.provideDocumentFormattingEdits(editor.document, {} as any, new vscode.CancellationTokenSource().token);
+            if (edits && edits.length > 0) {
+                await editor.edit(editBuilder => {
+                    for (const edit of edits) {
+                        editBuilder.replace(edit.range, edit.newText);
+                    }
+                });
+            } else {
+                vscode.window.showInformationMessage("Gherkin PowerTools: Document is already formatted or could not be formatted.");
+            }
         })
     );
 
@@ -137,7 +158,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register the custom command for creating step definitions
     context.subscriptions.push(
-        vscode.commands.registerCommand('gherkinPowerTools.createStepDefinition', createStepDefinition)
+        vscode.commands.registerCommand('gherkinPowerTools.createStepDefinition', async (...args) => {
+            const uri = await createStepDefinition(...args as [string, string, vscode.Uri?]);
+            if (uri) {
+                await symbolCache.updateFile(uri);
+                reLintOpenFiles();
+            }
+        })
     );
 
     // Register Command Center
