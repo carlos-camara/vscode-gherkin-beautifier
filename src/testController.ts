@@ -28,9 +28,10 @@ export class GherkinTestController {
     private textChangeDisposable?: vscode.Disposable;
     private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-    constructor(configService: ConfigurationService) {
+    constructor(configService: ConfigurationService, testControllerId?: string) {
         this.configService = configService;
-        this.controller = vscode.tests.createTestController('gherkin-tests', 'Gherkin / Behave');
+        const cid = testControllerId || 'gherkin-tests';
+        this.controller = vscode.tests.createTestController(cid, 'Gherkin / Behave');
 
         this.controller.resolveHandler = async (item) => {
             if (!item) {
