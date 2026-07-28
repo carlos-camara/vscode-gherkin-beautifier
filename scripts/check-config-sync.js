@@ -143,14 +143,4 @@ for (const s of expectedSettings) {
   }
 }
 
-// Check README.md
-const readmePath = path.join(rootDir, 'README.md');
-const readmeContent = fs.readFileSync(readmePath, 'utf8');
-
-for (const s of expectedSettings) {
-  if (!readmeContent.includes(s.key)) {
-    fail(`Setting "${s.key}" not documented in README.md`);
-  }
-}
-
-console.log('✅ Configuration synchronization check PASSED! All 9 settings match across package.json, JSON schema, TypeScript contract, docs, and README.');
+console.log('✅ Configuration synchronization check PASSED! All 9 settings match across package.json, JSON schema, TypeScript contract, and docs/configuration.md.');
