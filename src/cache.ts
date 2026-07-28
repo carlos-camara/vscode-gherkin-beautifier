@@ -35,8 +35,19 @@ export class SymbolCache {
                 this.updateFile(e.uri);
             } else if (e.type === 'stepFileDeleted') {
                 this.removeFile(e.uri);
+            } else if (e.type === 'configurationChanged') {
+                if (e.event && (e.event.affectsConfiguration('gherkinPowerTools.behave.stepGlobs') || e.event.affectsConfiguration('gherkinPowerTools.behave.ignoreGlobs'))) {
+                    this.clear();
+                    this.ensureInitialized();
+                }
             }
         });
+    }
+
+    public clear(): void {
+        this.cache.clear();
+        this.state = 'uninitialized';
+        this.initPromise = null;
     }
 
     public ensureInitialized(): Promise<void> {
