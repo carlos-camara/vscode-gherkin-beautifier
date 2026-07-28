@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security & Reliability Hardening for Execution**: Execution and debugging actions now use VS Code Tasks and array-based `ProcessExecution` APIs, entirely eliminating shell injection vulnerabilities for malicious or complex file paths.
   Additionally, interpreter detection now dynamically prioritizes your active `ms-python.python` environment to guarantee reliability.
 - **Test Explorer Real-Time Tree Updates**: The Testing sidebar tree now refreshes **as you type** in a `.feature` file, without requiring a save. The internal controller subscribes to text changes with a 400 ms debounce, so new, renamed, or deleted scenarios appear instantly.
-- **Instant Activation (O(1))**: The extension now activates instantly upon opening VS Code. Heavy workspace parsing (Python steps and Feature file tagging) has been successfully offloaded to background threads. This ensures that features like formatting and syntax highlighting are immediately available without blocking the extension host, dramatically improving startup times in massive enterprise projects.
+- **Instant Activation (O(1))**: The extension now activates instantly upon opening VS Code. Heavy workspace parsing (Python steps and Feature file tagging) has been successfully offloaded to background threads.
+  This ensures that features like formatting and syntax highlighting are immediately available without blocking the extension host, dramatically improving startup times in massive enterprise projects.
 - **Debug Console Auto-Focus**: When launching a debug session via the Test Explorer, VS Code now automatically switches focus to the **Debug Console** panel so you immediately see Behave's output and any assertion errors without navigating there manually.
 
 ### 🐛 Fixed
