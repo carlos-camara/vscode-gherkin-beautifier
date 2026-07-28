@@ -23,7 +23,7 @@ You can format the entire document or just a selection:
 - **Comments:** Comments are preserved and aligned properly.
 - **Blank Lines:** Standardizes blank lines between Scenarios, Rules, and Backgrounds.
 
-See the [Configuration](configuration.md#formatting) section for adjusting spacing, table alignment, and tag wrapping.
+See the [Configuration](configuration.md#formatting-settings) section for adjusting spacing, table alignment, and tag wrapping.
 
 ---
 

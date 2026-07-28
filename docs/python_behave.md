@@ -29,7 +29,7 @@ If your project uses a custom directory structure (e.g., a monorepo with `shared
     "**/shared_steps/**/*.py"
 ]
 ```
-Changes take effect immediately—no window reload required! See [Configuration](configuration.md#behave-step-discovery) for details.
+Changes take effect immediately—no window reload required! See [Configuration](configuration.md#behave-discovery-execution-settings) for details.
 
 ---
 
