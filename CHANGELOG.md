@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.7.9] - Unreleased
 
+### 🚀 Added
+- **Centralized Workspace Event Bus**: Implemented a robust internal event bus (`src/eventBus.ts`) to decouple file watchers and VS Code workspace events from feature modules. This architecture prevents memory leaks, ensures unified event processing, and simplifies the addition of new workspace-aware features.
+
+### 🐛 Fixed
+- **Windows CI Flakiness**: Fixed a critical race condition in the End-to-End test suite on Windows. `SymbolCache` now automatically invalidates its index and performs a deterministic synchronous scan whenever `stepGlobs` configuration changes, rather than relying on unreliable file-system creation events.
+
 ## [1.7.8] - 2026-07-28
 
 ### 🚀 Added

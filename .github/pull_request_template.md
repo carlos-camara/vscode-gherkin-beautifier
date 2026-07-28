@@ -49,6 +49,7 @@
 - [ ] **Run with Custom Args** — interactive dialog for volatile/persistent extra Behave args (`execution.ts`)
 
 ### Extension Infrastructure
+- [ ] **Workspace Event Bus** — centralized pub/sub for configuration and file watcher events (`eventBus.ts`)
 - [ ] **Symbol Cache** — async indexing of Python step definitions from workspace globs (`cache.ts`)
 - [ ] **Discovery Service** — reactive file watchers for `.feature` and `.py` files (`discovery.ts`)
 - [ ] **Configuration Service** — typesafe access to `gherkinPowerTools.*` settings (`configuration.ts`)
