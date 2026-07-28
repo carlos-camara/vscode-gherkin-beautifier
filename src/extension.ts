@@ -47,7 +47,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const configWatcher = vscode.workspace.createFileSystemWatcher('**/.gherkin-powertoolsrc.json');
     context.subscriptions.push(configWatcher);
 
-    
+    discoveryService.configService = configService;
     discoveryService.eventBus = eventBus;
     const testController = new GherkinTestController(configService);
     testController.setEventBus(eventBus);
