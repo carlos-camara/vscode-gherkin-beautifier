@@ -32,7 +32,7 @@ You can run your tests at any level of granularity:
 </div>
 
 ### Console Output & Failure Reporting
-When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error. 
+When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error.
 If a test fails, the node in the tree will turn red, and the Test Results panel will show the exact failure stack trace and the step where it occurred.
 
 ### Cancellation
@@ -42,7 +42,7 @@ You can safely cancel a long-running execution by clicking the Stop button (Squa
 
 ## Debugging
 
-Gherkin PowerTools makes attaching the Python debugger to Behave trivial. 
+Gherkin PowerTools makes attaching the Python debugger to Behave trivial.
 
 *Note: You must have the official [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) installed to use the debugger.*
 

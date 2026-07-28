@@ -37,7 +37,7 @@ Changes take effect immediately—no window reload required! See [Configuration]
 
 As you type in a `.feature` file, the extension offers context-aware autocompletion from your indexed Python steps.
 
-It natively understands the state of your scenario. A `@when` step will only be suggested if you type `When ` or a continuation keyword (`And `, `But `) that resolves semantically to a `When`.
+It natively understands the state of your scenario. A `@when` step will only be suggested if you type `When` or a continuation keyword (`And`, `But`) that resolves semantically to a `When`.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" />

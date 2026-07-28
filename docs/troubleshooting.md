@@ -18,7 +18,7 @@ This guide addresses common problems organized by observable symptoms.
 **Diagnostic Steps:**
 1. Run **Gherkin PowerTools: Diagnose Workspace** from the Command Palette. Check the "Discovered Steps" count.
 2. Verify where your Python steps actually live.
-**Resolution:** 
+**Resolution:**
 Update your settings to include your custom path:
 ```json
 "gherkinPowerTools.behave.stepGlobs": [
@@ -47,7 +47,7 @@ Wait a few seconds for the lazy-initialization to complete. If it still doesn't 
 ## Run fails (Behave executable is not found)
 **Symptom:** You click "Play" in the Test Explorer, but the test immediately fails with a "Command not found" or "behave is not recognized" error in the output.
 **Likely Causes:** `behave` is not installed, or your virtual environment is not active in the shell that VS Code spawns.
-**Resolution:** 
+**Resolution:**
 If using a virtual environment manager like Poetry or Pipenv, update your configuration:
 ```json
 "gherkinPowerTools.behave.command": "poetry run behave"
@@ -57,7 +57,7 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 ## Debugging does not stop at breakpoints
 **Symptom:** You click the "Debug" icon, the test runs, but it ignores your red breakpoints.
 **Likely Causes:** The Python extension is missing, or the debug session failed to attach to the `behave` process.
-**Resolution:** 
+**Resolution:**
 1. Ensure the official Microsoft Python extension is installed and active.
 2. Ensure you clicked the **Debug (Bug icon)** in the Test Explorer, not the **Run (Play icon)**.
 

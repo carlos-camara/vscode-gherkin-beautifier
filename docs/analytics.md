@@ -13,7 +13,7 @@ It helps you understand **Source-Level Structure**, including:
 - Which tags are used most frequently.
 - Which Scenarios are the most complex (ranked by step count).
 
-**Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement. 
+**Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 
 ---
 
@@ -35,7 +35,7 @@ A Webview panel will open in VS Code displaying the generated HTML report.
 
 In addition to the global dashboard, the extension provides inline analytics for tags via Hover.
 
-Hover your mouse over any `@tag` in a `.feature` file to instantly calculate exactly how many Scenarios, Backgrounds, and Example rows that tag affects across your entire workspace. 
+Hover your mouse over any `@tag` in a `.feature` file to instantly calculate exactly how many Scenarios, Backgrounds, and Example rows that tag affects across your entire workspace.
 
 This helps you understand the "blast radius" of executing a specific tag before you push code to CI.
 
