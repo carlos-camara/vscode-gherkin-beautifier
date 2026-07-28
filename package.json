@@ -59,6 +59,8 @@
       "properties": {
         "gherkinPowerTools.profile": {
           "type": "string",
+          "order": 0,
+          "scope": "resource",
           "enum": [
             "custom",
             "strict",
@@ -67,58 +69,106 @@
             "legacy"
           ],
           "default": "custom",
-          "markdownDescription": "Select a configuration profile. Individual settings override the profile defaults.",
+          "markdownDescription": "Baseline formatting profile. Individual settings always override the profile. Use `custom` (the default) to configure everything manually, or pick a preset to share a baseline across your team.\n\n**Tip:** Set this in `.gherkin-powertoolsrc.json` to standardize formatting for all contributors.",
           "markdownEnumDescriptions": [
-            "Custom configuration (default)",
-            "Strict formatting rules",
-            "Team shared configuration",
-            "Minimal formatting rules",
-            "Legacy formatting rules"
+            "Extension defaults \u2014 configure individual settings as needed",
+            "Strict consistency: 4-space indent, alphabetical tags, 1 blank line between scenarios",
+            "Standard team baseline: sensible defaults for large projects without being restrictive",
+            "Low-interference: 2-space indent, table alignment off, tags on one line, no blank line enforcement",
+            "Targets older Gherkin/SpecFlow codebases: 2-space indent, table alignment off"
           ]
+        },
+        "gherkinPowerTools.formatter.enabled": {
+          "type": "boolean",
+          "order": 1,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable or disable the Gherkin document formatter. When `false`, the extension will no longer format `.feature` files on demand or on save. Useful for projects that manage formatting through an external CI step."
         },
         "gherkinPowerTools.indentation.steps": {
           "type": "number",
+          "order": 10,
+          "scope": "resource",
           "default": 4,
-          "markdownDescription": "Number of spaces to indent steps."
+          "minimum": 0,
+          "maximum": 8,
+          "markdownDescription": "Number of spaces used to indent step keywords (`Given`, `When`, `Then`, `And`, `But`) relative to their parent block. The Gherkin community standard is `4`. Some legacy codebases use `2`."
         },
         "gherkinPowerTools.tables.alignToKeyword": {
           "type": "boolean",
+          "order": 11,
+          "scope": "resource",
           "default": true,
-          "markdownDescription": "If true, tables align dynamically to the start of the step text. If false, tables simply indent slightly more than the step keyword."
+          "markdownDescription": "When `true`, the left border of Data Tables and Examples tables is dynamically padded to align with the text start of the preceding step keyword \u2014 not a fixed column.\n\nSet to `false` for a simpler fixed-column alignment."
+        },
+        "gherkinPowerTools.emptyLines.betweenScenarios": {
+          "type": "number",
+          "order": 12,
+          "scope": "resource",
+          "default": 1,
+          "minimum": 0,
+          "maximum": 3,
+          "markdownDescription": "Number of blank lines enforced between `Scenario`, `Scenario Outline`, and `Rule` blocks. Set to `0` to remove separator lines, `1` for a single blank line (recommended), or `2` for extra breathing room in dense files."
         },
         "gherkinPowerTools.tags.format": {
           "type": "string",
+          "order": 13,
+          "scope": "resource",
           "enum": [
             "wrap",
             "singleLine"
           ],
           "default": "wrap",
-          "markdownDescription": "How to format long lists of tags. 'wrap' splits them across multiple lines (max 80 chars), 'singleLine' keeps them all on one line.",
+          "markdownDescription": "How to handle long lists of tags when formatting.\n\n- `wrap` \u2014 Splits tag lines that exceed 80 characters across multiple lines (recommended for readability)\n- `singleLine` \u2014 Keeps all tags on one line regardless of length (useful for CI pipelines that parse tag lines)",
           "markdownEnumDescriptions": [
-            "Splits tags across multiple lines (max 80 chars)",
-            "Keeps all tags on one line"
+            "Splits tag lines longer than 80 characters across multiple lines",
+            "Keeps all tags on a single line regardless of length"
           ]
         },
         "gherkinPowerTools.tags.sort": {
           "type": "string",
+          "order": 14,
+          "scope": "resource",
           "enum": [
             "preserve",
             "alphabetical"
           ],
           "default": "preserve",
-          "markdownDescription": "How to sort tags. 'preserve' keeps their original source order, 'alphabetical' sorts them A-Z.",
+          "markdownDescription": "Tag ordering applied on every format.\n\n- `preserve` \u2014 Tags remain in their original source order (safe default)\n- `alphabetical` \u2014 Tags are sorted A\u2013Z on every format (recommended for canonical ordering)",
           "markdownEnumDescriptions": [
-            "Keeps their original source order",
-            "Sorts them A-Z"
+            "Tags remain in their original source order \u2014 no reordering on format",
+            "Tags are sorted A\u2013Z on every format run"
           ]
         },
-        "gherkinPowerTools.emptyLines.betweenScenarios": {
-          "type": "number",
-          "default": 1,
-          "markdownDescription": "Number of empty lines to enforce between Scenario/Rule/Background blocks."
+        "gherkinPowerTools.linter.enabled": {
+          "type": "boolean",
+          "order": 20,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable or disable the real-time Gherkin linter. When `false`, no diagnostics (red/yellow underlines) will appear in `.feature` files. Useful when you rely exclusively on an external CI linter and want to reduce editor noise."
+        },
+        "gherkinPowerTools.linter.enabledRules": {
+          "type": "array",
+          "order": 21,
+          "scope": "resource",
+          "items": {
+            "type": "string",
+            "enum": [
+              "MISSING_COLON",
+              "INVALID_KEYWORD",
+              "SEMANTIC_ERROR",
+              "TABLE_INCONSISTENCY",
+              "UNDEFINED_STEP",
+              "AMBIGUOUS_STEP"
+            ]
+          },
+          "default": [],
+          "markdownDescription": "Whitelist of linting rule IDs to enforce. An **empty array (default)** enables **all rules**. Populate this array to restrict the linter to only the specified rules \u2014 useful for enterprise teams that want to suppress certain checks while keeping structural validation.\n\n**Available rules:** `MISSING_COLON`, `INVALID_KEYWORD`, `SEMANTIC_ERROR`, `TABLE_INCONSISTENCY`, `UNDEFINED_STEP`, `AMBIGUOUS_STEP`"
         },
         "gherkinPowerTools.behave.stepGlobs": {
           "type": "array",
+          "order": 30,
+          "scope": "resource",
           "items": {
             "type": "string"
           },
@@ -126,10 +176,12 @@
             "**/steps/**/*.py",
             "**/features/steps/**/*.py"
           ],
-          "markdownDescription": "Glob patterns to locate Python/Behave step definition files."
+          "markdownDescription": "Glob patterns used to discover Python step definition files. These patterns drive **IntelliSense**, **Go to Definition**, **Hover**, and **undefined step detection**.\n\nAdd extra patterns for monorepos or non-standard layouts. Changes take effect **immediately** \u2014 no restart required."
         },
         "gherkinPowerTools.behave.ignoreGlobs": {
           "type": "array",
+          "order": 31,
+          "scope": "resource",
           "items": {
             "type": "string"
           },
@@ -139,22 +191,24 @@
             "**/venv/**",
             "**/env/**"
           ],
-          "markdownDescription": "Glob patterns to ignore when locating Python/Behave step definition files."
+          "markdownDescription": "Glob patterns **excluded** from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches and performance degradation.\n\nChanges take effect **immediately** \u2014 no restart required."
+        },
+        "gherkinPowerTools.behave.command": {
+          "type": "string",
+          "order": 32,
+          "scope": "resource",
+          "default": "behave",
+          "markdownDescription": "The base command used to invoke Behave from the Test Explorer. Override this when using a virtual environment manager.\n\n**Examples:** `\"poetry run behave\"` \u00b7 `\"pipenv run behave\"` \u00b7 `\".venv/bin/behave\"` \u00b7 `\"python -m behave\"`"
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",
+          "order": 33,
+          "scope": "resource",
           "items": {
             "type": "string"
           },
           "default": [],
-          "scope": "resource",
-          "markdownDescription": "Additional arguments to pass to Behave when executing via the Test Explorer."
-        },
-        "gherkinPowerTools.behave.command": {
-          "type": "string",
-          "default": "behave",
-          "scope": "resource",
-          "markdownDescription": "The base command to run Behave."
+          "markdownDescription": "Extra flags appended to **every** Behave invocation from the Test Explorer.\n\n**Examples:** `[\"--no-capture\"]` \u00b7 `[\"-D\", \"env=staging\"]` \u00b7 `[\"--format\", \"progress\"]`"
         }
       }
     },
@@ -220,8 +274,18 @@
       "editor/context": [
         {
           "when": "editorLangId == feature",
+          "command": "gherkinPowerTools.format",
+          "group": "navigation@2"
+        },
+        {
+          "when": "editorLangId == feature",
+          "command": "gherkinPowerTools.diagnoseWorkspace",
+          "group": "navigation@3"
+        },
+        {
+          "when": "editorLangId == feature",
           "command": "gherkinPowerTools.showStatistics",
-          "group": "navigation"
+          "group": "navigation@4"
         }
       ],
       "view/title": [
@@ -356,7 +420,12 @@
     ],
     "jsonValidation": [
       {
-        "fileMatch": ".gherkin-powertoolsrc.json",
+        "fileMatch": [
+          "**/.gherkin-powertoolsrc.json",
+          "**/.gherkin-powertoolsrc",
+          "**/.gherkin.json",
+          "**/.gherkin"
+        ],
         "url": "./gherkin-powertools.schema.json"
       }
     ]
@@ -389,7 +458,7 @@
   },
   "overrides": {
     "serialize-javascript": "^7.0.5",
-    "brace-expansion": "^2.1.2",
+    "brace-expansion": "^2.1.3",
     "js-yaml": "^4.3.0"
   },
   "dependencies": {

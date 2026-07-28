@@ -15,7 +15,8 @@ suite('GherkinTestController Test Suite', () => {
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gherkin-test-controller-'));
         const configDiagnostics = vscode.languages.createDiagnosticCollection('gherkin-configuration-test');
         configService = new ConfigurationService(configDiagnostics);
-        controller = new GherkinTestController(configService);
+        const uniqueId = `gherkin-tests-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        controller = new GherkinTestController(configService, uniqueId);
     });
 
     teardown(() => {

@@ -58,7 +58,9 @@ suite('Execution Test Suite', () => {
         startDebuggingCalledWith = undefined;
         (vscode.debug as any).startDebugging = async (folder: any, config: any) => {
             startDebuggingCalledWith = { folder, config };
-            return true;
+            // Return false so that the promise in debugBehave resolves immediately 
+            // instead of waiting for debug termination events that never fire in tests.
+            return false;
         };
         (vscode.workspace as any).getWorkspaceFolder = () => ({ uri: vscode.Uri.file('/workspace'), name: 'workspace', index: 0 });
         (vscode.workspace as any).asRelativePath = () => 'features/test.feature';
@@ -191,7 +193,7 @@ suite('Execution Test Suite', () => {
         assert.strictEqual(config.module, 'behave');
         // Arguments are passed as an array to Python extension, which spawns the process safely
         assert.deepStrictEqual(config.args, ['--no-capture', './features/malicious $(rm -rf /) path.feature:42']);
-        assert.strictEqual(config.console, 'integratedTerminal');
+        assert.strictEqual(config.console, 'internalConsole');
     });
 
     test('debugBehave prompts for missing Python extension and handles install action', async () => {

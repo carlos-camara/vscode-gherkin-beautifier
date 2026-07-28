@@ -26,7 +26,7 @@ export class SymbolCache {
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
 
-    public initialize(): Promise<void> {
+    public ensureInitialized(): Promise<void> {
         if (this.state === 'initializing' || this.state === 'ready') {
             return this.initPromise!;
         }
@@ -50,8 +50,14 @@ export class SymbolCache {
 
     public async updateFile(uri: vscode.Uri): Promise<void> {
         try {
-            const rawBytes = await vscode.workspace.fs.readFile(uri);
-            const content = new TextDecoder('utf8').decode(rawBytes);
+            let content = '';
+            const openDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+            if (openDoc) {
+                content = openDoc.getText();
+            } else {
+                const rawBytes = await vscode.workspace.fs.readFile(uri);
+                content = new TextDecoder('utf8').decode(rawBytes);
+            }
             const lines = content.split(/\r?\n/);
             const definitions: StepDefinition[] = [];
 
@@ -184,7 +190,7 @@ export class SymbolCache {
     }
 
     public async getStepDefinitions(stepText: string, semanticType?: 'given' | 'when' | 'then' | 'step'): Promise<StepDefinition[]> {
-        await this.initialize();
+        await this.ensureInitialized();
         const matches: StepDefinition[] = [];
         for (const [_, definitions] of this.cache) {
             for (const def of definitions) {
@@ -200,7 +206,7 @@ export class SymbolCache {
     }
 
     public async getAllStepDefinitions(semanticType?: 'given' | 'when' | 'then' | 'step'): Promise<StepDefinition[]> {
-        await this.initialize();
+        await this.ensureInitialized();
         const definitions: StepDefinition[] = [];
         for (const [_, defs] of this.cache) {
             for (const def of defs) {
@@ -228,7 +234,7 @@ export class FeatureCache {
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
 
-    public initialize(): Promise<void> {
+    public ensureInitialized(): Promise<void> {
         if (this.state === 'ready' || this.state === 'initializing') {
             return this.initPromise!;
         }
@@ -351,20 +357,84 @@ export class FeatureCache {
                 const status = errors.length > 0 ? 'partial' : 'current';
                 this.updateIncrementalTagCounts(uri.toString(), tagCounts, status);
             } else {
-                // Partial or unparsable AST, mark existing as partial
-                const existing = this.fileTagCounts.get(uri.toString());
-                if (existing) {
-                    existing.status = 'partial';
-                }
+                // Partial or unparsable AST, use fallback
+                const fallbackCounts = this.fallbackParseTags(content);
+                this.updateIncrementalTagCounts(uri.toString(), fallbackCounts, 'partial');
             }
         } catch (err) {
             logger.error(`Error parsing feature file ${uri.toString()}:`, err);
-            // AST throws error, preserve state as partial
-            const existing = this.fileTagCounts.get(uri.toString());
-            if (existing) {
-                existing.status = 'partial';
+            const fallbackCounts = this.fallbackParseTags(content);
+            this.updateIncrementalTagCounts(uri.toString(), fallbackCounts, 'partial');
+        }
+    }
+
+    private fallbackParseTags(content: string): Map<string, number> {
+        const tagCounts = new Map<string, number>();
+        const lines = content.split(/\r?\n/);
+
+        let featureTags: string[] = [];
+        let ruleTags: string[] = [];
+        let currentTags: string[] = []; 
+        let currentScenarioTags: string[] = [];
+        
+        let isInsideExamples = false;
+        let exampleHeaderSeen = false;
+        let isFirstExamplesBlock = false;
+        
+        const addTags = (tags: string[], count: number) => {
+            for (const tag of tags) {
+                tagCounts.set(tag, (tagCounts.get(tag) || 0) + count);
+            }
+        };
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+
+            if (trimmed.startsWith('@')) {
+                const tagsOnLine = trimmed.split(/\s+/).filter(t => t.startsWith('@'));
+                currentTags.push(...tagsOnLine);
+            } else if (/^Feature:/i.test(trimmed)) {
+                featureTags = [...currentTags];
+                currentTags = [];
+                ruleTags = [];
+                isInsideExamples = false;
+            } else if (/^Rule:/i.test(trimmed)) {
+                ruleTags = [...currentTags];
+                currentTags = [];
+                isInsideExamples = false;
+            } else if (/^(Scenario|Scenario Outline|Scenario Template|Example):/i.test(trimmed)) {
+                isInsideExamples = false;
+                isFirstExamplesBlock = true;
+                const allTags = [...new Set([...featureTags, ...ruleTags, ...currentTags])];
+                currentScenarioTags = allTags;
+                addTags(currentScenarioTags, 1);
+                currentTags = [];
+            } else if (/^(Examples|Scenarios):/i.test(trimmed)) {
+                isInsideExamples = true;
+                exampleHeaderSeen = false;
+                const examplesTags = [...new Set([...currentScenarioTags, ...currentTags])];
+                currentScenarioTags = examplesTags;
+                currentTags = [];
+            } else if (isInsideExamples && trimmed.startsWith('|')) {
+                if (!exampleHeaderSeen) {
+                    exampleHeaderSeen = true;
+                } else {
+                    if (isFirstExamplesBlock) {
+                        addTags(currentScenarioTags, -1);
+                        isFirstExamplesBlock = false;
+                    }
+                    addTags(currentScenarioTags, 1);
+                }
+            } else {
+                currentTags = [];
             }
         }
+        
+        for (const [tag, count] of tagCounts.entries()) {
+            if (count <= 0) tagCounts.delete(tag);
+        }
+        return tagCounts;
     }
 
     private updateIncrementalTagCounts(uriString: string, newCounts: Map<string, number>, status: 'current' | 'stale' | 'partial') {
@@ -405,7 +475,8 @@ export class FeatureCache {
         }
     }
 
-    public getTagBlastRadius(tag: string): number {
+    public async getTagBlastRadius(tag: string): Promise<number> {
+        await this.ensureInitialized();
         return this.globalTagCount.get(tag) || 0;
     }
 
@@ -413,7 +484,8 @@ export class FeatureCache {
         return this.fileTagCounts.get(uri.toString());
     }
 
-    public hasStaleOrPartialFilesForTag(tag: string): boolean {
+    public async hasStaleOrPartialFilesForTag(tag: string): Promise<boolean> {
+        await this.ensureInitialized();
         for (const state of this.fileTagCounts.values()) {
             if ((state.status === 'stale' || state.status === 'partial') && state.counts.has(tag)) {
                 return true;

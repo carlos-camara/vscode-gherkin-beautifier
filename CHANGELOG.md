@@ -8,21 +8,21 @@ All notable changes to the "vscode-gherkin-powertools" extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.8] - 2026-07-27
 
 ### 🚀 Added
 - **Command Center**: A unified interactive QuickPick menu to access all extension capabilities (formatting, execution, debugging, step navigation, and diagnostics) from a single place. Open it via `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux) -> "Gherkin PowerTools: Command Center".
 - **Examples Execution CodeLens**: You can now execute and debug individual rows within `Examples` tables! The extension injects non-intrusive `▶` (Run) and `🐞` (Debug) icons strictly aligned to the left of each data row. When clicked, it passes the exact line number to Behave so that only that specific parameter set runs, saving time when debugging large scenario outlines.
-- **Security & Reliability Hardening for Execution**: Execution and debugging CodeLens actions now use VS Code Tasks and array-based `ProcessExecution` APIs, entirely eliminating shell injection vulnerabilities for malicious or celomplex file paths.
+- **Security & Reliability Hardening for Execution**: Execution and debugging CodeLens actions now use VS Code Tasks and array-based `ProcessExecution` APIs, entirely eliminating shell injection vulnerabilities for malicious or complex file paths.
   Additionally, interpreter detection now dynamically and aggressively prioritizes your active `ms-python.python` environment to guarantee reliability.
 - **Test Explorer Real-Time Tree Updates**: The Testing sidebar tree now refreshes **as you type** in a `.feature` file, without requiring a save.
   The `GherkinTestController` subscribes to `vscode.workspace.onDidChangeTextDocument` with a 400 ms debounce, so new, renamed, or deleted scenarios appear in the tree instantly during editing.
-
 - **Instant Activation (O(1))**: The extension now activates instantly upon opening VS Code.
   Heavy workspace parsing (Python steps and Feature file tagging) has been successfully offloaded
   to background threads. This ensures that features like formatting, syntax highlighting, and code
   action commands are immediately available without blocking the extension host, dramatically
   improving startup times in massive enterprise projects.
+- **Debug Console Auto-Focus**: When launching a debug session via the `🐞 Debug` button (CodeLens or Test Explorer), VS Code now automatically switches focus to the **Debug Console** panel so you immediately see Behave's output and any assertion errors without navigating there manually.
 
 ### 🐛 Fixed
 - **Linter Error Cascading**: Fixed a bug where a single missing colon (e.g., in `Scenario`) would completely break the internal Gherkin AST parser state, resulting in a massive wall of false-positive red squiggles on perfectly valid steps and tables below the error.
@@ -31,8 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This guarantees that all valid scenarios will always display execution buttons, even if previous syntax errors in the file break the parser.
 - **CodeLens Compatibility**: Fixed a bug where CodeLenses would silently fail to appear if the VS Code language identifier was set to `gherkin` instead of `feature`. The extension now fully supports both language IDs for all CodeLens actions.
 - **DevContainer Compatibility**: Fixed a bug where saving interactive execution arguments permanently to Workspace Settings would fail to apply inside DevContainers or multi-root workspaces. The settings are now correctly scoped to the active Workspace Folder's `.vscode/settings.json`.
-- **Test Explorer Debug Spinner**: Fixed a bug where running a scenario in **debug mode** from the Testing panel would leave the item spinner active until a 5-minute safety timeout expired, even though the Behave debug session had already finished.
-  The root cause was that `waitForTaskEnd()` listened to `onDidEndTaskProcess`, which is only dispatched for VS Code Tasks — not debug sessions. The controller now uses a dedicated `waitForDebugEnd()` that listens to `onDidTerminateDebugSession` and resolves immediately when the session ends.
+- **Debug Mode: Test Results Pollution**: Fixed a critical UX regression where triggering `🐞 Debug` from the Test Explorer was incorrectly recorded as a completed test run inside the **Test Results** panel. This caused previously-passing scenarios to appear as `Skipped (—)` after a debug session, destroying the valid green ✅ history. Debug sessions are now handled as a pure debugging workflow and never write to the Test Results history.
+- **Debug Session Spinner Stuck (Race Condition)**: Fixed a subtle race condition where the debug session started so quickly that `onDidStartDebugSession` fired before the extension's listener was registered — causing the Test Explorer spinner to never stop. The listener is now registered **before** `startDebugging()` is awaited, guaranteeing the event is never missed regardless of system speed.
+- **Debug Session Stuck on Failure**: Resolved a persistent issue where, if a Behave scenario **failed** during a debug session, the Test Explorer spinner would remain active indefinitely. The fix uses object-identity tracking (comparing `session` references, not string names) to reliably detect session termination, since the Python extension (`ms-python.debugpy`) may rename or modify debug session metadata internally.
+- **Edit Args Applied Uniformly**: Confirmed and documented that custom execution arguments set via the `✏️ Edit...` CodeLens (both `Save to Workspace` and `Just for this session` modes) are consistently applied to **both** `▶ Run` and `🐞 Debug` invocations, as both share the same argument resolution pipeline in `execution.ts`.
+
+### 🧹 Maintenance
+- **Dead Code Removal**: Removed 10 temporary scratch JavaScript files (`test_parse_error.js`, `test_linter_debug.js`, etc.) from the project root that accumulated during internal debugging sessions.
+- **Test File Cleanup**: Removed unused import declarations and unused parameters from `config-listener.test.ts` and `linter.test.ts` to achieve zero warnings under `--noUnusedLocals --noUnusedParameters` TypeScript compiler flags.
 
 ## [1.7.7] - 2026-07-23
 

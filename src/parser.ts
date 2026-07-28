@@ -10,6 +10,7 @@ let cucumberModulesPromise: Promise<any> | null = null;
 async function getCucumberModules() {
     if (!cucumberModulesPromise) {
         cucumberModulesPromise = (async () => {
+            // Bypass TypeScript transpiling `import()` to `require()` in commonjs
             const dynamicImport = new Function('specifier', 'return import(specifier)');
             const gherkin = await dynamicImport('@cucumber/gherkin');
             const messages = await dynamicImport('@cucumber/messages');

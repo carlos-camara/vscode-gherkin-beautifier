@@ -4,7 +4,7 @@ Gherkin PowerTools automatically indexes your Python step definitions and makes 
 
 **How it works:**
 
-The extension watches your workspace for `.py` files matching your configured globs and builds an in-memory symbol cache. The cache updates **reactively** — add a new step function, and IntelliSense reflects it within seconds without reloading.
+The extension watches your workspace for `.py` files matching your configured globs and builds an in-memory symbol cache. To ensure VS Code starts instantly, indexing is **deferred by ~2 seconds** after activation — you won't see any startup slowdown. The cache updates **reactively** after that — add a new step function, and IntelliSense reflects it within seconds without reloading.
 
 **Default step globs:**
 
@@ -31,7 +31,7 @@ You can also configure it manually:
 Exclude noise (e.g. virtual environments) to keep the cache fast:
 
 ```json
-"gherkinPowerTools.behave.stepGlobsExclude": [
+"gherkinPowerTools.behave.ignoreGlobs": [
     "**/node_modules/**",
     "**/.venv/**",
     "**/venv/**"

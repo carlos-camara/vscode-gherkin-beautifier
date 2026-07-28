@@ -42,8 +42,12 @@ Click **🐞** next to any item to launch a full VS Code debug session:
 
 - Behave runs under **`debugpy`** — the official Python debug adapter
 - Set a breakpoint in any Python step definition file and execution pauses there
+- VS Code automatically switches to the **Debug Console** where Behave output streams in real-time
 - Inspect **variables**, **call stack**, and use the **Debug Console** to evaluate expressions
 - The spinner clears automatically when the session ends
+- **Test Results are not modified** — your previous ✅ / ❌ history is preserved intact after debugging
+
+> 💡 **Tip:** Custom arguments set via **✏️ Edit Args** apply equally to both `▶ Run` and `🐞 Debug` modes.
 
 ---
 
@@ -53,7 +57,7 @@ Click **✏️** to open the **Edit Args** dialog before running:
 
 - Enter extra Behave arguments (e.g. `--tags=@wip`, `-D env=staging`)
 - Choose **Save to Workspace** to persist them in `settings.json`, or **Keep for Session** to apply them only to the current VS Code session
-- Saved args are applied automatically to every subsequent run until explicitly cleared
+- Saved args are applied automatically to every subsequent `▶ Run` **and** `🐞 Debug` execution until explicitly cleared
 
 ---
 

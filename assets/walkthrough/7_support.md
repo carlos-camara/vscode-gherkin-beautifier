@@ -12,12 +12,11 @@ The complete feature documentation is published at:
 
 Topics covered:
 
-- [Formatter](https://carlos-camara.github.io/vscode-gherkin-powertools/features/formatter/) — indentation, table alignment, tag wrapping
-- [Linter & Quick Fixes](https://carlos-camara.github.io/vscode-gherkin-powertools/features/linter/) — diagnostics, auto-corrections, step stub generation
-- [Test Explorer](https://carlos-camara.github.io/vscode-gherkin-powertools/features/execution/) — run, debug, and edit Behave tests from the VS Code Testing sidebar
-- [IntelliSense](https://carlos-camara.github.io/vscode-gherkin-powertools/features/snippets/) — step completions, outline parameter suggestions
-- [Hover & Navigation](https://carlos-camara.github.io/vscode-gherkin-powertools/features/hover/) — hover docs, Go to Definition
-- [Statistics Dashboard](https://carlos-camara.github.io/vscode-gherkin-powertools/features/statistics/) — workspace BDD metrics
+- [Formatter & Editing](https://carlos-camara.github.io/vscode-gherkin-powertools/gherkin_editing/) — indentation, table alignment, tag wrapping
+- [Linter & Quick Fixes](https://carlos-camara.github.io/vscode-gherkin-powertools/gherkin_editing/#diagnostics-and-linter) — diagnostics, auto-corrections, step stub generation
+- [Test Explorer](https://carlos-camara.github.io/vscode-gherkin-powertools/run_and_debug/) — run, debug, and edit Behave tests from the VS Code Testing sidebar
+- [Python Behave Integration](https://carlos-camara.github.io/vscode-gherkin-powertools/python_behave/) — step completions, Go to Definition, hover docs
+- [Statistics Dashboard](https://carlos-camara.github.io/vscode-gherkin-powertools/analytics/) — workspace BDD metrics
 - [Configuration Reference](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/) — all settings explained
 
 ---
