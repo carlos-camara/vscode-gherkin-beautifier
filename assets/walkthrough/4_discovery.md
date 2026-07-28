@@ -17,7 +17,7 @@ The extension watches your workspace for `.py` files matching your configured gl
 
 If your steps live in a non-standard location (e.g. `src/automation/steps/`), the extension **automatically detects this** on startup and prompts you with a recommended glob configuration.
 
-You can also configure it manually:
+You can also configure it manually in your `.vscode/settings.json` or centrally for your team in a `.gherkin-powertoolsrc.json` file:
 
 ```json
 "gherkinPowerTools.behave.stepGlobs": [

@@ -21,11 +21,11 @@ Everything Gherkin PowerTools can do, from a single searchable menu.
 
 | Action | What it does |
 |--------|-------------|
-| **Run Feature** | Execute the entire active `.feature` file with Behave via a VS Code Task |
+| **Run Feature** | Execute the entire active `.feature` file via the Test Explorer engine |
 | **Run Scenario** | Execute the scenario at the current cursor position |
 | **Debug Feature** | Launch a `debugpy` debug session for the entire feature |
 | **Debug Scenario** | Launch a `debugpy` debug session for the scenario at the cursor |
-| **Run with Custom Args** | Prompt for extra Behave arguments before running |
+| **Edit Feature/Scenario...** | Prompt for extra Behave arguments before running or debugging |
 
 ### 🛠️ Step Definitions
 

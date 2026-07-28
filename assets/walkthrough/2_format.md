@@ -40,4 +40,4 @@ Feature: Login
       | admin    | secret   |
 ```
 
-> **Configuration:** Customize indent sizes, tag wrap columns, and table alignment in `Settings → Extensions → Gherkin PowerTools → Formatting`.
+> **Configuration:** Choose a base formatting profile (`strict`, `team`, `minimal`) or customize indent sizes, tag wrap columns, and table alignment in `Settings → Extensions → Gherkin PowerTools → Formatting`.

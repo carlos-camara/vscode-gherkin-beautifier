@@ -86,11 +86,14 @@ If breaking changes exist, use this table:
 
 <!-- Link every doc page that changed in this release. -->
 
-- [`docs/features/execution.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/features/execution/) — Test Explorer: run, debug, and edit scenarios
-- [`docs/features/linter.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/features/linter/) — Live diagnostics and quick fixes
-- [`docs/features/formatter.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/features/formatter/) — AST-powered formatter
-- [`docs/features/command_center.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/features/command_center/) — Command Center
-- [`docs/configuration.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/) — All configuration options
+- [`docs/getting_started.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/getting_started/) — Getting Started
+- [`docs/gherkin_editing.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/gherkin_editing/) — Gherkin Editing
+- [`docs/python_behave.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/python_behave/) — Python Behave Integration
+- [`docs/run_and_debug.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/run_and_debug/) — Run and Debug (Test Explorer)
+- [`docs/analytics.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/analytics/) — Workspace Analytics
+- [`docs/configuration.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/) — Configuration Reference
+- [`docs/compatibility.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/compatibility/) — Framework Compatibility
+- [`docs/troubleshooting.md`](https://carlos-camara.github.io/vscode-gherkin-powertools/troubleshooting/) — Troubleshooting
 - [`CHANGELOG.md`](../CHANGELOG.md) — Full change history
 
 ---

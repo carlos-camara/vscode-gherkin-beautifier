@@ -156,20 +156,17 @@ If breaking:
 
 <!-- Link every doc page touched or added. -->
 
-- [ ] `docs/features/execution.md`
-- [ ] `docs/features/linter.md`
-- [ ] `docs/features/formatter.md`
-- [ ] `docs/features/command_center.md`
-- [ ] `docs/features/diagnostics.md`
-- [ ] `docs/features/hover.md`
-- [ ] `docs/features/definition.md`
-- [ ] `docs/features/snippets.md`
-- [ ] `docs/features/highlighting.md`
-- [ ] `docs/features/statistics.md`
-- [ ] `docs/features/outline.md`
-- [ ] `docs/demos.md`
-- [ ] `docs/ARCHITECTURE.md`
+- [ ] `README.md`
+- [ ] `mkdocs.yml`
+- [ ] `docs/getting_started.md`
+- [ ] `docs/gherkin_editing.md`
+- [ ] `docs/python_behave.md`
+- [ ] `docs/run_and_debug.md`
+- [ ] `docs/analytics.md`
 - [ ] `docs/configuration.md`
+- [ ] `docs/compatibility.md`
+- [ ] `docs/troubleshooting.md`
+- [ ] `CHANGELOG.md`
 
 ---
 
