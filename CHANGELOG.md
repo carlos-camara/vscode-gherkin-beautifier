@@ -8,7 +8,7 @@ All notable changes to the "vscode-gherkin-powertools" extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.7.8] - 2026-07-27
+## [1.7.8] - 2026-07-28
 
 ### 🚀 Added
 - **Command Center**: A unified interactive QuickPick menu to access all extension capabilities (formatting, execution, debugging, step navigation, and diagnostics) from a single place. Open it via `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux) -> "Gherkin PowerTools: Command Center".
