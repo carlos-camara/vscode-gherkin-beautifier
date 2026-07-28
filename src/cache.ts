@@ -4,6 +4,7 @@ import { discoveryService } from './discovery';
 import { parseGherkin } from './parser';
 import { parsePythonDecorators } from './tokenizer';
 import type { Tag, Scenario } from '@cucumber/messages';
+import { WorkspaceEventBus } from './eventBus';
 export interface StepDefinition {
     type: 'given' | 'when' | 'then' | 'step';
     rawPattern: string;
@@ -25,6 +26,18 @@ export class SymbolCache {
     private cache: Map<string, StepDefinition[]> = new Map();
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
+    private eventBus?: WorkspaceEventBus;
+
+    public setEventBus(eventBus: WorkspaceEventBus) {
+        this.eventBus = eventBus;
+        this.eventBus.onEvent(e => {
+            if (e.type === 'stepFileCreated' || e.type === 'stepFileChanged') {
+                this.updateFile(e.uri);
+            } else if (e.type === 'stepFileDeleted') {
+                this.removeFile(e.uri);
+            }
+        });
+    }
 
     public ensureInitialized(): Promise<void> {
         if (this.state === 'initializing' || this.state === 'ready') {
@@ -233,6 +246,18 @@ export class FeatureCache {
 
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
+    private eventBus?: WorkspaceEventBus;
+
+    public setEventBus(eventBus: WorkspaceEventBus) {
+        this.eventBus = eventBus;
+        this.eventBus.onEvent(e => {
+            if (e.type === 'featureFileCreated' || e.type === 'featureFileChanged') {
+                this.updateFile(e.uri);
+            } else if (e.type === 'featureFileDeleted') {
+                this.removeFile(e.uri);
+            }
+        });
+    }
 
     public ensureInitialized(): Promise<void> {
         if (this.state === 'ready' || this.state === 'initializing') {

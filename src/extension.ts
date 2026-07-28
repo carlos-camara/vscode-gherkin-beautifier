@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { WorkspaceEventBus } from './eventBus';
 import { GherkinFormattingEditProvider } from './formatter';
 import { GherkinDocumentSymbolProvider } from './outline';
 import { GherkinLinter } from './linter';
@@ -33,6 +34,9 @@ const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 export async function activate(context: vscode.ExtensionContext) {
     const t0 = performance.now();
     logger.info('Extension "vscode-gherkin-powertools" is now active.');
+    const eventBus = new WorkspaceEventBus();
+    context.subscriptions.push(eventBus);
+
     
     registerExecutionListeners(context);
 
@@ -43,9 +47,10 @@ export async function activate(context: vscode.ExtensionContext) {
     const configWatcher = vscode.workspace.createFileSystemWatcher('**/.gherkin-powertoolsrc.json');
     context.subscriptions.push(configWatcher);
 
-    discoveryService.configService = configService;
-
+    
+    discoveryService.eventBus = eventBus;
     const testController = new GherkinTestController(configService);
+    testController.setEventBus(eventBus);
     context.subscriptions.push(testController);
 
     const formatter = new GherkinFormattingEditProvider(configService);
@@ -53,70 +58,46 @@ export async function activate(context: vscode.ExtensionContext) {
     
     // Initialize Symbol Cache for definitions
     const symbolCache = new SymbolCache();
+    symbolCache.setEventBus(eventBus);
 
     // Initialize Feature Cache for workspace-wide tag statistics
     const featureCache = new FeatureCache();
+    featureCache.setEventBus(eventBus);
 
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);
+    linter.setEventBus(eventBus);
+    
+    const highlighter = new GherkinHighlighter();
+    highlighter.setEventBus(eventBus);
 
-    const reLintOpenFiles = () => {
-        vscode.workspace.textDocuments.forEach(doc => {
-            if (GHERKIN_LANGUAGES.includes(doc.languageId)) {
-                linter.immediateLint(doc);
-            }
-        });
-    };
 
-    // Watch for changes in Python step files
-    const setupStepWatchers = () => {
-        const watchers = discoveryService.setupWatchers(
-            async uri => { await symbolCache.updateFile(uri); reLintOpenFiles(); },
-            async uri => { await symbolCache.updateFile(uri); reLintOpenFiles(); },
-            uri => { symbolCache.removeFile(uri); reLintOpenFiles(); }
-        );
-        watchers.forEach(w => context.subscriptions.push(w));
-    };
-    const rebuildDiscovery = async () => {
-        configService.invalidateCache();
-        setupStepWatchers();
-        await symbolCache.ensureInitialized();
-        reLintOpenFiles();
-    };
-
+    
     // Rebuild discovery logic on configuration change
-    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async e => {
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('gherkinPowerTools')) {
             configService.invalidateCache();
-            if (e.affectsConfiguration('gherkinPowerTools.behave.stepGlobs') || 
-                e.affectsConfiguration('gherkinPowerTools.behave.ignoreGlobs')) {
-                await rebuildDiscovery();
-            }
-            // Unconditionally relint open files when any setting changes
-            // This ensures linter toggles and rule changes apply instantly.
-            reLintOpenFiles();
+            eventBus.publish({ type: 'configurationChanged', event: e });
         }
     }));
     
     // Listen to changes in project configuration files
-    configWatcher.onDidChange(rebuildDiscovery);
-    configWatcher.onDidCreate(rebuildDiscovery);
-    configWatcher.onDidDelete(rebuildDiscovery);
+    configWatcher.onDidChange(() => eventBus.publish({ type: 'configurationChanged' }));
+    configWatcher.onDidCreate(() => eventBus.publish({ type: 'configurationChanged' }));
+    configWatcher.onDidDelete(() => eventBus.publish({ type: 'configurationChanged' }));
     
     // Defer heavy I/O scanning and watcher setup to allow VS Code to start up quickly
     setTimeout(() => {
-        symbolCache.ensureInitialized().then(() => {
-            setupStepWatchers();
-            reLintOpenFiles();
-        }).catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
-
-        featureCache.ensureInitialized().then(() => {
-            const featureWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
-            featureWatcher.onDidCreate(async uri => { await featureCache.updateFile(uri); });
-            featureWatcher.onDidChange(async uri => { await featureCache.updateFile(uri); });
-            featureWatcher.onDidDelete(uri => { featureCache.removeFile(uri); });
-            context.subscriptions.push(featureWatcher);
-        }).catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
+        symbolCache.ensureInitialized().catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
+        featureCache.ensureInitialized().catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
+        
+        discoveryService.setupWatchers().forEach(w => context.subscriptions.push(w));
+        
+        const featureWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
+        featureWatcher.onDidCreate(uri => eventBus.publish({ type: 'featureFileCreated', uri }));
+        featureWatcher.onDidChange(uri => eventBus.publish({ type: 'featureFileChanged', uri }));
+        featureWatcher.onDidDelete(uri => eventBus.publish({ type: 'featureFileDeleted', uri }));
+        context.subscriptions.push(featureWatcher);
     }, 2000);
     
     // Asynchronously trigger onboarding recommendation check
@@ -162,7 +143,7 @@ export async function activate(context: vscode.ExtensionContext) {
             const uri = await createStepDefinition(...args as [string, string, vscode.Uri?]);
             if (uri) {
                 await symbolCache.updateFile(uri);
-                reLintOpenFiles();
+                eventBus.publish({ type: 'stepFileChanged', uri });
             }
         })
     );
@@ -242,7 +223,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(linter);
 
 
-    const highlighter = new GherkinHighlighter();
+
     context.subscriptions.push(highlighter);
 
     // Initial lint & highlight for all open feature files
@@ -253,41 +234,26 @@ export async function activate(context: vscode.ExtensionContext) {
         highlighter.highlight(vscode.window.activeTextEditor);
     }
 
-    // On file open or active editor change
+    // Event Bus publish for workspace events
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(editor => {
-            if (editor) {
-                highlighter.highlight(editor);
-            }
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.workspace.onDidOpenTextDocument(doc => {
-            linter.immediateLint(doc);
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.workspace.onDidSaveTextDocument(doc => {
-            linter.immediateLint(doc);
-        })
-    );
-
-    // On text change
-    context.subscriptions.push(
-        vscode.workspace.onDidChangeTextDocument(e => {
-            linter.scheduleLint(e.document);
-            if (vscode.window.activeTextEditor && e.document === vscode.window.activeTextEditor.document) {
-                highlighter.highlight(vscode.window.activeTextEditor);
-            }
-        })
-    );
-
-    // Clear on close
-    context.subscriptions.push(
+            eventBus.publish({ type: 'activeEditorChanged', editor });
+        }),
+        vscode.workspace.onDidOpenTextDocument(document => {
+            eventBus.publish({ type: 'textDocumentOpened', document });
+        }),
+        vscode.workspace.onDidSaveTextDocument(() => {
+            // Can be treated as change or open depending on needs. Linter just lint on textDocumentChanged.
+        }),
+        vscode.workspace.onDidChangeTextDocument(event => {
+            eventBus.publish({ type: 'textDocumentChanged', event });
+        }),
         vscode.workspace.onDidCloseTextDocument(doc => linter.clear(doc))
     );
+    
+    if (vscode.window.activeTextEditor) {
+        eventBus.publish({ type: 'activeEditorChanged', editor: vscode.window.activeTextEditor });
+    }
 
     // Register the formatter for both full documents and selections/ranges
     // We register for both 'feature' and 'gherkin' language identifiers to ensure maximum compatibility

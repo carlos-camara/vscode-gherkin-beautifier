@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { ConfigurationService } from './configuration';
+import { WorkspaceEventBus } from './eventBus';
 
 export class BehaveFileDiscoveryService {
     private stepWatchers: vscode.FileSystemWatcher[] = [];
     private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
     public configService?: ConfigurationService;
+    public eventBus?: WorkspaceEventBus;
 
     // Validates and normalizes an array of glob strings
     public normalizeGlobs(globs: any, defaultGlobs: string[]): string[] {
@@ -161,29 +163,25 @@ export class BehaveFileDiscoveryService {
         this.debounceTimers.set(key, timer);
     }
 
-    public setupWatchers(
-        onCreated: (uri: vscode.Uri) => void,
-        onChanged: (uri: vscode.Uri) => void,
-        onDeleted: (uri: vscode.Uri) => void
-    ): vscode.FileSystemWatcher[] {
+    public setupWatchers(): vscode.FileSystemWatcher[] {
         this.disposeWatchers();
 
         const wrapCreated = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
             const ignoreGlobs = this.getIgnoreGlobs(folderUri);
             if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`create:${uri.toString()}`, () => onCreated(uri));
+            this.debounceEvent(`create:${uri.toString()}`, () => this.eventBus?.publish({ type: 'stepFileCreated', uri }));
         };
 
         const wrapChanged = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
             const ignoreGlobs = this.getIgnoreGlobs(folderUri);
             if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`change:${uri.toString()}`, () => onChanged(uri));
+            this.debounceEvent(`change:${uri.toString()}`, () => this.eventBus?.publish({ type: 'stepFileChanged', uri }));
         };
 
         const wrapDeleted = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
             const ignoreGlobs = this.getIgnoreGlobs(folderUri);
             if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`delete:${uri.toString()}`, () => onDeleted(uri));
+            this.debounceEvent(`delete:${uri.toString()}`, () => this.eventBus?.publish({ type: 'stepFileDeleted', uri }));
         };
         
         if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {

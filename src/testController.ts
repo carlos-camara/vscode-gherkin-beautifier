@@ -4,6 +4,7 @@ import { logger } from './logger';
 import { ConfigurationService } from './configuration';
 import { runBehaveForTestRun } from './execution';
 import * as path from 'path';
+import { WorkspaceEventBus } from './eventBus';
 
 /** Extracts the scenario line number from a TestItem ID of the form `uri#scenario:LINE` */
 function extractLineFromId(id: string): number | undefined {
@@ -24,8 +25,7 @@ function isFileItem(item: vscode.TestItem): boolean {
 export class GherkinTestController {
     private controller: vscode.TestController;
     private configService: ConfigurationService;
-    private fileWatcher?: vscode.FileSystemWatcher;
-    private textChangeDisposable?: vscode.Disposable;
+    private eventBus?: WorkspaceEventBus;
     private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
     constructor(configService: ConfigurationService, testControllerId?: string) {
@@ -59,56 +59,35 @@ export class GherkinTestController {
 
         // Note: "Edit args & Run" is exposed as a standalone toolbar icon button
         // via package.json contributes.menus > view/title (see gherkinPowerTools.testExplorerEditAndRun)
-
-        this.startWatchingWorkspace();
-        this.startWatchingTextChanges();
     }
 
-    public dispose() {
-        this.controller.dispose();
-        this.fileWatcher?.dispose();
-        this.textChangeDisposable?.dispose();
-        for (const timer of this.debounceTimers.values()) { clearTimeout(timer); }
-        this.debounceTimers.clear();
-    }
+    public setEventBus(eventBus: WorkspaceEventBus) {
+        this.eventBus = eventBus;
+        this.eventBus.onEvent(e => {
+            if (e.type === 'featureFileCreated') {
+                this.getOrCreateFile(e.uri);
+            } else if (e.type === 'featureFileChanged') {
+                this.parseTestsInFileContents(this.getOrCreateFile(e.uri));
+            } else if (e.type === 'featureFileDeleted') {
+                this.controller.items.delete(e.uri.toString());
+            } else if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
+                const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
+                if (!doc.uri.fsPath.endsWith('.feature')) { return; }
 
-    private startWatchingWorkspace() {
-        this.fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
-        this.fileWatcher.onDidCreate(uri => this.getOrCreateFile(uri));
-        this.fileWatcher.onDidChange(uri => this.parseTestsInFileContents(this.getOrCreateFile(uri)));
-        this.fileWatcher.onDidDelete(uri => this.controller.items.delete(uri.toString()));
-    }
+                const key = doc.uri.toString();
+                const existing = this.debounceTimers.get(key);
+                if (existing) { clearTimeout(existing); }
 
-    private startWatchingTextChanges() {
-        // 1. Listen for text changes (debounced)
-        const onDidChange = vscode.workspace.onDidChangeTextDocument(event => {
-            const { uri } = event.document;
-            if (!uri.fsPath.endsWith('.feature')) { return; }
+                const timer = setTimeout(() => {
+                    this.debounceTimers.delete(key);
+                    const fileItem = this.getOrCreateFile(doc.uri);
+                    this.parseTestsInDocumentContent(fileItem, doc.getText());
+                }, 400);
 
-            const key = uri.toString();
-            const existing = this.debounceTimers.get(key);
-            if (existing) { clearTimeout(existing); }
-
-            const timer = setTimeout(() => {
-                this.debounceTimers.delete(key);
-                const fileItem = this.getOrCreateFile(uri);
-                this.parseTestsInDocumentContent(fileItem, event.document.getText());
-            }, 400);
-
-            this.debounceTimers.set(key, timer);
-        });
-
-        // 2. Listen for newly opened documents so we instantly discover tests in them
-        const onDidOpen = vscode.workspace.onDidOpenTextDocument(document => {
-            if (document.uri.fsPath.endsWith('.feature')) {
-                const fileItem = this.getOrCreateFile(document.uri);
-                this.parseTestsInDocumentContent(fileItem, document.getText());
+                this.debounceTimers.set(key, timer);
             }
         });
 
-        this.textChangeDisposable = vscode.Disposable.from(onDidChange, onDidOpen);
-
-        // 3. Eagerly parse any already open documents right now
         for (const document of vscode.workspace.textDocuments) {
             if (document.uri.fsPath.endsWith('.feature')) {
                 const fileItem = this.getOrCreateFile(document.uri);
@@ -116,6 +95,14 @@ export class GherkinTestController {
             }
         }
     }
+
+    public dispose() {
+        this.controller.dispose();
+        for (const timer of this.debounceTimers.values()) { clearTimeout(timer); }
+        this.debounceTimers.clear();
+    }
+
+
 
     private async discoverAllFilesInWorkspace() {
         if (!vscode.workspace.workspaceFolders) { return; }

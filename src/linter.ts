@@ -4,6 +4,7 @@ import { dialectService } from './dialect';
 import { parseGherkin } from './parser';
 import type { GherkinDocument, Step } from '@cucumber/messages';
 import { ConfigurationService } from './configuration';
+import { WorkspaceEventBus } from './eventBus';
 
 /**
  * Diagnostic Provider that acts as a realtime Linter for Gherkin files.
@@ -14,10 +15,25 @@ export class GherkinLinter {
     private symbolCache: SymbolCache;
     private pendingRequests: Map<string, { timer?: NodeJS.Timeout, requestId: number }> = new Map();
     private nextRequestId: number = 0;
+    private eventBus?: WorkspaceEventBus;
 
     constructor(symbolCache: SymbolCache, private configService: ConfigurationService) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('gherkin');
         this.symbolCache = symbolCache;
+    }
+
+    public setEventBus(eventBus: WorkspaceEventBus) {
+        this.eventBus = eventBus;
+        this.eventBus.onEvent(e => {
+            if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
+                const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
+                this.scheduleLint(doc);
+            } else if (e.type === 'stepFileChanged' || e.type === 'stepFileCreated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
+                vscode.workspace.textDocuments.forEach(doc => {
+                    this.immediateLint(doc);
+                });
+            }
+        });
     }
 
     /**
