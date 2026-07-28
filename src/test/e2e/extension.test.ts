@@ -745,17 +745,19 @@ def step_impl(context):
 
         const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
         const pyUri = vscode.Uri.joinPath(workspaceUri, 'temp_steps.py');
-        
-        // Write the file directly
-        const stepContent = Buffer.from('@given("I execute a cross file step")\ndef cross_file(): pass', 'utf8');
-        await vscode.workspace.fs.writeFile(pyUri, stepContent);
-
-        // Update globs to include all python files in root and trigger a deterministic re-index
+        // Update globs to include all python files in root first so the watcher is active
         const config = vscode.workspace.getConfiguration('gherkinPowerTools.behave');
         const oldGlobs = config.get('stepGlobs');
         await config.update('stepGlobs', ['**/*.py'], vscode.ConfigurationTarget.Global);
 
-        // Allow cache to re-initialize
+        // Allow watcher to be set up
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Write the file directly, triggering the newly created watcher
+        const stepContent = Buffer.from('@given("I execute a cross file step")\ndef cross_file(): pass', 'utf8');
+        await vscode.workspace.fs.writeFile(pyUri, stepContent);
+
+        // Allow cache to update via event bus
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Create an untitled feature file (this is fine, we just need the python file in cache)
