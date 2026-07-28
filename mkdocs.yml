@@ -59,29 +59,13 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started:
-      - Installation: installation.md
-      - Configuration: configuration.md
-      - Demo Gallery: demos.md
-  - Features:
-      - Command Center: features/command_center.md
-      - Automated Onboarding: features/onboarding.md
-      - Workspace Diagnostics: features/diagnostics.md
-      - Formatter: features/formatter.md
-      - Linter: features/linter.md
-      - Go To Definition: features/definition.md
-      - Behave Execution: features/execution.md
-      - Outline Provider: features/outline.md
-      - Statistics Dashboard: features/statistics.md
-      - Syntax Highlighting: features/highlighting.md
-      - Autocomplete & Snippets: features/snippets.md
-      - Hover Preview: features/hover.md
-  - Architecture:
-      - Core Architecture: ARCHITECTURE.md
-      - Performance & Lazy Init: features/performance.md
-      - CI/CD Pipelines: pipelines.md
-  - Community:
-      - Contributing: contributing.md
-      - Code of Conduct: code_of_conduct.md
-      - Security Policy: security.md
+  - Getting Started: getting_started.md
+  - Gherkin Editing: gherkin_editing.md
+  - Python Behave: python_behave.md
+  - Run and Debug: run_and_debug.md
+  - Analytics: analytics.md
+  - Configuration: configuration.md
+  - Compatibility: compatibility.md
+  - Troubleshooting: troubleshooting.md
+  - Contributing: contributing.md
   - Changelog: changelog.md
