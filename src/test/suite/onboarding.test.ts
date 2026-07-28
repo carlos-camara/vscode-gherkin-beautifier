@@ -121,6 +121,20 @@ suite('Onboarding Engine Test Suite', () => {
         assert.deepStrictEqual(parsed.behave.stepGlobs, newGlobs);
     });
 
+    test('mergeProjectConfigFile retains existing profile and does not overwrite it', () => {
+        const existing = JSON.stringify({
+            profile: 'legacy',
+            behave: {}
+        }, null, 2);
+
+        const newGlobs = ['**/steps/**/*.py'];
+        const merged = mergeProjectConfigFile(existing, newGlobs);
+
+        const parsed = JSON.parse(merged);
+        assert.strictEqual(parsed.profile, 'legacy');
+        assert.deepStrictEqual(parsed.behave.stepGlobs, newGlobs);
+    });
+
     test('mergeSettingsJson handles empty or malformed JSON gracefully', () => {
         const newGlobs = ['**/steps/**/*.py'];
 
@@ -133,16 +147,18 @@ suite('Onboarding Engine Test Suite', () => {
         assert.deepStrictEqual(parsedMalformed['gherkinPowerTools.behave.stepGlobs'], newGlobs);
     });
 
-    test('mergeProjectConfigFile handles empty or malformed JSON gracefully', () => {
+    test('mergeProjectConfigFile handles empty or malformed JSON gracefully and defaults to strict profile', () => {
         const newGlobs = ['**/steps/**/*.py'];
 
         const fromEmpty = mergeProjectConfigFile('', newGlobs);
         const parsedEmpty = JSON.parse(fromEmpty);
         assert.deepStrictEqual(parsedEmpty.behave.stepGlobs, newGlobs);
+        assert.strictEqual(parsedEmpty.profile, 'strict');
 
         const fromMalformed = mergeProjectConfigFile('{ invalid json', newGlobs);
         const parsedMalformed = JSON.parse(fromMalformed);
         assert.deepStrictEqual(parsedMalformed.behave.stepGlobs, newGlobs);
+        assert.strictEqual(parsedMalformed.profile, 'strict');
     });
 
     test('OnboardingEngine ignores step files matching ignoreGlobs', async () => {

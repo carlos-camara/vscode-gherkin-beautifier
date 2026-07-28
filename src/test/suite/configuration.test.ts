@@ -41,7 +41,8 @@ suite('ConfigurationService Test Suite', () => {
 
         const originalGetConfig = vscode.workspace.getConfiguration;
         vscode.workspace.getConfiguration = () => ({
-            get: () => undefined
+            get: () => undefined,
+            inspect: () => undefined
         } as any);
 
         const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
@@ -58,9 +59,10 @@ suite('ConfigurationService Test Suite', () => {
 
         const originalGetConfig = vscode.workspace.getConfiguration;
         vscode.workspace.getConfiguration = () => ({
-            get: (key: string) => {
-                if (key === 'indentation.steps') return 2;
-                if (key === 'tags.format') return 'singleLine';
+            get: () => undefined,
+            inspect: (key: string) => {
+                if (key === 'indentation.steps') return { workspaceValue: 2 };
+                if (key === 'tags.format') return { workspaceValue: 'singleLine' };
                 return undefined;
             }
         } as any);
@@ -84,11 +86,12 @@ suite('ConfigurationService Test Suite', () => {
 
         const originalGetConfig = vscode.workspace.getConfiguration;
         vscode.workspace.getConfiguration = () => ({
-            get: (key: string) => {
+            get: () => undefined,
+            inspect: (key: string) => {
                 // Workspace setting which should be overridden by project config
-                if (key === 'indentation.steps') return 2;
+                if (key === 'indentation.steps') return { workspaceValue: 2 };
                 // Workspace setting which should apply because it's not in project config
-                if (key === 'tags.format') return 'singleLine';
+                if (key === 'tags.format') return { workspaceValue: 'singleLine' };
                 return undefined;
             }
         } as any);
@@ -231,5 +234,35 @@ suite('ConfigurationService Test Suite', () => {
 
         assert.strictEqual(config.indentation.steps, 4);
         assert.ok(diagnostics.length > 0);
+    });
+
+    test('12. Profile settings provide base defaults that are overridden by explicit user settings', () => {
+        const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
+        if (fs.existsSync(configPath)) {
+            fs.unlinkSync(configPath);
+        }
+
+        const originalGetConfig = vscode.workspace.getConfiguration;
+        vscode.workspace.getConfiguration = () => ({
+            get: (key: string) => {
+                if (key === 'profile') return 'strict';
+                return undefined;
+            },
+            inspect: (key: string) => {
+                // Override strict profile's indentation
+                if (key === 'indentation.steps') return { workspaceValue: 8 };
+                return undefined;
+            }
+        } as any);
+
+        const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+
+        // Strict profile sets tags.sort to alphabetical
+        assert.strictEqual(config.tags.sort, 'alphabetical');
+        
+        // Strict profile defaults to 4, but user overrides to 8
+        assert.strictEqual(config.indentation.steps, 8);
+
+        vscode.workspace.getConfiguration = originalGetConfig;
     });
 });

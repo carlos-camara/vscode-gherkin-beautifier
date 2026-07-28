@@ -1,5 +1,37 @@
 # 💬 Documentation & Support
 
-Need help or want to report a bug?
+All Gherkin PowerTools documentation is open source and lives alongside the code.
 
-Our documentation is open-source. Feel free to explore our `docs/` folder, or reach out to us on **GitHub Discussions** if you have feature requests or run into any compatibility issues!
+---
+
+## Full Documentation
+
+The complete feature documentation is published at:
+
+**[https://carlos-camara.github.io/vscode-gherkin-powertools/](https://carlos-camara.github.io/vscode-gherkin-powertools/)**
+
+Topics covered:
+
+- [Formatter & Editing](https://carlos-camara.github.io/vscode-gherkin-powertools/gherkin_editing/) — indentation, table alignment, tag wrapping
+- [Linter & Quick Fixes](https://carlos-camara.github.io/vscode-gherkin-powertools/gherkin_editing/#diagnostics-and-linter) — diagnostics, auto-corrections, step stub generation
+- [Test Explorer](https://carlos-camara.github.io/vscode-gherkin-powertools/run_and_debug/) — run, debug, and edit Behave tests from the VS Code Testing sidebar
+- [Python Behave Integration](https://carlos-camara.github.io/vscode-gherkin-powertools/python_behave/) — step completions, Go to Definition, hover docs
+- [Statistics Dashboard](https://carlos-camara.github.io/vscode-gherkin-powertools/analytics/) — workspace BDD metrics
+- [Configuration Reference](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/) — all settings explained
+
+---
+
+## Get Help or Contribute
+
+| | |
+|-|-|
+| **Bug report / Feature request** | [Open an issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues/new/choose) |
+| **Questions & discussions** | [GitHub Discussions](https://github.com/carlos-camara/vscode-gherkin-powertools/discussions) |
+| **Source code** | [github.com/carlos-camara/vscode-gherkin-powertools](https://github.com/carlos-camara/vscode-gherkin-powertools) |
+| **Marketplace reviews** | [Leave a review](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-powertools&ssr=false#review-details) — it helps other developers find the extension |
+
+---
+
+**Diagnose problems instantly:**
+
+If something is not working as expected, open the **Command Center** and run **Diagnose Workspace** — it produces a detailed report of your step cache, glob configuration, and any parsing errors, so you can resolve issues without guesswork.

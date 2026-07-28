@@ -238,8 +238,10 @@ export function mergeProjectConfigFile(existingText: string, newStepGlobs: strin
         try {
             obj = JSON.parse(existingText);
         } catch {
-            obj = {};
+            obj = { profile: 'strict' };
         }
+    } else {
+        obj.profile = 'strict';
     }
     if (!obj.behave || typeof obj.behave !== 'object') {
         obj.behave = {};

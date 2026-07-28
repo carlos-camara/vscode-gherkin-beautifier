@@ -243,7 +243,8 @@ suite('Formatter Test Suite', () => {
         const mockDocument = {
             getText: () => unformatted,
             lineCount: 3,
-            eol: vscode.EndOfLine.CRLF
+            eol: vscode.EndOfLine.CRLF,
+            lineAt: (line: number) => ({ text: unformatted.split('\r\n')[line] || '' })
         } as any;
         const edits = await formatter.provideDocumentFormattingEdits(mockDocument, {} as any, { isCancellationRequested: false } as any);
         if (edits.length > 0) {

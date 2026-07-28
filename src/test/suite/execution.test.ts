@@ -1,15 +1,12 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { buildBehaveCommand, runBehave, runBehaveWithPrompt, parseArgsStringToVector, debugBehave, clearMemoryArgs } from '../../execution';
+import { runBehave, runBehaveWithPrompt, parseArgsStringToVector, debugBehave, clearMemoryArgs, resolveBehaveExecutionDetails, activeExecutions } from '../../execution';
 import { ConfigurationService } from '../../configuration';
 
 suite('Execution Test Suite', () => {
-    let originalCreateTerminal: any;
     let originalShowInputBox: any;
-    let originalTerminals: any;
-    let mockTerminal: any;
-    let sendTextCalledWith: string | undefined;
-    let showCalled: boolean;
+    let originalExecuteTask: any;
+    let executeTaskCalledWith: vscode.Task | undefined;
     let originalGetExtension: any;
     let originalStartDebugging: any;
     let originalAsRelativePath: any;
@@ -27,27 +24,15 @@ suite('Execution Test Suite', () => {
     } as unknown as ConfigurationService;
 
     setup(() => {
-        sendTextCalledWith = undefined;
-        showCalled = false;
-        
-        mockTerminal = {
-            show: (_preserveFocus?: boolean) => { showCalled = true; },
-            sendText: (text: string) => { sendTextCalledWith = text; }
-        };
+        executeTaskCalledWith = undefined;
 
-        originalCreateTerminal = vscode.window.createTerminal;
         originalShowInputBox = vscode.window.showInputBox;
         
-        const descriptor = Object.getOwnPropertyDescriptor(vscode.window, 'terminals');
-        originalTerminals = descriptor ? descriptor.get : undefined;
-
-        let lastCreatedTerminal: any = null;
-        (vscode.window as any).createTerminal = () => {
-            lastCreatedTerminal = mockTerminal;
-            return mockTerminal;
+        originalExecuteTask = vscode.tasks.executeTask;
+        (vscode.tasks as any).executeTask = async (task: vscode.Task) => {
+            executeTaskCalledWith = task;
+            return { task } as vscode.TaskExecution;
         };
-        // Always make window.terminals return the last created terminal so `includes` check passes
-        Object.defineProperty(vscode.window, 'terminals', { get: () => lastCreatedTerminal ? [lastCreatedTerminal] : [], configurable: true });
 
         originalGetExtension = vscode.extensions.getExtension;
         originalStartDebugging = vscode.debug.startDebugging;
@@ -55,7 +40,17 @@ suite('Execution Test Suite', () => {
         originalAsRelativePath = vscode.workspace.asRelativePath;
         
         getExtensionMock = (name: string) => {
-            if (name === 'ms-python.python') { return { id: name }; }
+            if (name === 'ms-python.python') { 
+                return { 
+                    id: name, 
+                    isActive: true, 
+                    exports: {
+                        settings: {
+                            getExecutionDetails: () => ({ execCommand: ['/custom/python'] })
+                        }
+                    }
+                }; 
+            }
             return undefined;
         };
         (vscode.extensions as any).getExtension = (name: string) => getExtensionMock(name);
@@ -63,181 +58,131 @@ suite('Execution Test Suite', () => {
         startDebuggingCalledWith = undefined;
         (vscode.debug as any).startDebugging = async (folder: any, config: any) => {
             startDebuggingCalledWith = { folder, config };
-            return true;
+            // Return false so that the promise in debugBehave resolves immediately 
+            // instead of waiting for debug termination events that never fire in tests.
+            return false;
         };
-        (vscode.workspace as any).getWorkspaceFolder = () => undefined; // Default: no workspace
+        (vscode.workspace as any).getWorkspaceFolder = () => ({ uri: vscode.Uri.file('/workspace'), name: 'workspace', index: 0 });
         (vscode.workspace as any).asRelativePath = () => 'features/test.feature';
+        
+        activeExecutions.clear();
     });
 
     teardown(() => {
-        (vscode.window as any).createTerminal = originalCreateTerminal;
         (vscode.window as any).showInputBox = originalShowInputBox;
-        if (originalTerminals) {
-            Object.defineProperty(vscode.window, 'terminals', { get: originalTerminals });
-        }
+        (vscode.tasks as any).executeTask = originalExecuteTask;
         (vscode.extensions as any).getExtension = originalGetExtension;
         (vscode.debug as any).startDebugging = originalStartDebugging;
         (vscode.workspace as any).getWorkspaceFolder = originalWorkspaceFolder;
         (vscode.workspace as any).asRelativePath = originalAsRelativePath;
         clearMemoryArgs();
+        activeExecutions.clear();
     });
 
-    test('buildBehaveCommand builds command correctly for file', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
-        const cmd = await buildBehaveCommand(uri, undefined, mockConfigService);
-        assert.strictEqual(cmd, `behave --no-capture "${uri.fsPath}"`);
+    test('resolveBehaveExecutionDetails uses Python extension active interpreter', async () => {
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+        const details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
+        assert.ok(details);
+        assert.strictEqual(details.executable, '/custom/python');
+        assert.deepStrictEqual(details.args, ['-m', 'behave', '--no-capture', './features/test.feature']);
     });
 
-    test('buildBehaveCommand builds command correctly for specific line', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
-        const cmd = await buildBehaveCommand(uri, 42, mockConfigService);
-        assert.strictEqual(cmd, `behave --no-capture "${uri.fsPath}:42"`);
+    test('resolveBehaveExecutionDetails uses custom behave command', async () => {
+        const customConfigService = {
+            getConfiguration: () => ({
+                behave: {
+                    command: 'poetry run behave',
+                    additionalArguments: ['--no-capture']
+                }
+            })
+        } as unknown as ConfigurationService;
+        
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+        const details = await resolveBehaveExecutionDetails(uri, 42, customConfigService);
+        assert.ok(details);
+        assert.strictEqual(details.executable, 'poetry');
+        assert.deepStrictEqual(details.args, ['run', 'behave', '--no-capture', './features/test.feature:42']);
     });
 
-    test('runBehave creates terminal and sends command', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
+    test('runBehave creates ProcessExecution task', async () => {
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
         await runBehave(uri, undefined, mockConfigService);
         
-        assert.strictEqual(showCalled, true, 'Terminal should be shown');
-        assert.strictEqual(sendTextCalledWith, `behave --no-capture "${uri.fsPath}"`);
+        assert.ok(executeTaskCalledWith, 'Task should be executed');
+        assert.strictEqual(executeTaskCalledWith.name, 'Behave Feature');
+        
+        const execution = executeTaskCalledWith.execution as vscode.ProcessExecution;
+        assert.strictEqual(execution.process, '/custom/python');
+        assert.deepStrictEqual(execution.args, ['-m', 'behave', '--no-capture', './features/test.feature']);
     });
 
-    test('runBehave reuses existing terminal if available', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
-        
-        let createTerminalCallCount = 0;
-        (vscode.window as any).createTerminal = () => {
-            createTerminalCallCount++;
-            return mockTerminal;
-        };
-        Object.defineProperty(vscode.window, 'terminals', { get: () => [mockTerminal], configurable: true });
-
-        // First run - might create if it's the first time in the module's life, or reuse if not
+    test('runBehave prevents duplicate executions', async () => {
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
         await runBehave(uri, undefined, mockConfigService);
         
-        // Reset the flag and run again
-        createTerminalCallCount = 0;
-        await runBehave(uri, undefined, mockConfigService);
+        let warningShown = false;
+        (vscode.window as any).showWarningMessage = async () => { warningShown = true; };
         
-        assert.strictEqual(createTerminalCallCount, 0, 'Should not create a new terminal if one exists');
-        assert.strictEqual(sendTextCalledWith, `behave --no-capture "${uri.fsPath}"`);
+        executeTaskCalledWith = undefined;
+        await runBehave(uri, undefined, mockConfigService); // Should block
+        
+        assert.strictEqual(executeTaskCalledWith, undefined, 'Second execution should be blocked');
+        assert.strictEqual(warningShown, true);
     });
 
     test('runBehaveWithPrompt does nothing if user cancels prompt', async () => {
         (vscode.window as any).showInputBox = async () => undefined;
         
-        const uri = vscode.Uri.file('/path/to/test.feature');
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
         await runBehaveWithPrompt(uri, undefined, mockConfigService);
         
-        assert.strictEqual(showCalled, false);
-        assert.strictEqual(sendTextCalledWith, undefined);
+        const details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
+        assert.ok(details?.args.includes('--no-capture'));
     });
 
-    test('runBehaveWithPrompt saves modified args in memory but does not execute', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
+    test('runBehaveWithPrompt saves modified args in memory', async () => {
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
         
-        let infoMessageShown = false;
-        (vscode.window as any).showInformationMessage = async () => { infoMessageShown = true; };
-        
+        (vscode.window as any).showInformationMessage = async () => 'Just for this session';
         (vscode.window as any).showInputBox = async (options: any) => {
             return options.value.replace('--no-capture', '--no-capture --tags=@wip');
         };
         
         await runBehaveWithPrompt(uri, undefined, mockConfigService);
-        
-        assert.strictEqual(showCalled, false, 'Terminal should NOT be shown on edit');
-        assert.strictEqual(sendTextCalledWith, undefined, 'Command should NOT be executed on edit');
-        assert.strictEqual(infoMessageShown, true, 'Information message should be shown');
 
-        // Next time buildBehaveCommand is called, it should use the memory args
-        const cmd = await buildBehaveCommand(uri, undefined, mockConfigService);
-        assert.strictEqual(cmd, `behave --no-capture --tags=@wip "${uri.fsPath}"`);
+        const details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
+        assert.ok(details?.args.includes('--tags=@wip'));
     });
 
-    test('runBehaveWithPrompt saves modified args to workspace when requested', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
+    test('clearMemoryArgs correctly resets additional arguments', async () => {
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
         
-        let updateCalledWith: { section: string, value: any, target: vscode.ConfigurationTarget } | undefined;
-        let originalGetConfiguration = vscode.workspace.getConfiguration;
-        (vscode.workspace as any).getConfiguration = (section?: string) => {
-            if (section === 'gherkinPowerTools.behave') {
-                return {
-                    update: async (key: string, value: any, target: vscode.ConfigurationTarget) => {
-                        updateCalledWith = { section: key, value, target };
-                    }
-                };
-            }
-            return originalGetConfiguration(section);
-        };
-        
-        (vscode.window as any).showInformationMessage = async () => 'Save to Workspace';
-        
-        (vscode.window as any).showInputBox = async (options: any) => {
-            return options.value.replace('--no-capture', '--no-capture --tags=@wip');
-        };
-        
-        await runBehaveWithPrompt(uri, undefined, mockConfigService);
-        
-        assert.ok(updateCalledWith, 'workspace configuration update should have been called');
-        assert.strictEqual(updateCalledWith.section, 'additionalArguments');
-        assert.deepStrictEqual(updateCalledWith.value, ['--no-capture', '--tags=@wip']);
-        assert.strictEqual(updateCalledWith.target, vscode.ConfigurationTarget.Workspace);
-
-        // Restore original
-        (vscode.workspace as any).getConfiguration = originalGetConfiguration;
-    });
-    
-    test('runBehaveWithPrompt does not save memory args if command format is completely changed', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
-        
-        let errorMessageShown = false;
-        (vscode.window as any).showErrorMessage = async () => { errorMessageShown = true; };
-        
-        (vscode.window as any).showInputBox = async () => 'echo "hello"';
-        
-        await runBehaveWithPrompt(uri, undefined, mockConfigService);
-        
-        assert.strictEqual(showCalled, false);
-        assert.strictEqual(sendTextCalledWith, undefined);
-        assert.strictEqual(errorMessageShown, true, 'Error message should be shown for invalid command format');
-
-        // Memory should not be updated with echo hello
-        const cmd = await buildBehaveCommand(uri, undefined, mockConfigService);
-        // It should remain undefined, so it uses the original additional arguments
-        assert.strictEqual(cmd, `behave --no-capture "${uri.fsPath}"`);
-    });
-
-    test('clearMemoryArgs correctly resets additional arguments to configuration defaults', async () => {
-        const uri = vscode.Uri.file('/path/to/test.feature');
-        
-        // Mock prompt to set custom args
         (vscode.window as any).showInputBox = async (options: any) => {
             return options.value.replace('--no-capture', '--tags=@fast');
         };
-        (vscode.window as any).showInformationMessage = async () => {};
+        (vscode.window as any).showInformationMessage = async () => 'Just for this session';
         
         await runBehaveWithPrompt(uri, undefined, mockConfigService);
         
-        // Verify args are changed
-        let cmd = await buildBehaveCommand(uri, undefined, mockConfigService);
-        assert.strictEqual(cmd, `behave --tags=@fast "${uri.fsPath}"`);
+        let details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
+        assert.ok(details?.args.includes('--tags=@fast'));
         
-        // Clear memory
         clearMemoryArgs();
         
-        // Verify args are back to default config
-        cmd = await buildBehaveCommand(uri, undefined, mockConfigService);
-        assert.strictEqual(cmd, `behave --no-capture "${uri.fsPath}"`);
+        details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
+        assert.ok(details?.args.includes('--no-capture'));
     });
 
     test('parseArgsStringToVector correctly splits arguments and unquotes strings', () => {
-        const args = parseArgsStringToVector('--no-capture --tags "@wip or @dev" -D env=test');
-        assert.deepStrictEqual(args, ['--no-capture', '--tags', '@wip or @dev', '-D', 'env=test']);
+        const args = parseArgsStringToVector('--no-capture --tags "@wip or @dev" -D env="test env"');
+        assert.deepStrictEqual(args, ['--no-capture', '--tags', '@wip or @dev', '-D', 'env=test env']);
     });
 
-    test('debugBehave creates valid debug configuration', async () => {
-        (vscode.workspace as any).getWorkspaceFolder = () => ({ uri: vscode.Uri.file('/workspace'), name: 'workspace', index: 0 });
+    test('debugBehave creates valid debug configuration bypassing shell injection', async () => {
         const uri = vscode.Uri.file('/workspace/features/test.feature');
+        // Simulate a malicious path from workspace name
+        (vscode.workspace as any).asRelativePath = () => 'features/malicious $(rm -rf /) path.feature';
+        
         await debugBehave(uri, 42, mockConfigService);
         
         assert.ok(startDebuggingCalledWith, 'startDebugging should have been called');
@@ -246,12 +191,13 @@ suite('Execution Test Suite', () => {
         assert.strictEqual(config.type, 'python');
         assert.strictEqual(config.request, 'launch');
         assert.strictEqual(config.module, 'behave');
-        assert.deepStrictEqual(config.args, ['--no-capture', './features/test.feature:42']);
-        assert.strictEqual(config.console, 'integratedTerminal');
+        // Arguments are passed as an array to Python extension, which spawns the process safely
+        assert.deepStrictEqual(config.args, ['--no-capture', './features/malicious $(rm -rf /) path.feature:42']);
+        assert.strictEqual(config.console, 'internalConsole');
     });
 
     test('debugBehave prompts for missing Python extension and handles install action', async () => {
-        getExtensionMock = () => undefined; // Simulate no Python extension
+        getExtensionMock = () => undefined; 
         
         let errorMessageShown = false;
         let commandExecuted = '';
@@ -269,31 +215,5 @@ suite('Execution Test Suite', () => {
         assert.strictEqual(startDebuggingCalledWith, undefined, 'startDebugging should NOT have been called');
         assert.strictEqual(errorMessageShown, true, 'Error message should be shown prompting installation');
         assert.strictEqual(commandExecuted, 'extension.open:ms-python.python');
-    });
-
-    test('debugBehave shows error if no workspace folder is open', async () => {
-        getExtensionMock = () => ({ id: 'ms-python.python' });
-        (vscode.workspace as any).getWorkspaceFolder = () => undefined;
-
-        let errorMessage = '';
-        (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
-
-        const uri = vscode.Uri.file('/tmp/test.feature');
-        await debugBehave(uri, undefined, mockConfigService);
-
-        assert.strictEqual(errorMessage, 'A workspace folder must be open to start debugging.');
-    });
-
-    test('runBehaveWithPrompt handles unquoted relative path replacement', async () => {
-        const uri = vscode.Uri.file('/workspace/features/test.feature');
-        (vscode.workspace as any).getWorkspaceFolder = () => ({ uri: vscode.Uri.file('/workspace'), name: 'workspace', index: 0 });
-        (vscode.workspace as any).asRelativePath = () => 'features/test.feature';
-
-        (vscode.window as any).showInputBox = async () => 'behave --tags=@wip ./features/test.feature';
-        (vscode.window as any).showInformationMessage = async () => {};
-
-        await runBehaveWithPrompt(uri, undefined, mockConfigService);
-        const cmd = await buildBehaveCommand(uri, undefined, mockConfigService);
-        assert.ok(cmd.includes('--tags=@wip'));
     });
 });

@@ -6,19 +6,24 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping us optimize the extension! Please provide as much context as possible.
+        Thanks for helping us optimize the extension!
+        Please provide as much context as possible.
   - type: textarea
     id: problem-description
     attributes:
       label: "Describe the performance issue"
-      description: "e.g., The extension uses 1GB of memory after 1 hour, or formatting takes 10 seconds."
+      description: >
+        e.g., The extension uses 1GB of memory after 1 hour,
+        or formatting takes 10 seconds.
     validations:
       required: true
   - type: textarea
     id: workspace-size
     attributes:
       label: "Workspace Context"
-      description: "Roughly how many feature files or step definitions are in your workspace?"
+      description: >
+        Roughly how many feature files or step definitions are in
+        your workspace?
       placeholder: "e.g., 500 feature files, 3000 step definitions"
     validations:
       required: true
@@ -38,5 +43,7 @@ body:
     id: diagnostic-output
     attributes:
       label: "Diagnostic Output (Optional)"
-      description: "Run 'Gherkin: Diagnose Workspace' from the Command Palette, click 'Copy Sanitized Report', and paste the output here."
+      description: >
+        Run 'Gherkin: Diagnose Workspace' from the Command Palette,
+        click 'Copy Sanitized Report', and paste the output here.
       render: text

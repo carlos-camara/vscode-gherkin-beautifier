@@ -73,11 +73,31 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.vars.outputs.tag }}"
+          
+          # Extract release notes for this specific version
+          node -e "
+          const fs = require('fs');
+          const version = require('./package.json').version;
+          const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+          const lines = changelog.split('\n');
+          let capturing = false;
+          let notes = [];
+          for (const line of lines) {
+            if (line.startsWith('## [' + version + ']')) {
+              capturing = true;
+              continue;
+            }
+            if (capturing && line.startsWith('## [')) break;
+            if (capturing) notes.push(line);
+          }
+          fs.writeFileSync('release_notes.md', notes.join('\n').trim());
+          "
+
           if gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG already exists."
           else
             echo "Creating release $TAG..."
-            gh release create "$TAG" --generate-notes
+            gh release create "$TAG" --notes-file release_notes.md
           fi
 
       - name: 📎 Upload VSIX Asset
@@ -86,7 +106,8 @@ jobs:
         run: |
           TAG="${{ steps.vars.outputs.tag }}"
           VSIX="${{ steps.vars.outputs.vsix }}"
-          if gh release view "$TAG" --json assets -q ".assets[].name" | grep -qx "$VSIX"; then
+          if gh release view "$TAG" \
+            --json assets -q ".assets[].name" | grep -qx "$VSIX"; then
             echo "Asset $VSIX already uploaded to release $TAG."
           else
             echo "Uploading asset $VSIX to release $TAG..."

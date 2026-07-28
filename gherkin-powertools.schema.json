@@ -1,92 +1,137 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://carlos-camara.github.io/vscode-gherkin-powertools/gherkin-powertools.schema.json",
   "title": "Gherkin PowerTools Configuration",
+  "description": "Project-level configuration for Gherkin PowerTools. Commit this file to share formatting, discovery, and linting settings with your entire team. Properties here use a nested object structure (without the 'gherkinPowerTools.' prefix used in VS Code settings).",
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "profile": {
+      "type": "string",
+      "enum": ["custom", "strict", "team", "minimal", "legacy"],
+      "default": "custom",
+      "description": "Baseline formatting profile. Individual settings always override the profile. Use 'custom' (the default) to configure everything manually, or pick a preset to share a baseline across your team.",
+      "markdownDescription": "Baseline formatting profile. Individual settings always override the profile.\n\n| Value | Description |\n|---|---|\n| `custom` | Extension defaults — configure individual settings as needed |\n| `strict` | 4-space indent, alphabetical tags, 1 blank line between scenarios |\n| `team` | Standard team baseline — sensible defaults without being restrictive |\n| `minimal` | 2-space indent, table alignment off, tags on one line, no blank lines |\n| `legacy` | Targets older Gherkin/SpecFlow codebases: 2-space indent, alignment off |"
+    },
+    "formatter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Formatter behaviour settings.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable the Gherkin document formatter. When false, the extension will no longer format .feature files on demand or on save."
+        }
+      }
+    },
     "indentation": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Indentation settings for the Gherkin formatter.",
       "properties": {
         "steps": {
           "type": "integer",
           "default": 4,
-          "description": "Number of spaces to indent steps."
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Number of spaces used to indent step keywords (Given, When, Then, And, But) relative to their parent block. The Gherkin community standard is 4. Some legacy codebases use 2."
         }
       }
     },
     "tables": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Data table formatting settings.",
       "properties": {
         "alignToKeyword": {
           "type": "boolean",
           "default": true,
-          "description": "If true, tables align dynamically to the start of the step text."
-        }
-      }
-    },
-    "tags": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "format": {
-          "type": "string",
-          "enum": ["wrap", "singleLine"],
-          "default": "wrap",
-          "description": "How to format long lists of tags."
-        },
-        "sort": {
-          "type": "string",
-          "enum": ["preserve", "alphabetical"],
-          "default": "preserve",
-          "description": "How to sort tags."
+          "description": "When true, the left border of Data Tables and Examples tables is dynamically padded to align with the text start of the preceding step keyword — not a fixed column. Set to false for simpler fixed-column alignment."
         }
       }
     },
     "emptyLines": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Empty line enforcement settings.",
       "properties": {
         "betweenScenarios": {
           "type": "integer",
           "default": 1,
-          "description": "Number of empty lines to enforce between Scenario/Rule/Background blocks."
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Number of blank lines enforced between Scenario, Scenario Outline, and Rule blocks. Set to 0 to remove separator lines, 1 for a single blank line (recommended)."
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Tag formatting settings.",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["wrap", "singleLine"],
+          "default": "wrap",
+          "description": "How to handle long lists of tags. 'wrap' splits tag lines exceeding 80 characters across multiple lines. 'singleLine' keeps all tags on one line regardless of length."
+        },
+        "sort": {
+          "type": "string",
+          "enum": ["preserve", "alphabetical"],
+          "default": "preserve",
+          "description": "Tag ordering on every format. 'preserve' keeps tags in their original source order. 'alphabetical' sorts tags A-Z on every format run."
+        }
+      }
+    },
+    "linter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Real-time linter settings.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable the real-time Gherkin linter. When false, no diagnostics (underlines) will appear in .feature files."
+        },
+        "enabledRules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["MISSING_COLON", "INVALID_KEYWORD", "SEMANTIC_ERROR", "TABLE_INCONSISTENCY", "UNDEFINED_STEP", "AMBIGUOUS_STEP"]
+          },
+          "default": [],
+          "description": "Whitelist of linting rule IDs to enforce. An empty array (default) enables ALL rules. Populate to restrict linting to specific rules only — useful for enterprise teams that want to suppress certain checks. Available: MISSING_COLON, INVALID_KEYWORD, SEMANTIC_ERROR, TABLE_INCONSISTENCY, UNDEFINED_STEP, AMBIGUOUS_STEP."
         }
       }
     },
     "behave": {
       "type": "object",
       "additionalProperties": false,
+      "description": "Behave step discovery and execution settings.",
       "properties": {
         "stepGlobs": {
           "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "items": { "type": "string" },
           "default": ["**/steps/**/*.py", "**/features/steps/**/*.py"],
-          "description": "Glob patterns to locate Python/Behave step definition files."
+          "description": "Glob patterns used to discover Python step definition files. These patterns drive IntelliSense, Go to Definition, Hover, and undefined step detection. Add extra patterns for monorepos or non-standard layouts. Changes take effect immediately."
         },
         "ignoreGlobs": {
           "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "items": { "type": "string" },
           "default": ["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"],
-          "description": "Glob patterns to ignore when locating Python/Behave step definition files."
-        },
-        "additionalArguments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Additional arguments to pass to Behave when executing via CodeLens."
+          "description": "Glob patterns excluded from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches. Changes take effect immediately."
         },
         "command": {
           "type": "string",
           "default": "behave",
-          "description": "The base command to run Behave."
+          "description": "The base command used to invoke Behave from the Test Explorer. Override when using a virtual environment manager: 'poetry run behave', 'pipenv run behave', '.venv/bin/behave', 'python -m behave'."
+        },
+        "additionalArguments": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Extra flags appended to every Behave invocation from the Test Explorer. Examples: ['--no-capture'], ['-D', 'env=staging'], ['--format', 'progress']."
         }
       }
     }

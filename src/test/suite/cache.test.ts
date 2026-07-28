@@ -204,18 +204,18 @@ def step_impl(
         
         // We can't easily mock vscode.workspace.findFiles, but we can verify 
         // that calling initialize() doesn't crash and sets state.
-        const p1 = cache.initialize();
+        const p1 = cache.ensureInitialized();
         assert.strictEqual(cache.state, 'initializing');
         
         // Multiple simultaneous calls should return the same promise
-        const p2 = cache.initialize();
+        const p2 = cache.ensureInitialized();
         assert.strictEqual(p1, p2, 'Multiple initialize calls should return the exact same promise instance');
         
         await p1;
         assert.strictEqual(cache.state, 'ready');
         
         // Calling it again after ready should also return the resolved promise
-        const p3 = cache.initialize();
+        const p3 = cache.ensureInitialized();
         assert.strictEqual(p1, p3);
 
         discoveryService.getStepFiles = originalGetStepFiles;
@@ -243,10 +243,10 @@ Feature: Blast Radius
         await featureCache.updateFile(vscode.Uri.file(featurePath));
         
         // Feature has @regression, which is inherited by 1 Scenario + 1 Outline (3 examples) = 4 total
-        assert.strictEqual(featureCache.getTagBlastRadius('@regression'), 4, '@regression should inherit down to all 4 executable scenarios');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@regression'), 4, '@regression should inherit down to all 4 executable scenarios');
         
         // @smoke is only on the Simple Scenario
-        assert.strictEqual(featureCache.getTagBlastRadius('@smoke'), 1, '@smoke should only affect 1 scenario');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@smoke'), 1, '@smoke should only affect 1 scenario');
     });
 
     test('FeatureCache: Handles Rule tags, empty Example tables, and incremental updates', async () => {
@@ -271,9 +271,9 @@ Feature: Rule Feature
 
         await featureCache.updateFile(uri);
 
-        assert.strictEqual(featureCache.getTagBlastRadius('@feature_tag'), 2);
-        assert.strictEqual(featureCache.getTagBlastRadius('@rule_tag'), 2);
-        assert.strictEqual(featureCache.getTagBlastRadius('@scenario_tag'), 1);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@feature_tag'), 2);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@rule_tag'), 2);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@scenario_tag'), 1);
 
         // Incremental update: modify content and remove @scenario_tag
         const content2 = `
@@ -285,8 +285,8 @@ Feature: Rule Feature
         fs.writeFileSync(featurePath, content2);
         await featureCache.updateFile(uri);
 
-        assert.strictEqual(featureCache.getTagBlastRadius('@feature_tag'), 1);
-        assert.strictEqual(featureCache.getTagBlastRadius('@scenario_tag'), 0);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@feature_tag'), 1);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@scenario_tag'), 0);
     });
 
     test('FeatureCache: Handles AST parse throw and preserves partial state', async () => {
@@ -295,7 +295,7 @@ Feature: Rule Feature
         fs.writeFileSync(uri.fsPath, '@valid_tag\nFeature: Valid\n  Scenario: S1\n    Given step');
 
         await featureCache.updateFile(uri);
-        assert.strictEqual(featureCache.getTagBlastRadius('@valid_tag'), 1);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@valid_tag'), 1);
 
         // Update with non-feature content
         fs.writeFileSync(uri.fsPath, 'This is not gherkin');
@@ -322,11 +322,11 @@ Feature: Fallback Test
         
         await featureCache.updateFile(vscode.Uri.file(featurePath));
         
-        assert.strictEqual(featureCache.getTagBlastRadius('@salvaged'), 1, 'Tags should still be parsed via AST fallback');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@salvaged'), 1, 'Tags should still be parsed via AST fallback');
         
         const state = featureCache.getFileState(vscode.Uri.file(featurePath));
         assert.strictEqual(state?.status, 'partial', 'State should be partial when parsing encounters an error');
-        assert.strictEqual(featureCache.hasStaleOrPartialFilesForTag('@salvaged'), true, 'Should report stale/partial for the tag');
+        assert.strictEqual(await featureCache.hasStaleOrPartialFilesForTag('@salvaged'), true, 'Should report stale/partial for the tag');
     });
 
     test('FeatureCache: Uses unsaved open document text instead of disk', async () => {
@@ -352,8 +352,8 @@ Feature: Fallback Test
             Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
         }
 
-        assert.strictEqual(featureCache.getTagBlastRadius('@old'), 0, 'Should not use disk content');
-        assert.strictEqual(featureCache.getTagBlastRadius('@new'), 1, 'Should use unsaved document content');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@old'), 0, 'Should not use disk content');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@new'), 1, 'Should use unsaved document content');
     });
 
     test('FeatureCache: Handles non-file remote URIs', async () => {
@@ -375,7 +375,7 @@ Feature: Fallback Test
             Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
         }
 
-        assert.strictEqual(featureCache.getTagBlastRadius('@remote'), 1, 'Should handle custom URI schemes');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@remote'), 1, 'Should handle custom URI schemes');
     });
 
     test('FeatureCache: Debounces rapid concurrent update requests for the same URI', async () => {
@@ -390,7 +390,7 @@ Feature: Fallback Test
 
         await Promise.all([p1, p2, p3]);
 
-        assert.strictEqual(featureCache.getTagBlastRadius('@fast'), 1, 'Debounce should coalesce updates to 1');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@fast'), 1, 'Debounce should coalesce updates to 1');
     });
 
     test('FeatureCache: Retains stale data on temporary read failure', async () => {
@@ -415,7 +415,7 @@ Feature: Fallback Test
         // Second pass fails to read
         await featureCache.updateFile(uri);
 
-        assert.strictEqual(featureCache.getTagBlastRadius('@retained'), 1, 'Should keep old data when read fails');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@retained'), 1, 'Should keep old data when read fails');
         assert.strictEqual(featureCache.getFileState(uri)?.status, 'stale', 'Status should be stale');
     });
 
@@ -425,10 +425,10 @@ Feature: Fallback Test
         fs.writeFileSync(uri.fsPath, '@del\nFeature: delete me\n  Scenario: del\n    Given step');
         
         await featureCache.updateFile(uri);
-        assert.strictEqual(featureCache.getTagBlastRadius('@del'), 1);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@del'), 1);
 
         featureCache.removeFile(uri);
-        assert.strictEqual(featureCache.getTagBlastRadius('@del'), 0, 'Should decrement global tags');
+        assert.strictEqual(await featureCache.getTagBlastRadius('@del'), 0, 'Should decrement global tags');
         assert.strictEqual(featureCache.getFileState(uri), undefined);
     });
 
@@ -444,7 +444,7 @@ Feature: Fallback Test
         await p;
 
         // Since it was removed, the file state should be completely empty/undefined, and tag count 0
-        assert.strictEqual(featureCache.getTagBlastRadius('@pending'), 0);
+        assert.strictEqual(await featureCache.getTagBlastRadius('@pending'), 0);
         assert.strictEqual(featureCache.getFileState(uri), undefined);
     });
 
@@ -457,7 +457,7 @@ Feature: Fallback Test
         
         // File is healthy ('current')
         assert.strictEqual(featureCache.getFileState(uri)?.status, 'current');
-        assert.strictEqual(featureCache.hasStaleOrPartialFilesForTag('@healthy'), false);
+        assert.strictEqual(await featureCache.hasStaleOrPartialFilesForTag('@healthy'), false);
     });
 });
 

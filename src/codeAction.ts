@@ -108,6 +108,33 @@ export function serializeToPythonString(text: string): string {
 }
 
 /**
+ * Extracts parameters (quoted strings, standalone numbers) from step text.
+ * Returns the modified pattern string and the list of parameter names.
+ */
+export function extractStepParameters(text: string): { pattern: string, funcArgs: string[] } {
+    let pattern = text;
+    const funcArgs: string[] = [];
+    let paramIndex = 1;
+
+    // 1. Extract double-quoted strings
+    pattern = pattern.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, () => {
+        const argName = `arg${paramIndex++}`;
+        funcArgs.push(argName);
+        return `"{${argName}}"`;
+    });
+
+    // 2. Extract integers/decimals (only if they are standalone)
+    // Avoid replacing numbers inside `{arg1}` markers
+    pattern = pattern.replace(/(^|[^a-zA-Z0-9_{])(\d+(?:\.\d+)?)(?=[^a-zA-Z0-9_}]|$)/g, (_match, p1) => {
+        const argName = `arg${paramIndex++}`;
+        funcArgs.push(argName);
+        return `${p1}{${argName}}`;
+    });
+
+    return { pattern, funcArgs };
+}
+
+/**
  * Generates a deterministic, valid, non-colliding Python function name.
  */
 export function generateStepFunctionName(text: string): string {
@@ -129,8 +156,8 @@ export function generateStepFunctionName(text: string): string {
 /**
  * Handles the creation of a new Python step definition.
  */
-export async function createStepDefinition(stepText: string, keyword: string, documentUri?: vscode.Uri) {
-    if (!stepText) return;
+export async function createStepDefinition(stepText: string, keyword: string, documentUri?: vscode.Uri): Promise<vscode.Uri | undefined> {
+    if (!stepText) return undefined;
 
     let pyKeyword = keyword.toLowerCase().trim();
     if (!['given', 'when', 'then', 'step'].includes(pyKeyword)) {
@@ -148,7 +175,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
             
         if (!workspaceFolder) {
             vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
-            return;
+            return undefined;
         }
 
         const defaultStepsDir = vscode.Uri.joinPath(workspaceFolder.uri, 'features', 'steps');
@@ -195,7 +222,8 @@ export async function createStepDefinition(stepText: string, keyword: string, do
             } catch(e) {}
         }
 
-        const safeString = serializeToPythonString(stepText);
+        const { pattern, funcArgs } = extractStepParameters(stepText);
+        const safeString = serializeToPythonString(pattern);
         const baseFuncName = generateStepFunctionName(stepText);
         
         let funcName = baseFuncName;
@@ -212,7 +240,8 @@ export async function createStepDefinition(stepText: string, keyword: string, do
             snippet = fileContent.length === 0 || fileContent.endsWith('\n') ? '\n' : '\n\n';
         }
 
-        snippet += `@${pyKeyword}(${safeString})\ndef ${funcName}(context):\n    raise NotImplementedError(${safeString})\n`;
+        const argsString = ['context', ...funcArgs].join(', ');
+        snippet += `@${pyKeyword}(${safeString})\ndef ${funcName}(${argsString}):\n    raise NotImplementedError(${safeString})\n`;
 
         const edit = new vscode.WorkspaceEdit();
         if (isNewFile) {
@@ -246,6 +275,9 @@ export async function createStepDefinition(stepText: string, keyword: string, do
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
         editor.selection = new vscode.Selection(newEndPos, newEndPos);
         editor.revealRange(new vscode.Range(newEndPos, newEndPos));
+
+        return targetUri;
     }
+    return undefined;
 }
 

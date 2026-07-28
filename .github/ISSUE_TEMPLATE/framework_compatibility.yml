@@ -1,17 +1,23 @@
 ---
 name: "🔌 Framework Compatibility"
-description: "Report an issue with a specific BDD framework (e.g., Python Behave, Cucumber)."
+description: >
+  Report an issue with a specific BDD framework
+  (e.g., Python Behave, Cucumber).
 labels: ["framework-compatibility", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Please note: We currently strictly support **Python Behave**. We do not promise support for other frameworks at this time, though we may track compatibility requests here.
+        Please note: We currently strictly support **Python Behave**.
+        We do not promise support for other frameworks at this time,
+        though we may track compatibility requests here.
   - type: input
     id: framework
     attributes:
       label: "Target Framework"
-      description: "Which framework are you using? (e.g., Python Behave, Cucumber.js, SpecFlow)"
+      description: >
+        Which framework are you using?
+        (e.g., Python Behave, Cucumber.js, SpecFlow)
       placeholder: "Python Behave"
     validations:
       required: true
@@ -19,7 +25,9 @@ body:
     id: issue-description
     attributes:
       label: "Describe the compatibility issue"
-      description: "How does the extension fail to interoperate with the framework? (e.g. step definitions not resolving, incorrect dialect)."
+      description: >
+        How does the extension fail to interoperate with the framework?
+        (e.g. step definitions not resolving, incorrect dialect).
     validations:
       required: true
   - type: input
@@ -32,5 +40,7 @@ body:
     id: diagnostic-output
     attributes:
       label: "Diagnostic Output (Optional)"
-      description: "Run 'Gherkin: Diagnose Workspace' from the Command Palette, click 'Copy Sanitized Report', and paste the output here."
+      description: >
+        Run 'Gherkin: Diagnose Workspace' from the Command Palette,
+        click 'Copy Sanitized Report', and paste the output here.
       render: text

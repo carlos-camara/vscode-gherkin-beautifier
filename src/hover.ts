@@ -21,12 +21,12 @@ export class GherkinHoverProvider implements vscode.HoverProvider {
         const tagRange = document.getWordRangeAtPosition(position, /@[^\s@]+/);
         if (tagRange) {
             const tagName = document.getText(tagRange);
-            const blastRadius = this.featureCache.getTagBlastRadius(tagName);
+            const blastRadius = await this.featureCache.getTagBlastRadius(tagName);
             
             const hoverContent = new vscode.MarkdownString();
             hoverContent.appendMarkdown(`🏷️ **${tagName}**\n\nApplies to **${blastRadius}** scenarios across the workspace.`);
             
-            if (this.featureCache.hasStaleOrPartialFilesForTag(tagName)) {
+            if (await this.featureCache.hasStaleOrPartialFilesForTag(tagName)) {
                 hoverContent.appendMarkdown(`\n\n> ⚠️ **Warning:** Some files containing this tag have unsaved syntax errors or are currently unreachable. The scenario count might be inaccurate.`);
             }
 

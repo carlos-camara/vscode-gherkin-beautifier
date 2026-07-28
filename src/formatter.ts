@@ -52,6 +52,10 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         _options: vscode.FormattingOptions,
         token: vscode.CancellationToken
     ): Promise<vscode.TextEdit[]> {
+        const config = this.configService.getConfiguration(document.uri);
+        if (config.formatter?.enabled === false) {
+            return [];
+        }
         const options = this.getOptions(document.uri);
         const text = document.getText();
         const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
@@ -67,8 +71,9 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             return []; // Idempotent check
         }
 
+        const lastLine = document.lineAt(document.lineCount - 1);
         const start = new vscode.Position(0, 0);
-        const end = new vscode.Position(document.lineCount, 0);
+        const end = new vscode.Position(document.lineCount - 1, lastLine.text.length);
         const range = new vscode.Range(start, end);
 
         return [vscode.TextEdit.replace(range, finalText)];
@@ -80,6 +85,10 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         _options: vscode.FormattingOptions,
         token: vscode.CancellationToken
     ): Promise<vscode.TextEdit[]> {
+        const config = this.configService.getConfiguration(document.uri);
+        if (config.formatter?.enabled === false) {
+            return [];
+        }
         const options = this.getOptions(document.uri);
         const text = document.getText();
         const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
