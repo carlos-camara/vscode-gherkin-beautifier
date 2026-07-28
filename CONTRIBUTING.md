@@ -11,6 +11,7 @@ The extension is written in **TypeScript** and uses the native **VS Code Extensi
 Here is a breakdown of the core modules located in the `src/` directory:
 
 - **`extension.ts`**: The entry point. Bundled via Esbuild for fast activation. Registers all commands, providers, and diagnostics.
+- **`eventBus.ts`**: The centralized publish/subscribe Workspace Event Bus. It handles file watchers and decouples feature modules from VS Code workspace events.
 - **`formatter.ts`**: The core AST-based formatter. It handles indentation, table alignment, auto-casing, and tag wrapping based on `@cucumber/gherkin` parses.
 - **`highlighter.ts`**: Implements custom semantic syntax highlighting via VS Code's `createTextEditorDecorationType` API.
 - **`linter.ts`**: Uses the official `@cucumber/gherkin` AST parser to perform real-time syntax checking. Generates `vscode.Diagnostic` warnings to underline mistakes in the editor.
