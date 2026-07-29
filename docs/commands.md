@@ -87,6 +87,6 @@ These commands typically appear as CodeLens buttons above Scenarios/Features, or
 - **Identifier**: `gherkinPowerTools.debugScenario`
 - **Result**: Launches the Python debugger for a single Scenario or Scenario Outline.
 
-### Edit Feature... / Edit Scenario...
+### Edit Feature / Edit Scenario
 - **Identifiers**: `gherkinPowerTools.runFeatureWithArgs` / `gherkinPowerTools.runScenarioWithArgs`
 - **Result**: Interactively prompts for custom CLI arguments before running or debugging the target test.
