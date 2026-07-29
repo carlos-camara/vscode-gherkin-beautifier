@@ -58,6 +58,7 @@ Specific integrations designed exclusively for Python Behave test suites:
 * **Catch malformed Gherkin before CI:** Identify missing colons, wrong block structures, and syntax errors as you type.
 * **Find Python step definitions without searching manually:** Jump directly to the implementing Python function with a single click.
 * **Generate missing Behave steps:** Create valid Python stubs for undefined steps directly.
+* **Analyze step definitions:** Detect unused, duplicated, ambiguous, and suspiciously similar Python steps.
 * **Run or debug directly from VS Code:** Execute a specific scenario or example row without context-switching to the terminal.
 * **Understand the BDD suite structure:** Analyze tag distribution and scenario complexity across your entire workspace.
 
@@ -129,6 +130,7 @@ Generate an interactive dashboard from your Gherkin source files to analyze feat
 | **Command Center** | Access all extension capabilities from a single searchable quick-pick menu. |
 | **Workspace Diagnostics** | Generate a health report of your environment, Python path, and discovered step files. |
 | **Developer Metrics** | Track AST parsing performance, cache hit ratios, and parser failures in real-time. |
+| **Step Definition Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |
 | **Project Onboarding** | Benefit from automated detection and configuration suggestions for Behave projects. |
 
