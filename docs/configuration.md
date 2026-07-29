@@ -76,6 +76,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
+### `gherkinPowerTools.diagnostics.metricsEnabled`
+- **Purpose:** Enable or disable parser diagnostics and performance metrics. When `true`, the extension collects data on AST parsing, cache hits, and document complexity which can be viewed using the 'Show Developer Metrics' command.
+- **Type:** `boolean`
+- **Default:** `false`
+
 ### `gherkinPowerTools.linter.enabledRules`
 - **Purpose:** Whitelist of linting rule IDs to enforce. An empty array enables ALL rules.
 - **Type:** `array` of strings

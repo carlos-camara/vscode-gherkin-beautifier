@@ -128,6 +128,7 @@ Generate an interactive dashboard from your Gherkin source files to analyze feat
 | **Semantic Highlighting** | Enjoy a curated color palette for Gherkin keywords, tags, parameters, and tables. |
 | **Command Center** | Access all extension capabilities from a single searchable quick-pick menu. |
 | **Workspace Diagnostics** | Generate a health report of your environment, Python path, and discovered step files. |
+| **Developer Metrics** | Track AST parsing performance, cache hit ratios, and parser failures in real-time. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |
 | **Project Onboarding** | Benefit from automated detection and configuration suggestions for Behave projects. |
 

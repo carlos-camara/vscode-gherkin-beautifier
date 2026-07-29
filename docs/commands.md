@@ -45,6 +45,17 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Show Developer Metrics
+- **Identifier**: `gherkinPowerTools.showMetrics`
+- **Where it appears**: Command Palette.
+- **Required context**: The `gherkinPowerTools.diagnostics.metricsEnabled` setting must be enabled.
+- **Input**: None.
+- **Result**: Opens an Output Channel displaying real-time parser performance metrics, cache hit ratios, and AST complexities to aid in developer troubleshooting.
+- **Related setting**: `gherkinPowerTools.diagnostics.metricsEnabled`
+- **Default shortcut**: None.
+
+---
+
 ## Edit Behave args & Run
 - **Identifier**: `gherkinPowerTools.testExplorerEditAndRun`
 - **Where it appears**: Testing Sidebar (Title Menu).

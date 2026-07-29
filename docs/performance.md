@@ -18,6 +18,16 @@ When Behave is detected, the extension builds a robust index to provide navigati
 - **Debounced Watchers**: File system changes are debounced. Rapid modifications during saving or git branch switches will not flood the system with redundant re-indexing events.
 - **LRU AST Caching**: Gherkin document parsing is centralized via the `AstRepository`. When multiple language features (like the linter, formatter, and hover provider) request the abstract syntax tree simultaneously, they share the exact same parsed object. The AST is cached by document version and automatically purged to maintain a low memory footprint.
 
+## Parser Diagnostics & Developer Metrics
+
+To monitor the performance of the `AstRepository`, you can enable parser metrics by setting `"gherkinPowerTools.diagnostics.metricsEnabled": true` in your configuration. This activates the **Gherkin PowerTools: Show Developer Metrics** command, which provides:
+- **Parse Durations:** Track how long it takes to generate ASTs.
+- **Cache Hit Ratios:** See how often the extension successfully reuses AST objects instead of reparsing documents.
+- **Document Complexity:** Monitor the total number of features, scenarios, and steps parsed.
+- **Parser Failures:** Track documents that failed to parse due to malformed Gherkin.
+
+These metrics are collected independently of any provider (formatter, linter) and impose zero performance penalty when the setting is left disabled (the default).
+
 ## Performance Troubleshooting
 
 If you experience high CPU usage or delayed IntelliSense in massive monorepos, check the following:

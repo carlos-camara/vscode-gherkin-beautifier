@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { WorkspaceEventBus } from './eventBus';
 import { ParseResult, parseGherkin } from './parser';
+import { metricsLogger } from './metrics';
 
 export interface ASTDocument {
     uri: vscode.Uri;
@@ -45,10 +46,12 @@ export class AstRepository {
         // If we have a cached version that matches the document version, return it
         if (cached && cached.version === document.version) {
             cached.lastAccessed = Date.now();
+            metricsLogger.recordCacheHit();
             return cached.promise;
         }
 
         // Cache miss or version mismatch: parse and cache
+        metricsLogger.recordCacheMiss();
         const promise = parseGherkin(document.getText());
         this.cache.set(uriStr, {
             version: document.version,

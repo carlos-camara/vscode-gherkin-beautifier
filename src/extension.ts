@@ -12,6 +12,7 @@ import { GherkinCodeActionProvider, createStepDefinition } from './codeAction';
 import { GherkinCompletionProvider } from './completion';
 import { GherkinHoverProvider } from './hover';
 import { astRepository } from './ast';
+import { metricsLogger } from './metrics';
 import { discoveryService } from './discovery';
 import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
 
@@ -133,6 +134,9 @@ export async function activate(context: vscode.ExtensionContext) {
             } else {
                 vscode.window.showInformationMessage("Gherkin PowerTools: Document is already formatted or could not be formatted.");
             }
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.showMetrics', () => {
+            metricsLogger.showMetrics();
         })
     );
 

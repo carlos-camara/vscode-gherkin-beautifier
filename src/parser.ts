@@ -1,5 +1,8 @@
 import type { GherkinDocument } from '@cucumber/messages';
 
+import { metricsLogger } from './metrics';
+import { performance } from 'perf_hooks';
+
 export interface ParseResult {
     document: GherkinDocument | null;
     errors: any[];
@@ -31,10 +34,18 @@ export async function parseGherkin(text: string): Promise<ParseResult> {
 
     let document: GherkinDocument | null = null;
     let errors: any[] = [];
+    
+    // Performance metrics
+    const totalStart = performance.now();
+    let astStart = 0;
+    let astEnd = 0;
 
     try {
+        astStart = performance.now();
         document = parser.parse(text) as GherkinDocument;
+        astEnd = performance.now();
     } catch (e: any) {
+        astEnd = performance.now();
         // Syntax errors are grouped in an array by @cucumber/gherkin
         errors = Array.isArray(e.errors) ? e.errors : [e];
 
@@ -47,6 +58,44 @@ export async function parseGherkin(text: string): Promise<ParseResult> {
         } catch (builderError) {
             // Partial tree might not be available for severe syntax errors
         }
+    }
+
+    const totalEnd = performance.now();
+
+    if (metricsLogger.isEnabled()) {
+        let features = 0;
+        let scenarios = 0;
+        let steps = 0;
+
+        if (document && document.feature) {
+            features = 1;
+            for (const child of document.feature.children) {
+                if (child.scenario) {
+                    scenarios++;
+                    steps += child.scenario.steps?.length || 0;
+                } else if (child.background) {
+                    steps += child.background.steps?.length || 0;
+                } else if (child.rule) {
+                    for (const ruleChild of child.rule.children) {
+                        if (ruleChild.scenario) {
+                            scenarios++;
+                            steps += ruleChild.scenario.steps?.length || 0;
+                        } else if (ruleChild.background) {
+                            steps += ruleChild.background.steps?.length || 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        metricsLogger.recordParse(
+            totalEnd - totalStart,
+            astEnd - astStart,
+            features,
+            scenarios,
+            steps,
+            errors.length
+        );
     }
 
     return { document, errors };
