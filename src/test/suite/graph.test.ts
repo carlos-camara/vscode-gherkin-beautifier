@@ -1,7 +1,7 @@
 import * as assert from 'assert';
-import { WorkspaceGraph } from '../../../src/graph';
-import { SymbolCache } from '../../../src/cache';
-import { WorkspaceEventBus } from '../../../src/eventBus';
+import { WorkspaceGraph } from '../../graph';
+import { SymbolCache } from '../../cache';
+import { WorkspaceEventBus } from '../../eventBus';
 
 suite('WorkspaceGraph Test Suite', () => {
     let graph: WorkspaceGraph;
