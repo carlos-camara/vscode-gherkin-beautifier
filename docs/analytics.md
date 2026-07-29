@@ -35,7 +35,7 @@ A Webview panel will open in VS Code displaying the generated HTML report.
 
 In addition to the global dashboard, the extension provides inline analytics for tags via Hover.
 
-Hover your mouse over any `@tag` in a `.feature` file to instantly calculate exactly how many Scenarios, Backgrounds, and Example rows that tag affects across your entire workspace.
+Hover your mouse over any `@tag` in a `.feature` file to calculate exactly how many Scenarios, Backgrounds, and Example rows that tag affects across your entire workspace.
 
 This helps you understand the "blast radius" of executing a specific tag before you push code to CI.
 

@@ -1,0 +1,35 @@
+# Performance and Activation
+
+Gherkin PowerTools is designed to remain lightweight and unobtrusive, even in very large enterprise codebases with thousands of `.feature` and `.py` files.
+
+## Activation Lifecycle
+
+The extension uses **lazy activation** (`onLanguage:feature`). It will not start, load dependencies, or consume memory until you open a Gherkin document.
+
+## Workspaces without Behave
+
+If you open a Gherkin document in a project that does not use Python Behave, Gherkin PowerTools gracefully functions as a pure formatter and structural linter. It automatically disables the Python step discovery engine, ensuring zero overhead from file watchers or AST parsing of irrelevant languages.
+
+## Large-Workspace Behavior
+
+When Behave is detected, the extension builds a robust index to provide navigation and IntelliSense.
+
+- **Deferred Indexing**: Heavy workspace scanning is offloaded to background threads and does not block the VS Code Extension Host. Editor features (like formatting and syntax highlighting) are immediately available.
+- **Debounced Watchers**: File system changes are debounced. Rapid modifications during saving or git branch switches will not flood the system with redundant re-indexing events.
+- **LRU AST Caching**: Gherkin document parsing is centralized via the `AstRepository`. When multiple language features (like the linter, formatter, and hover provider) request the abstract syntax tree simultaneously, they share the exact same parsed object. The AST is cached by document version and automatically purged to maintain a low memory footprint.
+
+## Performance Troubleshooting
+
+If you experience high CPU usage or delayed IntelliSense in massive monorepos, check the following:
+
+1. **Verify your Ignored Globs**: Ensure your `gherkinPowerTools.behave.ignoreGlobs` correctly exclude virtual environments, `node_modules`, and compiled assets. If the extension attempts to parse thousands of third-party Python files inside a virtual environment, performance will degrade.
+   ```json
+   "gherkinPowerTools.behave.ignoreGlobs": [
+       "**/node_modules/**",
+       "**/.venv/**",
+       "**/venv/**",
+       "**/env/**"
+   ]
+   ```
+2. **Narrow your Step Globs**: If your steps are isolated to specific directories (e.g., `tests/features/steps`), update `gherkinPowerTools.behave.stepGlobs` to strictly target those folders instead of scanning the entire workspace.
+3. **Run the Diagnostic Command**: Execute `Gherkin PowerTools: Diagnose Workspace` from the Command Palette. The generated report will tell you exactly how many step files are currently being tracked by the internal watchers. If this number is unexpectedly high (e.g., in the thousands), your globs are likely too permissive.

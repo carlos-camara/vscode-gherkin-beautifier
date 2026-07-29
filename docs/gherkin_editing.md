@@ -40,7 +40,7 @@ The real-time AST linter validates your Gherkin structure **as you type**. It gr
 *Note: For Python Behave projects, the linter also provides warnings for Undefined and Ambiguous steps. See [Python Behave](python_behave.md).*
 
 ### Quick Fixes
-For common structural errors (like a missing colon or misspelled keyword), place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to instantly apply a Quick Fix.
+For common structural errors (like a missing colon or misspelled keyword), place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to apply a Quick Fix.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif" alt="Quick Fix - correct keyword typos with one keypress" width="600" />

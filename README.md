@@ -47,7 +47,7 @@ Framework-independent tools for any BDD project (Cucumber, SpecFlow, Playwright 
 Specific integrations designed exclusively for Python Behave test suites:
 * **Python Step Discovery:** Auto-detect and index Behave step definitions.
 * **IntelliSense & Navigation:** Autocomplete steps and go to definition.
-* **Code Actions:** Generate missing Python steps instantly.
+* **Code Actions:** Generate missing Python steps quickly.
 * **Test Explorer:** Run and debug scenarios visually from the sidebar.
 
 ---
@@ -57,7 +57,7 @@ Specific integrations designed exclusively for Python Behave test suites:
 * **Keep feature files consistently formatted:** Standardize whitespace and table alignment across your team.
 * **Catch malformed Gherkin before CI:** Identify missing colons, wrong block structures, and syntax errors as you type.
 * **Find Python step definitions without searching manually:** Jump directly to the implementing Python function with a single click.
-* **Generate missing Behave steps:** Create valid Python stubs for undefined steps instantly.
+* **Generate missing Behave steps:** Create valid Python stubs for undefined steps directly.
 * **Run or debug directly from VS Code:** Execute a specific scenario or example row without context-switching to the terminal.
 * **Understand the BDD suite structure:** Analyze tag distribution and scenario complexity across your entire workspace.
 
