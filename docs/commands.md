@@ -45,6 +45,17 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Show Developer Metrics
+- **Identifier**: `gherkinPowerTools.showMetrics`
+- **Where it appears**: Command Palette.
+- **Required context**: The `gherkinPowerTools.diagnostics.metricsEnabled` setting must be enabled.
+- **Input**: None.
+- **Result**: Opens an Output Channel displaying real-time parser performance metrics, cache hit ratios, and AST complexities to aid in developer troubleshooting.
+- **Related setting**: `gherkinPowerTools.diagnostics.metricsEnabled`
+- **Default shortcut**: None.
+
+---
+
 ## Edit Behave args & Run
 - **Identifier**: `gherkinPowerTools.testExplorerEditAndRun`
 - **Where it appears**: Testing Sidebar (Title Menu).
@@ -76,6 +87,6 @@ These commands typically appear as CodeLens buttons above Scenarios/Features, or
 - **Identifier**: `gherkinPowerTools.debugScenario`
 - **Result**: Launches the Python debugger for a single Scenario or Scenario Outline.
 
-### Edit Feature... / Edit Scenario...
+### Edit Feature / Edit Scenario
 - **Identifiers**: `gherkinPowerTools.runFeatureWithArgs` / `gherkinPowerTools.runScenarioWithArgs`
 - **Result**: Interactively prompts for custom CLI arguments before running or debugging the target test.

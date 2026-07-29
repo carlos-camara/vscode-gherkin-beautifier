@@ -78,8 +78,10 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 
 ## Large workspace performance is poor
 **Symptom:** VS Code feels slow when typing in `.feature` files.
-**Likely Causes:** The extension is scanning too many files (e.g., inside `.venv` or `node_modules`).
-**Resolution:** Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores all dependency directories.
+**Likely Causes:** The extension is scanning too many files (e.g., inside `.venv` or `node_modules`), or parsing a massive file is bottlenecking the AST.
+**Resolution:** 
+1. Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores all dependency directories.
+2. Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run the **Show Developer Metrics** command to identify if specific files have high parsing durations or poor cache hit ratios.
 
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).
