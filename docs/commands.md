@@ -50,7 +50,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Where it appears**: Command Palette.
 - **Required context**: A Python Behave project workspace.
 - **Input**: None.
-- **Result**: Analyzes all discovered Python step definitions against all `.feature` files to find unused steps, duplicated implementations, ambiguous usages, and suspiciously similar regex patterns. Opens an interactive HTML report.
+- **Result**: Proactively indexes all `.feature` and `.py` files in the workspace. Analyzes all discovered Python step definitions against all `.feature` files to find unused steps (grouped by file), duplicated implementations, ambiguous usages, and suspiciously similar regex patterns. Opens an interactive dashboard webview with clickable file links for instant navigation.
 - **Default shortcut**: None.
 
 ---

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Thundering Herd Protection**: The new parsing architecture prevents multiple language features from simultaneously triggering parsing on the exact same keystroke, creating a perfectly smooth typing experience.
 - **Parser Diagnostics & Performance Metrics**: A new lightweight metrics engine that tracks parsing duration, cache hit ratios, document complexity, and parser failures in real-time. Enable via `gherkinPowerTools.diagnostics.metricsEnabled` and view using the **Show Developer Metrics** command.
 - **Workspace Relationship Graph**: Implemented an event-driven `WorkspaceGraph` that maps structural relationships between Features, Scenarios, Rules, and Python Step Definitions in memory. This enables O(1) query capabilities for "Go To Definition" and "Hover" operations, entirely eliminating redundant regex scanning across the workspace.
+- **Step Definition Analysis Dashboard**: Added a comprehensive, interactive webview dashboard (`Gherkin PowerTools: Analyze Step Definitions`) to help you keep your Python steps clean. It proactively indexes the workspace to detect unused steps (grouped by Python file), duplicated implementations, ambiguous step usages, and suspiciously similar regex patterns. Features click-to-navigate for all file references.
 
 ## [1.7.9] - 2026-07-29
 

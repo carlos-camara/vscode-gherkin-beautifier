@@ -90,12 +90,16 @@ The Linter actively validates your steps against the Python backend:
 
 Gherkin PowerTools includes a comprehensive analyzer that inspects your entire workspace to ensure your Python step definitions are healthy and maintainable.
 
-You can generate this report by running the **Gherkin PowerTools: Analyze Step Definitions** command from the Command Palette. It opens an interactive webview displaying:
+**Proactive Indexing**: When you run the analysis, the extension proactively scans and parses all `.feature` and `.py` files across your entire workspace, ensuring 100% accuracy even if you haven't opened those files in your current session.
 
-- **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace, allowing you to safely delete dead code.
+You can generate this report by running the **Gherkin PowerTools: Analyze Step Definitions** command from the Command Palette. It opens an interactive **Dashboard Webview** displaying:
+
+- **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
 - **Duplicated Implementations:** Finds identical step definitions (same matcher type and regex pattern) across different files which will cause a runtime failure in Behave.
 - **Ambiguous Step Usages:** Identifies specific steps in your feature files that match multiple definitions, helping you pinpoint exactly where Behave will fail.
 - **Suspicious Similarities:** Highlights step definitions with very similar regex patterns (>85% similarity). These are often accidental duplicates with minor typos or overly generic patterns that could lead to ambiguity.
+
+**Interactive Navigation**: Every file reference in the dashboard is an interactive link. Click any file path to instantly open that file in VS Code at the exact line number.
 
 ---
 
