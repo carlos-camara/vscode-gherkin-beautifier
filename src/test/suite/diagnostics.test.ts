@@ -99,8 +99,8 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
 
         const originalFindFiles = vscode.workspace.findFiles;
         vscode.workspace.findFiles = async (glob) => {
-            const globStr = typeof glob === 'string' ? glob : (glob as vscode.RelativePattern).pattern;
-            if (globStr === '**/steps/**/*.py' || globStr === '**/features/steps/**/*.py') {
+            const globStr = typeof glob === 'string' ? glob : (glob as any).pattern || String(glob);
+            if (globStr && globStr.includes('steps')) {
                 return [vscode.Uri.file('/steps/test.py')];
             }
             return [];
@@ -132,13 +132,9 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
         const mockContext = { subscriptions } as unknown as vscode.ExtensionContext;
 
         const originalShowInfo = vscode.window.showInformationMessage;
-        let clipboardText = '';
-        const originalWriteText = vscode.env.clipboard.writeText;
         
-        vscode.env.clipboard.writeText = async (text: string) => { clipboardText = text; };
-
         try {
-            // Mock showInformationMessage to return the Copy action button for the report and 'OK' for the info msg
+            // Mock showInformationMessage to return the Copy action button for the report
             (vscode.window as any).showInformationMessage = async (msg: string, ..._items: string[]) => {
                 if (msg.includes('Diagnostics gathered') || msg.includes('Diagnostic report generated')) {
                     return '📋 Copy Sanitized Report';
@@ -146,12 +142,15 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
                 return undefined;
             };
 
+            // Write some dummy text first to ensure it actually changes
+            await vscode.env.clipboard.writeText('dummy');
+
             await showDiagnosticsReport(mockContext);
 
+            const clipboardText = await vscode.env.clipboard.readText();
             assert.ok(clipboardText.includes('GHERKIN POWERTOOLS DIAGNOSTIC REPORT'));
         } finally {
             vscode.window.showInformationMessage = originalShowInfo;
-            vscode.env.clipboard.writeText = originalWriteText;
         }
     });
 });
