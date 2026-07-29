@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { DiagnosticEngine, redactPath, redactReportText, showDiagnosticsReport } from '../../diagnostics';
 import { SymbolCache } from '../../cache';
+import { discoveryService } from '../../discovery';
 
 suite('DiagnosticEngine & Redaction Test Suite', () => {
     let engine: DiagnosticEngine;
@@ -97,14 +98,8 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
             getAllStepDefinitions: async () => []
         } as unknown as SymbolCache;
 
-        const originalFindFiles = vscode.workspace.findFiles;
-        vscode.workspace.findFiles = async (glob) => {
-            const globStr = typeof glob === 'string' ? glob : (glob as any).pattern || String(glob);
-            if (globStr && globStr.includes('steps')) {
-                return [vscode.Uri.file('/steps/test.py')];
-            }
-            return [];
-        };
+        const originalGetStepFiles = discoveryService.getStepFiles;
+        discoveryService.getStepFiles = async () => [vscode.Uri.file('/steps/test.py')];
 
         try {
             const report = await engine.collectDiagnostics(mockCache);
@@ -113,7 +108,7 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
             assert.ok(report.warnings.some(w => w.includes('0 step definitions were indexed')));
             assert.ok(report.recommendations.some(r => r.includes('@given, @when, @then')));
         } finally {
-            vscode.workspace.findFiles = originalFindFiles;
+            discoveryService.getStepFiles = originalGetStepFiles;
         }
     });
 
