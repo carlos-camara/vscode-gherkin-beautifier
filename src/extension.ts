@@ -11,6 +11,7 @@ import { logger } from './logger';
 import { GherkinCodeActionProvider, createStepDefinition } from './codeAction';
 import { GherkinCompletionProvider } from './completion';
 import { GherkinHoverProvider } from './hover';
+import { astRepository } from './ast';
 import { discoveryService } from './discovery';
 import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
 
@@ -60,6 +61,10 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize Feature Cache for workspace-wide tag statistics
     const featureCache = new FeatureCache();
     featureCache.setEventBus(eventBus);
+
+    // Initialize AST Repository to centralize parsing
+    astRepository.setEventBus(eventBus);
+    context.subscriptions.push({ dispose: () => astRepository.dispose() });
 
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);

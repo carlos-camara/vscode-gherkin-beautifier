@@ -5,12 +5,14 @@ import * as path from 'path';
 import * as os from 'os';
 import { SymbolCache, FeatureCache } from '../../cache';
 import { discoveryService } from '../../discovery';
+import { astRepository } from '../../ast';
 
 suite('SymbolCache Test Suite', () => {
     let cache: SymbolCache;
     let tempDir: string;
 
     setup(() => {
+        astRepository.clear();
         cache = new SymbolCache();
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gherkin-cache-test-'));
     });
@@ -283,6 +285,7 @@ Feature: Rule Feature
     Given step
         `;
         fs.writeFileSync(featurePath, content2);
+        astRepository.clear(); // Clear to simulate actual workspace event bus invalidation
         await featureCache.updateFile(uri);
 
         assert.strictEqual(await featureCache.getTagBlastRadius('@feature_tag'), 1);
@@ -298,7 +301,8 @@ Feature: Rule Feature
         assert.strictEqual(await featureCache.getTagBlastRadius('@valid_tag'), 1);
 
         // Update with non-feature content
-        fs.writeFileSync(uri.fsPath, 'This is not gherkin');
+        fs.writeFileSync(uri.fsPath, 'Just some garbage');
+        astRepository.clear();
         await featureCache.updateFile(uri);
 
         const state = featureCache.getFileState(uri);

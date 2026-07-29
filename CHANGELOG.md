@@ -8,6 +8,12 @@ All notable changes to the "vscode-gherkin-powertools" extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-07-29
+
+### 🚀 Added
+- **Centralized AST Repository**: Completely redesigned the internal Gherkin parsing architecture. The extension now uses a centralized `AstRepository` that caches the parsed Abstract Syntax Tree per document version. This eliminates redundant CPU-intensive parsing operations across multiple features (formatting, linting, hover, autocomplete), drastically reducing CPU usage and improving editor responsiveness, especially in large `.feature` files.
+- **Thundering Herd Protection**: The new parsing architecture prevents multiple language features from simultaneously triggering parsing on the exact same keystroke, creating a perfectly smooth typing experience.
+
 ## [1.7.9] - 2026-07-29
 
 ### 🚀 Added

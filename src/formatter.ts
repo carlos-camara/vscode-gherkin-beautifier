@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseGherkin } from './parser';
+import { astRepository } from './ast';
 import type { GherkinDocument, Scenario, Background, TableCell, Tag } from '@cucumber/messages';
 import { ConfigurationService } from './configuration';
 
@@ -61,7 +61,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
         const hasFinalNewline = text.endsWith('\n');
 
-        const formattedLines = await this.formatGherkin(text, options, token);
+        const formattedLines = await this.formatGherkin(document, options, token);
         if (formattedLines === null || token.isCancellationRequested) return [];
 
         const formattedText = formattedLines.map(l => l.text).join(eol);
@@ -90,17 +90,16 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             return [];
         }
         const options = this.getOptions(document.uri);
-        const text = document.getText();
         const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
 
-        const { document: gherkinDocument, errors } = await parseGherkin(text);
+        const { document: gherkinDocument, errors } = await astRepository.getAST(document);
         if (!gherkinDocument || errors.length > 0) {
             // Fallback to full document format or return empty if we can't parse safely
             vscode.window.showWarningMessage("Gherkin PowerTools: Cannot range-format document due to syntax errors.");
             return [];
         }
 
-        const formattedLines = await this.formatGherkin(text, options, token);
+        const formattedLines = await this.formatGherkin(document, options, token);
         if (formattedLines === null || token.isCancellationRequested) return [];
 
         const startLineOriginal = range.start.line + 1; // 1-indexed
@@ -148,8 +147,9 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         return [vscode.TextEdit.replace(replacementRange, replacementText)];
     }
 
-    public async formatGherkin(text: string, options: FormatterOptions, token: vscode.CancellationToken): Promise<FormattedLine[] | null> {
-        const { document: gherkinDocument, errors } = await parseGherkin(text);
+    public async formatGherkin(document: vscode.TextDocument | { uri: vscode.Uri, version: number, getText(): string }, options: FormatterOptions, token: vscode.CancellationToken): Promise<FormattedLine[] | null> {
+        const text = document.getText();
+        const { document: gherkinDocument, errors } = await astRepository.getAST(document);
 
         if (!gherkinDocument || errors.length > 0) {
             vscode.window.showWarningMessage("Gherkin PowerTools: Cannot format document due to syntax errors.");

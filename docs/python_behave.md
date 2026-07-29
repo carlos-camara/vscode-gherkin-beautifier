@@ -50,7 +50,7 @@ If you are inside a `Scenario Outline` table, typing `<` inside a step will auto
 
 ## Go to Definition
 
-You can instantly jump from any Gherkin step directly to its implementing Python decorator.
+You can jump from any Gherkin step directly to its implementing Python decorator.
 
 - **macOS:** <kbd>Cmd+Click</kbd>
 - **Windows/Linux:** <kbd>Ctrl+Click</kbd>

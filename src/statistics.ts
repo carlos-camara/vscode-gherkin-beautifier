@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseGherkin } from './parser';
+import { astRepository } from './ast';
 import type { Tag, Step, Background, Scenario, Rule } from '@cucumber/messages';
 
 export function escapeHtml(unsafe: string) {
@@ -122,7 +122,7 @@ export async function calculateStatistics(
     
     let fileCount = 0;
 
-    const processFile = async (content: string) => {
+    const processFile = async (content: string, uri: vscode.Uri) => {
         if (token?.isCancellationRequested) return;
 
         stats.totalFiles++;
@@ -134,7 +134,7 @@ export async function calculateStatistics(
             if (/^\s*#/.test(line)) stats.totalComments++;
         }
 
-        const { document: doc } = await parseGherkin(content);
+        const { document: doc } = await astRepository.getAST({ uri, version: 0, getText: () => content });
         if (!doc || !doc.feature) return;
 
         stats.totalFeatures++;
@@ -242,7 +242,7 @@ export async function calculateStatistics(
 
     for (const doc of openDocs) {
         processedUris.add(doc.uri.toString());
-        await processFile(doc.getText());
+        await processFile(doc.getText(), doc.uri);
     }
 
     for (const file of files) {
@@ -250,8 +250,8 @@ export async function calculateStatistics(
         if (!processedUris.has(file.toString())) {
             processedUris.add(file.toString());
             const contentBytes = await vscode.workspace.fs.readFile(file);
-            const contentStr = new TextDecoder().decode(contentBytes);
-            await processFile(contentStr);
+            const contentStr = Buffer.from(contentBytes).toString('utf8');
+            await processFile(contentStr, file);
         }
         fileCount++;
         if (progress) {
