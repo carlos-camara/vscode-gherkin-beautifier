@@ -222,14 +222,13 @@ suite('Execution Test Suite', () => {
 
         const cp = require('child_process');
         const originalSpawn = cp.spawn;
-        let killCalled = false;
         
         cp.spawn = () => {
             const EventEmitter = require('events');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
-            child.kill = () => { killCalled = true; };
+            child.kill = () => {};
             
             setTimeout(() => {
                 child.stdout.emit('data', Buffer.from('Standard output line 1\\n'));

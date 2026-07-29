@@ -133,7 +133,7 @@ Feature: Run Feature
         Object.defineProperty(vscode.window, 'visibleTextEditors', {
             get: () => [{
                 document: { uri: featureUri },
-                setDecorations: (decorationType: any, ranges: vscode.Range[]) => {
+                setDecorations: (_decorationType: any, ranges: vscode.Range[]) => {
                     decorationsSet = ranges;
                 }
             }]
