@@ -79,7 +79,11 @@ Specific integrations designed exclusively for Python Behave test suites:
 Write a Gherkin step. The linter underlines it if the Python implementation is missing. Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to automatically generate a valid Python stub with the extracted regex parameters directly in your steps folder.
 
 ### Behave Test Explorer, Run, and Debug
-Open the Testing panel to view a live tree of your features, rules, scenarios, and example rows. Click the Play button to execute, or the Bug icon to attach the Python debugger with full breakpoint support.
+Open the Testing panel to view a live tree of your features, rules, scenarios, and example rows. Click the Play button to execute, or the Bug icon to attach the Python debugger with full breakpoint support. 
+
+**Live Step Tracking:** As Behave runs your tests in the background, the exact step currently executing lights up dynamically in your `.feature` file, allowing you to visually track execution in real-time.
+
+**Context Snapshot:** The runner automatically captures a Context Snapshot at the end of each scenario, injecting the final state of your `context` variables directly into the output panel so you can inspect internal state without stopping execution.
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer" width="600" />
 </div>

@@ -27,10 +27,16 @@ export class SymbolCache {
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
     private eventBus?: WorkspaceEventBus;
+    private eventBusDisposable?: vscode.Disposable;
 
+    /**
+     * Subscribes to the Workspace Event Bus to receive file system and editor changes.
+     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
+     */
     public setEventBus(eventBus: WorkspaceEventBus) {
         this.eventBus = eventBus;
-        this.eventBus.onEvent(e => {
+        this.eventBusDisposable?.dispose();
+        this.eventBusDisposable = this.eventBus.onEvent(e => {
             if (e.type === 'stepFileCreated' || e.type === 'stepFileChanged') {
                 this.updateFile(e.uri);
             } else if (e.type === 'stepFileDeleted') {
@@ -48,6 +54,11 @@ export class SymbolCache {
         this.cache.clear();
         this.state = 'uninitialized';
         this.initPromise = null;
+    }
+
+    public dispose(): void {
+        this.eventBusDisposable?.dispose();
+        this.clear();
     }
 
     public ensureInitialized(): Promise<void> {
@@ -258,10 +269,16 @@ export class FeatureCache {
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
     private eventBus?: WorkspaceEventBus;
+    private eventBusDisposable?: vscode.Disposable;
 
+    /**
+     * Subscribes to the Workspace Event Bus to receive file system and editor changes.
+     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
+     */
     public setEventBus(eventBus: WorkspaceEventBus) {
         this.eventBus = eventBus;
-        this.eventBus.onEvent(e => {
+        this.eventBusDisposable?.dispose();
+        this.eventBusDisposable = this.eventBus.onEvent(e => {
             if (e.type === 'featureFileCreated' || e.type === 'featureFileChanged') {
                 this.updateFile(e.uri);
             } else if (e.type === 'featureFileDeleted') {

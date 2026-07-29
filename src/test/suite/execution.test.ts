@@ -216,4 +216,98 @@ suite('Execution Test Suite', () => {
         assert.strictEqual(errorMessageShown, true, 'Error message should be shown prompting installation');
         assert.strictEqual(commandExecuted, 'extension.open:ms-python.python');
     });
+    test('runBehaveForTestRun parses NDJSON events and separates standard output', async () => {
+        const { runBehaveForTestRun } = require('../../execution');
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        let killCalled = false;
+        
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => { killCalled = true; };
+            
+            setTimeout(() => {
+                child.stdout.emit('data', Buffer.from('Standard output line 1\\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step_start", "data": {"line": 4}}\\n'));
+                child.stdout.emit('data', Buffer.from('Standard output line 2\\n'));
+                child.emit('close', 0);
+            }, 10);
+            
+            return child;
+        };
+
+        const outputReceived: string[] = [];
+        const eventsReceived: any[] = [];
+        const tokenSource = new vscode.CancellationTokenSource();
+
+        try {
+            const exitCode = await runBehaveForTestRun(
+                uri,
+                undefined,
+                mockConfigService,
+                (text: string) => outputReceived.push(text),
+                tokenSource.token,
+                (event: any) => eventsReceived.push(event)
+            );
+
+            assert.strictEqual(exitCode, 0);
+            
+            // Standard output should be passed through with \r\n
+            assert.strictEqual(outputReceived.length, 2);
+            assert.strictEqual(outputReceived[0], 'Standard output line 1\\r\\n');
+            assert.strictEqual(outputReceived[1], 'Standard output line 2\\r\\n');
+
+            // JSON event should be parsed and delivered
+            assert.strictEqual(eventsReceived.length, 1);
+            assert.strictEqual(eventsReceived[0].event, 'step_start');
+            assert.strictEqual(eventsReceived[0].data.line, 4);
+        } finally {
+            cp.spawn = originalSpawn;
+        }
+    });
+
+    test('runBehaveForTestRun respects cancellation token', async () => {
+        const { runBehaveForTestRun } = require('../../execution');
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        let killCalled = false;
+        
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => { killCalled = true; };
+            return child; // Hangs forever until killed
+        };
+
+        const tokenSource = new vscode.CancellationTokenSource();
+        
+        try {
+            const runPromise = runBehaveForTestRun(
+                uri,
+                undefined,
+                mockConfigService,
+                () => {},
+                tokenSource.token,
+                () => {}
+            );
+
+            // Cancel immediately
+            tokenSource.cancel();
+            
+            const exitCode = await runPromise;
+            assert.strictEqual(exitCode, null, 'Should return null on cancellation');
+            assert.strictEqual(killCalled, true, 'Should invoke child.kill()');
+        } finally {
+            cp.spawn = originalSpawn;
+        }
+    });
 });

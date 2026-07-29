@@ -16,15 +16,21 @@ export class GherkinLinter {
     private pendingRequests: Map<string, { timer?: NodeJS.Timeout, requestId: number }> = new Map();
     private nextRequestId: number = 0;
     private eventBus?: WorkspaceEventBus;
+    private eventBusDisposable?: vscode.Disposable;
 
     constructor(symbolCache: SymbolCache, private configService: ConfigurationService) {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('gherkin');
         this.symbolCache = symbolCache;
     }
 
+    /**
+     * Subscribes to the Workspace Event Bus to receive file system and editor changes.
+     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
+     */
     public setEventBus(eventBus: WorkspaceEventBus) {
         this.eventBus = eventBus;
-        this.eventBus.onEvent(e => {
+        this.eventBusDisposable?.dispose();
+        this.eventBusDisposable = this.eventBus.onEvent(e => {
             if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
                 const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
                 this.scheduleLint(doc);
@@ -715,6 +721,8 @@ export class GherkinLinter {
             }
         }
         this.pendingRequests.clear();
+        this.eventBusDisposable?.dispose();
+        this.diagnosticCollection.clear();
         this.diagnosticCollection.dispose();
     }
 }

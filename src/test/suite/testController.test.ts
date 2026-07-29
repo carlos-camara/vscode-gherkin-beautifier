@@ -16,7 +16,8 @@ suite('GherkinTestController Test Suite', () => {
         const configDiagnostics = vscode.languages.createDiagnosticCollection('gherkin-configuration-test');
         configService = new ConfigurationService(configDiagnostics);
         const uniqueId = `gherkin-tests-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        controller = new GherkinTestController(configService, uniqueId);
+        const mockContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
+        controller = new GherkinTestController(mockContext, configService, uniqueId);
     });
 
     teardown(() => {
@@ -98,5 +99,84 @@ Feature: Rules Feature
         ruleItem!.children.forEach((item: vscode.TestItem) => { scenarioItem = item; });
         
         assert.strictEqual(scenarioItem!.label, 'Scenario: Rule scenario');
+    });
+    test('Binds to WorkspaceEventBus correctly', () => {
+        const { WorkspaceEventBus } = require('../../eventBus');
+        const eventBus = new WorkspaceEventBus();
+        controller.setEventBus(eventBus);
+
+        const testControllerPrivate = controller as any;
+        const testUri = vscode.Uri.file(path.join(tempDir, 'event.feature'));
+        eventBus.publish({ type: 'featureFileCreated', uri: testUri });
+
+        const fileItem = testControllerPrivate.controller.items.get(testUri.toString());
+        assert.ok(fileItem, 'Item should be created on featureFileCreated event');
+        
+        eventBus.dispose();
+    });
+
+    test('Live Step Tracking and Context Snapshot processing', async () => {
+        const featureUri = vscode.Uri.file(path.join(tempDir, 'run.feature'));
+        fs.writeFileSync(featureUri.fsPath, `
+Feature: Run Feature
+  Scenario: Run scenario
+    Given a step
+`);
+
+        const testControllerPrivate = controller as any;
+        const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
+        await testControllerPrivate.parseTestsInFileContents(fileItem);
+
+        // Mock vscode.window.visibleTextEditors
+        const originalVisibleEditors = vscode.window.visibleTextEditors;
+        let decorationsSet: vscode.Range[] | undefined;
+        Object.defineProperty(vscode.window, 'visibleTextEditors', {
+            get: () => [{
+                document: { uri: featureUri },
+                setDecorations: (decorationType: any, ranges: vscode.Range[]) => {
+                    decorationsSet = ranges;
+                }
+            }]
+        });
+
+        // Mock child_process.spawn to simulate Behave events
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => {};
+            
+            // Simulate Behave NDJSON stream
+            setTimeout(() => {
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Run scenario"}}\\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step_start", "data": {"line": 4}}\\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step", "data": {"status": "passed", "duration": 0.1}}\\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3, "context_snapshot": {"foo": "bar"}}}\\n'));
+                child.emit('close', 0);
+            }, 10);
+            
+            return child;
+        };
+
+        try {
+            // Trigger test run
+            const request = new vscode.TestRunRequest([fileItem]);
+            const tokenSource = new vscode.CancellationTokenSource();
+            
+            await testControllerPrivate.runHandler(request, tokenSource.token, 'run');
+
+            // Verify Live Step Tracking called setDecorations with the correct line (line 4 is 0-indexed as 3)
+            assert.ok(decorationsSet, 'setDecorations should have been called');
+            assert.strictEqual(decorationsSet!.length, 1);
+            assert.strictEqual(decorationsSet![0].start.line, 3);
+        } finally {
+            Object.defineProperty(vscode.window, 'visibleTextEditors', {
+                get: () => originalVisibleEditors
+            });
+            cp.spawn = originalSpawn;
+        }
     });
 });

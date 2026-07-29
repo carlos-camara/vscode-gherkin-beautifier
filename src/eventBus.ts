@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
 
+/**
+ * Represents a discrete event occurring within the VS Code workspace environment.
+ * Services should subscribe to the Event Bus to receive these instead of creating 
+ * their own file system watchers or VS Code event listeners.
+ */
 export type WorkspaceEvent = 
     | { type: 'featureFileCreated', uri: vscode.Uri }
     | { type: 'featureFileChanged', uri: vscode.Uri }
@@ -12,6 +17,11 @@ export type WorkspaceEvent =
     | { type: 'textDocumentOpened', document: vscode.TextDocument }
     | { type: 'activeEditorChanged', editor: vscode.TextEditor | undefined };
 
+/**
+ * A centralized internal message broker for the extension.
+ * Decouples file watchers and generic VS Code workspace events from specific 
+ * domain services (like the Linter, Cache, or Test Controller).
+ */
 export class WorkspaceEventBus {
     private _onEvent = new vscode.EventEmitter<WorkspaceEvent>();
     public readonly onEvent = this._onEvent.event;

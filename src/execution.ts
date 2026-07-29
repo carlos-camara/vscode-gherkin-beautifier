@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
+import * as path from 'path';
 import { ConfigurationService } from './configuration';
 
 let memoryAdditionalArgs: string | undefined = undefined;
@@ -135,7 +136,9 @@ export async function runBehave(uri: vscode.Uri, line: number | undefined, confi
 
     const taskName = line !== undefined ? `Behave Scenario (Line ${line})` : `Behave Feature`;
     
-    const execution = new vscode.ProcessExecution(details.executable, details.args);
+    const execution = new vscode.ProcessExecution(details.executable, details.args, {
+        env: { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
+    });
     
     const task = new vscode.Task(
         { type: 'gherkinPowerTools', command: 'run' },
@@ -269,7 +272,8 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
         module: "behave",
         args: [...additionalArgs, pathArg],
         console: "internalConsole",
-        justMyCode: true
+        justMyCode: true,
+        env: { FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
     };
     
     if (!workspaceFolder) {
@@ -350,24 +354,77 @@ export async function runBehaveForTestRun(
     line: number | undefined,
     configService: ConfigurationService,
     onOutput: (text: string) => void,
-    token: vscode.CancellationToken
+    token: vscode.CancellationToken,
+    onEvent?: (event: any) => void
 ): Promise<number | null> {
     const details = await resolveBehaveExecutionDetails(uri, line, configService);
-    if (!details) { return null; }
+    if (!details) {
+        return null;
+    }
 
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-    const cwd = workspaceFolder?.uri.fsPath;
+    const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : path.dirname(uri.fsPath);
+
+    // Inject custom formatter for real-time updates
+    const assetsPath = path.join(__dirname, '..', 'assets');
+    const pathArg = details.args.pop();
+    
+    // Ensure pretty formatter is still used for stdout if no formatter is specified
+    if (!details.args.includes('-f') && !details.args.includes('--format')) {
+        details.args.push('-f', 'pretty');
+    }
+    
+    // Disable behave's internal capture so VS Code Test Results panel gets all stdout/stderr natively
+    if (!details.args.includes('--no-capture')) {
+        details.args.push('--no-capture');
+    }
+    if (!details.args.includes('--no-capture-stderr')) {
+        details.args.push('--no-capture-stderr');
+    }
+
+    details.args.push('-f', 'vscode_behave_formatter:VSCodeFormatter');
+    if (pathArg) {
+        details.args.push(pathArg);
+    }
 
     return new Promise<number | null>((resolve) => {
+        const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' };
+        if (env.PYTHONPATH) {
+            env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
+        } else {
+            env.PYTHONPATH = assetsPath;
+        }
+
         const child = cp.spawn(details.executable, details.args, {
             cwd,
             shell: false,
+            env
         });
 
+        let lineBuffer = '';
         const handleData = (data: Buffer) => {
-            // Normalize line endings; VS Code TEST RESULTS panel expects \r\n
-            const text = data.toString('utf8').replace(/(?<!\r)\n/g, '\r\n');
-            onOutput(text);
+            const text = data.toString('utf8');
+            lineBuffer += text;
+            let newlineIndex;
+            while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
+                const line = lineBuffer.substring(0, newlineIndex + 1);
+                lineBuffer = lineBuffer.substring(newlineIndex + 1);
+                
+                if (line.startsWith('##VSCODE_BEHAVE_EVENT:')) {
+                    if (onEvent) {
+                        try {
+                            const eventJson = line.substring('##VSCODE_BEHAVE_EVENT:'.length).trim();
+                            const event = JSON.parse(eventJson);
+                            onEvent(event);
+                        } catch (e) {
+                            // ignore parse errors
+                        }
+                    }
+                } else {
+                    // Send to VS Code terminal replacing newlines with \r\n
+                    onOutput(line.replace(/(?<!\r)\n/g, '\r\n'));
+                }
+            }
         };
 
         child.stdout?.on('data', handleData);
@@ -375,14 +432,14 @@ export async function runBehaveForTestRun(
 
         // Respect cancellation: kill the child process
         const cancelDisposable = token.onCancellationRequested(() => {
-            child.kill();
+            child.kill('SIGKILL');
             cancelDisposable.dispose();
             resolve(null);
         });
 
         // Safety timeout: 5 minutes
         const timeout = setTimeout(() => {
-            child.kill();
+            child.kill('SIGKILL');
             cancelDisposable.dispose();
             resolve(null);
         }, 5 * 60 * 1000);

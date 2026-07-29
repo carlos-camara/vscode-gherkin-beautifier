@@ -61,6 +61,16 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 1. Ensure the official Microsoft Python extension is installed and active.
 2. Ensure you clicked the **Debug (Bug icon)** in the Test Explorer, not the **Run (Play icon)**.
 
+## Live Step Tracking animation is not visible
+**Symptom:** The scenario runs in the Test Explorer, but the active step is not highlighted in the editor.
+**Likely Causes:** The custom Formatter isn't emitting `step_start` events, or the file is not currently focused.
+**Resolution:** Ensure your `behave` process has not overridden the custom JSON formatter, and verify that the `.feature` file you are running is currently open and active in the editor.
+
+## Syntax Errors cascade into massive false-positives
+**Symptom:** You missed a colon on a `Scenario`, and suddenly all steps below it have red underlines.
+**Likely Causes:** This was a known limitation of the AST parser in older versions.
+**Resolution:** Upgrade to version 1.7.9+. The linter now gracefully falls back to a text-based scanner to isolate severe structural errors from your valid steps.
+
 ## Statistics are empty or incomplete
 **Symptom:** The Project Statistics dashboard shows 0 features.
 **Likely Causes:** The workspace indexer was interrupted, or you opened the dashboard immediately upon launching VS Code before the 2-second background scan completed.

@@ -20,8 +20,6 @@ import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
 
 import { ConfigurationService } from './configuration';
-import { performance } from 'perf_hooks';
-import * as fs from 'fs';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 
@@ -32,7 +30,6 @@ const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
  * @param context The extension context provided by VS Code.
  */
 export async function activate(context: vscode.ExtensionContext) {
-    const t0 = performance.now();
     logger.info('Extension "vscode-gherkin-powertools" is now active.');
     const eventBus = new WorkspaceEventBus();
     context.subscriptions.push(eventBus);
@@ -49,7 +46,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     discoveryService.configService = configService;
     discoveryService.eventBus = eventBus;
-    const testController = new GherkinTestController(configService);
+    const testController = new GherkinTestController(context, configService);
     testController.setEventBus(eventBus);
     context.subscriptions.push(testController);
 
@@ -104,7 +101,11 @@ export async function activate(context: vscode.ExtensionContext) {
     showOnboardingNotificationIfNeeded(context, configService).catch(err => {
         logger.error(`Error checking onboarding notification: ${err}`);
     });
-    
+
+    // Asynchronously trigger peek view recommendation check
+    checkPeekViewRecommendation(context).catch(err => {
+        logger.error(`Error checking peek view recommendation: ${err}`);
+    });
     // Register the context menu command to format the document
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.format', async () => {
@@ -295,11 +296,7 @@ export async function activate(context: vscode.ExtensionContext) {
         );
     });
 
-    const tEnd = performance.now();
-    const duration = tEnd - t0;
-    fs.appendFileSync('/tmp/vscode-gherkin-perf.log', `Activation: ${duration}ms\n`);
-    logger.info(`Activation finished in ${duration}ms`);
-    console.log(`Gherkin PowerTools Activation: ${duration}ms`);
+    logger.info('Activation finished successfully.');
 }
 
 /**
@@ -307,5 +304,33 @@ export async function activate(context: vscode.ExtensionContext) {
  * This method is called when the extension is deactivated.
  */
 export function deactivate() {
-    discoveryService.disposeWatchers();
+    discoveryService.dispose();
+}
+
+async function checkPeekViewRecommendation(context: vscode.ExtensionContext) {
+    const stateKey = 'gherkinPowerTools.promptedPeekView';
+    const prompted = context.globalState.get<boolean>(stateKey, false);
+    
+    if (prompted) {
+        return;
+    }
+
+    const testingConfig = vscode.workspace.getConfiguration('testing');
+    const currentValue = testingConfig.get<string>('automaticallyOpenPeekView');
+    
+    if (currentValue !== 'never') {
+        const choice = await vscode.window.showInformationMessage(
+            "For the best BDD experience with Gherkin PowerTools, we recommend disabling the automatic Test Peek View.",
+            "Disable Peek View", "Keep Current"
+        );
+        
+        if (choice === "Disable Peek View") {
+            // Set it in the user's global settings to affect their standard VS Code experience
+            await testingConfig.update('automaticallyOpenPeekView', 'never', vscode.ConfigurationTarget.Global);
+            logger.info("testing.automaticallyOpenPeekView has been set to 'never'");
+        }
+    }
+    
+    // Mark as prompted so we don't bother the user again
+    await context.globalState.update(stateKey, true);
 }
