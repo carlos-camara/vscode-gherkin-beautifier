@@ -3,7 +3,7 @@ import { WorkspaceEventBus } from './eventBus';
 import { astRepository } from './ast';
 import { SymbolCache } from './cache';
 import { logger } from './logger';
-import type { Tag, Scenario, Rule, Background, Step, Examples } from '@cucumber/messages';
+import type { Tag, Step } from '@cucumber/messages';
 
 export type NodeType = 'Feature' | 'Rule' | 'Background' | 'Scenario' | 'Step' | 'Example' | 'Tag' | 'StepDefinition' | 'PythonFile';
 

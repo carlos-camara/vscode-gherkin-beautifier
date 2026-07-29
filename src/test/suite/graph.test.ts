@@ -1,6 +1,5 @@
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import { WorkspaceGraph, StepNode, ScenarioNode } from '../../../src/graph';
+import { WorkspaceGraph } from '../../../src/graph';
 import { SymbolCache } from '../../../src/cache';
 import { WorkspaceEventBus } from '../../../src/eventBus';
 
