@@ -12,6 +12,7 @@ export async function showStepAnalysisReport(graph: WorkspaceGraph, symbolCache:
         cancellable: false
     }, async (progress) => {
         progress.report({ message: 'Analyzing step definitions...' });
+        await graph.initialize();
         const result = await analyzer.analyze();
 
         const panel = vscode.window.createWebviewPanel(
