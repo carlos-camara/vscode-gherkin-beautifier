@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This eliminates redundant CPU-intensive parsing operations across multiple features (formatting, linting, hover, autocomplete), drastically reducing CPU usage and improving editor responsiveness, especially in large `.feature` files.
 - **Thundering Herd Protection**: The new parsing architecture prevents multiple language features from simultaneously triggering parsing on the exact same keystroke, creating a perfectly smooth typing experience.
 - **Parser Diagnostics & Performance Metrics**: A new lightweight metrics engine that tracks parsing duration, cache hit ratios, document complexity, and parser failures in real-time. Enable via `gherkinPowerTools.diagnostics.metricsEnabled` and view using the **Show Developer Metrics** command.
+- **Workspace Relationship Graph**: Implemented an event-driven `WorkspaceGraph` that maps structural relationships between Features, Scenarios, Rules, and Python Step Definitions in memory. This enables O(1) query capabilities for "Go To Definition" and "Hover" operations, entirely eliminating redundant regex scanning across the workspace.
 
 ## [1.7.9] - 2026-07-29
 

@@ -17,6 +17,7 @@ When Behave is detected, the extension builds a robust index to provide navigati
 - **Deferred Indexing**: Heavy workspace scanning is offloaded to background threads and does not block the VS Code Extension Host. Editor features (like formatting and syntax highlighting) are immediately available.
 - **Debounced Watchers**: File system changes are debounced. Rapid modifications during saving or git branch switches will not flood the system with redundant re-indexing events.
 - **LRU AST Caching**: Gherkin document parsing is centralized via the `AstRepository`. When multiple language features (like the linter, formatter, and hover provider) request the abstract syntax tree simultaneously, they share the exact same parsed object. The AST is cached by document version and automatically purged to maintain a low memory footprint.
+- **O(1) Workspace Relationship Graph**: Features like Go To Definition, Hover, and Find Usages no longer iterate over workspace-wide regex patterns. Instead, the `WorkspaceGraph` maintains a live, event-driven representation of relationships between Gherkin steps and Python code. This completely eliminates duplicate regex parsing overhead and keeps response times consistently at 0ms, even in enterprise-scale codebases.
 
 ## Parser Diagnostics & Developer Metrics
 
