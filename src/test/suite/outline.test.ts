@@ -1,6 +1,9 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { GherkinDocumentSymbolProvider } from '../../outline';
+import { astRepository } from '../../ast';
+
+let docVersion = 1;
 
 function createMockDocument(text: string): vscode.TextDocument {
     const lines = text.split('\n');
@@ -9,7 +12,8 @@ function createMockDocument(text: string): vscode.TextDocument {
         getText: () => text,
         lineAt: (line: number) => ({ text: lines[line] }),
         lineCount: lines.length,
-        uri: vscode.Uri.parse('file:///mock.feature')
+        uri: vscode.Uri.parse('file:///mock.feature'),
+        version: docVersion++
     } as any as vscode.TextDocument;
 }
 
@@ -17,6 +21,7 @@ suite('Outline Test Suite', () => {
     let provider: GherkinDocumentSymbolProvider;
 
     setup(() => {
+        astRepository.clear();
         provider = new GherkinDocumentSymbolProvider();
     });
 

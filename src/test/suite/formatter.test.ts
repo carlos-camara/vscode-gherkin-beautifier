@@ -11,8 +11,10 @@ const defaultOptions: FormatterOptions = {
     emptyLinesBetweenScenarios: 1
 };
 
+let docVersion = 1;
+
 async function runFormat(formatter: GherkinFormattingEditProvider, unformatted: string): Promise<string> {
-    const formattedLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: 1, getText: () => unformatted }, defaultOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+    const formattedLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: docVersion++, getText: () => unformatted }, defaultOptions, { isCancellationRequested: false } as vscode.CancellationToken);
     return formattedLines ? formattedLines.map(l => l.text).join('\n') : '';
 }
 
@@ -23,6 +25,8 @@ async function runRangeFormat(formatter: GherkinFormattingEditProvider, unformat
             if (!range) return unformatted;
             return lines.slice(range.start.line, range.end.line + 1).join('\n');
         },
+        uri: vscode.Uri.file('test.feature'),
+        version: docVersion++,
         eol: vscode.EndOfLine.LF,
         lineAt: (line: number) => ({ text: lines[line] || '' }),
         lineCount: lines.length
@@ -138,7 +142,7 @@ suite('Formatter Test Suite', () => {
             tagsSort: 'alphabetical'
         };
 
-        const resultLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: 1, getText: () => unformatted }, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+        const resultLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: docVersion++, getText: () => unformatted }, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
         const result = resultLines ? resultLines.map(l => l.text).join('\n') : '';
         const formatted = result.split('\n');
         assert.strictEqual(formatted[0], '@apple @banana @zebra @zebra');
@@ -241,6 +245,8 @@ suite('Formatter Test Suite', () => {
         const formatter = new GherkinFormattingEditProvider(mockConfigService);
         const unformatted = 'Feature: CRLF\r\nScenario: test\r\nGiven a step';
         const mockDocument = {
+            uri: vscode.Uri.file('test.feature'),
+            version: docVersion++,
             getText: () => unformatted,
             lineCount: 3,
             eol: vscode.EndOfLine.CRLF,
@@ -306,7 +312,7 @@ suite('Formatter Test Suite', () => {
             emptyLinesBetweenScenarios: 1
         };
 
-        const resultLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: 1, getText: () => unformatted }, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+        const resultLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: docVersion++, getText: () => unformatted }, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
         const result = resultLines ? resultLines.map(l => l.text).join('\n') : '';
         const formatted = result.split('\n');
 
@@ -327,6 +333,8 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         const textWithNewline = 'Feature: Final Newline\n';
         const mockDocument = {
+            uri: vscode.Uri.file('test.feature'),
+            version: docVersion++,
             getText: () => textWithNewline,
             lineCount: 2,
             eol: vscode.EndOfLine.LF
@@ -339,6 +347,8 @@ suite('Formatter VS Code API Wrapper Tests', () => {
 
         const textWithoutNewline = 'Feature: Final Newline';
         const mockDocument2 = {
+            uri: vscode.Uri.file('test.feature'),
+            version: docVersion++,
             getText: () => textWithoutNewline,
             lineCount: 1,
             eol: vscode.EndOfLine.LF
