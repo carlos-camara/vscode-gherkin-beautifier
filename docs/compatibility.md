@@ -33,15 +33,22 @@ The advanced integrations (Go to Definition, Hover, Autocomplete, Step Generatio
 | **SSH Workspaces** | Supported & Tested | |
 | **GitHub Codespaces** | Supported & Tested | |
 
-### Workspace Constraints
-
-- **Multi-Root Workspaces:** Supported. Configuration settings in `.vscode/settings.json` apply to their specific workspace folders.
-- **Paths with Spaces / Unicode Paths:** Supported. The extension uses native URI parsing to properly encode/decode file paths for regex matching and command execution.
-- **Monorepos:** Supported. Configure `gherkinPowerTools.behave.stepGlobs` to point to all sub-directories where steps reside.
-
 ---
 
 ## Python & Behave Requirements
 
+- **Python Versions:** Tested and Supported on Python 3.8 through 3.12.
+- **Behave Versions:** Tested and Supported on Behave 1.2.6.
 - **Python Extension:** Required **only** for Debugging features in the Test Explorer (`ms-python.python`).
 - **Behave Executable:** Required **only** for test execution from the Test Explorer (`pip install behave`). The extension can execute Behave via system PATH, Poetry, Pipenv, or explicit virtual environment paths.
+
+## Workspace Constraints
+
+- **Multi-Root Workspaces:** Supported. Configuration settings in `.vscode/settings.json` apply to their specific workspace folders.
+- **Paths with Spaces / Unicode Paths:** Supported. The extension uses native URI parsing to properly encode/decode file paths for regex matching and command execution.
+- **Monorepos:** Supported. Configure `gherkinPowerTools.behave.stepGlobs` to point to all sub-directories where steps reside.
+- **Large Workspaces:** Supported. The AST parser and file system watchers are deferred and operate in the background. Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores virtual environments to prevent parsing timeouts.
+
+## Gherkin Dialects
+
+- **Language Support:** Supported & Tested. The semantic parser automatically adapts to 70+ languages (e.g. Spanish `Dado`, French `Soit`) via the `# language: <lang>` header.

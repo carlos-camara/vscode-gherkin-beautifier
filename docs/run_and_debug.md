@@ -32,11 +32,20 @@ You can run your tests at any level of granularity:
 </div>
 
 ### Console Output & Failure Reporting
-When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error.
-If a test fails, the node in the tree will turn red, and the Test Results panel will show the exact failure stack trace and the step where it occurred.
+When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error. 
+
+If a test fails, the node in the tree will turn red. To keep your editor clean, error messages and stack traces are **collapsed by default**. You can view the exact failure details by explicitly clicking on the failed step or the error message within the Test Explorer.
+
+### Live Step Tracking (Execution Animation)
+As Behave executes your scenarios in the background, Gherkin PowerTools receives real-time `step_start` events. The extension uses VS Code's decoration API to visually highlight the exact step currently executing in the `.feature` file. You can watch your scenario "run" line by line right inside the editor!
+
+### Final Context State (Context Snapshot)
+When a scenario finishes executing, Gherkin PowerTools automatically inspects the Behave `context` object and extracts all variables that were dynamically set during the run. This snapshot is formatted and injected directly into the **Test Results** output, allowing you to easily verify your test data state without needing to attach a debugger.
+
+**Navigation:** Clicking on any Feature, Scenario, or Example row in the Test Explorer will intuitively navigate you directly to its definition in the `.feature` file.
 
 ### Cancellation
-You can safely cancel a long-running execution by clicking the Stop button (Square icon) in the Test Explorer.
+You can safely cancel a frozen or long-running execution by clicking the Stop button (Square icon) in the Test Explorer. The extension issues a forceful `SIGKILL` command to guarantee the underlying Python process terminates immediately.
 
 ---
 

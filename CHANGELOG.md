@@ -8,7 +8,21 @@ All notable changes to the "vscode-gherkin-powertools" extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.7.9] - Unreleased
+## [1.7.9] - 2026-07-29
+
+### 🚀 Added
+- **Live Step Tracking**: The Test Explorer now visually animates the execution of your scenarios. As Behave runs your tests in the background, the exact step currently executing lights up dynamically in your `.feature` file!
+- **On-the-Fly Context Snapshot**: The Test Explorer now automatically inspects your Behave `context` at the end of every scenario. A beautifully formatted snapshot of your final variables is instantly injected into the Test Output panel, eliminating the need to attach a debugger just to see internal state.
+- **Centralized Workspace Event Bus**: Implemented a robust internal event bus (`src/eventBus.ts`) to decouple file watchers and VS Code workspace events from feature modules. This architecture prevents memory leaks, ensures unified event processing, and simplifies the addition of new workspace-aware features.
+
+### ✨ Improved
+- **Test Explorer Navigation**: Clicking on a Scenario or Feature in the Test Explorer now intuitively navigates directly to its definition in the `.feature` file instead of jumping to the underlying Python step implementation.
+- **Execution Output Clutter**: When a scenario fails during a test run, the error message and stack trace are no longer expanded automatically in the editor. They remain collapsed by default to prevent visual clutter, and can be viewed by explicitly clicking the error in the Test Explorer.
+
+### 🐛 Fixed
+- **Forceful Test Cancellation**: Fixed an issue where clicking the "Stop" button in the Test Explorer wouldn't reliably terminate frozen or long-running tests. The runner now uses a forceful `SIGKILL` signal to guarantee the underlying Python process is immediately destroyed.
+- **Test Explorer Console Output**: Fixed an issue where `print()` statements and standard output were hidden during Test Explorer executions. The extension now forces Behave to stream all output natively (`--no-capture`), ensuring that prints are immediately visible in the VS Code Test Results panel, even for passing scenarios.
+- **Windows CI Flakiness**: Fixed a critical race condition in the End-to-End test suite on Windows. `SymbolCache` now automatically invalidates its index and performs a deterministic synchronous scan whenever `stepGlobs` configuration changes, rather than relying on unreliable file-system creation events.
 
 ## [1.7.8] - 2026-07-28
 

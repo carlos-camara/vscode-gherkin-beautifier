@@ -4,6 +4,7 @@ import { logger } from './logger';
 import { ConfigurationService } from './configuration';
 import { runBehaveForTestRun } from './execution';
 import * as path from 'path';
+import { WorkspaceEventBus } from './eventBus';
 
 /** Extracts the scenario line number from a TestItem ID of the form `uri#scenario:LINE` */
 function extractLineFromId(id: string): number | undefined {
@@ -11,27 +12,27 @@ function extractLineFromId(id: string): number | undefined {
     return match ? parseInt(match[1], 10) : undefined;
 }
 
-/** Returns whether a TestItem represents a scenario (has a line in its ID) */
-function isScenarioItem(item: vscode.TestItem): boolean {
-    return item.id.includes('#scenario:');
-}
-
-/** Returns whether a TestItem represents a file-level node */
-function isFileItem(item: vscode.TestItem): boolean {
-    return !item.id.includes('#');
-}
 
 export class GherkinTestController {
     private controller: vscode.TestController;
     private configService: ConfigurationService;
-    private fileWatcher?: vscode.FileSystemWatcher;
-    private textChangeDisposable?: vscode.Disposable;
+    private eventBus?: WorkspaceEventBus;
+    private eventBusDisposable?: vscode.Disposable;
     private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    private activeStepDecoration: vscode.TextEditorDecorationType;
 
-    constructor(configService: ConfigurationService, testControllerId?: string) {
+    constructor(context: vscode.ExtensionContext, configService: ConfigurationService, testControllerId?: string) {
         this.configService = configService;
         const cid = testControllerId || 'gherkin-tests';
         this.controller = vscode.tests.createTestController(cid, 'Gherkin / Behave');
+
+        this.activeStepDecoration = vscode.window.createTextEditorDecorationType({
+            backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
+            isWholeLine: true,
+            border: '1px solid',
+            borderColor: new vscode.ThemeColor('editor.wordHighlightBorder')
+        });
+        context.subscriptions.push(this.activeStepDecoration);
 
         this.controller.resolveHandler = async (item) => {
             if (!item) {
@@ -59,56 +60,40 @@ export class GherkinTestController {
 
         // Note: "Edit args & Run" is exposed as a standalone toolbar icon button
         // via package.json contributes.menus > view/title (see gherkinPowerTools.testExplorerEditAndRun)
-
-        this.startWatchingWorkspace();
-        this.startWatchingTextChanges();
     }
 
-    public dispose() {
-        this.controller.dispose();
-        this.fileWatcher?.dispose();
-        this.textChangeDisposable?.dispose();
-        for (const timer of this.debounceTimers.values()) { clearTimeout(timer); }
-        this.debounceTimers.clear();
-    }
+    /**
+     * Subscribes to the Workspace Event Bus to receive file system and editor changes.
+     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
+     */
+    public setEventBus(eventBus: WorkspaceEventBus) {
+        this.eventBus = eventBus;
+        this.eventBusDisposable?.dispose();
+        this.eventBusDisposable = this.eventBus.onEvent(e => {
+            if (e.type === 'featureFileCreated') {
+                this.getOrCreateFile(e.uri);
+            } else if (e.type === 'featureFileChanged') {
+                this.parseTestsInFileContents(this.getOrCreateFile(e.uri));
+            } else if (e.type === 'featureFileDeleted') {
+                this.controller.items.delete(e.uri.toString());
+            } else if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
+                const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
+                if (!doc.uri.fsPath.endsWith('.feature')) { return; }
 
-    private startWatchingWorkspace() {
-        this.fileWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
-        this.fileWatcher.onDidCreate(uri => this.getOrCreateFile(uri));
-        this.fileWatcher.onDidChange(uri => this.parseTestsInFileContents(this.getOrCreateFile(uri)));
-        this.fileWatcher.onDidDelete(uri => this.controller.items.delete(uri.toString()));
-    }
+                const key = doc.uri.toString();
+                const existing = this.debounceTimers.get(key);
+                if (existing) { clearTimeout(existing); }
 
-    private startWatchingTextChanges() {
-        // 1. Listen for text changes (debounced)
-        const onDidChange = vscode.workspace.onDidChangeTextDocument(event => {
-            const { uri } = event.document;
-            if (!uri.fsPath.endsWith('.feature')) { return; }
+                const timer = setTimeout(() => {
+                    this.debounceTimers.delete(key);
+                    const fileItem = this.getOrCreateFile(doc.uri);
+                    this.parseTestsInDocumentContent(fileItem, doc.getText());
+                }, 400);
 
-            const key = uri.toString();
-            const existing = this.debounceTimers.get(key);
-            if (existing) { clearTimeout(existing); }
-
-            const timer = setTimeout(() => {
-                this.debounceTimers.delete(key);
-                const fileItem = this.getOrCreateFile(uri);
-                this.parseTestsInDocumentContent(fileItem, event.document.getText());
-            }, 400);
-
-            this.debounceTimers.set(key, timer);
-        });
-
-        // 2. Listen for newly opened documents so we instantly discover tests in them
-        const onDidOpen = vscode.workspace.onDidOpenTextDocument(document => {
-            if (document.uri.fsPath.endsWith('.feature')) {
-                const fileItem = this.getOrCreateFile(document.uri);
-                this.parseTestsInDocumentContent(fileItem, document.getText());
+                this.debounceTimers.set(key, timer);
             }
         });
 
-        this.textChangeDisposable = vscode.Disposable.from(onDidChange, onDidOpen);
-
-        // 3. Eagerly parse any already open documents right now
         for (const document of vscode.workspace.textDocuments) {
             if (document.uri.fsPath.endsWith('.feature')) {
                 const fileItem = this.getOrCreateFile(document.uri);
@@ -116,6 +101,23 @@ export class GherkinTestController {
             }
         }
     }
+    public dispose() {
+        this.eventBusDisposable?.dispose();
+        this.controller.dispose();
+        for (const timer of this.debounceTimers.values()) { clearTimeout(timer); }
+        this.debounceTimers.clear();
+        this.activeStepDecoration.dispose();
+    }
+
+    private clearActiveStepDecoration(uri?: vscode.Uri) {
+        for (const editor of vscode.window.visibleTextEditors) {
+            if (!uri || editor.document.uri.toString() === uri.toString()) {
+                editor.setDecorations(this.activeStepDecoration, []);
+            }
+        }
+    }
+
+
 
     private async discoverAllFilesInWorkspace() {
         if (!vscode.workspace.workspaceFolders) { return; }
@@ -231,149 +233,216 @@ export class GherkinTestController {
     ) {
         const run = mode !== 'debug' ? this.controller.createTestRun(request) : undefined;
 
-        // Collect all leaf (scenario) items that should run
-        const scenarioItems: vscode.TestItem[] = [];
-        const fileItems: vscode.TestItem[] = [];
-
-        const collectItems = (item: vscode.TestItem) => {
-            if (isScenarioItem(item)) {
-                scenarioItems.push(item);
-            } else if (isFileItem(item)) {
-                fileItems.push(item);
-                // Also collect all scenario children
-                item.children.forEach(feat => feat.children.forEach(child => {
-                    if (isScenarioItem(child)) { scenarioItems.push(child); }
-                    else { child.children.forEach(sc => { if (isScenarioItem(sc)) { scenarioItems.push(sc); } }); }
-                }));
-            } else {
-                // Feature or Rule node: collect all scenario children
-                item.children.forEach(child => collectItems(child));
-            }
-        };
-
+        const itemsToRun: vscode.TestItem[] = [];
         if (request.include) {
-            request.include.forEach(item => collectItems(item));
+            itemsToRun.push(...request.include);
         } else {
-            this.controller.items.forEach(item => collectItems(item));
+            this.controller.items.forEach(item => itemsToRun.push(item));
         }
 
-        // Mark them all as enqueued (shows spinner)
-        if (run) {
-            scenarioItems.forEach(item => run.enqueued(item));
-        }
+        // Recursively enqueue all children so the UI shows spinners
+        const enqueueItem = (item: vscode.TestItem) => {
+            run?.enqueued(item);
+            item.children.forEach(enqueueItem);
+        };
+        itemsToRun.forEach(enqueueItem);
 
         if (token.isCancellationRequested) {
             run?.end();
             return;
         }
 
-        // For "edit" mode: show the args prompt once before running
         if (mode === 'edit') {
-            const firstUri = scenarioItems[0]?.uri || fileItems[0]?.uri;
+            const firstUri = itemsToRun[0]?.uri;
             if (firstUri) {
-                // The prompt updates memoryAdditionalArgs; then we fall through to 'run'
-                await vscode.commands.executeCommand(
-                    'gherkinPowerTools.runScenarioWithArgs',
-                    firstUri,
-                    undefined
-                );
+                await vscode.commands.executeCommand('gherkinPowerTools.runScenarioWithArgs', firstUri, undefined);
             }
             run?.end();
             return;
         }
 
-        // Execute each item using the core execution commands
-        for (const item of scenarioItems) {
-            if (token.isCancellationRequested) { break; }
-            if (!item.uri) { continue; }
+        // Helper to find a child item by its line number
+        const findItemByLine = (parent: vscode.TestItem, line: number): vscode.TestItem | undefined => {
+            const itemLine = extractLineFromId(parent.id);
+            if (itemLine === line) return parent;
+            for (const [_, child] of parent.children) {
+                const found = findItemByLine(child, line);
+                if (found) return found;
+            }
+            return undefined;
+        };
+
+        // Helper to find a child item by its name as fallback
+        const findItemByName = (parent: vscode.TestItem, name: string): vscode.TestItem | undefined => {
+            if (parent.label.includes(name)) return parent;
+            for (const [_, child] of parent.children) {
+                const found = findItemByName(child, name);
+                if (found) return found;
+            }
+            return undefined;
+        };
+
+        for (const item of itemsToRun) {
+            if (token.isCancellationRequested) break;
+            if (!item.uri) continue;
 
             const line = extractLineFromId(item.id);
             run?.started(item);
 
             if (mode === 'debug') {
-                // Debug mode: launch via the existing debug command (output goes
-                // to the integrated terminal / debug console, not TEST RESULTS)
                 await vscode.commands.executeCommand(
                     line !== undefined ? 'gherkinPowerTools.debugScenario' : 'gherkinPowerTools.debugFeature',
                     item.uri,
                     line
                 );
             } else if (run) {
-                // Run mode: spawn Behave directly so we can capture its output
-                // and feed it into the TEST RESULTS panel via run.appendOutput()
-                run.appendOutput(
-                    `\r\n▶ Running: ${item.label}\r\n`,
-                    undefined,
-                    item
-                );
+                // Use Cyan (\x1b[36m) to make the "Running" text stand out in the console without looking like an error
+                run.appendOutput(`\r\n\x1b[36m▶ Running: ${item.label}\x1b[0m\r\n`, undefined, item);
 
                 let capturedOutput = '';
+                let currentScenarioItem: vscode.TestItem | undefined;
+                let currentScenarioFailed = false;
+                let currentScenarioDuration = 0;
+                let currentScenarioErrorFile: string | undefined;
+                let currentScenarioErrorLine: number | undefined;
+                let currentScenarioErrorMessage: string | undefined;
+                const processedItems = new Set<vscode.TestItem>();
+
                 const exitCode = await runBehaveForTestRun(
                     item.uri,
                     line,
                     this.configService,
                     (text) => {
                         capturedOutput += text;
-                        run.appendOutput(text, undefined, item);
+                        run.appendOutput(text, undefined, currentScenarioItem || item);
                     },
-                    token
+                    token,
+                    (event) => {
+                        if (event.event === 'scenario') {
+                            currentScenarioFailed = false;
+                            currentScenarioDuration = 0;
+                            currentScenarioErrorFile = undefined;
+                            currentScenarioErrorLine = undefined;
+                            currentScenarioErrorMessage = undefined;
+                            currentScenarioItem = findItemByLine(item, event.data.line) || (event.data.name ? findItemByName(item, event.data.name) : undefined);
+                            if (currentScenarioItem) {
+                                const childrenToRemove: string[] = [];
+                                currentScenarioItem.children.forEach(child => {
+                                    if (child.id.includes('#error:')) {
+                                        childrenToRemove.push(child.id);
+                                    }
+                                });
+                                childrenToRemove.forEach(id => currentScenarioItem!.children.delete(id));
+                                run.started(currentScenarioItem);
+                            }
+                        } else if (event.event === 'step_start') {
+                            if (currentScenarioItem && currentScenarioItem.uri) {
+                                const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === currentScenarioItem!.uri!.toString());
+                                if (editor && event.data.line) {
+                                    const line = event.data.line - 1;
+                                    const range = new vscode.Range(line, 0, line, 0);
+                                    editor.setDecorations(this.activeStepDecoration, [range]);
+                                }
+                            }
+                        } else if (event.event === 'step') {
+                            if (currentScenarioItem && currentScenarioItem.uri) {
+                                this.clearActiveStepDecoration(currentScenarioItem.uri);
+                            }
+                            if (['failed', 'undefined', 'error'].includes(event.data.status)) {
+                                currentScenarioFailed = true;
+                                if (event.data.error_file && event.data.error_line !== undefined) {
+                                    currentScenarioErrorFile = event.data.error_file;
+                                    currentScenarioErrorLine = event.data.error_line;
+                                }
+                                if (event.data.error_message) {
+                                    currentScenarioErrorMessage = event.data.error_message;
+                                }
+                            }
+                            if (event.data.duration) {
+                                currentScenarioDuration += event.data.duration;
+                            }
+                        } else if (event.event === 'scenario_result') {
+                            if (currentScenarioItem && extractLineFromId(currentScenarioItem.id) === event.data.line) {
+                                processedItems.add(currentScenarioItem);
+                                
+                                if (event.data.context_snapshot) {
+                                    const keys = Object.keys(event.data.context_snapshot);
+                                    if (keys.length > 0) {
+                                        let snapshotOutput = '\r\n\x1b[35m--------------------------------------------------\x1b[0m\r\n';
+                                        snapshotOutput += '\x1b[35mFINAL CONTEXT STATE (Context Snapshot)\x1b[0m\r\n';
+                                        snapshotOutput += '\x1b[35m--------------------------------------------------\x1b[0m\r\n';
+                                        for (const key of keys) {
+                                            snapshotOutput += `\x1b[34m• context.${key}\x1b[0m = ${event.data.context_snapshot[key]}\r\n`;
+                                        }
+                                        snapshotOutput += '\x1b[35m--------------------------------------------------\x1b[0m\r\n\r\n';
+                                        run.appendOutput(snapshotOutput, undefined, currentScenarioItem);
+                                    }
+                                }
+
+                                const isFailure = ['failed', 'error', 'hook_error'].includes(event.data.status) || currentScenarioFailed;
+                                if (isFailure) {
+                                    if (event.data.error_message) {
+                                        currentScenarioErrorMessage = event.data.error_message;
+                                    }
+                                    const msgText = currentScenarioErrorMessage || "Scenario failed";
+                                    const msg = new vscode.TestMessage(msgText);
+                                    let stepItem: vscode.TestItem | undefined;
+                                    if (currentScenarioErrorFile && currentScenarioErrorLine !== undefined) {
+                                        const uri = vscode.Uri.file(currentScenarioErrorFile);
+                                        const pos = new vscode.Position(currentScenarioErrorLine - 1, 0);
+                                        msg.location = new vscode.Location(uri, pos);
+                                        
+                                        // Create a child TestItem so clicking the scenario doesn't auto-open peek view
+                                        const stepId = `${currentScenarioItem.id}#error:${currentScenarioErrorLine}`;
+                                        stepItem = this.controller.createTestItem(
+                                            stepId,
+                                            `Failed Step (Line ${currentScenarioErrorLine})`,
+                                            uri
+                                        );
+                                        stepItem.range = new vscode.Range(pos, pos);
+                                        currentScenarioItem.children.add(stepItem);
+                                        run.started(stepItem);
+                                        run.failed(stepItem, msg, currentScenarioDuration * 1000 || undefined);
+                                    }
+                                    
+                                    if (stepItem) {
+                                        // Fail the scenario without a message to prevent auto-peek
+                                        run.failed(currentScenarioItem, [], currentScenarioDuration * 1000 || undefined);
+                                    } else {
+                                        run.failed(currentScenarioItem, msg, currentScenarioDuration * 1000 || undefined);
+                                    }
+                                } else if (event.data.status === 'skipped' || event.data.status === 'untested') {
+                                    run.skipped(currentScenarioItem);
+                                } else {
+                                    run.passed(currentScenarioItem, currentScenarioDuration * 1000 || undefined);
+                                }
+                                this.clearActiveStepDecoration(currentScenarioItem.uri);
+                                currentScenarioItem = undefined;
+                            }
+                        }
+                    }
                 );
 
-                if (exitCode === 0) {
-                    run.passed(item);
-                } else if (exitCode !== null) {
-                    // Surface the exit code as a TestMessage so it appears in the
-                    // Test Results panel when the user clicks on the failed node.
-                    // We append the stripped output inside a markdown block so that
-                    // older test results correctly display the full failure log.
+                if (exitCode !== 0 && exitCode !== null && processedItems.size === 0) {
                     const cleanOutput = capturedOutput.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
                     const md = new vscode.MarkdownString(`**Behave exited with code ${exitCode}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
                     run.failed(item, new vscode.TestMessage(md));
-                } else {
-                    // Cancelled or timed out
-                    run.skipped(item);
+                } else if (exitCode !== null) {
+                    const markUnprocessed = (node: vscode.TestItem) => {
+                        if (node.children.size === 0) {
+                            if (!processedItems.has(node)) {
+                                run.skipped(node);
+                            }
+                        } else {
+                            node.children.forEach(markUnprocessed);
+                        }
+                    };
+                    markUnprocessed(item);
                 }
             }
         }
 
-        // If no individual scenarios were run (feature-level), run at file level
-        if (scenarioItems.length === 0) {
-            for (const fileItem of fileItems) {
-                if (token.isCancellationRequested) { break; }
-                if (!fileItem.uri) { continue; }
-                run?.started(fileItem);
-                
-                if (mode === 'debug') {
-                    // Ignore waitForDebugEnd here, just launch it
-                    await vscode.commands.executeCommand('gherkinPowerTools.debugFeature', fileItem.uri);
-                } else if (run) {
-                    run.appendOutput(`\r\n▶ Running Feature: ${fileItem.label}\r\n`, undefined, fileItem);
-                    
-                    let capturedOutput = '';
-                    const exitCode = await runBehaveForTestRun(
-                        fileItem.uri,
-                        undefined,
-                        this.configService,
-                        (text) => {
-                            capturedOutput += text;
-                            run.appendOutput(text, undefined, fileItem);
-                        },
-                        token
-                    );
-                    
-                    if (exitCode === 0) {
-                        run.passed(fileItem);
-                    } else if (exitCode !== null) {
-                        const cleanOutput = capturedOutput.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-                        const md = new vscode.MarkdownString(`**Behave exited with code ${exitCode}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
-                        run.failed(fileItem, new vscode.TestMessage(md));
-                    } else {
-                        run.skipped(fileItem);
-                    }
-                }
-            }
-        }
-
+        this.clearActiveStepDecoration();
         run?.end();
     }
 

@@ -1,10 +1,32 @@
 import * as vscode from 'vscode';
 import { ConfigurationService } from './configuration';
+import { WorkspaceEventBus } from './eventBus';
 
 export class BehaveFileDiscoveryService {
     private stepWatchers: vscode.FileSystemWatcher[] = [];
     private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
     public configService?: ConfigurationService;
+    private _eventBus?: WorkspaceEventBus;
+    private eventBusDisposable?: vscode.Disposable;
+
+    /**
+     * Subscribes to the Workspace Event Bus to receive configuration changes.
+     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
+     */
+    public set eventBus(bus: WorkspaceEventBus) {
+        this._eventBus = bus;
+        this.eventBusDisposable?.dispose();
+        this.eventBusDisposable = this._eventBus.onEvent(e => {
+            if (e.type === 'configurationChanged') {
+                this.disposeWatchers();
+                this.setupWatchers();
+            }
+        });
+    }
+
+    public get eventBus(): WorkspaceEventBus | undefined {
+        return this._eventBus;
+    }
 
     // Validates and normalizes an array of glob strings
     public normalizeGlobs(globs: any, defaultGlobs: string[]): string[] {
@@ -161,29 +183,25 @@ export class BehaveFileDiscoveryService {
         this.debounceTimers.set(key, timer);
     }
 
-    public setupWatchers(
-        onCreated: (uri: vscode.Uri) => void,
-        onChanged: (uri: vscode.Uri) => void,
-        onDeleted: (uri: vscode.Uri) => void
-    ): vscode.FileSystemWatcher[] {
+    public setupWatchers(): vscode.FileSystemWatcher[] {
         this.disposeWatchers();
 
         const wrapCreated = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
             const ignoreGlobs = this.getIgnoreGlobs(folderUri);
             if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`create:${uri.toString()}`, () => onCreated(uri));
+            this.debounceEvent(`create:${uri.toString()}`, () => this.eventBus?.publish({ type: 'stepFileCreated', uri }));
         };
 
         const wrapChanged = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
             const ignoreGlobs = this.getIgnoreGlobs(folderUri);
             if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`change:${uri.toString()}`, () => onChanged(uri));
+            this.debounceEvent(`change:${uri.toString()}`, () => this.eventBus?.publish({ type: 'stepFileChanged', uri }));
         };
 
         const wrapDeleted = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
             const ignoreGlobs = this.getIgnoreGlobs(folderUri);
             if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`delete:${uri.toString()}`, () => onDeleted(uri));
+            this.debounceEvent(`delete:${uri.toString()}`, () => this._eventBus?.publish({ type: 'stepFileDeleted', uri }));
         };
         
         if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
@@ -213,15 +231,18 @@ export class BehaveFileDiscoveryService {
         return this.stepWatchers;
     }
 
+    public dispose() {
+        this.eventBusDisposable?.dispose();
+        this.disposeWatchers();
+    }
+
     public disposeWatchers(): void {
         for (const timer of this.debounceTimers.values()) {
             clearTimeout(timer);
         }
         this.debounceTimers.clear();
 
-        for (const watcher of this.stepWatchers) {
-            watcher.dispose();
-        }
+        this.stepWatchers.forEach(watcher => watcher.dispose());
         this.stepWatchers = [];
     }
 

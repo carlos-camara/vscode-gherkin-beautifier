@@ -1,11 +1,33 @@
 import * as vscode from 'vscode';
 import { dialectService } from './dialect';
+import { WorkspaceEventBus } from './eventBus';
 
 /**
  * Custom Syntax Highlighter for Gherkin documents.
  * Dynamically detects the language and highlights keywords with custom colors.
  */
 export class GherkinHighlighter {
+    private eventBus?: WorkspaceEventBus;
+    private eventBusDisposable?: vscode.Disposable;
+
+    /**
+     * Subscribes to the Workspace Event Bus to receive file system and editor changes.
+     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
+     */
+    public setEventBus(eventBus: WorkspaceEventBus) {
+        this.eventBus = eventBus;
+        this.eventBusDisposable?.dispose();
+        this.eventBusDisposable = this.eventBus.onEvent(e => {
+            if (e.type === 'activeEditorChanged' && e.editor) {
+                this.highlight(e.editor);
+            } else if (e.type === 'textDocumentChanged') {
+                if (vscode.window.activeTextEditor && e.event.document === vscode.window.activeTextEditor.document) {
+                    this.highlight(vscode.window.activeTextEditor);
+                }
+            }
+        });
+    }
+
     private structureDecoration: vscode.TextEditorDecorationType;
     private actionDecoration: vscode.TextEditorDecorationType;
     private tagDecoration: vscode.TextEditorDecorationType;
@@ -105,6 +127,7 @@ export class GherkinHighlighter {
      * Disposes the decorations to prevent memory leaks.
      */
     public dispose() {
+        this.eventBusDisposable?.dispose();
         this.structureDecoration.dispose();
         this.actionDecoration.dispose();
         this.tagDecoration.dispose();
