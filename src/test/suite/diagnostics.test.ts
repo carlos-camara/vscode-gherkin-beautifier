@@ -99,7 +99,8 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
 
         const originalFindFiles = vscode.workspace.findFiles;
         vscode.workspace.findFiles = async (glob) => {
-            if (glob === '**/steps/**/*.py' || glob === '**/features/steps/*.py') {
+            const globStr = typeof glob === 'string' ? glob : (glob as vscode.RelativePattern).pattern;
+            if (globStr === '**/steps/**/*.py' || globStr === '**/features/steps/**/*.py') {
                 return [vscode.Uri.file('/steps/test.py')];
             }
             return [];
@@ -132,15 +133,14 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
 
         const originalShowInfo = vscode.window.showInformationMessage;
         let clipboardText = '';
-        const originalClipboard = vscode.env.clipboard;
-        (vscode.env as any).clipboard = {
-            writeText: async (text: string) => { clipboardText = text; }
-        };
+        const originalWriteText = vscode.env.clipboard.writeText;
+        
+        vscode.env.clipboard.writeText = async (text: string) => { clipboardText = text; };
 
         try {
             // Mock showInformationMessage to return the Copy action button for the report and 'OK' for the info msg
             (vscode.window as any).showInformationMessage = async (msg: string, ..._items: string[]) => {
-                if (msg.includes('Diagnostics gathered')) {
+                if (msg.includes('Diagnostics gathered') || msg.includes('Diagnostic report generated')) {
                     return '📋 Copy Sanitized Report';
                 }
                 return undefined;
@@ -151,7 +151,7 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
             assert.ok(clipboardText.includes('GHERKIN POWERTOOLS DIAGNOSTIC REPORT'));
         } finally {
             vscode.window.showInformationMessage = originalShowInfo;
-            (vscode.env as any).clipboard = originalClipboard;
+            vscode.env.clipboard.writeText = originalWriteText;
         }
     });
 });
