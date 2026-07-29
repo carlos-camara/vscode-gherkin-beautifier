@@ -48,8 +48,28 @@ export class WorkspaceGraph {
         });
     }
 
+    private isInitialized = false;
+
     public async initialize(): Promise<void> {
-        // Initialization can be triggered by scanning workspace files
+        if (this.isInitialized) return;
+        this.isInitialized = true;
+
+        try {
+            // Find and index all feature files
+            const featureUris = await vscode.workspace.findFiles('**/*.feature', '**/{node_modules,.venv,venv,env,.git}/**');
+            for (const uri of featureUris) {
+                await this.indexFeatureFile(uri);
+            }
+
+            // Find and index all python files that have step definitions
+            const allDefs = await this.symbolCache.getAllStepDefinitions();
+            const pythonUris = new Set(allDefs.map(d => d.uri.toString()));
+            for (const uriStr of pythonUris) {
+                await this.indexPythonFile(vscode.Uri.parse(uriStr));
+            }
+        } catch (err) {
+            logger.error(`WorkspaceGraph: Error during initialization`, err);
+        }
     }
 
     private async indexFeatureFile(uri: vscode.Uri) {
@@ -299,6 +319,14 @@ export class WorkspaceGraph {
                 await this.resolveStepDefinition(step);
             }
         }
+    }
+
+    public getAllStepNodes(): StepNode[] {
+        return Array.from(this.nodes.values()).filter(n => n.type === 'Step') as StepNode[];
+    }
+
+    public getAllStepDefNodes(): StepDefNode[] {
+        return Array.from(this.nodes.values()).filter(n => n.type === 'StepDefinition') as StepDefNode[];
     }
 
     public getUsages(stepDefId: string): StepNode[] {

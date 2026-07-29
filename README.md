@@ -58,6 +58,7 @@ Specific integrations designed exclusively for Python Behave test suites:
 * **Catch malformed Gherkin before CI:** Identify missing colons, wrong block structures, and syntax errors as you type.
 * **Find Python step definitions without searching manually:** Jump directly to the implementing Python function with a single click.
 * **Generate missing Behave steps:** Create valid Python stubs for undefined steps directly.
+* **Analyze step definitions:** Detect unused, duplicated, ambiguous, and suspiciously similar Python steps via an interactive dashboard.
 * **Run or debug directly from VS Code:** Execute a specific scenario or example row without context-switching to the terminal.
 * **Understand the BDD suite structure:** Analyze tag distribution and scenario complexity across your entire workspace.
 
@@ -106,6 +107,12 @@ Align tables, wrap long tags, and standardize indentation using the built-in for
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif" alt="AST-powered Gherkin formatter aligning tables and standardizing indentation" width="600" />
 </div>
 
+</div>
+
+### Step Definition Analysis Dashboard
+Generate a comprehensive, interactive Webview report to ensure your Python step definitions are healthy and maintainable. Detect unused steps (grouped by file), duplicated implementations, ambiguous step usages, and suspiciously similar patterns. 
+*Note: A screenshot of this dashboard will be added in a future release.*
+
 ### Tag Impact Analysis
 Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.
 <div align="center">
@@ -129,6 +136,7 @@ Generate an interactive dashboard from your Gherkin source files to analyze feat
 | **Command Center** | Access all extension capabilities from a single searchable quick-pick menu. |
 | **Workspace Diagnostics** | Generate a health report of your environment, Python path, and discovered step files. |
 | **Developer Metrics** | Track AST parsing performance, cache hit ratios, and parser failures in real-time. |
+| **Step Definition Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |
 | **Project Onboarding** | Benefit from automated detection and configuration suggestions for Behave projects. |
 

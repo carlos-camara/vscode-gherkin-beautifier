@@ -45,6 +45,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Analyze Step Definitions
+- **Identifier**: `gherkinPowerTools.analyzeSteps`
+- **Where it appears**: Command Palette, Editor Context Menu.
+- **Required context**: A Python Behave project workspace.
+- **Input**: None.
+- **Result**: Proactively indexes all `.feature` and `.py` files in the workspace. Analyzes all discovered Python step definitions against all `.feature` files to find unused steps (grouped by file), duplicated implementations, ambiguous usages, and suspiciously similar regex patterns. Opens an interactive dashboard webview with clickable file links for instant navigation.
+- **Default shortcut**: None.
+
+---
+
 ## Show Developer Metrics
 - **Identifier**: `gherkinPowerTools.showMetrics`
 - **Where it appears**: Command Palette.
