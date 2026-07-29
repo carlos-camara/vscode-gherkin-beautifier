@@ -90,7 +90,6 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             return [];
         }
         const options = this.getOptions(document.uri);
-        const text = document.getText();
         const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
 
         const { document: gherkinDocument, errors } = await astRepository.getAST(document);

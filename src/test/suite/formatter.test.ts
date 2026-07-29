@@ -12,7 +12,7 @@ const defaultOptions: FormatterOptions = {
 };
 
 async function runFormat(formatter: GherkinFormattingEditProvider, unformatted: string): Promise<string> {
-    const formattedLines = await formatter.formatGherkin(unformatted, defaultOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+    const formattedLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: 1, getText: () => unformatted }, defaultOptions, { isCancellationRequested: false } as vscode.CancellationToken);
     return formattedLines ? formattedLines.map(l => l.text).join('\n') : '';
 }
 
@@ -138,7 +138,7 @@ suite('Formatter Test Suite', () => {
             tagsSort: 'alphabetical'
         };
 
-        const resultLines = await formatter.formatGherkin(unformatted, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+        const resultLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: 1, getText: () => unformatted }, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
         const result = resultLines ? resultLines.map(l => l.text).join('\n') : '';
         const formatted = result.split('\n');
         assert.strictEqual(formatted[0], '@apple @banana @zebra @zebra');
@@ -306,7 +306,7 @@ suite('Formatter Test Suite', () => {
             emptyLinesBetweenScenarios: 1
         };
 
-        const resultLines = await formatter.formatGherkin(unformatted, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+        const resultLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: 1, getText: () => unformatted }, customOptions, { isCancellationRequested: false } as vscode.CancellationToken);
         const result = resultLines ? resultLines.map(l => l.text).join('\n') : '';
         const formatted = result.split('\n');
 

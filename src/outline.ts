@@ -19,6 +19,7 @@ export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvi
         }
 
         const symbols: vscode.DocumentSymbol[] = [];
+        const text = document.getText();
         const feature = gherkinDocument.feature;
 
         const featureSymbol = this.createSymbol(

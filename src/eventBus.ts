@@ -15,6 +15,7 @@ export type WorkspaceEvent =
     | { type: 'configurationChanged', event?: vscode.ConfigurationChangeEvent }
     | { type: 'textDocumentChanged', event: vscode.TextDocumentChangeEvent }
     | { type: 'textDocumentOpened', document: vscode.TextDocument }
+    | { type: 'textDocumentClosed', document: vscode.TextDocument }
     | { type: 'activeEditorChanged', editor: vscode.TextEditor | undefined };
 
 /**

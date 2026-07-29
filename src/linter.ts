@@ -94,7 +94,6 @@ export class GherkinLinter {
         }
 
         const diagnostics: vscode.Diagnostic[] = [];
-        const text = document.getText();
         const dialect = dialectService.getDialect(document);
         let gherkinDocument: GherkinDocument | null = null;
         const result = await astRepository.getAST(document);

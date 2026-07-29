@@ -122,7 +122,7 @@ export async function calculateStatistics(
     
     let fileCount = 0;
 
-    const processFile = async (content: string) => {
+    const processFile = async (content: string, uri: vscode.Uri) => {
         if (token?.isCancellationRequested) return;
 
         stats.totalFiles++;
@@ -242,7 +242,7 @@ export async function calculateStatistics(
 
     for (const doc of openDocs) {
         processedUris.add(doc.uri.toString());
-        await processFile(doc.getText());
+        await processFile(doc.getText(), doc.uri);
     }
 
     for (const file of files) {
@@ -250,8 +250,8 @@ export async function calculateStatistics(
         if (!processedUris.has(file.toString())) {
             processedUris.add(file.toString());
             const contentBytes = await vscode.workspace.fs.readFile(file);
-            const contentStr = new TextDecoder().decode(contentBytes);
-            await processFile(contentStr);
+            const contentStr = Buffer.from(contentBytes).toString('utf8');
+            await processFile(contentStr, file);
         }
         fileCount++;
         if (progress) {
