@@ -58,3 +58,13 @@ To ensure long-term stability and prevent regressions in these core architectura
 - All file watchers and the Event Bus are correctly disposed during deactivation.
 - All core modules and services initialize successfully without exceptions during bootstrap.
 - No duplicate command registrations exist.
+
+## Workspace Relationship Graph
+
+To enable instantaneous, O(1) semantic queries across massive projects, the extension introduces the **Workspace Relationship Graph** (`WorkspaceGraph`).
+
+### How the Graph Works
+1. **Incremental, Event-Driven Construction:** Subscribes to the `WorkspaceEventBus`. When a Gherkin document or Python step file is changed, the graph updates only the affected nodes.
+2. **Zero-Overhead Parsing:** Instead of re-parsing text, it natively consumes the memoized AST from the `AstRepository` and the pre-indexed symbols from the `SymbolCache`.
+3. **Semantic Mapping:** The graph establishes bi-directional edges between Gherkin steps and Python step definitions (`StepNode` <-> `StepDefNode`), and tracks Tag inheritance downwards to Scenarios.
+4. **O(1) Queries:** Powers ultra-fast operations like `getUsages`, `getReferences`, `getImpactedScenarios`, and `getDuplicateImplementations` without iterating over regex patterns on every hover or go-to-definition request.
