@@ -258,8 +258,8 @@ suite('Execution Test Suite', () => {
             
             // Standard output should be passed through with \r\n
             assert.strictEqual(outputReceived.length, 2);
-            assert.strictEqual(outputReceived[0], 'Standard output line 1\\r\\n');
-            assert.strictEqual(outputReceived[1], 'Standard output line 2\\r\\n');
+            assert.strictEqual(outputReceived[0], 'Standard output line 1\r\n');
+            assert.strictEqual(outputReceived[1], 'Standard output line 2\r\n');
 
             // JSON event should be parsed and delivered
             assert.strictEqual(eventsReceived.length, 1);

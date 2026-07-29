@@ -129,12 +129,12 @@ Feature: Run Feature
 
         // Mock vscode.window.visibleTextEditors
         const originalVisibleEditors = vscode.window.visibleTextEditors;
-        let decorationsSet: vscode.Range[] | undefined;
+        let decorationsSet: vscode.Range[][] = [];
         Object.defineProperty(vscode.window, 'visibleTextEditors', {
             get: () => [{
                 document: { uri: featureUri },
                 setDecorations: (_decorationType: any, ranges: vscode.Range[]) => {
-                    decorationsSet = ranges;
+                    decorationsSet.push(ranges);
                 }
             }]
         });
@@ -169,9 +169,9 @@ Feature: Run Feature
             await testControllerPrivate.runHandler(request, tokenSource.token, 'run');
 
             // Verify Live Step Tracking called setDecorations with the correct line (line 4 is 0-indexed as 3)
-            assert.ok(decorationsSet, 'setDecorations should have been called');
-            assert.strictEqual(decorationsSet!.length, 1);
-            assert.strictEqual(decorationsSet![0].start.line, 3);
+            assert.ok(decorationsSet.length > 0, 'setDecorations should have been called');
+            assert.strictEqual(decorationsSet[0].length, 1);
+            assert.strictEqual(decorationsSet[0][0].start.line, 3);
         } finally {
             Object.defineProperty(vscode.window, 'visibleTextEditors', {
                 get: () => originalVisibleEditors
