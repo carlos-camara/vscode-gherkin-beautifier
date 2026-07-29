@@ -179,4 +179,124 @@ Feature: Run Feature
             cp.spawn = originalSpawn;
         }
     });
+
+    test('Handles Behave error exit with no processed items', async () => {
+        const featureUri = vscode.Uri.file(path.join(tempDir, 'error.feature'));
+        fs.writeFileSync(featureUri.fsPath, `
+Feature: Error Feature
+  Scenario: Error scenario
+    Given a step
+`);
+
+        const testControllerPrivate = controller as any;
+        const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
+        await testControllerPrivate.parseTestsInFileContents(fileItem);
+
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => {};
+            
+            setTimeout(() => {
+                child.stdout.emit('data', Buffer.from('Some catastrophic failure\n'));
+                child.emit('close', 1);
+            }, 10);
+            
+            return child;
+        };
+
+        try {
+            const request = new vscode.TestRunRequest([fileItem]);
+            const tokenSource = new vscode.CancellationTokenSource();
+            
+            // Mock test run to capture failed() calls
+            let failedCalled = false;
+            let failedMessage = '';
+            const originalCreateTestRun = testControllerPrivate.controller.createTestRun;
+            testControllerPrivate.controller.createTestRun = (req: any) => {
+                const run = originalCreateTestRun.call(testControllerPrivate.controller, req);
+                run.failed = (_item: any, msg: any) => {
+                    failedCalled = true;
+                    if (msg instanceof vscode.TestMessage) {
+                        failedMessage = (msg.message as vscode.MarkdownString).value;
+                    }
+                };
+                return run;
+            };
+
+            await testControllerPrivate.runHandler(request, tokenSource.token, 'run');
+
+            assert.strictEqual(failedCalled, true, 'run.failed should have been called');
+            assert.ok(failedMessage.includes('Behave exited with code 1'), 'Message should indicate exit code');
+            assert.ok(failedMessage.includes('Some catastrophic failure'), 'Message should include output');
+            
+            testControllerPrivate.controller.createTestRun = originalCreateTestRun;
+        } finally {
+            cp.spawn = originalSpawn;
+        }
+    });
+
+    test('Marks unprocessed items as skipped', async () => {
+        const featureUri = vscode.Uri.file(path.join(tempDir, 'skip.feature'));
+        fs.writeFileSync(featureUri.fsPath, `
+Feature: Skip Feature
+  Scenario: Scenario 1
+    Given step 1
+  Scenario: Scenario 2
+    Given step 2
+`);
+
+        const testControllerPrivate = controller as any;
+        const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
+        await testControllerPrivate.parseTestsInFileContents(fileItem);
+
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => {};
+            
+            setTimeout(() => {
+                // Only process Scenario 1
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Scenario 1"}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3}}\n'));
+                child.emit('close', 0);
+            }, 10);
+            
+            return child;
+        };
+
+        try {
+            const request = new vscode.TestRunRequest([fileItem]);
+            const tokenSource = new vscode.CancellationTokenSource();
+            
+            let skippedCalled = false;
+            let skippedItemLabel = '';
+            const originalCreateTestRun = testControllerPrivate.controller.createTestRun;
+            testControllerPrivate.controller.createTestRun = (req: any) => {
+                const run = originalCreateTestRun.call(testControllerPrivate.controller, req);
+                run.skipped = (item: any) => {
+                    skippedCalled = true;
+                    skippedItemLabel = item.label;
+                };
+                return run;
+            };
+
+            await testControllerPrivate.runHandler(request, tokenSource.token, 'run');
+
+            assert.strictEqual(skippedCalled, true, 'run.skipped should have been called');
+            assert.ok(skippedItemLabel.includes('Scenario 2'), 'Scenario 2 should be skipped because it was unprocessed');
+            
+            testControllerPrivate.controller.createTestRun = originalCreateTestRun;
+        } finally {
+            cp.spawn = originalSpawn;
+        }
+    });
 });

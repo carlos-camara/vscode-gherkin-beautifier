@@ -309,4 +309,93 @@ suite('Execution Test Suite', () => {
             cp.spawn = originalSpawn;
         }
     });
+
+    test('runBehaveForTestRun handles child process error event (ENOENT)', async () => {
+        const { runBehaveForTestRun } = require('../../execution');
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => {};
+            
+            setTimeout(() => {
+                child.emit('error', new Error('spawn behave ENOENT'));
+            }, 10);
+            
+            return child;
+        };
+
+        const tokenSource = new vscode.CancellationTokenSource();
+        const outputs: string[] = [];
+        
+        try {
+            const exitCode = await runBehaveForTestRun(
+                uri,
+                undefined,
+                mockConfigService,
+                (text: string) => outputs.push(text),
+                tokenSource.token,
+                () => {}
+            );
+
+            assert.strictEqual(exitCode, null);
+            assert.ok(outputs.some(text => text.includes('Failed to start Behave')));
+            assert.ok(outputs.some(text => text.includes('ENOENT')));
+        } finally {
+            cp.spawn = originalSpawn;
+        }
+    });
+
+    test('runBehaveForTestRun triggers safety timeout', async () => {
+        const { runBehaveForTestRun } = require('../../execution');
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+        
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        let killCalled = false;
+        
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => { killCalled = true; child.emit('close', null); };
+            return child; // Hangs until killed
+        };
+
+        const tokenSource = new vscode.CancellationTokenSource();
+        
+        // Temporarily patch global setTimeout to trigger immediately for this test
+        const originalSetTimeout = global.setTimeout;
+        (global as any).setTimeout = (cb: any, ms: number) => {
+            if (ms === 5 * 60 * 1000) {
+                // If it's the safety timeout, call it immediately
+                originalSetTimeout(cb, 10);
+                return 1 as any;
+            }
+            return originalSetTimeout(cb, ms);
+        };
+
+        try {
+            const exitCode = await runBehaveForTestRun(
+                uri,
+                undefined,
+                mockConfigService,
+                () => {},
+                tokenSource.token,
+                () => {}
+            );
+            assert.strictEqual(exitCode, null);
+            assert.strictEqual(killCalled, true, 'Should invoke child.kill() on timeout');
+        } finally {
+            cp.spawn = originalSpawn;
+            global.setTimeout = originalSetTimeout;
+        }
+    });
 });
