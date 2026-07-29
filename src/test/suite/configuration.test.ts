@@ -138,7 +138,11 @@ suite('ConfigurationService Test Suite', () => {
         
         fs.writeFileSync(configPath, JSON.stringify({
             indentation: { steps: "not a number" },
-            tags: { format: "invalidFormat" }
+            tags: { format: "invalidFormat" },
+            behave: {
+                command: 123,
+                additionalArguments: "not an array"
+            }
         }));
 
         let diagnostics: vscode.Diagnostic[] = [];
@@ -149,7 +153,10 @@ suite('ConfigurationService Test Suite', () => {
         // Fallbacks to default
         assert.strictEqual(config.indentation.steps, 4);
         assert.strictEqual(config.tags.format, 'wrap');
-        assert.strictEqual(diagnostics.length, 2);
+        // behave defaults should be untouched
+        assert.strictEqual(config.behave.command, 'behave');
+        assert.deepStrictEqual(config.behave.additionalArguments, []);
+        assert.strictEqual(diagnostics.length, 4); // indentation, tags, and 2 for behave
     });
 
     test('7. Handles unknown keys and unknown root sections gracefully', () => {

@@ -39,3 +39,11 @@ As the custom formatter receives step events, it emits a `step_start` payload pr
 
 ### Lifecycle & Disposal
 Every service that calls `eventBus.onEvent()` tracks its subscription with an `eventBusDisposable`. When a service is disposed, it automatically unregisters itself from the Event Bus. When the extension deactivates, the Event Bus itself is disposed, instantly severing all active subscriptions and preventing memory leaks.
+
+### Architecture Validation
+To ensure long-term stability and prevent regressions in these core architectural patterns, Gherkin PowerTools employs an **Architecture Validation Test Suite**. This suite runs in CI and automatically validates that:
+- Every command declared in `package.json` is successfully registered in the extension context.
+- Every registered provider (CodeLens, Hover, Definition, CodeAction, Completion) is properly pushed to the context subscriptions for disposal.
+- All file watchers and the Event Bus are correctly disposed during deactivation.
+- All core modules and services initialize successfully without exceptions during bootstrap.
+- No duplicate command registrations exist.
