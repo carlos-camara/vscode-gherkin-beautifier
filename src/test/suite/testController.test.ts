@@ -151,10 +151,10 @@ Feature: Run Feature
             
             // Simulate Behave NDJSON stream
             setTimeout(() => {
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Run scenario"}}\\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step_start", "data": {"line": 4}}\\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step", "data": {"status": "passed", "duration": 0.1}}\\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3, "context_snapshot": {"foo": "bar"}}}\\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Run scenario"}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step_start", "data": {"line": 4}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step", "data": {"status": "passed", "duration": 0.1}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3, "context_snapshot": {"foo": "bar"}}}\n'));
                 child.emit('close', 0);
             }, 10);
             

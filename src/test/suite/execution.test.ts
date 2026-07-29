@@ -231,9 +231,9 @@ suite('Execution Test Suite', () => {
             child.kill = () => {};
             
             setTimeout(() => {
-                child.stdout.emit('data', Buffer.from('Standard output line 1\\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step_start", "data": {"line": 4}}\\n'));
-                child.stdout.emit('data', Buffer.from('Standard output line 2\\n'));
+                child.stdout.emit('data', Buffer.from('Standard output line 1\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step_start", "data": {"line": 4}}\n'));
+                child.stdout.emit('data', Buffer.from('Standard output line 2\n'));
                 child.emit('close', 0);
             }, 10);
             
