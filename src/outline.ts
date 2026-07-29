@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseGherkin } from './parser';
+import { astRepository } from './ast';
 import type { Scenario, Background } from '@cucumber/messages';
 
 /**
@@ -12,8 +12,7 @@ export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvi
         document: vscode.TextDocument,
         _token: vscode.CancellationToken
     ): Promise<vscode.DocumentSymbol[]> {
-        const text = document.getText();
-        const { document: gherkinDocument } = await parseGherkin(text);
+        const { document: gherkinDocument } = await astRepository.getAST(document);
 
         if (!gherkinDocument || !gherkinDocument.feature) {
             return [];

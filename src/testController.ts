@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseGherkin } from './parser';
+import { astRepository } from './ast';
 import { logger } from './logger';
 import { ConfigurationService } from './configuration';
 import { runBehaveForTestRun } from './execution';
@@ -87,7 +87,7 @@ export class GherkinTestController {
                 const timer = setTimeout(() => {
                     this.debounceTimers.delete(key);
                     const fileItem = this.getOrCreateFile(doc.uri);
-                    this.parseTestsInDocumentContent(fileItem, doc.getText());
+                    this.parseTestsInDocumentContent(fileItem, doc);
                 }, 400);
 
                 this.debounceTimers.set(key, timer);
@@ -97,7 +97,7 @@ export class GherkinTestController {
         for (const document of vscode.workspace.textDocuments) {
             if (document.uri.fsPath.endsWith('.feature')) {
                 const fileItem = this.getOrCreateFile(document.uri);
-                this.parseTestsInDocumentContent(fileItem, document.getText());
+                this.parseTestsInDocumentContent(fileItem, document);
             }
         }
     }
@@ -143,20 +143,20 @@ export class GherkinTestController {
         if (!fileItem.uri) { return; }
         try {
             const doc = await vscode.workspace.openTextDocument(fileItem.uri);
-            await this.parseTestsInDocumentContent(fileItem, doc.getText());
+            await this.parseTestsInDocumentContent(fileItem, doc);
         } catch (e) {
             logger.error(`Error parsing file for Test Explorer: ${e}`);
         }
     }
 
-    private async parseTestsInDocumentContent(fileItem: vscode.TestItem, text: string) {
+    private async parseTestsInDocumentContent(fileItem: vscode.TestItem, document: vscode.TextDocument) {
         if (!fileItem.uri) { return; }
         try {
-            const { document } = await parseGherkin(text);
+            const { document: docAST } = await astRepository.getAST(document);
             fileItem.children.replace([]);
-            if (!document?.feature) { return; }
+            if (!docAST?.feature) { return; }
 
-            const feature = document.feature;
+            const feature = docAST.feature;
             const featureItem = this.controller.createTestItem(
                 `${fileItem.uri.toString()}#feature`,
                 `Feature: ${feature.name}`,

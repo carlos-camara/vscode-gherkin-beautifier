@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SymbolCache } from './cache';
 import { dialectService } from './dialect';
-import { parseGherkin } from './parser';
+import { astRepository } from './ast';
 import type { GherkinDocument, Step } from '@cucumber/messages';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
@@ -97,7 +97,7 @@ export class GherkinLinter {
         const text = document.getText();
         const dialect = dialectService.getDialect(document);
         let gherkinDocument: GherkinDocument | null = null;
-        const result = await parseGherkin(text);
+        const result = await astRepository.getAST(document);
         gherkinDocument = result.document;
         const errors = result.errors;
         

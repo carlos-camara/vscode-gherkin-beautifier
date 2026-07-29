@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseGherkin } from './parser';
+import { astRepository } from './ast';
 import type { Tag, Step, Background, Scenario, Rule } from '@cucumber/messages';
 
 export function escapeHtml(unsafe: string) {
@@ -134,7 +134,7 @@ export async function calculateStatistics(
             if (/^\s*#/.test(line)) stats.totalComments++;
         }
 
-        const { document: doc } = await parseGherkin(content);
+        const { document: doc } = await astRepository.getAST({ uri, version: 0, getText: () => content });
         if (!doc || !doc.feature) return;
 
         stats.totalFeatures++;
