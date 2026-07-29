@@ -32,7 +32,7 @@ You can run your tests at any level of granularity:
 </div>
 
 ### Console Output & Failure Reporting
-When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error. 
+When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error.
 
 If a test fails, the node in the tree will turn red. To keep your editor clean, error messages and stack traces are **collapsed by default**. You can view the exact failure details by explicitly clicking on the failed step or the error message within the Test Explorer.
 

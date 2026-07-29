@@ -13,11 +13,11 @@ In earlier versions, each feature (like the Test Controller, Symbol Cache, and L
 - **Memory Leaks:** It was difficult to ensure all watchers were properly disposed when features were toggled on or off.
 
 ### How it Works
-1. **Centralized Watchers (`extension.ts` and `discovery.ts`):** 
+1. **Centralized Watchers (`extension.ts` and `discovery.ts`):**
    The extension initializes exactly *one* set of VS Code file system watchers and text document listeners at the root of the extension.
-2. **Event Routing:** 
+2. **Event Routing:**
    When a relevant VS Code event occurs (e.g., a `.feature` file is saved or a `step` file is modified), the root watchers convert it into a strongly typed `WorkspaceEvent` (e.g., `featureFileChanged` or `stepFileDeleted`).
-3. **Publishing:** 
+3. **Publishing:**
    This event is published to the `WorkspaceEventBus`.
 4. **Subscription & Debouncing:**
    Domain services inject the Event Bus as a dependency during initialization (`setEventBus`). They listen for specific event types. Services like the `GherkinLinter` or `FeatureCache` handle their own internal debouncing logic to ensure that rapid typing in the editor only triggers expensive operations (like AST parsing) once the user pauses.
@@ -30,7 +30,9 @@ The `WorkspaceEvent` union type includes payloads for:
 - **Editor State (`textDocumentOpened`, `textDocumentChanged`, `activeEditorChanged`)**: Drives real-time diagnostic linting and semantic highlighting.
 
 ### Execution Output & Custom Formatting
-When running Behave tests through the Test Explorer, the extension spawns Behave as a child process and injects a custom Python formatter (`vscode_behave_formatter.py`). This formatter translates Python-side test results and the final **Context Snapshot** into standardized JSON events (`##VSCODE_BEHAVE_EVENT:`). These stdout events are piped directly back to the extension, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI.
+When running Behave tests through the Test Explorer, the extension spawns Behave as a child process and injects a custom Python formatter (`vscode_behave_formatter.py`).
+This formatter translates Python-side test results and the final **Context Snapshot** into standardized JSON events (`##VSCODE_BEHAVE_EVENT:`).
+These stdout events are piped directly back to the extension, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI.
 
 ### Live Step Tracking
 As the custom formatter receives step events, it emits a `step_start` payload precisely before a Python step function runs. The Test Controller listens to this and dynamically creates a transient text decoration in the active `vscode.TextEditor`. This achieves the real-time "animation" of tests moving down the Gherkin feature file.
