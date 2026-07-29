@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Gherkin formatting, linting, project analysis, Python/Behave navigation, and execution/debugging for BDD.",
-  "version": "1.7.8",
+  "version": "1.7.9",
   "engines": {
     "vscode": "^1.93.0"
   },

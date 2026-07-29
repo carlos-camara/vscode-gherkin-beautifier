@@ -133,7 +133,7 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
             };
         };
 
-        const watchers = service.setupWatchers(() => {}, () => {}, () => {});
+        const watchers = service.setupWatchers();
         assert.strictEqual(watchers.length, 1);
         assert.strictEqual(createdWatchers, 1);
 
@@ -168,11 +168,13 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
             };
         };
 
-        service.setupWatchers(
-            () => {},
-            () => { changedFired = true; },
-            () => { deletedFired = true; }
-        );
+        const eventBus = new (require('../../eventBus').WorkspaceEventBus)();
+        service.eventBus = eventBus;
+        eventBus.onEvent((e: any) => {
+            if (e.type === 'stepFileChanged') changedFired = true;
+            if (e.type === 'stepFileDeleted') deletedFired = true;
+        });
+        service.setupWatchers();
 
         if (onChangedListener) {
             onChangedListener(vscode.Uri.file('/workspace/features/steps/login.py'));
@@ -214,11 +216,12 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
             };
         };
 
-        service.setupWatchers(
-            () => { eventFired = true; },
-            () => {},
-            () => {}
-        );
+        const eventBus = new (require('../../eventBus').WorkspaceEventBus)();
+        service.eventBus = eventBus;
+        eventBus.onEvent((e: any) => {
+            if (e.type === 'stepFileCreated') eventFired = true;
+        });
+        service.setupWatchers();
 
         if (onCreatedListener) {
             onCreatedListener(vscode.Uri.file('/workspace/venv/lib/steps.py'));

@@ -67,5 +67,6 @@ nav:
   - Configuration: configuration.md
   - Compatibility: compatibility.md
   - Troubleshooting: troubleshooting.md
+  - Architecture: architecture.md
   - Contributing: contributing.md
   - Changelog: changelog.md
