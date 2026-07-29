@@ -303,6 +303,11 @@
           "when": "editorLangId == feature",
           "command": "gherkinPowerTools.showStatistics",
           "group": "navigation@4"
+        },
+        {
+          "when": "editorLangId == feature",
+          "command": "gherkinPowerTools.analyzeSteps",
+          "group": "navigation@5"
         }
       ],
       "view/title": [

@@ -47,7 +47,7 @@ export async function showStepAnalysisReport(graph: WorkspaceGraph, symbolCache:
     });
 }
 
-function getReportHtml(result: StepAnalysisResult): string {
+export function getReportHtml(result: StepAnalysisResult): string {
     const escapeHtml = (unsafe: string) => unsafe
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
