@@ -301,6 +301,14 @@ export class WorkspaceGraph {
         }
     }
 
+    public getAllStepNodes(): StepNode[] {
+        return Array.from(this.nodes.values()).filter(n => n.type === 'Step') as StepNode[];
+    }
+
+    public getAllStepDefNodes(): StepDefNode[] {
+        return Array.from(this.nodes.values()).filter(n => n.type === 'StepDefinition') as StepDefNode[];
+    }
+
     public getUsages(stepDefId: string): StepNode[] {
         const defNode = this.nodes.get(stepDefId) as StepDefNode | undefined;
         if (!defNode) return [];

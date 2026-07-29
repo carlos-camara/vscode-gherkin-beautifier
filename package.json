@@ -241,6 +241,11 @@
         "category": "Gherkin PowerTools"
       },
       {
+        "command": "gherkinPowerTools.analyzeSteps",
+        "title": "Analyze Step Definitions",
+        "category": "Gherkin PowerTools"
+      },
+      {
         "command": "gherkinPowerTools.runFeature",
         "title": "Run Feature",
         "category": "Gherkin PowerTools"
