@@ -125,6 +125,12 @@ The built-in **Recommendation Engine** proactively flags:
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/project-health.png" alt="Interactive BDD source analytics and project health dashboard" width="600" />
 </div>
 
+### Tag Impact Analysis
+Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover over a tag to see its impact across the workspace" width="600" />
+</div>
+
 ---
 
 ## Additional Features
