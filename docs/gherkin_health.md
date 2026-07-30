@@ -32,7 +32,7 @@ To generate the dashboard:
 A Webview panel will open in VS Code displaying the generated HTML report.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/project-health.png" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" />
 </div>
 
 > **Note**: The legacy "Analyze Step Definitions" command has been fully integrated into the new Gherkin Health Dashboard. Both commands now launch the same unified view.

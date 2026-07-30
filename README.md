@@ -122,7 +122,7 @@ The built-in **Recommendation Engine** proactively flags:
 
 *Note: This analyzes static source structure, not runtime test coverage or execution results.*
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/project-health.png" alt="Interactive BDD source analytics and project health dashboard" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" />
 </div>
 
 ### Tag Impact Analysis
