@@ -39,6 +39,13 @@ As you type in a `.feature` file, the extension offers context-aware autocomplet
 
 It natively understands the state of your scenario. A `@when` step will only be suggested if you type `When` or a continuation keyword (`And`, `But`) that resolves semantically to a `When`.
 
+### Smart Context-Aware Ranking
+Suggestions are not simply sorted alphabetically. Gherkin PowerTools uses an intelligent, deterministic ranking algorithm to prioritize the steps you are most likely to need:
+- **Recent Usage**: Steps you have recently accepted are boosted via an internal LRU (Least Recently Used) cache.
+- **Tag Affinity**: The background indexer tracks which steps are frequently used alongside specific tags. If you are inside a `@ui` feature, UI-related steps will float to the top.
+- **Feature Context**: Steps heavily used in the current `.feature` file or neighboring scenarios are ranked higher.
+- **Semantic Matching**: Partial matches against the Python definition receive a score boost.
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" />
 </div>

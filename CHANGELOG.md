@@ -8,6 +8,11 @@ All notable changes to the "vscode-gherkin-powertools" extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - Unreleased
+
+### 🚀 Added
+- **Smart Context-Aware Completion**: Python Behave step autocomplete is now incredibly smart. Instead of sorting suggestions alphabetically, Gherkin PowerTools now uses an intelligent ranking algorithm that tracks your recent usage, understands the current active feature, and prioritizes steps based on contextual tag affinity (e.g. suggesting UI steps when you are in a `@ui` feature). This makes writing scenarios significantly faster as the most relevant steps are always at the top of the list.
+
 ## [1.7.9] - 2026-07-29
 
 ### 🚀 Added

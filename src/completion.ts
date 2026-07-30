@@ -2,12 +2,15 @@ import * as vscode from 'vscode';
 import { SymbolCache } from './cache';
 import { dialectService } from './dialect';
 import type { Dialect } from '@cucumber/gherkin';
+import { CompletionRankingService, RankingContext } from './completionRanking';
 
 export class GherkinCompletionProvider implements vscode.CompletionItemProvider {
     private symbolCache: SymbolCache;
+    private rankingService: CompletionRankingService;
 
-    constructor(symbolCache: SymbolCache) {
+    constructor(symbolCache: SymbolCache, rankingService: CompletionRankingService) {
         this.symbolCache = symbolCache;
+        this.rankingService = rankingService;
     }
 
     public async provideCompletionItems(
@@ -88,6 +91,25 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
         const completionItems: vscode.CompletionItem[] = [];
         const seenPatterns = new Set<string>();
 
+        // Fast extraction of current document context for ranking
+        const currentText = document.getText();
+        const currentTags = Array.from(currentText.matchAll(/@[\w-]+/g)).map(m => m[0]);
+        const currentFeatureStepTexts: string[] = [];
+        for (let i = 0; i < document.lineCount; i++) {
+            const line = document.lineAt(i).text.trim();
+            const stepMatch = line.match(stepRegex);
+            if (stepMatch) {
+                currentFeatureStepTexts.push(line.substring(stepMatch[1].length).trim());
+            }
+        }
+
+        const rankingContext: RankingContext = {
+            semanticType,
+            typedText,
+            currentTags,
+            currentFeatureStepTexts
+        };
+
         for (const def of definitions) {
             if (token.isCancellationRequested) {
                 return undefined;
@@ -126,12 +148,16 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             // Allow VS Code to filter by matching what the user typed against the full pattern
             item.filterText = pattern;
             
-            // Rank exact textual prefixes higher than fuzzy matches
-            if (pattern.startsWith(typedText)) {
-                item.sortText = '0_' + pattern;
-            } else {
-                item.sortText = '1_' + pattern;
-            }
+            // Apply contextual ranking
+            const score = this.rankingService.scoreItem(def, rankingContext);
+            item.sortText = this.rankingService.getSortText(score, pattern);
+            
+            // Attach internal command to track when this completion is accepted
+            item.command = {
+                title: 'Record Completion',
+                command: 'gherkinPowerTools.internal.recordCompletion',
+                arguments: [pattern]
+            };
             
             completionItems.push(item);
         }

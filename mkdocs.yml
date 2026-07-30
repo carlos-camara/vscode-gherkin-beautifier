@@ -65,6 +65,7 @@ nav:
   - Run and Debug: run_and_debug.md
   - Analytics: analytics.md
   - Configuration: configuration.md
+  - Commands: commands.md
   - Compatibility: compatibility.md
   - Troubleshooting: troubleshooting.md
   - Architecture: architecture.md

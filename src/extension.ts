@@ -10,6 +10,7 @@ import { SymbolCache, FeatureCache } from './cache';
 import { logger } from './logger';
 import { GherkinCodeActionProvider, createStepDefinition } from './codeAction';
 import { GherkinCompletionProvider } from './completion';
+import { CompletionRankingService } from './completionRanking';
 import { GherkinHoverProvider } from './hover';
 import { discoveryService } from './discovery';
 import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
@@ -61,6 +62,10 @@ export async function activate(context: vscode.ExtensionContext) {
     const featureCache = new FeatureCache();
     featureCache.setEventBus(eventBus);
 
+    // Initialize Completion Ranking Service for contextual completions
+    const rankingService = new CompletionRankingService();
+    rankingService.usageIndexer.setEventBus(eventBus);
+
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);
     linter.setEventBus(eventBus);
@@ -87,6 +92,7 @@ export async function activate(context: vscode.ExtensionContext) {
     setTimeout(() => {
         symbolCache.ensureInitialized().catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
         featureCache.ensureInitialized().catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
+        rankingService.usageIndexer.indexWorkspace().catch(err => logger.error(`Error during lazy usage indexer load: ${err}`));
         
         discoveryService.setupWatchers().forEach(w => context.subscriptions.push(w));
         
@@ -128,6 +134,13 @@ export async function activate(context: vscode.ExtensionContext) {
             } else {
                 vscode.window.showInformationMessage("Gherkin PowerTools: Document is already formatted or could not be formatted.");
             }
+        })
+    );
+
+    // Register internal completion tracking command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.internal.recordCompletion', (pattern: string) => {
+            rankingService.recordCompletion(pattern);
         })
     );
 
@@ -279,7 +292,7 @@ export async function activate(context: vscode.ExtensionContext) {
             ),
             vscode.languages.registerCompletionItemProvider(
                 { language },
-                new GherkinCompletionProvider(symbolCache),
+                new GherkinCompletionProvider(symbolCache, rankingService),
                 ' ', '<' // trigger on space or <
             ),
             vscode.languages.registerHoverProvider(
