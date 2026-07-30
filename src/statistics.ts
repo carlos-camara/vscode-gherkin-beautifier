@@ -644,7 +644,6 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     ${snapshots.length > 1 ? `
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.js"></script>
     <script>
-        const vscode = acquireVsCodeApi();
         const snapshots = ${JSON.stringify(snapshots)};
         const ctx = document.getElementById('trendsChart').getContext('2d');
         
