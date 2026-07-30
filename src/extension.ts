@@ -5,6 +5,7 @@ import { GherkinDocumentSymbolProvider } from './outline';
 import { GherkinLinter } from './linter';
 import { GherkinHighlighter } from './highlighter';
 import { showProjectHealthDashboard } from './statistics';
+
 import { GherkinDefinitionProvider } from './definition';
 import { SymbolCache, FeatureCache } from './cache';
 import { logger } from './logger';
@@ -165,6 +166,7 @@ export async function activate(context: vscode.ExtensionContext) {
             showProjectHealthDashboard(context, workspaceGraph, symbolCache);
         })
     );
+
 
     // Register the custom command for creating step definitions
     context.subscriptions.push(

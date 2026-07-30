@@ -96,4 +96,19 @@ suite('Parser Architecture Test Suite', () => {
         assert.ok(result.document?.feature?.children.length === 1000, 'Should parse all 1000 scenarios');
         assert.ok(duration < 2000, `Parsing should be relatively fast, took ${duration}ms`);
     });
+
+    test('should handle completely empty documents', async () => {
+        const text = '';
+        const result = await parseGherkin(text);
+        assert.strictEqual(result.errors.length, 0);
+        assert.ok(!result.document?.feature, 'Should return empty document without feature');
+    });
+
+    test('should handle feature with no scenarios', async () => {
+        const text = 'Feature: Empty feature\n';
+        const result = await parseGherkin(text);
+        assert.strictEqual(result.errors.length, 0);
+        assert.ok(result.document?.feature);
+        assert.strictEqual(result.document?.feature?.children.length, 0);
+    });
 });

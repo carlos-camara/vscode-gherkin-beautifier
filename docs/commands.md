@@ -35,7 +35,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
-## Show Project Health Dashboard
+## Show Gherkin Health
 - **Identifier**: `gherkinPowerTools.showStatistics`
 - **Where it appears**: Command Palette, Editor Context Menu.
 - **Required context**: An active `.feature` file.
