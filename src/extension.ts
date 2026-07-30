@@ -11,6 +11,7 @@ import { SymbolCache, FeatureCache } from './cache';
 import { logger } from './logger';
 import { GherkinCodeActionProvider, createStepDefinition } from './codeAction';
 import { GherkinCompletionProvider } from './completion';
+import { CompletionRankingService } from './completionRanking';
 import { GherkinHoverProvider } from './hover';
 import { astRepository } from './ast';
 import { WorkspaceGraph } from './graph';
@@ -65,6 +66,10 @@ export async function activate(context: vscode.ExtensionContext) {
     const featureCache = new FeatureCache();
     featureCache.setEventBus(eventBus);
 
+    // Initialize Completion Ranking Service for contextual completions
+    const rankingService = new CompletionRankingService();
+    rankingService.usageIndexer.setEventBus(eventBus);
+
     // Initialize AST Repository to centralize parsing
     astRepository.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => astRepository.dispose() });
@@ -100,6 +105,7 @@ export async function activate(context: vscode.ExtensionContext) {
     setTimeout(() => {
         symbolCache.ensureInitialized().catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
         featureCache.ensureInitialized().catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
+        rankingService.usageIndexer.indexWorkspace().catch(err => logger.error(`Error during lazy usage indexer load: ${err}`));
         
         discoveryService.setupWatchers().forEach(w => context.subscriptions.push(w));
         
@@ -144,6 +150,13 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('gherkinPowerTools.showMetrics', () => {
             metricsLogger.showMetrics();
+        })
+    );
+
+    // Register internal completion tracking command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.internal.recordCompletion', (pattern: string) => {
+            rankingService.recordCompletion(pattern);
         })
     );
 
@@ -298,7 +311,7 @@ export async function activate(context: vscode.ExtensionContext) {
             ),
             vscode.languages.registerCompletionItemProvider(
                 { language },
-                new GherkinCompletionProvider(symbolCache),
+                new GherkinCompletionProvider(symbolCache, rankingService),
                 ' ', '<' // trigger on space or <
             ),
             vscode.languages.registerHoverProvider(

@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { GherkinCompletionProvider } from '../../completion';
+import { CompletionRankingService } from '../../completionRanking';
 import { SymbolCache, StepDefinition } from '../../cache';
 
 let docVersion = 0;
@@ -24,6 +25,7 @@ function createMockDocument(text: string, lineIndex: number): [vscode.TextDocume
 suite('Completion Test Suite', () => {
     let provider: GherkinCompletionProvider;
     let mockCache: SymbolCache;
+    let rankingService: CompletionRankingService;
 
     setup(() => {
         mockCache = new SymbolCache();
@@ -74,7 +76,8 @@ suite('Completion Test Suite', () => {
             return Promise.resolve(steps.filter(s => s.type === semanticType || s.type === 'step'));
         };
         
-        provider = new GherkinCompletionProvider(mockCache);
+        rankingService = new CompletionRankingService();
+        provider = new GherkinCompletionProvider(mockCache, rankingService);
     });
 
     test('Provides Given completions and generic steps, but not When/Then', async () => {
@@ -172,11 +175,12 @@ Feature: Test
         
         const dupItem = completions.find(c => c.filterText === 'duplicate pattern');
         assert.ok(dupItem);
-        assert.strictEqual(dupItem.sortText, '0_duplicate pattern');
         
         const genItem = completions.find(c => c.filterText === 'generic step');
         assert.ok(genItem);
-        assert.strictEqual(genItem.sortText, '1_generic step');
+
+        // Lexicographically smaller means higher rank in VS Code
+        assert.ok(dupItem.sortText! < genItem.sortText!, 'Exact prefix should rank higher than fuzzy prefix');
     });
 
     test('Provides parameter completions for Scenario Outline Examples', async () => {
