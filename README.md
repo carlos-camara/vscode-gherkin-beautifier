@@ -58,9 +58,9 @@ Specific integrations designed exclusively for Python Behave test suites:
 * **Catch malformed Gherkin before CI:** Identify missing colons, wrong block structures, and syntax errors as you type.
 * **Find Python step definitions without searching manually:** Jump directly to the implementing Python function with a single click.
 * **Generate missing Behave steps:** Create valid Python stubs for undefined steps directly.
-* **Analyze step definitions:** Detect unused, duplicated, ambiguous, and suspiciously similar Python steps via an interactive dashboard.
+* **Analyze step definitions:** Detect unused, duplicated, ambiguous, and suspiciously similar Python steps via the Gherkin Health dashboard.
 * **Run or debug directly from VS Code:** Execute a specific scenario or example row without context-switching to the terminal.
-* **Understand the BDD suite structure:** Analyze tag distribution and scenario complexity across your entire workspace.
+* **Understand the BDD suite structure:** Analyze tag distribution, scenario complexity, and structural quality across your entire workspace.
 
 ---
 
@@ -111,8 +111,14 @@ Align tables, wrap long tags, and standardize indentation using the built-in for
 
 </div>
 
-### Project Health Dashboard
-Generate a comprehensive, interactive Webview report to ensure your Python step definitions are healthy and maintainable. This dashboard analyzes your source structure to calculate your Overall Project Health, Maintainability, Complexity, and Technical Debt (e.g., unused, duplicated, or ambiguous steps).
+### Gherkin Health & Recommendation Engine
+Generate a comprehensive, interactive Webview report to ensure your project is healthy and maintainable. This dashboard analyzes your source structure to calculate your Overall Health, Maintainability, Complexity, and Technical Debt.
+
+The built-in **Recommendation Engine** proactively flags:
+* **Undefined Steps**: Identifies Gherkin steps that lack Python implementations.
+* **Ambiguous Steps**: Detects steps matching multiple overlapping Regex patterns.
+* **Duplicated Steps**: Finds identical Regex patterns declared in multiple files.
+* **Oversized Scenarios**: Highlights overly complex scenarios that should be broken down.
 
 *Note: This analyzes static source structure, not runtime test coverage or execution results.*
 <div align="center">
@@ -130,7 +136,7 @@ Generate a comprehensive, interactive Webview report to ensure your Python step 
 | **Command Center** | Access all extension capabilities from a single searchable quick-pick menu. |
 | **Workspace Diagnostics** | Generate a health report of your environment, Python path, and discovered step files. |
 | **Developer Metrics** | Track AST parsing performance, cache hit ratios, and parser failures in real-time. |
-| **Step Definition Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
+| **Gherkin Health Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |
 | **Project Onboarding** | Benefit from automated detection and configuration suggestions for Behave projects. |
 

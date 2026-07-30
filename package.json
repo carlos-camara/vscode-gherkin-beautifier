@@ -374,8 +374,8 @@
           },
           {
             "id": "projectStatistics",
-            "title": "View BDD Statistics",
-            "description": "Generate an interactive HTML dashboard with your BDD project metrics. [Show Statistics](command:gherkinPowerTools.showStatistics)",
+            "title": "View Gherkin Health",
+            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showStatistics)",
             "media": {
               "markdown": "assets/walkthrough/6_statistics.md"
             },

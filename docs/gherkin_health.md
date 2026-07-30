@@ -1,22 +1,23 @@
-# Analytics & Project Health
+# Gherkin Health & Analytics
 
-Gherkin PowerTools includes a built-in **Project Health Dashboard** that provides immediate insights into the architecture, quality, and maintainability of your BDD suite.
+Gherkin PowerTools includes a built-in **Gherkin Health Dashboard** that provides immediate insights into the architecture, quality, and maintainability of your BDD suite.
 
 ---
 
 ## What the Dashboard Does
 
-The Analytics Dashboard analyzes your workspace in real-time leveraging the in-memory **Workspace Graph** (which connects Features, Scenarios, Steps, and Python Step Definitions).
+The Analytics Dashboard analyzes your workspace in real-time leveraging the in-memory **Workspace Graph** (which connects Features, Scenarios, Steps, and Python Step Definitions) and the **Recommendation Engine**.
 
 It generates deep heuristics and scores, including:
 
-- **Overall Project Health Score**: A unified metric indicating the general state of your test suite.
+- **Overall Health Score**: A unified metric indicating the general state of your test suite.
 - **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files.
 - **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
-- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, and undefined steps.
+- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Recommendation Engine.
+- **Actionable Insights**: Prioritized recommendations (High, Medium, Low severity) such as breaking down oversized scenarios or removing duplicated regex patterns.
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
-**Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on a large scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.
+**Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.
 
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 
@@ -26,15 +27,15 @@ It generates deep heuristics and scores, including:
 
 To generate the dashboard:
 1. Open the Command Palette (<kbd>Ctrl+Shift+P</kbd> or <kbd>Cmd+Shift+P</kbd>).
-2. Type and select **Gherkin PowerTools: Show Project Health Dashboard**.
+2. Type and select **Gherkin PowerTools: Show Gherkin Health**.
 
 A Webview panel will open in VS Code displaying the generated HTML report.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/project-health.png" alt="Project Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/project-health.png" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" />
 </div>
 
-> **Note**: The legacy "Analyze Step Definitions" command has been fully integrated into the new Project Health Dashboard. Both commands now launch the same unified view.
+> **Note**: The legacy "Analyze Step Definitions" command has been fully integrated into the new Gherkin Health Dashboard. Both commands now launch the same unified view.
 
 ---
 
