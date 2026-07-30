@@ -3,6 +3,7 @@ import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, Ta
 import { SymbolCache } from './cache';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
 import { Recommendation, RecommendationEngine } from './recommendationEngine';
+import { MetricsHistory, MetricsSnapshot } from './history';
 
 export function escapeHtml(unsafe: string) {
     return unsafe
@@ -50,7 +51,7 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
     panel.webview.html = getLoadingHtml();
 
     try {
-        const { metrics, recommendations } = await vscode.window.withProgress({
+        const { metrics, recommendations, snapshots } = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: "Calculating Gherkin Health & Recommendations",
             cancellable: false
@@ -59,11 +60,15 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
             const metrics = await calculateHealthMetrics(graph, symbolCache);
             const engine = new RecommendationEngine();
             const recommendations = engine.generateRecommendations(graph, metrics);
-            return { metrics, recommendations };
+            
+            const history = new MetricsHistory(context);
+            const snapshots = history.addSnapshot(metrics);
+
+            return { metrics, recommendations, snapshots };
         });
 
         const version = context.extension.packageJSON?.version || '1.8.0';
-        panel.webview.html = getDashboardHtml(metrics, recommendations, version);
+        panel.webview.html = getDashboardHtml(metrics, recommendations, version, snapshots);
 
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'openFile') {
@@ -162,7 +167,7 @@ export function getLoadingHtml() {
     return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Gherkin Health...</h2><p>Scanning graph...</p></body></html>`;
 }
 
-export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: Recommendation[], version: string): string {
+export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: Recommendation[], version: string, snapshots: MetricsSnapshot[] = []): string {
     const renderLink = (uri: string, line: number, text: string) => {
         return `<a href="#" class="file-link" onclick="openFile('${escapeHtml(uri)}', ${line})">${escapeHtml(text)}</a>`;
     };
@@ -178,11 +183,25 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     const maintainBg = getScoreGradient(metrics.scores.maintainability);
     const complexityBg = getScoreGradient(metrics.scores.complexity, true);
 
+    const prevSnapshot = snapshots.length > 1 ? snapshots[snapshots.length - 2] : undefined;
+
+    const renderDelta = (current: number, previous: number | undefined, inverse = false) => {
+        if (previous === undefined) return '';
+        const diff = current - previous;
+        if (diff === 0) return '<span style="font-size: 0.8em; opacity: 0.7; margin-left: 8px;">=</span>';
+        
+        let isGood = inverse ? diff < 0 : diff > 0;
+        const color = isGood ? '#10b981' : '#ef4444';
+        const arrow = diff > 0 ? '↗' : '↘';
+        return `<span style="color: ${color}; font-size: 0.85em; margin-left: 8px; font-weight: bold; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 8px;">${diff > 0 ? '+' : ''}${diff} ${arrow}</span>`;
+    };
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; connect-src https://cdn.jsdelivr.net;">
     <title>Gherkin Health</title>
     <style>
         :root {
@@ -480,18 +499,25 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
 
     <div class="scores-grid">
         <div class="score-card health">
-            <div class="score-label">Overall Health</div>
+            <div class="score-label">Overall Health ${renderDelta(metrics.scores.health, prevSnapshot?.health)}</div>
             <div class="score-value">${metrics.scores.health}</div>
         </div>
         <div class="score-card maintain">
-            <div class="score-label">Maintainability</div>
+            <div class="score-label">Maintainability ${renderDelta(metrics.scores.maintainability, prevSnapshot?.maintainability)}</div>
             <div class="score-value">${metrics.scores.maintainability}</div>
         </div>
         <div class="score-card complex">
-            <div class="score-label">Complexity</div>
+            <div class="score-label">Complexity ${renderDelta(metrics.scores.complexity, prevSnapshot?.complexity, true)}</div>
             <div class="score-value">${metrics.scores.complexity}</div>
         </div>
     </div>
+
+    ${snapshots.length > 1 ? `
+    <h2 class="section-title">Historical Trends</h2>
+    <div style="background: var(--vscode-editorWidget-background); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-sm); margin-bottom: 40px; animation: fadeInUp 0.5s ease-out forwards 0.2s;">
+        <canvas id="trendsChart" width="1000" height="250"></canvas>
+    </div>
+    ` : ''}
 
     ${recommendations.length > 0 ? `
     <h2 class="section-title">Actionable Insights</h2>
@@ -614,6 +640,75 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         <div class="stat-pill"><strong>Avg Scenario Length:</strong> <span>${metrics.averageScenarioLength.toFixed(1)} steps</span></div>
         <div class="stat-pill"><strong>Avg Background Length:</strong> <span>${metrics.averageBackgroundLength.toFixed(1)} steps</span></div>
     </div>
+
+    ${snapshots.length > 1 ? `
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const vscode = acquireVsCodeApi();
+        const snapshots = ${JSON.stringify(snapshots)};
+        const ctx = document.getElementById('trendsChart').getContext('2d');
+        
+        const labels = snapshots.map(s => {
+            const d = new Date(s.timestamp);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        });
+        
+        const style = getComputedStyle(document.body);
+        const textColor = style.getPropertyValue('--vscode-foreground') || '#cccccc';
+        const gridColor = style.getPropertyValue('--vscode-editorWidget-border') || 'rgba(128,128,128,0.2)';
+
+        Chart.defaults.color = textColor;
+        Chart.defaults.font.family = style.getPropertyValue('--vscode-font-family');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Health',
+                        data: snapshots.map(s => s.health),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Maintainability',
+                        data: snapshots.map(s => s.maintainability),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Complexity',
+                        data: snapshots.map(s => s.complexity),
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: gridColor } },
+                    y: { 
+                        min: 0, 
+                        max: 100, 
+                        grid: { color: gridColor } 
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: textColor } }
+                }
+            }
+        });
+    </script>
+    ` : ''}
 </body>
 </html>`;
 }
