@@ -41,7 +41,32 @@ suite('WorkspaceGraph Test Suite', () => {
         assert.strictEqual(ref, undefined);
     });
 
-    // Since WorkspaceGraph depends heavily on AstRepository and file system events,
-    // comprehensive tests would require mocking those out or using real test fixtures.
-    // Here we ensure the APIs are callable and don't throw.
+    test('Removes nodes correctly when a file is deleted', () => {
+        const uri = 'file:///test.feature';
+        
+        // Manually inject some nodes to simulate parsing
+        (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
+        (graph as any).nodes.set(`${uri}:Scenario:1`, { id: `${uri}:Scenario:1`, type: 'Scenario', uri, parent: `${uri}:Feature:Test`, tags: [] });
+        
+        assert.ok(graph.getAllNodes().length > 0, 'Graph should have nodes after update');
+
+        // Simulate file removal
+        (graph as any).removeNodesByUri(uri);
+        const nodesAfter = graph.getAllNodes().filter(n => n.uri === uri);
+        assert.strictEqual(nodesAfter.length, 0, 'Nodes should be removed for the URI');
+    });
+
+    test('Handles cyclic or repeated updates gracefully', async () => {
+        // Since we cannot mock AST safely here without complex setup, 
+        // we test that dispose and remove don't crash and leave state clean
+        const uri = 'file:///test.feature';
+        (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
+        
+        const nodeCount1 = graph.getAllNodes().length;
+        (graph as any).removeNodesByUri(uri);
+        (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
+        const nodeCount2 = graph.getAllNodes().length;
+
+        assert.strictEqual(nodeCount1, nodeCount2, 'Node count should remain stable across replacement updates');
+    });
 });

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, TagNode } from './graph';
 import { SymbolCache } from './cache';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
+import { Recommendation, RecommendationEngine } from './recommendationEngine';
 
 export function escapeHtml(unsafe: string) {
     return unsafe
@@ -41,7 +42,7 @@ export interface ProjectHealthMetrics {
 export async function showProjectHealthDashboard(context: vscode.ExtensionContext, graph: WorkspaceGraph, symbolCache: SymbolCache) {
     const panel = vscode.window.createWebviewPanel(
         'gherkinHealthDashboard',
-        'Project Health Dashboard',
+        'Gherkin Health',
         vscode.ViewColumn.One,
         { enableScripts: true, retainContextWhenHidden: true }
     );
@@ -49,17 +50,20 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
     panel.webview.html = getLoadingHtml();
 
     try {
-        const metrics = await vscode.window.withProgress({
+        const { metrics, recommendations } = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "Calculating Project Health",
+            title: "Calculating Gherkin Health & Recommendations",
             cancellable: false
         }, async () => {
             await graph.initialize();
-            return calculateHealthMetrics(graph, symbolCache);
+            const metrics = await calculateHealthMetrics(graph, symbolCache);
+            const engine = new RecommendationEngine();
+            const recommendations = engine.generateRecommendations(graph, metrics);
+            return { metrics, recommendations };
         });
 
         const version = context.extension.packageJSON?.version || '1.8.0';
-        panel.webview.html = getDashboardHtml(metrics, version);
+        panel.webview.html = getDashboardHtml(metrics, recommendations, version);
 
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'openFile') {
@@ -155,10 +159,10 @@ export async function calculateHealthMetrics(graph: WorkspaceGraph, symbolCache:
 }
 
 export function getLoadingHtml() {
-    return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Project Health...</h2><p>Scanning graph...</p></body></html>`;
+    return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Gherkin Health...</h2><p>Scanning graph...</p></body></html>`;
 }
 
-export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string): string {
+export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: Recommendation[], version: string): string {
     const renderLink = (uri: string, line: number, text: string) => {
         return `<a href="#" class="file-link" onclick="openFile('${escapeHtml(uri)}', ${line})">${escapeHtml(text)}</a>`;
     };
@@ -179,7 +183,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Health Dashboard</title>
+    <title>Gherkin Health</title>
     <style>
         :root {
             --radius-lg: 16px;
@@ -203,22 +207,57 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
             margin: 0 auto;
             line-height: 1.6;
             max-width: 1200px;
-            /* Animated subtle gradient background */
-            background: linear-gradient(-45deg, var(--vscode-editor-background), var(--vscode-editorWidget-background), var(--vscode-editor-background));
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
+            background: var(--vscode-editor-background);
         }
 
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        /* Recommendations Card Styles */
+        .rec-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.4s ease-out forwards;
         }
+        
+        .rec-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 25px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-sm);
+        }
+        body.vscode-light .rec-card {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        .rec-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--vscode-button-background);
+        }
+        .rec-header {
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;
+        }
+        .rec-title { margin: 0; font-size: 1.2em; font-weight: 600; }
+        .severity-badge {
+            padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .severity-high { background: #e74c3c; color: white; }
+        .severity-medium { background: #f39c12; color: white; }
+        .severity-low { background: #3498db; color: white; }
+        .rec-explanation { margin: 0 0 20px 0; color: var(--vscode-descriptionForeground); flex-grow: 1; }
+        .rec-fix {
+            background-color: rgba(46, 204, 113, 0.1); border-left: 4px solid #2ecc71; padding: 12px 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9em;
+        }
+        .rec-affected { font-size: 0.9em; }
+        .rec-affected ul { margin: 5px 0 0 0; padding-left: 20px; }
 
         .header {
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 40px;
-            animation: fadeInUp 0.5s ease-out forwards;
+            animation: fadeInUp 0.4s ease-out forwards;
         }
         .header h1 {
             margin: 0;
@@ -244,16 +283,13 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
             padding: 32px;
             text-align: center;
             box-shadow: var(--shadow-sm);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-            opacity: 0;
-            animation: fadeInUp 0.6s ease-out forwards;
+            animation: fadeInUp 0.4s ease-out forwards;
         }
 
-        .score-card:nth-child(1) { animation-delay: 0.1s; }
-        .score-card:nth-child(2) { animation-delay: 0.2s; }
-        .score-card:nth-child(3) { animation-delay: 0.3s; }
+
 
         .score-card:hover {
             transform: translateY(-5px);
@@ -294,16 +330,14 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
             margin: 40px 0 24px 0;
             border-bottom: 2px solid var(--glass-border);
             padding-bottom: 8px;
-            opacity: 0;
-            animation: fadeInUp 0.6s ease-out forwards 0.4s;
+            animation: fadeInUp 0.4s ease-out forwards;
         }
 
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: var(--spacing);
-            opacity: 0;
-            animation: fadeInUp 0.6s ease-out forwards 0.5s;
+            animation: fadeInUp 0.4s ease-out forwards;
         }
 
         .metric-panel {
@@ -376,6 +410,24 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
         }
         .file-link:hover { text-decoration: underline; transform: translateX(2px); }
 
+        details {
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 8px 12px;
+            margin-top: 12px;
+            transition: background 0.2s ease;
+        }
+        details:hover { background: rgba(0, 0, 0, 0.05); }
+        summary {
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            user-select: none;
+            color: var(--vscode-textLink-foreground);
+        }
+        details > ul { margin-top: 12px; margin-bottom: 4px; padding-left: 20px; }
+        
         .step-def {
             margin-top: 6px;
             font-size: 13px;
@@ -396,8 +448,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
 
         .overview-stats {
             display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px;
-            opacity: 0;
-            animation: fadeInUp 0.6s ease-out forwards 0.6s;
+            animation: fadeInUp 0.4s ease-out forwards;
         }
         .stat-pill {
             background: var(--vscode-editorWidget-background);
@@ -423,7 +474,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
 </head>
 <body>
     <div class="header">
-        <h1>Project Health Dashboard</h1>
+        <h1>Gherkin Health</h1>
         <span class="badge" style="font-size: 14px; padding: 6px 14px;">v${version}</span>
     </div>
 
@@ -442,59 +493,63 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, version: string)
         </div>
     </div>
 
-    <h2 class="section-title">Technical Debt & Quality</h2>
-    <div class="metrics-grid">
-        <div class="metric-panel">
-            <div class="metric-header" onclick="togglePanel(this)">
-                <div class="icon-title"><span>⚠️</span> <span>Unused Steps</span></div>
-                <span class="badge">${metrics.stepAnalysis.unusedSteps.length}</span>
+    ${recommendations.length > 0 ? `
+    <h2 class="section-title">Actionable Insights</h2>
+    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized recommendations to improve the health, maintenance, and reliability of your Gherkin tests.</p>
+    <div class="rec-grid">
+        ${recommendations.map(rec => `
+            <div class="rec-card">
+                <div class="rec-header">
+                    <h3 class="rec-title">${escapeHtml(rec.title)}</h3>
+                    <span class="severity-badge severity-${rec.severity}">${rec.severity}</span>
+                </div>
+                <p class="rec-explanation">${escapeHtml(rec.explanation)}</p>
+                <div class="rec-fix">
+                    <strong>Suggested Fix:</strong> ${escapeHtml(rec.suggestedFix)}
+                </div>
+                ${rec.affectedItems && rec.affectedItems.length > 0 ? `
+                <div class="rec-affected">
+                    <strong>Affected Items:</strong>
+                    <details>
+                        <summary>Show all ${rec.affectedItems.length} items</summary>
+                        <ul>
+                            ${rec.affectedItems.map(item => `
+                                <li>
+                                    <div class="step-def" style="margin-bottom: 4px; display: block;">${escapeHtml(item.label)}</div>
+                                    <a href="#" class="file-link" style="font-size: 12px; margin-left: 8px;" onclick="openFile('${escapeHtml(item.uri)}', ${item.line || 0})">↳ ${escapeHtml(item.uri.split('/').pop() || item.uri)}${item.line ? `:${item.line + 1}` : ''}</a>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </details>
+                </div>` : rec.affectedFiles && rec.affectedFiles.length > 0 ? `
+                <div class="rec-affected">
+                    <strong>Affected Files:</strong>
+                    <details>
+                        <summary>Show all ${rec.affectedFiles.length} files</summary>
+                        <ul>
+                            ${rec.affectedFiles.map(uri => `
+                                <li><a href="#" class="file-link" onclick="openFile('${escapeHtml(uri)}', 0)">${escapeHtml(uri.split('/').pop() || uri)}</a></li>
+                            `).join('')}
+                        </ul>
+                    </details>
+                </div>` : ''}
             </div>
-            <div class="metric-body">
-                ${metrics.stepAnalysis.unusedSteps.length ? metrics.stepAnalysis.unusedSteps.map(u =>
-                    `<div class="list-item">
-                        <div>
-                            <div class="step-def">${escapeHtml(u.stepDef.pattern)}</div>
-                        </div>
-                        ${renderLink(u.stepDef.uri, u.stepDef.line, 'Go →')}
-                    </div>`
-                ).join('') : '<div class="empty-state"><span class="emoji">🎉</span><span>No unused steps! Codebase is clean.</span></div>'}
-            </div>
-        </div>
-
-        <div class="metric-panel">
-            <div class="metric-header" onclick="togglePanel(this)">
-                <div class="icon-title"><span>🔄</span> <span>Duplicated Steps</span></div>
-                <span class="badge">${metrics.stepAnalysis.duplicatedSteps.length}</span>
-            </div>
-            <div class="metric-body">
-                ${metrics.stepAnalysis.duplicatedSteps.length ? metrics.stepAnalysis.duplicatedSteps.map(d =>
-                    `<div class="list-item" style="flex-direction: column; align-items: flex-start;">
-                        <div class="step-def">${escapeHtml(d.pattern)}</div>
-                        <div style="font-size: 13px; margin-top: 8px; opacity: 0.8; padding-left: 4px;">
-                            Found in: ${d.stepDefs.map(def => renderLink(def.uri, def.line, 'Go →')).join(' | ')}
-                        </div>
-                    </div>`
-                ).join('') : '<div class="empty-state"><span class="emoji">✨</span><span>No duplicated steps! Great job.</span></div>'}
-            </div>
-        </div>
-
-        <div class="metric-panel">
-            <div class="metric-header" onclick="togglePanel(this)">
-                <div class="icon-title"><span>❓</span> <span>Undefined Steps</span></div>
-                <span class="badge">${metrics.undefinedSteps.length}</span>
-            </div>
-            <div class="metric-body">
-                ${metrics.undefinedSteps.length ? metrics.undefinedSteps.map(s =>
-                    `<div class="list-item">
-                        <span title="${escapeHtml(s.text)}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; display: inline-block;">
-                            <strong>${escapeHtml(s.keyword)}</strong> ${escapeHtml(s.text)}
-                        </span>
-                        ${renderLink(s.uri, s.line, 'Go →')}
-                    </div>`
-                ).join('') : '<div class="empty-state"><span class="emoji">✅</span><span>All steps are defined!</span></div>'}
-            </div>
+        `).join('')}
+    </div>
+    ` : `
+    <h2 class="section-title">Actionable Insights</h2>
+    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized recommendations to improve the health, maintenance, and reliability of your Gherkin tests.</p>
+    <div class="rec-grid">
+        <div class="rec-card" style="text-align: center; grid-column: 1 / -1; padding: 40px;">
+            <span style="font-size: 32px; display: block; margin-bottom: 16px;">🎉</span>
+            <h3 style="margin: 0;">Amazing!</h3>
+            <p style="color: var(--vscode-descriptionForeground);">Your workspace is perfectly healthy. No recommendations found.</p>
         </div>
     </div>
+    `}
+
+    <h2 class="section-title">Technical Debt & Quality</h2>
+    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Detailed metrics on potential issues and codebase complexity.</p>
 
     <h2 class="section-title">Architecture & Size</h2>
     <div class="metrics-grid">

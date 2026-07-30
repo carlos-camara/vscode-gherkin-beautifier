@@ -232,7 +232,7 @@
       },
       {
         "command": "gherkinPowerTools.showStatistics",
-        "title": "Show Project Health Dashboard",
+        "title": "Show Gherkin Health",
         "category": "Gherkin PowerTools"
       },
       {

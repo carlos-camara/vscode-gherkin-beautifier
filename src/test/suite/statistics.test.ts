@@ -30,7 +30,7 @@ suite('Project Health Dashboard Test Suite', () => {
 
     test('getLoadingHtml: Returns valid HTML', () => {
         const html = getLoadingHtml();
-        assert.ok(html.includes('Analyzing Project Health'));
+        assert.ok(html.includes('Analyzing Gherkin Health'));
     });
 
     test('getDashboardHtml: Renders metrics correctly', () => {
@@ -55,7 +55,7 @@ suite('Project Health Dashboard Test Suite', () => {
             }
         };
 
-        const html = getDashboardHtml(dummyMetrics, '1.8.0');
+        const html = getDashboardHtml(dummyMetrics, [], '1.8.0');
 
         assert.ok(html.includes('Very long scenario with &lt;script&gt;'));
         assert.ok(html.includes('@smoke'));
@@ -97,7 +97,7 @@ suite('Project Health Dashboard Test Suite', () => {
 
         await showProjectHealthDashboard(mockContext, graph, symbolCache);
 
-        assert.ok(webviewHtml.includes('Project Health Dashboard'), 'Dashboard HTML should be set');
+        assert.ok(webviewHtml.includes('Gherkin Health'), 'Dashboard HTML should be set');
 
         vscode.window.createWebviewPanel = originalCreateWebviewPanel;
         vscode.window.withProgress = originalWithProgress;
