@@ -110,7 +110,7 @@ Align tables, wrap long tags, and standardize indentation using the built-in for
 </div>
 
 ### Step Definition Analysis Dashboard
-Generate a comprehensive, interactive Webview report to ensure your Python step definitions are healthy and maintainable. Detect unused steps (grouped by file), duplicated implementations, ambiguous step usages, and suspiciously similar patterns. 
+Generate a comprehensive, interactive Webview report to ensure your Python step definitions are healthy and maintainable. Detect unused steps (grouped by file), duplicated implementations, ambiguous step usages, and suspiciously similar patterns.
 *Note: A screenshot of this dashboard will be added in a future release.*
 
 ### Tag Impact Analysis
