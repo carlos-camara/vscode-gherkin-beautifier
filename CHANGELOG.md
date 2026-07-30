@@ -1,18 +1,14 @@
 <!-- markdownlint-disable MD024 -->
-## [Unreleased]
-
-### Added
-- **Project Health Dashboard**: Redesigned the Statistics feature into a comprehensive Project Health Dashboard that measures Complexity, Maintainability, and Technical Debt (unused/duplicate/undefined steps). The dashboard operates in $O(1)$ time by leveraging the new in-memory `WorkspaceGraph`. Includes a premium Glassmorphism UI redesign with fluid animations and responsive states.
-- **Integrated Step Analysis**: The legacy "Analyze Step Definitions" command has been fully integrated into the Project Health Dashboard for a unified experience.
-
-🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
 ## [1.8.0] - 2026-07-30
 
 ### 🚀 Added
+- **Project Health Dashboard**: Redesigned the Statistics feature into a comprehensive Project Health Dashboard that measures Complexity, Maintainability, and Technical Debt (unused/duplicate/undefined steps). The dashboard operates in $O(1)$ time by leveraging the new in-memory `WorkspaceGraph`. Includes a premium Glassmorphism UI redesign with fluid animations and responsive states.
+- **Integrated Step Analysis**: The legacy "Analyze Step Definitions" command has been fully integrated into the Project Health Dashboard for a unified experience.
 - **Smart Context-Aware Completion**: Python Behave step autocomplete is now incredibly smart. Instead of sorting suggestions alphabetically, Gherkin PowerTools now uses an intelligent ranking algorithm that tracks your recent usage, understands the current active feature, and prioritizes steps based on contextual tag affinity (e.g. suggesting UI steps when you are in a `@ui` feature). This makes writing scenarios significantly faster as the most relevant steps are always at the top of the list.
 - **Centralized AST Repository**: Completely redesigned the internal Gherkin parsing architecture. The extension now uses a centralized `AstRepository` that caches the parsed Abstract Syntax Tree per document version.
   This eliminates redundant CPU-intensive parsing operations across multiple features (formatting, linting, hover, autocomplete), drastically reducing CPU usage and improving editor responsiveness, especially in large `.feature` files.
