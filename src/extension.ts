@@ -5,6 +5,7 @@ import { GherkinDocumentSymbolProvider } from './outline';
 import { GherkinLinter } from './linter';
 import { GherkinHighlighter } from './highlighter';
 import { showStatisticsDashboard } from './statistics';
+import { showStepAnalysisReport } from './stepAnalysisReport';
 import { GherkinDefinitionProvider } from './definition';
 import { SymbolCache, FeatureCache } from './cache';
 import { logger } from './logger';
@@ -12,6 +13,9 @@ import { GherkinCodeActionProvider, createStepDefinition } from './codeAction';
 import { GherkinCompletionProvider } from './completion';
 import { CompletionRankingService } from './completionRanking';
 import { GherkinHoverProvider } from './hover';
+import { astRepository } from './ast';
+import { WorkspaceGraph } from './graph';
+import { metricsLogger } from './metrics';
 import { discoveryService } from './discovery';
 import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
 
@@ -65,6 +69,15 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize Completion Ranking Service for contextual completions
     const rankingService = new CompletionRankingService();
     rankingService.usageIndexer.setEventBus(eventBus);
+
+    // Initialize AST Repository to centralize parsing
+    astRepository.setEventBus(eventBus);
+    context.subscriptions.push({ dispose: () => astRepository.dispose() });
+
+    // Initialize WorkspaceGraph
+    const workspaceGraph = new WorkspaceGraph(symbolCache);
+    workspaceGraph.setEventBus(eventBus);
+    context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
 
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);
@@ -134,6 +147,9 @@ export async function activate(context: vscode.ExtensionContext) {
             } else {
                 vscode.window.showInformationMessage("Gherkin PowerTools: Document is already formatted or could not be formatted.");
             }
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.showMetrics', () => {
+            metricsLogger.showMetrics();
         })
     );
 
@@ -146,6 +162,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register the statistics dashboard command
     context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.analyzeSteps', () => {
+            showStepAnalysisReport(workspaceGraph, symbolCache);
+        }),
         vscode.commands.registerCommand('gherkinPowerTools.showStatistics', () => {
             showStatisticsDashboard(context);
         })

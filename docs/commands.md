@@ -1,68 +1,102 @@
-# Commands Reference
+# Command Reference
 
-Gherkin PowerTools contributes several commands to help you format, execute, and analyze your BDD projects.
+Gherkin PowerTools contributes several commands to improve your workflow. All commands are prefixed with `Gherkin PowerTools:` in the Command Palette.
 
-## Central Command Center
+---
 
-### `gherkinPowerTools.commandCenter`
-* **Title:** Gherkin PowerTools: Command Center
-* **Description:** Opens a unified interactive QuickPick menu to access all extension capabilities (formatting, execution, debugging, step navigation, and diagnostics) from a single place.
-* **Access:** Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+## Gherkin PowerTools: Command Center
+- **Identifier**: `gherkinPowerTools.commandCenter`
+- **Where it appears**: Command Palette.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Opens a unified QuickPick menu giving access to formatting, statistics, running tests, debugging, and workspace diagnostics.
+- **Default shortcut**: None.
 
-## Core Features
+---
 
-### `gherkinPowerTools.format`
-* **Title:** Format Gherkin Document
-* **Description:** Formats the currently active `.feature` file according to your configured formatting rules.
-* **Access:** Command Palette, or standard format shortcut (`Shift+Alt+F` / `⇧⌥F`).
+## Format Gherkin Document
+- **Identifier**: `gherkinPowerTools.format`
+- **Where it appears**: Command Palette, Editor Context Menu (Right-click in `.feature` file).
+- **Required context**: An active `.feature` file.
+- **Input**: None.
+- **Result**: Formats the active Gherkin document or the current selection according to your configuration profile.
+- **Related setting**: `gherkinPowerTools.profile`, `gherkinPowerTools.indentation.steps`, etc.
+- **Default shortcut**: Depends on VS Code's `editor.action.formatDocument` (e.g., <kbd>Shift+Alt+F</kbd>).
 
-### `gherkinPowerTools.showStatistics`
-* **Title:** Show Project Statistics
-* **Description:** Opens a Webview showing rich analytics (tag usage, scenario complexity, etc.) across your entire Gherkin workspace.
-* **Access:** Command Palette, or the Editor Title menu.
+---
 
-### `gherkinPowerTools.diagnoseWorkspace`
-* **Title:** Diagnose Workspace
-* **Description:** Scans the workspace and outputs internal diagnostics about Python step discovery and caching. Useful for troubleshooting.
-* **Access:** Command Palette.
+## Diagnose Workspace
+- **Identifier**: `gherkinPowerTools.diagnoseWorkspace`
+- **Where it appears**: Command Palette, Editor Context Menu.
+- **Required context**: An active `.feature` file or workspace.
+- **Input**: None.
+- **Result**: Analyzes environment versions, workspace layout, discovered feature/step files, indexed definitions, Python extension status, and `.gherkin-powertoolsrc.json` validity. Generates an Output Channel report with a 1-click `Copy Sanitized Report` action.
+- **Default shortcut**: None.
 
-## Test Explorer & Execution (Behave Only)
+---
 
-These commands are primarily driven through the Test Explorer UI, but can be invoked manually or bound to keyboard shortcuts.
+## Show Project Statistics
+- **Identifier**: `gherkinPowerTools.showStatistics`
+- **Where it appears**: Command Palette, Editor Context Menu.
+- **Required context**: An active `.feature` file.
+- **Input**: None.
+- **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing scenario counts, tag impact, and complexity distribution.
+- **Default shortcut**: None.
 
-### `gherkinPowerTools.runFeature`
-* **Title:** Run Feature
-* **Description:** Executes all scenarios in the active feature file using Python Behave.
-* **Access:** Test Explorer, Editor Title menu.
+---
 
-### `gherkinPowerTools.runScenario`
-* **Title:** Run Scenario
-* **Description:** Executes the specific scenario under the cursor.
-* **Access:** Test Explorer, CodeLens, Editor context menu.
+## Analyze Step Definitions
+- **Identifier**: `gherkinPowerTools.analyzeSteps`
+- **Where it appears**: Command Palette, Editor Context Menu.
+- **Required context**: A Python Behave project workspace.
+- **Input**: None.
+- **Result**: Proactively indexes all `.feature` and `.py` files in the workspace. Analyzes all discovered Python step definitions against all `.feature` files to find unused steps (grouped by file), duplicated implementations, ambiguous usages, and suspiciously similar regex patterns. Opens an interactive dashboard webview with clickable file links for instant navigation.
+- **Default shortcut**: None.
 
-### `gherkinPowerTools.runFeatureWithArgs`
-* **Title:** Edit Feature...
-* **Description:** Prompts for additional Behave CLI arguments before executing the active feature file.
-* **Access:** Test Explorer context menu.
+---
 
-### `gherkinPowerTools.runScenarioWithArgs`
-* **Title:** Edit Scenario...
-* **Description:** Prompts for additional Behave CLI arguments before executing the selected scenario.
-* **Access:** Test Explorer context menu.
+## Show Developer Metrics
+- **Identifier**: `gherkinPowerTools.showMetrics`
+- **Where it appears**: Command Palette.
+- **Required context**: The `gherkinPowerTools.diagnostics.metricsEnabled` setting must be enabled.
+- **Input**: None.
+- **Result**: Opens an Output Channel displaying real-time parser performance metrics, cache hit ratios, and AST complexities to aid in developer troubleshooting.
+- **Related setting**: `gherkinPowerTools.diagnostics.metricsEnabled`
+- **Default shortcut**: None.
 
-### `gherkinPowerTools.debugFeature`
-* **Title:** Debug Feature
-* **Description:** Launches the active feature file using the Python debugger, stopping at any set breakpoints in your step definitions.
-* **Access:** Test Explorer.
+---
 
-### `gherkinPowerTools.debugScenario`
-* **Title:** Debug Scenario
-* **Description:** Launches the specific scenario under the cursor using the Python debugger.
-* **Access:** Test Explorer, CodeLens.
+## Edit Behave args & Run
+- **Identifier**: `gherkinPowerTools.testExplorerEditAndRun`
+- **Where it appears**: Testing Sidebar (Title Menu).
+- **Required context**: Active Testing view.
+- **Input**: Opens an interactive dialog to enter Behave arguments (e.g., `--tags=@wip`).
+- **Result**: Prompts whether to save the arguments permanently to the workspace settings (`gherkinPowerTools.behave.additionalArguments`) or use them once for the current session. Then executes the selected tests.
+- **Related setting**: `gherkinPowerTools.behave.additionalArguments`
+- **Default shortcut**: None.
 
-### `gherkinPowerTools.testExplorerEditAndRun`
-* **Title:** Edit Behave args & Run
-* **Description:** Same as run with args, available directly as an inline action in the Test Explorer nodes.
-* **Access:** Test Explorer inline actions.
+---
 
-*(Note: Internal commands such as `gherkinPowerTools.internal.recordCompletion` are omitted as they are triggered automatically by extension logic and are not meant for manual invocation).*
+## Test Execution Commands (CodeLens / Tree Nodes)
+
+These commands typically appear as CodeLens buttons above Scenarios/Features, or are invoked internally by the Test Explorer.
+
+### Run Feature
+- **Identifier**: `gherkinPowerTools.runFeature`
+- **Result**: Executes the entire `.feature` file using Python Behave.
+
+### Run Scenario
+- **Identifier**: `gherkinPowerTools.runScenario`
+- **Result**: Executes a single Scenario or Scenario Outline.
+
+### Debug Feature
+- **Identifier**: `gherkinPowerTools.debugFeature`
+- **Result**: Launches the Python debugger, attaching it to the Behave execution of the `.feature` file. Allows stopping at breakpoints in step definitions.
+
+### Debug Scenario
+- **Identifier**: `gherkinPowerTools.debugScenario`
+- **Result**: Launches the Python debugger for a single Scenario or Scenario Outline.
+
+### Edit Feature / Edit Scenario
+- **Identifiers**: `gherkinPowerTools.runFeatureWithArgs` / `gherkinPowerTools.runScenarioWithArgs`
+- **Result**: Interactively prompts for custom CLI arguments before running or debugging the target test.

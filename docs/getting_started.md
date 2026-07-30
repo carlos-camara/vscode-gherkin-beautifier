@@ -70,6 +70,18 @@ To run your tests, simply open the **Testing** panel in the VS Code sidebar. The
 
 ---
 
+## 6. Command Center
+
+If you ever forget a command or shortcut, press <kbd>Ctrl+Shift+P</kbd> (<kbd>Cmd+Shift+P</kbd> on macOS) and search for **Gherkin PowerTools: Command Center**.
+
+This opens an interactive quick-pick menu that groups all the extension's capabilities (formatting, running tests, diagnosing workspace, viewing statistics) into one unified searchable list.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.png" alt="Command Center" width="600" />
+</div>
+
+---
+
 ## Next Steps
 
 Explore the full capabilities:

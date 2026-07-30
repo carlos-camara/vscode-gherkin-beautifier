@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { DiagnosticEngine, redactPath, redactReportText, showDiagnosticsReport } from '../../diagnostics';
 import { SymbolCache } from '../../cache';
+import { discoveryService } from '../../discovery';
 
 suite('DiagnosticEngine & Redaction Test Suite', () => {
     let engine: DiagnosticEngine;
@@ -92,6 +93,25 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
         assert.strictEqual(report.indexedDefinitionsCount, 0);
     });
 
+    test('collectDiagnostics handles empty step cache but with step files', async () => {
+        const mockCache = {
+            getAllStepDefinitions: async () => []
+        } as unknown as SymbolCache;
+
+        const originalGetStepFiles = discoveryService.getStepFiles;
+        discoveryService.getStepFiles = async () => [vscode.Uri.file('/steps/test.py')];
+
+        try {
+            const report = await engine.collectDiagnostics(mockCache);
+            assert.strictEqual(report.indexedDefinitionsCount, 0);
+            assert.ok(report.stepFilesCount > 0);
+            assert.ok(report.warnings.some(w => w.includes('0 step definitions were indexed')));
+            assert.ok(report.recommendations.some(r => r.includes('@given, @when, @then')));
+        } finally {
+            discoveryService.getStepFiles = originalGetStepFiles;
+        }
+    });
+
     test('showDiagnosticsReport creates OutputChannel and returns report markdown', async () => {
         const subscriptions: vscode.Disposable[] = [];
         const mockContext = { subscriptions } as unknown as vscode.ExtensionContext;
@@ -100,5 +120,32 @@ suite('DiagnosticEngine & Redaction Test Suite', () => {
         assert.ok(result && typeof result === 'string');
         assert.ok(result.includes('GHERKIN POWERTOOLS DIAGNOSTIC REPORT'));
         assert.ok(subscriptions.length > 0, 'Should push OutputChannel to context subscriptions');
+    });
+
+    test('showDiagnosticsReport writes to clipboard if user selects Copy', async () => {
+        const subscriptions: vscode.Disposable[] = [];
+        const mockContext = { subscriptions } as unknown as vscode.ExtensionContext;
+
+        const originalShowInfo = vscode.window.showInformationMessage;
+        
+        try {
+            // Mock showInformationMessage to return the Copy action button for the report
+            (vscode.window as any).showInformationMessage = async (msg: string, ..._items: string[]) => {
+                if (msg.includes('Diagnostics gathered') || msg.includes('Diagnostic report generated')) {
+                    return '📋 Copy Sanitized Report';
+                }
+                return undefined;
+            };
+
+            // Write some dummy text first to ensure it actually changes
+            await vscode.env.clipboard.writeText('dummy');
+
+            await showDiagnosticsReport(mockContext);
+
+            const clipboardText = await vscode.env.clipboard.readText();
+            assert.ok(clipboardText.includes('GHERKIN POWERTOOLS DIAGNOSTIC REPORT'));
+        } finally {
+            vscode.window.showInformationMessage = originalShowInfo;
+        }
     });
 });

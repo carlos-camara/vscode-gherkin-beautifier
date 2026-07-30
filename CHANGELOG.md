@@ -8,10 +8,18 @@ All notable changes to the "vscode-gherkin-powertools" extension will be documen
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.8.0] - Unreleased
+## [1.8.0] - 2026-07-30
 
 ### 🚀 Added
 - **Smart Context-Aware Completion**: Python Behave step autocomplete is now incredibly smart. Instead of sorting suggestions alphabetically, Gherkin PowerTools now uses an intelligent ranking algorithm that tracks your recent usage, understands the current active feature, and prioritizes steps based on contextual tag affinity (e.g. suggesting UI steps when you are in a `@ui` feature). This makes writing scenarios significantly faster as the most relevant steps are always at the top of the list.
+- **Centralized AST Repository**: Completely redesigned the internal Gherkin parsing architecture. The extension now uses a centralized `AstRepository` that caches the parsed Abstract Syntax Tree per document version.
+  This eliminates redundant CPU-intensive parsing operations across multiple features (formatting, linting, hover, autocomplete), drastically reducing CPU usage and improving editor responsiveness, especially in large `.feature` files.
+- **Thundering Herd Protection**: The new parsing architecture prevents multiple language features from simultaneously triggering parsing on the exact same keystroke, creating a perfectly smooth typing experience.
+- **Parser Diagnostics & Performance Metrics**: A new lightweight metrics engine that tracks parsing duration, cache hit ratios, document complexity, and parser failures in real-time. Enable via `gherkinPowerTools.diagnostics.metricsEnabled` and view using the **Show Developer Metrics** command.
+- **Workspace Relationship Graph**: Implemented an event-driven `WorkspaceGraph` that maps structural relationships between Features, Scenarios, Rules, and Python Step Definitions in memory. This enables O(1) query capabilities for "Go To Definition" and "Hover" operations, entirely eliminating redundant regex scanning across the workspace.
+- **Step Definition Analysis Dashboard**: Added a comprehensive, interactive webview dashboard (`Gherkin PowerTools: Analyze Step Definitions`) to help you keep your Python steps clean.
+  It proactively indexes the workspace to detect unused steps (grouped by Python file), duplicated implementations, ambiguous step usages, and suspiciously similar regex patterns.
+  Features click-to-navigate for all file references.
 
 ## [1.7.9] - 2026-07-29
 

@@ -12,7 +12,7 @@ In earlier versions, each feature (like the Test Controller, Symbol Cache, and L
 - **Race Conditions:** Different services updated their internal states at different times.
 - **Memory Leaks:** It was difficult to ensure all watchers were properly disposed when features were toggled on or off.
 
-### How it Works
+### How the Event Bus Works
 1. **Centralized Watchers (`extension.ts` and `discovery.ts`):**
    The extension initializes exactly *one* set of VS Code file system watchers and text document listeners at the root of the extension.
 2. **Event Routing:**
@@ -44,4 +44,35 @@ To provide intelligent Behave step autocomplete without relying on remote AI mod
 3. **Deterministic Ranking**: When the user requests autocomplete, the `CompletionRankingService` calculates a score based on LRU presence, active feature context, tag affinity, and semantic string matching. The highest scores are assigned a lexicographical `sortText` (e.g., `000_`) to force VS Code's IntelliSense to present the most relevant steps at the top.
 
 ### Lifecycle & Disposal
-Every service that calls `eventBus.onEvent()` tracks its subscription with an `eventBusDisposable`. When a service is disposed, it automatically unregisters itself from the Event Bus. When the extension deactivates, the Event Bus itself is disposed, instantly severing all active subscriptions and preventing memory leaks.
+Every service that calls `eventBus.onEvent()` tracks its subscription with an `eventBusDisposable`. When a service is disposed, it automatically unregisters itself from the Event Bus. When the extension deactivates, the Event Bus itself is disposed, severing all active subscriptions and preventing memory leaks.
+
+## AST Repository
+
+To optimize performance and eliminate redundant parsing of the same document across multiple providers (formatter, linter, hover, definitions), Gherkin PowerTools centralizes Gherkin parsing through the **AST Repository** (`AstRepository`).
+
+### How the Repository Works
+1. **Memoization:** When a provider requests the AST for a document, the repository checks its cache. If a cached `ParseResult` exists for the current document version, it is returned immediately.
+2. **Thundering Herd Protection:** The repository caches the *Promise* of the parse operation. If multiple providers request the AST simultaneously before the first parse completes, they all await the exact same Promise, guaranteeing the document is only parsed once per version.
+3. **Event-Driven Invalidation:** The repository listens to the `WorkspaceEventBus`. When a `featureFileChanged` or `featureFileDeleted` event fires, the repository automatically purges the stale AST from its internal LRU cache.
+4. **Memory Management:** The repository maintains a bounded Least-Recently-Used (LRU) cache (e.g., maximum 100 parsed documents) to prevent unbounded memory growth in large workspaces.
+5. **Diagnostics & Telemetry:** If metrics are enabled, the repository integrates with the `MetricsLogger` to track parse durations, cache hit ratios, and parser failures without overhead.
+
+### Architecture Validation
+To ensure long-term stability and prevent regressions in these core architectural patterns, Gherkin PowerTools employs an **Architecture Validation Test Suite**. This suite runs in CI and automatically validates that:
+- Every command declared in `package.json` is successfully registered in the extension context.
+- Every registered provider (CodeLens, Hover, Definition, CodeAction, Completion) is properly pushed to the context subscriptions for disposal.
+- All file watchers and the Event Bus are correctly disposed during deactivation.
+- All core modules and services initialize successfully without exceptions during bootstrap.
+- No duplicate command registrations exist.
+
+## Workspace Relationship Graph
+
+To enable instantaneous, O(1) semantic queries across massive projects, the extension introduces the **Workspace Relationship Graph** (`WorkspaceGraph`).
+
+### How the Graph Works
+1. **Incremental, Event-Driven Construction:** Subscribes to the `WorkspaceEventBus`. When a Gherkin document or Python step file is changed, the graph updates only the affected nodes.
+2. **Zero-Overhead Parsing:** Instead of re-parsing text, it natively consumes the memoized AST from the `AstRepository` and the pre-indexed symbols from the `SymbolCache`.
+3. **Semantic Mapping:** The graph establishes bi-directional edges between Gherkin steps and Python step definitions (`StepNode` <-> `StepDefNode`), and tracks Tag inheritance downwards to Scenarios.
+4. **O(1) Queries:** Powers ultra-fast operations like `getUsages`, `getReferences`, `getImpactedScenarios`, and `getDuplicateImplementations` without iterating over regex patterns on every hover or go-to-definition request.
+5. **Dashboard Webviews:** The graph directly powers the Step Definition Analysis Dashboard (`StepAnalysisReport`). The backend queries the graph for unused, duplicated, and ambiguous nodes, serializes them into a JSON payload, and injects them into an HTML Webview.
+   Standard VS Code message passing (`acquireVsCodeApi().postMessage`) bridges the UI clicks back to the extension host to trigger `vscode.window.showTextDocument` for interactive file navigation.

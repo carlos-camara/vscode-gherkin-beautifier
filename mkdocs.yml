@@ -66,6 +66,7 @@ nav:
   - Analytics: analytics.md
   - Configuration: configuration.md
   - Commands: commands.md
+  - Performance: performance.md
   - Compatibility: compatibility.md
   - Troubleshooting: troubleshooting.md
   - Architecture: architecture.md
