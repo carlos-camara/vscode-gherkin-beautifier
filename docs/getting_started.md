@@ -77,7 +77,7 @@ If you ever forget a command or shortcut, press <kbd>Ctrl+Shift+P</kbd> (<kbd>Cm
 This opens an interactive quick-pick menu that groups all the extension's capabilities (formatting, running tests, diagnosing workspace, viewing statistics) into one unified searchable list.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.png" alt="Command Center" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif" alt="Command Center" width="600" />
 </div>
 
 ---
