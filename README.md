@@ -111,20 +111,12 @@ Align tables, wrap long tags, and standardize indentation using the built-in for
 
 </div>
 
-### Step Definition Analysis Dashboard
-Generate a comprehensive, interactive Webview report to ensure your Python step definitions are healthy and maintainable. Detect unused steps (grouped by file), duplicated implementations, ambiguous step usages, and suspiciously similar patterns.
-*Note: A screenshot of this dashboard will be added in a future release.*
+### Project Health Dashboard
+Generate a comprehensive, interactive Webview report to ensure your Python step definitions are healthy and maintainable. This dashboard analyzes your source structure to calculate your Overall Project Health, Maintainability, Complexity, and Technical Debt (e.g., unused, duplicated, or ambiguous steps).
 
-### Tag Impact Analysis
-Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.
+*Note: This analyzes static source structure, not runtime test coverage or execution results.*
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover over a tag to see its impact across the workspace" width="600" />
-</div>
-
-### Workspace Source Analytics
-Generate an interactive dashboard from your Gherkin source files to analyze feature counts, tag frequencies, and scenario complexity based on step counts. *(Note: This analyzes source structure, not runtime test coverage or execution results).*
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics dashboard" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/project-health.png" alt="Interactive BDD source analytics and project health dashboard" width="600" />
 </div>
 
 ---

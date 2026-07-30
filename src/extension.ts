@@ -4,8 +4,7 @@ import { GherkinFormattingEditProvider } from './formatter';
 import { GherkinDocumentSymbolProvider } from './outline';
 import { GherkinLinter } from './linter';
 import { GherkinHighlighter } from './highlighter';
-import { showStatisticsDashboard } from './statistics';
-import { showStepAnalysisReport } from './stepAnalysisReport';
+import { showProjectHealthDashboard } from './statistics';
 import { GherkinDefinitionProvider } from './definition';
 import { SymbolCache, FeatureCache } from './cache';
 import { logger } from './logger';
@@ -160,13 +159,10 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Register the statistics dashboard command
+    // Register the project health dashboard command
     context.subscriptions.push(
-        vscode.commands.registerCommand('gherkinPowerTools.analyzeSteps', () => {
-            showStepAnalysisReport(workspaceGraph, symbolCache);
-        }),
         vscode.commands.registerCommand('gherkinPowerTools.showStatistics', () => {
-            showStatisticsDashboard(context);
+            showProjectHealthDashboard(context, workspaceGraph, symbolCache);
         })
     );
 

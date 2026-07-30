@@ -1,33 +1,40 @@
-# Analytics & Statistics
+# Analytics & Project Health
 
-Gherkin PowerTools includes a built-in Workspace Analytics dashboard that provides immediate insights into the health and structure of your BDD suite.
+Gherkin PowerTools includes a built-in **Project Health Dashboard** that provides immediate insights into the architecture, quality, and maintainability of your BDD suite.
 
 ---
 
 ## What the Dashboard Does
 
-The Analytics Dashboard parses your workspace's `.feature` files and generates heuristics based on the underlying Cucumber AST.
+The Analytics Dashboard analyzes your workspace in real-time leveraging the in-memory **Workspace Graph** (which connects Features, Scenarios, Steps, and Python Step Definitions).
 
-It helps you understand **Source-Level Structure**, including:
-- How many Feature files, Scenarios, and Steps exist in the workspace.
-- Which tags are used most frequently.
-- Which Scenarios are the most complex (ranked by step count).
+It generates deep heuristics and scores, including:
+
+- **Overall Project Health Score**: A unified metric indicating the general state of your test suite.
+- **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files.
+- **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
+- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, and undefined steps.
+- **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
+
+**Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on a large scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.
 
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 
 ---
 
-## How to View Statistics
+## How to View the Dashboard
 
 To generate the dashboard:
 1. Open the Command Palette (<kbd>Ctrl+Shift+P</kbd> or <kbd>Cmd+Shift+P</kbd>).
-2. Type and select **Gherkin PowerTools: Show Project Statistics**.
+2. Type and select **Gherkin PowerTools: Show Project Health Dashboard**.
 
 A Webview panel will open in VS Code displaying the generated HTML report.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Statistics dashboard - workspace metrics generated from the Cucumber AST" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/project-health.png" alt="Project Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" />
 </div>
+
+> **Note**: The legacy "Analyze Step Definitions" command has been fully integrated into the new Project Health Dashboard. Both commands now launch the same unified view.
 
 ---
 
@@ -45,7 +52,8 @@ This helps you understand the "blast radius" of executing a specific tag before 
 
 ---
 
-## Limitations
+## Performance
 
-- The dashboard relies on the internal `FeatureCache`, which parses all `.feature` files upon workspace load. Extremely large repositories (thousands of feature files) may take several seconds to generate the report.
-- Excluded folders (like `node_modules` or `.venv`) are appropriately ignored to maintain performance.
+- The dashboard relies on the internal `WorkspaceGraph` and `SymbolCache`, which parse all `.feature` and Python step files upon workspace load.
+- Thanks to the graph architecture, the dashboard generation is completely $O(1)$ after initial indexing and loads instantaneously, even on enterprise repositories.
+- Excluded folders (like `node_modules` or `.venv`) are appropriately ignored during the initial index to maintain performance.

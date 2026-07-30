@@ -1,7 +1,9 @@
 <!-- markdownlint-disable MD024 -->
-# Changelog
+## [Unreleased]
 
-All notable changes to the "vscode-gherkin-powertools" extension will be documented in this file.
+### Added
+- **Project Health Dashboard**: Redesigned the Statistics feature into a comprehensive Project Health Dashboard that measures Complexity, Maintainability, and Technical Debt (unused/duplicate/undefined steps). The dashboard operates in $O(1)$ time by leveraging the new in-memory `WorkspaceGraph`. Includes a premium Glassmorphism UI redesign with fluid animations and responsive states.
+- **Integrated Step Analysis**: The legacy "Analyze Step Definitions" command has been fully integrated into the Project Health Dashboard for a unified experience.
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
