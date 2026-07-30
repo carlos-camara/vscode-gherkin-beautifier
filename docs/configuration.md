@@ -115,6 +115,20 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 ---
 
+## Analytics Settings
+
+### `gherkinPowerTools.analytics.historicalTrends.enabled`
+- **Purpose:** Enable or disable historical trend analysis for Gherkin Health. When enabled, dashboard metrics are persisted locally to visualize project evolution over time.
+- **Type:** `boolean`
+- **Default:** `true`
+
+### `gherkinPowerTools.analytics.historicalTrends.retentionSnapshots`
+- **Purpose:** Maximum number of historical snapshots to retain for trend analysis.
+- **Type:** `number` (1–365)
+- **Default:** `30`
+
+---
+
 ## Shared Team Configuration (`.gherkin-powertoolsrc.json`)
 
 You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root to standardize formatting and discovery for the whole team, regardless of their individual VS Code settings.

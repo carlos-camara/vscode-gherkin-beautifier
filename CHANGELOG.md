@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.1] - 2026-07-31
+
+### 🚀 Added
+- **Historical Trend Analysis**: Gherkin Health Dashboard now automatically tracks and persists lightweight historical snapshots of your project metrics in the workspace state. It visualizes project evolution (complexity, maintainability, technical debt) over time using interactive charts without sending any data off your machine. Configure retention policies or disable it entirely in settings.
+
+### 🐛 Fixed
+- Fixed an issue where the new Gherkin Health Dashboard failed to load the charting library in some VS Code environments due to `acquireVsCodeApi` strictness.
+
 ## [1.8.0] - 2026-07-30
 
 ### 🚀 Added
