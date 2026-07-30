@@ -63,7 +63,7 @@ nav:
   - Gherkin Editing: gherkin_editing.md
   - Python Behave: python_behave.md
   - Run and Debug: run_and_debug.md
-  - Analytics: analytics.md
+  - Project Health & Analytics: analytics.md
   - Configuration: configuration.md
   - Commands: commands.md
   - Performance: performance.md

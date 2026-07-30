@@ -122,7 +122,7 @@ export class WorkspaceGraph {
                     };
                     this.nodes.set(stepId, stepNode);
                     stepIds.push(stepId);
-                    
+
                     this.resolveStepDefinition(stepNode);
                 }
                 return stepIds;
@@ -161,7 +161,7 @@ export class WorkspaceGraph {
                         }
                         this.nodes.set(scId, scNode);
                         featureNode.children.push(scId);
-                        
+
                         // Add target to tags
                         const inheritedTags = [...new Set([...featureTags, ...scTags])];
                         inheritedTags.forEach(t => {
@@ -176,7 +176,7 @@ export class WorkspaceGraph {
                             id: rId, type: 'Rule', uri: uriStr, line: r.location.line,
                             children: [], tags: rTags, parent: featureId, name: r.name
                         };
-                        
+
                         if (r.children) {
                             for (const rChild of r.children) {
                                 if (rChild.background) {
@@ -209,7 +209,7 @@ export class WorkspaceGraph {
                                     }
                                     this.nodes.set(scId, scNode);
                                     rNode.children.push(scId);
-                                    
+
                                     const inheritedTags = [...new Set([...featureTags, ...rTags, ...scTags])];
                                     inheritedTags.forEach(t => {
                                         const tNode = this.nodes.get(`Tag:${t}`) as TagNode;
@@ -236,7 +236,7 @@ export class WorkspaceGraph {
 
         const allDefs = await this.symbolCache.getAllStepDefinitions();
         const fileDefs = allDefs.filter(d => d.uri.toString() === uriStr);
-        
+
         if (fileDefs.length === 0) return;
 
         const pyFileNode: PythonFileNode = {
@@ -298,13 +298,13 @@ export class WorkspaceGraph {
 
     private async resolveStepDefinition(stepNode: StepNode) {
         if (!stepNode.text) return;
-        
+
         const defs = await this.symbolCache.getStepDefinitions(stepNode.text);
         if (defs.length > 0) {
             const def = defs[0];
             const defId = `${def.uri.toString()}:${def.decoratorRange.start.line}`;
             stepNode.definitionId = defId;
-            
+
             const defNode = this.nodes.get(defId) as StepDefNode | undefined;
             if (defNode && !defNode.usages.includes(stepNode.id)) {
                 defNode.usages.push(stepNode.id);
@@ -350,7 +350,7 @@ export class WorkspaceGraph {
     public getDuplicateImplementations(): StepDefNode[][] {
         const duplicates: StepDefNode[][] = [];
         const patternMap = new Map<string, StepDefNode[]>();
-        
+
         for (const node of this.nodes.values()) {
             if (node.type === 'StepDefinition') {
                 const def = node as StepDefNode;
@@ -359,16 +359,20 @@ export class WorkspaceGraph {
                 patternMap.get(key)!.push(def);
             }
         }
-        
+
         for (const defs of patternMap.values()) {
             if (defs.length > 1) {
                 duplicates.push(defs);
             }
         }
-        
+
         return duplicates;
     }
-    
+
+    public getAllNodes(): GraphNode[] {
+        return Array.from(this.nodes.values());
+    }
+
     public dispose() {
         this.eventBusDisposable?.dispose();
         this.nodes.clear();

@@ -35,22 +35,12 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
-## Show Project Statistics
+## Show Project Health Dashboard
 - **Identifier**: `gherkinPowerTools.showStatistics`
 - **Where it appears**: Command Palette, Editor Context Menu.
 - **Required context**: An active `.feature` file.
 - **Input**: None.
-- **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing scenario counts, tag impact, and complexity distribution.
-- **Default shortcut**: None.
-
----
-
-## Analyze Step Definitions
-- **Identifier**: `gherkinPowerTools.analyzeSteps`
-- **Where it appears**: Command Palette, Editor Context Menu.
-- **Required context**: A Python Behave project workspace.
-- **Input**: None.
-- **Result**: Proactively indexes all `.feature` and `.py` files in the workspace. Analyzes all discovered Python step definitions against all `.feature` files to find unused steps (grouped by file), duplicated implementations, ambiguous usages, and suspiciously similar regex patterns. Opens an interactive dashboard webview with clickable file links for instant navigation.
+- **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing project health, maintainability, tag impact, and complexity distribution.
 - **Default shortcut**: None.
 
 ---

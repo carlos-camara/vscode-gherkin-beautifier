@@ -232,17 +232,12 @@
       },
       {
         "command": "gherkinPowerTools.showStatistics",
-        "title": "Show Project Statistics",
+        "title": "Show Project Health Dashboard",
         "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.showMetrics",
         "title": "Show Developer Metrics",
-        "category": "Gherkin PowerTools"
-      },
-      {
-        "command": "gherkinPowerTools.analyzeSteps",
-        "title": "Analyze Step Definitions",
         "category": "Gherkin PowerTools"
       },
       {
@@ -303,11 +298,6 @@
           "when": "editorLangId == feature",
           "command": "gherkinPowerTools.showStatistics",
           "group": "navigation@4"
-        },
-        {
-          "when": "editorLangId == feature",
-          "command": "gherkinPowerTools.analyzeSteps",
-          "group": "navigation@5"
         }
       ],
       "view/title": [
