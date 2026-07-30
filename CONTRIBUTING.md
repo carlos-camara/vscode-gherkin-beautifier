@@ -62,13 +62,13 @@ To verify that all configuration settings in `package.json`, `gherkin-powertools
 npm run check:config
 ```
 
-### Unit Tests
-To run ultra-fast unit tests that validate the AST processor and algorithms:
+### Unit and Architecture Tests
+To run ultra-fast unit tests that validate the AST processor and algorithms, as well as the **Architecture Validation Test Suite** (which ensures all commands are registered, watchers are disposed, and bootstrap completes successfully):
 ```bash
 npm run test
 ```
 
-To run the unit tests and generate an LCOV coverage report:
+To run the unit and architecture tests and generate an LCOV coverage report:
 ```bash
 npm run coverage
 ```

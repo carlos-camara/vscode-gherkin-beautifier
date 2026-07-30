@@ -47,7 +47,7 @@ Framework-independent tools for any BDD project (Cucumber, SpecFlow, Playwright 
 Specific integrations designed exclusively for Python Behave test suites:
 * **Python Step Discovery:** Auto-detect and index Behave step definitions.
 * **IntelliSense & Navigation:** Autocomplete steps and go to definition.
-* **Code Actions:** Generate missing Python steps instantly.
+* **Code Actions:** Generate missing Python steps quickly.
 * **Test Explorer:** Run and debug scenarios visually from the sidebar.
 
 ---
@@ -57,9 +57,10 @@ Specific integrations designed exclusively for Python Behave test suites:
 * **Keep feature files consistently formatted:** Standardize whitespace and table alignment across your team.
 * **Catch malformed Gherkin before CI:** Identify missing colons, wrong block structures, and syntax errors as you type.
 * **Find Python step definitions without searching manually:** Jump directly to the implementing Python function with a single click.
-* **Generate missing Behave steps:** Create valid Python stubs for undefined steps instantly.
+* **Generate missing Behave steps:** Create valid Python stubs for undefined steps directly.
+* **Analyze step definitions:** Detect unused, duplicated, ambiguous, and suspiciously similar Python steps via the Gherkin Health dashboard.
 * **Run or debug directly from VS Code:** Execute a specific scenario or example row without context-switching to the terminal.
-* **Understand the BDD suite structure:** Analyze tag distribution and scenario complexity across your entire workspace.
+* **Understand the BDD suite structure:** Analyze tag distribution, scenario complexity, and structural quality across your entire workspace.
 
 ---
 
@@ -89,7 +90,9 @@ Open the Testing panel to view a live tree of your features, rules, scenarios, a
 </div>
 
 ### Python Navigation and IntelliSense
-The extension suggests matching steps from your Python backend as you type. <kbd>Ctrl+Click</kbd> (<kbd>Cmd+Click</kbd> on macOS) any step to jump to its Python definition, or hover to preview the function signature and docstring.
+The extension suggests matching steps from your Python backend as you type. Unlike standard autocomplete, Gherkin PowerTools uses **Smart Context-Aware Ranking** to prioritize steps based on your recent usage, the current feature file, and semantic tag affinity.
+
+<kbd>Ctrl+Click</kbd> (<kbd>Cmd+Click</kbd> on macOS) any step to jump to its Python definition, or hover to preview the function signature and docstring.
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif" alt="Navigate from a feature file directly to the Python step definition" width="600" />
 </div>
@@ -106,16 +109,26 @@ Align tables, wrap long tags, and standardize indentation using the built-in for
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif" alt="AST-powered Gherkin formatter aligning tables and standardizing indentation" width="600" />
 </div>
 
+</div>
+
+### Gherkin Health & Recommendation Engine
+Generate a comprehensive, interactive Webview report to ensure your project is healthy and maintainable. This dashboard analyzes your source structure to calculate your Overall Health, Maintainability, Complexity, and Technical Debt.
+
+The built-in **Recommendation Engine** proactively flags:
+* **Undefined Steps**: Identifies Gherkin steps that lack Python implementations.
+* **Ambiguous Steps**: Detects steps matching multiple overlapping Regex patterns.
+* **Duplicated Steps**: Finds identical Regex patterns declared in multiple files.
+* **Oversized Scenarios**: Highlights overly complex scenarios that should be broken down.
+
+*Note: This analyzes static source structure, not runtime test coverage or execution results.*
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" />
+</div>
+
 ### Tag Impact Analysis
 Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover over a tag to see its impact across the workspace" width="600" />
-</div>
-
-### Workspace Source Analytics
-Generate an interactive dashboard from your Gherkin source files to analyze feature counts, tag frequencies, and scenario complexity based on step counts. *(Note: This analyzes source structure, not runtime test coverage or execution results).*
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics dashboard" width="600" />
 </div>
 
 ---
@@ -128,6 +141,8 @@ Generate an interactive dashboard from your Gherkin source files to analyze feat
 | **Semantic Highlighting** | Enjoy a curated color palette for Gherkin keywords, tags, parameters, and tables. |
 | **Command Center** | Access all extension capabilities from a single searchable quick-pick menu. |
 | **Workspace Diagnostics** | Generate a health report of your environment, Python path, and discovered step files. |
+| **Developer Metrics** | Track AST parsing performance, cache hit ratios, and parser failures in real-time. |
+| **Gherkin Health Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |
 | **Project Onboarding** | Benefit from automated detection and configuration suggestions for Behave projects. |
 

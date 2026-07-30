@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Gherkin formatting, linting, project analysis, Python/Behave navigation, and execution/debugging for BDD.",
-  "version": "1.7.9",
+  "version": "1.8.0",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -71,7 +71,7 @@
           "default": "custom",
           "markdownDescription": "Baseline formatting profile. Individual settings always override the profile. Use `custom` (the default) to configure everything manually, or pick a preset to share a baseline across your team.\n\n**Tip:** Set this in `.gherkin-powertoolsrc.json` to standardize formatting for all contributors.",
           "markdownEnumDescriptions": [
-            "Extension defaults \u2014 configure individual settings as needed",
+            "Extension defaults — configure individual settings as needed",
             "Strict consistency: 4-space indent, alphabetical tags, 1 blank line between scenarios",
             "Standard team baseline: sensible defaults for large projects without being restrictive",
             "Low-interference: 2-space indent, table alignment off, tags on one line, no blank line enforcement",
@@ -99,7 +99,7 @@
           "order": 11,
           "scope": "resource",
           "default": true,
-          "markdownDescription": "When `true`, the left border of Data Tables and Examples tables is dynamically padded to align with the text start of the preceding step keyword \u2014 not a fixed column.\n\nSet to `false` for a simpler fixed-column alignment."
+          "markdownDescription": "When `true`, the left border of Data Tables and Examples tables is dynamically padded to align with the text start of the preceding step keyword — not a fixed column.\n\nSet to `false` for a simpler fixed-column alignment."
         },
         "gherkinPowerTools.emptyLines.betweenScenarios": {
           "type": "number",
@@ -119,7 +119,7 @@
             "singleLine"
           ],
           "default": "wrap",
-          "markdownDescription": "How to handle long lists of tags when formatting.\n\n- `wrap` \u2014 Splits tag lines that exceed 80 characters across multiple lines (recommended for readability)\n- `singleLine` \u2014 Keeps all tags on one line regardless of length (useful for CI pipelines that parse tag lines)",
+          "markdownDescription": "How to handle long lists of tags when formatting.\n\n- `wrap` — Splits tag lines that exceed 80 characters across multiple lines (recommended for readability)\n- `singleLine` — Keeps all tags on one line regardless of length (useful for CI pipelines that parse tag lines)",
           "markdownEnumDescriptions": [
             "Splits tag lines longer than 80 characters across multiple lines",
             "Keeps all tags on a single line regardless of length"
@@ -134,10 +134,10 @@
             "alphabetical"
           ],
           "default": "preserve",
-          "markdownDescription": "Tag ordering applied on every format.\n\n- `preserve` \u2014 Tags remain in their original source order (safe default)\n- `alphabetical` \u2014 Tags are sorted A\u2013Z on every format (recommended for canonical ordering)",
+          "markdownDescription": "Tag ordering applied on every format.\n\n- `preserve` — Tags remain in their original source order (safe default)\n- `alphabetical` — Tags are sorted A–Z on every format (recommended for canonical ordering)",
           "markdownEnumDescriptions": [
-            "Tags remain in their original source order \u2014 no reordering on format",
-            "Tags are sorted A\u2013Z on every format run"
+            "Tags remain in their original source order — no reordering on format",
+            "Tags are sorted A–Z on every format run"
           ]
         },
         "gherkinPowerTools.linter.enabled": {
@@ -146,6 +146,13 @@
           "scope": "resource",
           "default": true,
           "markdownDescription": "Enable or disable the real-time Gherkin linter. When `false`, no diagnostics (red/yellow underlines) will appear in `.feature` files. Useful when you rely exclusively on an external CI linter and want to reduce editor noise."
+        },
+        "gherkinPowerTools.diagnostics.metricsEnabled": {
+          "type": "boolean",
+          "order": 22,
+          "scope": "resource",
+          "default": false,
+          "markdownDescription": "Enable or disable parser diagnostics and performance metrics. When `true`, the extension collects data on AST parsing, cache hits, and document complexity which can be viewed using the 'Show Developer Metrics' command. Keep disabled in normal use to avoid overhead."
         },
         "gherkinPowerTools.linter.enabledRules": {
           "type": "array",
@@ -163,7 +170,7 @@
             ]
           },
           "default": [],
-          "markdownDescription": "Whitelist of linting rule IDs to enforce. An **empty array (default)** enables **all rules**. Populate this array to restrict the linter to only the specified rules \u2014 useful for enterprise teams that want to suppress certain checks while keeping structural validation.\n\n**Available rules:** `MISSING_COLON`, `INVALID_KEYWORD`, `SEMANTIC_ERROR`, `TABLE_INCONSISTENCY`, `UNDEFINED_STEP`, `AMBIGUOUS_STEP`"
+          "markdownDescription": "Whitelist of linting rule IDs to enforce. An **empty array (default)** enables **all rules**. Populate this array to restrict the linter to only the specified rules — useful for enterprise teams that want to suppress certain checks while keeping structural validation.\n\n**Available rules:** `MISSING_COLON`, `INVALID_KEYWORD`, `SEMANTIC_ERROR`, `TABLE_INCONSISTENCY`, `UNDEFINED_STEP`, `AMBIGUOUS_STEP`"
         },
         "gherkinPowerTools.behave.stepGlobs": {
           "type": "array",
@@ -176,7 +183,7 @@
             "**/steps/**/*.py",
             "**/features/steps/**/*.py"
           ],
-          "markdownDescription": "Glob patterns used to discover Python step definition files. These patterns drive **IntelliSense**, **Go to Definition**, **Hover**, and **undefined step detection**.\n\nAdd extra patterns for monorepos or non-standard layouts. Changes take effect **immediately** \u2014 no restart required."
+          "markdownDescription": "Glob patterns used to discover Python step definition files. These patterns drive **IntelliSense**, **Go to Definition**, **Hover**, and **undefined step detection**.\n\nAdd extra patterns for monorepos or non-standard layouts. Changes take effect **immediately** — no restart required."
         },
         "gherkinPowerTools.behave.ignoreGlobs": {
           "type": "array",
@@ -191,14 +198,14 @@
             "**/venv/**",
             "**/env/**"
           ],
-          "markdownDescription": "Glob patterns **excluded** from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches and performance degradation.\n\nChanges take effect **immediately** \u2014 no restart required."
+          "markdownDescription": "Glob patterns **excluded** from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches and performance degradation.\n\nChanges take effect **immediately** — no restart required."
         },
         "gherkinPowerTools.behave.command": {
           "type": "string",
           "order": 32,
           "scope": "resource",
           "default": "behave",
-          "markdownDescription": "The base command used to invoke Behave from the Test Explorer. Override this when using a virtual environment manager.\n\n**Examples:** `\"poetry run behave\"` \u00b7 `\"pipenv run behave\"` \u00b7 `\".venv/bin/behave\"` \u00b7 `\"python -m behave\"`"
+          "markdownDescription": "The base command used to invoke Behave from the Test Explorer. Override this when using a virtual environment manager.\n\n**Examples:** `\"poetry run behave\"` · `\"pipenv run behave\"` · `\".venv/bin/behave\"` · `\"python -m behave\"`"
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",
@@ -208,7 +215,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Extra flags appended to **every** Behave invocation from the Test Explorer.\n\n**Examples:** `[\"--no-capture\"]` \u00b7 `[\"-D\", \"env=staging\"]` \u00b7 `[\"--format\", \"progress\"]`"
+          "markdownDescription": "Extra flags appended to **every** Behave invocation from the Test Explorer.\n\n**Examples:** `[\"--no-capture\"]` · `[\"-D\", \"env=staging\"]` · `[\"--format\", \"progress\"]`"
         }
       }
     },
@@ -225,7 +232,12 @@
       },
       {
         "command": "gherkinPowerTools.showStatistics",
-        "title": "Show Project Statistics",
+        "title": "Show Gherkin Health",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.showMetrics",
+        "title": "Show Developer Metrics",
         "category": "Gherkin PowerTools"
       },
       {
@@ -362,8 +374,8 @@
           },
           {
             "id": "projectStatistics",
-            "title": "View BDD Statistics",
-            "description": "Generate an interactive HTML dashboard with your BDD project metrics. [Show Statistics](command:gherkinPowerTools.showStatistics)",
+            "title": "View Gherkin Health",
+            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showStatistics)",
             "media": {
               "markdown": "assets/walkthrough/6_statistics.md"
             },
@@ -445,6 +457,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.1",
     "@types/node": "^26.1.1",
+    "@types/sinon": "^22.0.0",
     "@types/vscode": "^1.93.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
@@ -454,6 +467,7 @@
     "mocha": "^11.7.6",
     "mocha-junit-reporter": "^2.2.1",
     "mocha-multi-reporters": "^1.5.1",
+    "sinon": "^22.1.0",
     "typescript": "^7.0.2"
   },
   "overrides": {

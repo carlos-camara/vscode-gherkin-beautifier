@@ -70,8 +70,8 @@ export async function showCommandCenter() {
             kind: vscode.QuickPickItemKind.Separator
         },
         {
-            label: '$(graph) Show Project Statistics',
-            description: 'Generates a visual dashboard of features and steps',
+            label: '$(graph) Show Gherkin Health',
+            description: 'Generates a visual dashboard of project metrics and actionable insights',
             commandId: 'gherkinPowerTools.showStatistics'
         },
         {

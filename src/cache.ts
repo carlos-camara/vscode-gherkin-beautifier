@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { logger } from './logger';
 import { discoveryService } from './discovery';
-import { parseGherkin } from './parser';
+import { astRepository } from './ast';
 import { parsePythonDecorators } from './tokenizer';
 import type { Tag, Scenario } from '@cucumber/messages';
 import { WorkspaceEventBus } from './eventBus';
@@ -354,7 +354,7 @@ export class FeatureCache {
         }
 
         try {
-            const { document: docAST, errors } = await parseGherkin(content);
+            const { document: docAST, errors } = await astRepository.getAST({ uri, version: 0, getText: () => content });
             const tagCounts = new Map<string, number>();
 
             const addTagCount = (tag: string, count: number) => {
