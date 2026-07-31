@@ -303,11 +303,6 @@
         "category": "Refactoring"
       },
       {
-        "command": "gherkinPowerTools.refactor.mergeSteps",
-        "title": "Merge Steps",
-        "category": "Refactoring"
-      },
-      {
         "command": "gherkinPowerTools.refactor.moveStep",
         "title": "Move Step Definition",
         "category": "Refactoring"

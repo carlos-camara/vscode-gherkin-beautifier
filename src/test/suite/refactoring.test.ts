@@ -128,48 +128,4 @@ suite('Step Refactoring Engine Test Suite', () => {
         assert.ok(pythonEdits);
         assert.ok(pythonEdits[1][0].newText.includes('new step name'));
     });
-
-    test('mergeSteps updates usages and consolidates definitions', async () => {
-        const featureUri = vscode.Uri.file('/fake/test.feature');
-        const pythonUri = vscode.Uri.file('/fake/steps.py');
-
-        sinon.stub(graph, 'getAllStepDefNodes').returns([
-            { id: `${pythonUri.toString()}:5`, uri: pythonUri.toString(), line: 5, pattern: 'step a' } as any,
-            { id: `${pythonUri.toString()}:10`, uri: pythonUri.toString(), line: 10, pattern: 'step b' } as any
-        ]);
-
-        sinon.stub(graph, 'getAllStepNodes').returns([
-            { id: `${featureUri.toString()}:3`, uri: featureUri.toString(), line: 3, text: 'Given step a', definitionId: `${pythonUri.toString()}:5` } as any,
-            { id: `${featureUri.toString()}:4`, uri: featureUri.toString(), line: 4, text: 'And step b', definitionId: `${pythonUri.toString()}:10` } as any
-        ]);
-
-        sinon.stub(graph, 'getUsages').callsFake((defId: string) => {
-            if (defId === `${pythonUri.toString()}:5`) {
-                return [{ id: `${featureUri.toString()}:3`, uri: featureUri.toString(), line: 3, text: 'Given step a', definitionId: `${pythonUri.toString()}:5` } as any];
-            } else if (defId === `${pythonUri.toString()}:10`) {
-                return [{ id: `${featureUri.toString()}:4`, uri: featureUri.toString(), line: 4, text: 'And step b', definitionId: `${pythonUri.toString()}:10` } as any];
-            }
-            return [];
-        });
-
-        sinon.stub(symbolCache, 'getAllStepDefinitions').resolves([
-            { uri: pythonUri, decoratorRange: new vscode.Range(5, 0, 5, 20), pattern: 'step a', line: 5, functionRange: new vscode.Range(5, 0, 7, 0) } as any,
-            { uri: pythonUri, decoratorRange: new vscode.Range(10, 0, 10, 20), pattern: 'step b', line: 10, functionRange: new vscode.Range(10, 0, 12, 0) } as any
-        ]);
-
-
-
-        const edit = await refactoringService.mergeSteps([`${pythonUri.toString()}:5`, `${pythonUri.toString()}:10`], 'merged step');
-        assert.ok(edit);
-
-        const featureEdits = edit.entries().find(e => e[0] && e[0].toString() === featureUri.toString());
-        assert.ok(featureEdits);
-        // It updates step a to merged step, and step b to merged step
-        assert.strictEqual(featureEdits[1].length, 2);
-
-        const pythonEdits = edit.entries().find(e => e[0] && e[0].toString() === pythonUri.toString());
-        assert.ok(pythonEdits);
-        // It renames def-1 and deletes def-2
-        assert.strictEqual(pythonEdits[1].length, 2);
-    });
 });

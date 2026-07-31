@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { WorkspaceGraph, StepNode, StepDefNode } from './graph';
+import { WorkspaceGraph, StepDefNode } from './graph';
 import { SymbolCache } from './cache';
 
 export class StepRefactoringService {
@@ -137,68 +137,7 @@ export class StepRefactoringService {
         return edit;
     }
 
-    /**
-     * Merge multiple step definitions into a single definition.
-     */
-    public async mergeSteps(stepDefinitionIds: string[], newName: string): Promise<vscode.WorkspaceEdit | undefined> {
-        if (stepDefinitionIds.length < 2) return undefined;
-        await this.graph.initialize();
 
-        const edit = new vscode.WorkspaceEdit();
-        
-        const defNodes = stepDefinitionIds.map(id => this.graph.getAllStepDefNodes().find(n => n.id === id)).filter(n => !!n) as StepDefNode[];
-        if (defNodes.length === 0) return undefined;
-
-        // 1. Update all usages to the new name
-        const allUsages: StepNode[] = [];
-        for (const defNode of defNodes) {
-            allUsages.push(...this.graph.getUsages(defNode.id));
-        }
-
-        for (const usage of allUsages) {
-            const usageUri = vscode.Uri.parse(usage.uri);
-            const usageDoc = await vscode.workspace.openTextDocument(usageUri);
-            const lineIdx = usage.line - 1;
-            const lineText = usageDoc.lineAt(lineIdx).text;
-            
-            const match = lineText.match(/^(\s*(?:Given|When|Then|And|But|\*)\s+)(.*)$/i);
-            if (match) {
-                const prefix = match[1];
-                const newText = prefix + newName;
-                edit.replace(usageUri, new vscode.Range(lineIdx, 0, lineIdx, lineText.length), newText);
-            }
-        }
-
-        const cachedDefs = await this.symbolCache.getAllStepDefinitions();
-
-        // 2. Rename the first definition
-        const firstDef = defNodes[0];
-        const firstCachedDef = cachedDefs.find(d => `${d.uri.toString()}:${d.decoratorRange.start.line}` === firstDef.id);
-        if (firstCachedDef) {
-            const doc = await vscode.workspace.openTextDocument(firstCachedDef.uri);
-            const decoratorLineText = doc.lineAt(firstCachedDef.decoratorRange.start.line).text;
-            
-            let newDecorator = decoratorLineText;
-            if (firstCachedDef.matcherType === 're') {
-                newDecorator = `@${firstCachedDef.type}(re.compile(r'${newName}'))`;
-            } else {
-                newDecorator = `@${firstCachedDef.type}('${newName}')`;
-            }
-            edit.replace(firstCachedDef.uri, new vscode.Range(firstCachedDef.decoratorRange.start.line, 0, firstCachedDef.decoratorRange.start.line, decoratorLineText.length), newDecorator);
-        }
-
-        // 3. Delete the other definitions
-        for (let i = 1; i < defNodes.length; i++) {
-            const defToDel = defNodes[i];
-            const cachedToDel = cachedDefs.find(d => `${d.uri.toString()}:${d.decoratorRange.start.line}` === defToDel.id);
-            if (cachedToDel && cachedToDel.functionRange) {
-                // Delete from decorator start to function end
-                edit.delete(cachedToDel.uri, new vscode.Range(cachedToDel.decoratorRange.start.line, 0, cachedToDel.functionRange.end.line + 1, 0));
-            }
-        }
-
-        return edit;
-    }
 
     /**
      * Move a step definition to another Python file.

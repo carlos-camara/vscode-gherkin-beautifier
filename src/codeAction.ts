@@ -101,14 +101,6 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 title: 'Extract Step'
             };
             actions.push(extractAction);
-
-            const mergeAction = new vscode.CodeAction('Merge Selected Steps', vscode.CodeActionKind.RefactorExtract);
-            mergeAction.command = {
-                command: 'gherkinPowerTools.refactor.mergeSteps',
-                title: 'Merge Steps'
-            };
-            // Note: mergeSteps currently expects step definition IDs from Python, but providing a UX entrypoint here is useful.
-            actions.push(mergeAction);
         }
 
         return actions;

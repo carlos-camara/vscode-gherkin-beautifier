@@ -280,31 +280,7 @@ export async function activate(context: vscode.ExtensionContext) {
             const edit = await refactoringService.extractStep(editor.document, editor.selection, newName, selectedTarget.uri);
             if (edit) await vscode.workspace.applyEdit(edit);
         }),
-        vscode.commands.registerCommand('gherkinPowerTools.refactor.mergeSteps', async (stepIds?: string[]) => {
-            let defIds = stepIds || [];
-            if (defIds.length === 0) {
-                const editor = vscode.window.activeTextEditor;
-                if (editor && editor.document.uri.toString().endsWith('.feature')) {
-                    const selection = editor.selection;
-                    for (let line = selection.start.line; line <= selection.end.line; line++) {
-                        const stepId = `${editor.document.uri.toString()}:${line + 1}`;
-                        const stepNode = workspaceGraph.getAllStepNodes().find(n => n.id === stepId);
-                        if (stepNode && stepNode.definitionId && !defIds.includes(stepNode.definitionId)) {
-                            defIds.push(stepNode.definitionId);
-                        }
-                    }
-                }
-            }
 
-            if (defIds.length < 2) {
-                vscode.window.showErrorMessage('Select at least two steps (with distinct definitions) to merge.');
-                return;
-            }
-            const newName = await vscode.window.showInputBox({ prompt: 'Enter new merged step name (without Given/When/Then)' });
-            if (!newName) return;
-            const edit = await refactoringService.mergeSteps(defIds, newName);
-            if (edit) await vscode.workspace.applyEdit(edit);
-        }),
         vscode.commands.registerCommand('gherkinPowerTools.refactor.moveStep', async () => {
             vscode.window.showInformationMessage('Move step definition command invoked.');
         })
