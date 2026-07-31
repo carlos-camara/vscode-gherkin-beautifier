@@ -47,7 +47,7 @@ suite('VSIX Automated Verification Test Suite', () => {
             assert.strictEqual(result.checksPassed, false, 'Validation should fail for invalid package');
             assert.ok(result.violations.some((v: any) => v.file.includes('index.ts')), 'Should detect TypeScript file');
             assert.ok(result.violations.some((v: any) => v.file.includes('extension.js.map')), 'Should detect source map');
-            assert.ok(result.violations.some((v: any) => v.file.includes('SKILL.md')), 'Should detect private skill');
+            assert.ok(result.violations.some((v: any) => v.file.includes('SKILL.md')), 'Should detect private metadata file');
             assert.ok(result.violations.some((v: any) => v.file.includes('vsix-validation-report.md')), 'Should detect validation report file');
             assert.ok(result.violations.some((v: any) => v.type === 'Missing Required Asset'), 'Should detect missing required assets');
             assert.ok(fs.existsSync(reportPath), 'Validation report file should be created');
