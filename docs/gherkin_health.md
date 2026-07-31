@@ -41,7 +41,7 @@ A Webview panel will open in VS Code displaying the generated HTML report.
 
 ## Historical Trend Analysis
 
-To help you monitor your project's quality over time, the Gherkin Health Dashboard tracks historical trends of your main metrics. 
+To help you monitor your project's quality over time, the Gherkin Health Dashboard tracks historical trends of your main metrics.
 
 Each time you generate the dashboard, a lightweight snapshot is recorded. The dashboard features:
 - **Evolution Charts**: A line chart visualizing how your Overall Health, Maintainability, and Complexity change over time.
