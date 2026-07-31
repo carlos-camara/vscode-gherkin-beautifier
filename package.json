@@ -468,6 +468,7 @@
     "test": "vscode-test --label unitTests",
     "test:e2e": "vscode-test --label e2eTests",
     "check:config": "node scripts/check-config-sync.js",
+    "verify:vsix": "node scripts/verify-vsix.js",
     "coverage": "vscode-test --label unitTests --coverage --coverage-reporter=lcov --coverage-reporter=text --coverage-reporter=html --coverage-reporter=json-summary"
   },
   "devDependencies": {

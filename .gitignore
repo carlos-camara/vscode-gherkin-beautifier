@@ -10,4 +10,6 @@ dist/
 site/
 .venv/
 venv/
+vsix-validation-report.md
+
 
