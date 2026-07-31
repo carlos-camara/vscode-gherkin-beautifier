@@ -26,7 +26,7 @@ export class StepRefactoringService {
         let targetDefNode: StepDefNode | undefined;
 
         if (uriStr.endsWith('.feature')) {
-            const stepId = `${uriStr}:${position.line}`;
+            const stepId = `${uriStr}:${position.line + 1}`;
             const stepNode = this.graph.getAllStepNodes().find(n => n.id === stepId);
             if (stepNode && stepNode.definitionId) {
                 targetDefNode = this.graph.getAllStepDefNodes().find(n => n.id === stepNode.definitionId);
@@ -75,7 +75,8 @@ export class StepRefactoringService {
         for (const usage of usages) {
             const usageUri = vscode.Uri.parse(usage.uri);
             const usageDoc = await vscode.workspace.openTextDocument(usageUri);
-            const lineText = usageDoc.lineAt(usage.line).text;
+            const lineIdx = usage.line - 1;
+            const lineText = usageDoc.lineAt(lineIdx).text;
             
             // Replace the text after the keyword
             // Keyword could be Given, When, Then, And, But (with possible spaces)
@@ -83,7 +84,7 @@ export class StepRefactoringService {
             if (match) {
                 const prefix = match[1];
                 const newText = prefix + newName;
-                edit.replace(usageUri, new vscode.Range(usage.line, 0, usage.line, lineText.length), newText);
+                edit.replace(usageUri, new vscode.Range(lineIdx, 0, lineIdx, lineText.length), newText);
             }
         }
 
@@ -142,13 +143,14 @@ export class StepRefactoringService {
         for (const usage of allUsages) {
             const usageUri = vscode.Uri.parse(usage.uri);
             const usageDoc = await vscode.workspace.openTextDocument(usageUri);
-            const lineText = usageDoc.lineAt(usage.line).text;
+            const lineIdx = usage.line - 1;
+            const lineText = usageDoc.lineAt(lineIdx).text;
             
             const match = lineText.match(/^(\s*(?:Given|When|Then|And|But|\*)\s+)(.*)$/i);
             if (match) {
                 const prefix = match[1];
                 const newText = prefix + newName;
-                edit.replace(usageUri, new vscode.Range(usage.line, 0, usage.line, lineText.length), newText);
+                edit.replace(usageUri, new vscode.Range(lineIdx, 0, lineIdx, lineText.length), newText);
             }
         }
 

@@ -84,18 +84,18 @@ suite('Step Refactoring Engine Test Suite', () => {
         } as any]);
 
         sinon.stub(graph, 'getAllStepNodes').returns([{
-            id: `${featureUri.toString()}:2`,
+            id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
-            line: 2,
+            line: 3,
             text: 'Given old step name',
             keyword: 'Given',
             definitionId: `${pythonUri.toString()}:5`
         } as any]);
 
         sinon.stub(graph, 'getUsages').returns([{
-            id: `${featureUri.toString()}:2`,
+            id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
-            line: 2,
+            line: 3,
             text: 'Given old step name',
             keyword: 'Given',
             definitionId: `${pythonUri.toString()}:5`
@@ -139,15 +139,15 @@ suite('Step Refactoring Engine Test Suite', () => {
         ]);
 
         sinon.stub(graph, 'getAllStepNodes').returns([
-            { id: `${featureUri.toString()}:2`, uri: featureUri.toString(), line: 2, text: 'Given step a', definitionId: `${pythonUri.toString()}:5` } as any,
-            { id: `${featureUri.toString()}:3`, uri: featureUri.toString(), line: 3, text: 'And step b', definitionId: `${pythonUri.toString()}:10` } as any
+            { id: `${featureUri.toString()}:3`, uri: featureUri.toString(), line: 3, text: 'Given step a', definitionId: `${pythonUri.toString()}:5` } as any,
+            { id: `${featureUri.toString()}:4`, uri: featureUri.toString(), line: 4, text: 'And step b', definitionId: `${pythonUri.toString()}:10` } as any
         ]);
 
         sinon.stub(graph, 'getUsages').callsFake((defId: string) => {
             if (defId === `${pythonUri.toString()}:5`) {
-                return [{ id: `${featureUri.toString()}:2`, uri: featureUri.toString(), line: 2, text: 'Given step a', definitionId: `${pythonUri.toString()}:5` } as any];
+                return [{ id: `${featureUri.toString()}:3`, uri: featureUri.toString(), line: 3, text: 'Given step a', definitionId: `${pythonUri.toString()}:5` } as any];
             } else if (defId === `${pythonUri.toString()}:10`) {
-                return [{ id: `${featureUri.toString()}:3`, uri: featureUri.toString(), line: 3, text: 'And step b', definitionId: `${pythonUri.toString()}:10` } as any];
+                return [{ id: `${featureUri.toString()}:4`, uri: featureUri.toString(), line: 4, text: 'And step b', definitionId: `${pythonUri.toString()}:10` } as any];
             }
             return [];
         });

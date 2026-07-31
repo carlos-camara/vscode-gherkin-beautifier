@@ -20,7 +20,7 @@ export class GherkinRenameProvider implements vscode.RenameProvider {
         let range: vscode.Range | undefined;
 
         if (uriStr.endsWith('.feature')) {
-            const stepId = `${uriStr}:${position.line}`;
+            const stepId = `${uriStr}:${position.line + 1}`;
             const stepNode = this.graph.getAllStepNodes().find(n => n.id === stepId);
             if (stepNode && stepNode.definitionId) {
                 isValid = true;
