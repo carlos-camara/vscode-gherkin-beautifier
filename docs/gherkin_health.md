@@ -47,6 +47,10 @@ Each time you generate the dashboard, a lightweight snapshot is recorded. The da
 - **Evolution Charts**: A line chart visualizing how your Overall Health, Maintainability, and Complexity change over time.
 - **Delta Indicators**: Quick visual cues (e.g., `+5 ↗`) showing improvements or regressions compared to the previous dashboard run.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/historical-trends.gif" alt="Historical Trends tracking technical debt over time" width="600" />
+</div>
+
 > **Privacy First**: All historical data is strictly stored locally on your machine using VS Code's `workspaceState`. No analytics are sent to any external server.
 
 This feature is enabled by default and retains the last 30 snapshots. You can disable it or change the retention policy in your VS Code settings under `Gherkin PowerTools > Analytics > Historical Trends`.

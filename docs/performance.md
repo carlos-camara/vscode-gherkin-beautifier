@@ -30,6 +30,10 @@ To monitor the performance of the `AstRepository`, you can enable parser metrics
 - **Document Complexity:** Monitor the total number of features, scenarios, and steps parsed.
 - **Parser Failures:** Track documents that failed to parse due to malformed Gherkin.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing Developer Metrics" width="600" />
+</div>
+
 These metrics are collected independently of any provider (formatter, linter) and impose zero performance penalty when the setting is left disabled (the default).
 
 ## Performance Troubleshooting

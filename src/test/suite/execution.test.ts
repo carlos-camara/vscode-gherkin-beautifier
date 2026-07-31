@@ -104,6 +104,14 @@ suite('Execution Test Suite', () => {
         assert.deepStrictEqual(details.args, ['run', 'behave', '--no-capture', './features/test.feature:42']);
     });
 
+    test('resolveBehaveExecutionDetails correctly appends Example row line number to arguments', async () => {
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+        // Example row line is just a line number to Behave
+        const details = await resolveBehaveExecutionDetails(uri, 55, mockConfigService);
+        assert.ok(details);
+        assert.deepStrictEqual(details.args, ['-m', 'behave', '--no-capture', './features/test.feature:55']);
+    });
+
     test('runBehave creates ProcessExecution task', async () => {
         const uri = vscode.Uri.file('/workspace/features/test.feature');
         await runBehave(uri, undefined, mockConfigService);

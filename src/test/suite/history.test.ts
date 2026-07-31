@@ -1,11 +1,13 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import * as sinon from 'sinon';
 import { MetricsHistory } from '../../history';
 import { ProjectHealthMetrics } from '../../statistics';
 
 suite('MetricsHistory Test Suite', () => {
     let mockContext: vscode.ExtensionContext;
     let store: { [key: string]: any } = {};
+    let getConfigurationStub: sinon.SinonStub;
 
     setup(() => {
         store = {};
@@ -21,6 +23,19 @@ suite('MetricsHistory Test Suite', () => {
                 keys: () => Object.keys(store)
             }
         } as unknown as vscode.ExtensionContext;
+
+        getConfigurationStub = sinon.stub(vscode.workspace, 'getConfiguration');
+        getConfigurationStub.withArgs('gherkinPowerTools').returns({
+            get: (key: string, defaultValue: any) => {
+                if (key === 'analytics.historicalTrends.enabled') return true;
+                if (key === 'analytics.historicalTrends.retentionSnapshots') return 30;
+                return defaultValue;
+            }
+        } as any);
+    });
+
+    teardown(() => {
+        sinon.restore();
     });
 
     test('addSnapshot should store a new snapshot', () => {
@@ -33,14 +48,11 @@ suite('MetricsHistory Test Suite', () => {
 
         const snapshots = history.addSnapshot(dummyMetrics);
         
-        // If config is disabled globally, this might return 0. Assuming defaults are true.
-        if (snapshots.length > 0) {
-            assert.strictEqual(snapshots.length, 1);
-            assert.strictEqual(snapshots[0].health, 85);
-            assert.strictEqual(snapshots[0].maintainability, 90);
-            assert.strictEqual(snapshots[0].complexity, 20);
-            assert.strictEqual(snapshots[0].techDebtTotal, 0);
-        }
+        assert.strictEqual(snapshots.length, 1);
+        assert.strictEqual(snapshots[0].health, 85);
+        assert.strictEqual(snapshots[0].maintainability, 90);
+        assert.strictEqual(snapshots[0].complexity, 20);
+        assert.strictEqual(snapshots[0].techDebtTotal, 0);
     });
 
     test('addSnapshot should honor retention limits', () => {
@@ -56,10 +68,8 @@ suite('MetricsHistory Test Suite', () => {
         }
 
         const snapshots = history.getSnapshots();
-        if (snapshots.length > 0) {
-            // Retention default is 30
-            assert.strictEqual(snapshots.length, 30);
-        }
+        // Retention default is 30
+        assert.strictEqual(snapshots.length, 30);
     });
 
     test('clearHistory should remove all snapshots', () => {
