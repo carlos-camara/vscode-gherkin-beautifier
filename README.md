@@ -112,7 +112,7 @@ Align tables, wrap long tags, and standardize indentation using the built-in for
 </div>
 
 ### Gherkin Health & Recommendation Engine
-Generate a comprehensive, interactive Webview report to ensure your project is healthy and maintainable. This dashboard analyzes your source structure to calculate your Overall Health, Maintainability, Complexity, and Technical Debt.
+Generate a comprehensive, interactive Webview report to ensure your project is healthy and maintainable. This dashboard analyzes your source structure to calculate your Overall Health, Maintainability, Complexity, and Technical Debt. It also automatically persists lightweight historical snapshots to visualize your project's evolution over time via interactive trend charts.
 
 The built-in **Recommendation Engine** proactively flags:
 * **Undefined Steps**: Identifies Gherkin steps that lack Python implementations.

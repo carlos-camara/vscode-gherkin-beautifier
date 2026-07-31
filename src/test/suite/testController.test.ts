@@ -100,6 +100,48 @@ Feature: Rules Feature
         
         assert.strictEqual(scenarioItem!.label, 'Scenario: Rule scenario');
     });
+
+    test('Parses Scenario Outline and Examples rows into TestItems', async () => {
+        const featureUri = vscode.Uri.file(path.join(tempDir, 'outline.feature'));
+        fs.writeFileSync(featureUri.fsPath, `
+Feature: Outline Feature
+  Scenario Outline: Outline scenario
+    Given a step with <arg>
+    Examples:
+      | arg |
+      | 1   |
+      | 2   |
+`);
+
+        const testControllerPrivate = controller as any;
+        const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
+        
+        await testControllerPrivate.parseTestsInFileContents(fileItem);
+        
+        let featureItem: vscode.TestItem | undefined;
+        fileItem.children.forEach((item: vscode.TestItem) => { featureItem = item; });
+        
+        assert.ok(featureItem);
+        assert.strictEqual(featureItem!.children.size, 1);
+        
+        let scenarioOutlineItem: vscode.TestItem | undefined;
+        featureItem!.children.forEach((item: vscode.TestItem) => { scenarioOutlineItem = item; });
+        
+        assert.ok(scenarioOutlineItem);
+        assert.strictEqual(scenarioOutlineItem!.label, 'Scenario Outline: Outline scenario');
+        
+        // Check that the two Example rows are parsed as children
+        assert.strictEqual(scenarioOutlineItem!.children.size, 2);
+        
+        const exampleItems: vscode.TestItem[] = [];
+        scenarioOutlineItem!.children.forEach((item: vscode.TestItem) => { exampleItems.push(item); });
+        
+        assert.strictEqual(exampleItems[0].label, 'Example: arg=1');
+        assert.strictEqual(exampleItems[0].id, `${featureUri.toString()}#scenario:7`);
+        
+        assert.strictEqual(exampleItems[1].label, 'Example: arg=2');
+        assert.strictEqual(exampleItems[1].id, `${featureUri.toString()}#scenario:8`);
+    });
     test('Binds to WorkspaceEventBus correctly', () => {
         const { WorkspaceEventBus } = require('../../eventBus');
         const eventBus = new WorkspaceEventBus();

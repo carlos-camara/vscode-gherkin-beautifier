@@ -204,6 +204,16 @@ suite('E2E UI Test Suite', () => {
         }
         assert.strictEqual(errorThrown, false, 'The Statistics Webview command threw an error');
     });
+
+    test('Simulate Developer Metrics Output', async () => {
+        let errorThrown = false;
+        try {
+            await vscode.commands.executeCommand('gherkinPowerTools.showMetrics');
+        } catch (e) {
+            errorThrown = true;
+        }
+        assert.strictEqual(errorThrown, false, 'The Developer Metrics command threw an error');
+    });
     test('Simulate Outline Parameter Autocompletion', async () => {
         const uri = vscode.Uri.parse('untitled:outline_autocomplete_test.feature');
         const document = await vscode.workspace.openTextDocument(uri);

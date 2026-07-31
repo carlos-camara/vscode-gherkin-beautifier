@@ -216,6 +216,22 @@
           },
           "default": [],
           "markdownDescription": "Extra flags appended to **every** Behave invocation from the Test Explorer.\n\n**Examples:** `[\"--no-capture\"]` · `[\"-D\", \"env=staging\"]` · `[\"--format\", \"progress\"]`"
+        },
+        "gherkinPowerTools.analytics.historicalTrends.enabled": {
+          "type": "boolean",
+          "order": 40,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable or disable historical trend analysis for Gherkin Health. When enabled, dashboard metrics are persisted locally to visualize project evolution over time."
+        },
+        "gherkinPowerTools.analytics.historicalTrends.retentionSnapshots": {
+          "type": "number",
+          "order": 41,
+          "scope": "resource",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 365,
+          "markdownDescription": "Maximum number of historical snapshots to retain for trend analysis."
         }
       }
     },
