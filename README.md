@@ -142,7 +142,7 @@ Hover over any tag to calculate exactly how many scenarios and example rows it a
 | **Command Center** | Access all extension capabilities from a single searchable quick-pick menu. |
 | **Workspace Diagnostics** | Generate a health report of your environment, Python path, and discovered step files. |
 | **Developer Metrics** | Track AST parsing performance, cache hit ratios, and parser failures in real-time. |
-| **Gherkin Health Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
+| **Step Refactoring** | Rename steps workspace-wide with `F2`, or extract selected steps into a new Python stub via Code Actions. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |
 | **Project Onboarding** | Benefit from automated detection and configuration suggestions for Behave projects. |
 

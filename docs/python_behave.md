@@ -95,21 +95,20 @@ The Linter actively validates your steps against the Python backend:
 
 ## Step Definition Analysis
 
-Gherkin PowerTools includes a comprehensive analyzer that inspects your entire workspace to ensure your Python step definitions are healthy and maintainable.
+Gherkin PowerTools includes a comprehensive analyzer integrated into the **Gherkin Health Dashboard** that inspects your entire workspace to ensure your Python step definitions are healthy and maintainable.
 
-**Proactive Indexing**: When you run the analysis, the extension proactively scans and parses all `.feature` and `.py` files across your entire workspace, ensuring 100% accuracy even if you haven't opened those files in your current session.
+**Proactive Indexing**: When you open the dashboard, the extension proactively scans and parses all `.feature` and `.py` files across your entire workspace, ensuring 100% accuracy even if you haven't opened those files in your current session.
 
-You can generate this report by running the **Gherkin PowerTools: Analyze Step Definitions** command from the Command Palette. It opens an interactive **Dashboard Webview** displaying:
+Open the dashboard by running **Gherkin PowerTools: Show Gherkin Health** from the Command Palette. The interactive Webview displays:
 
-- **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
-- **Duplicated Implementations:** Finds identical step definitions (same matcher type and regex pattern) across different files which will cause a runtime failure in Behave.
-- **Ambiguous Step Usages:** Identifies specific steps in your feature files that match multiple definitions, helping you pinpoint exactly where Behave will fail.
-- **Suspicious Similarities:** Highlights step definitions with very similar regex patterns (>85% similarity). These are often accidental duplicates with minor typos or overly generic patterns that could lead to ambiguity.
+- **Undefined Steps:** Identifies Gherkin steps that lack Python implementations.
+- **Ambiguous Step Usages:** Identifies specific steps in your feature files that match multiple definitions.
+- **Duplicated Implementations:** Finds identical step definitions (same matcher type and regex pattern) declared in multiple files.
+- **Suspicious Similarities:** Highlights step definitions with very similar regex patterns (>85% similarity) — often accidental duplicates with minor typos.
 
 **Interactive Navigation**: Every file reference in the dashboard is an interactive link. Click any file path to instantly open that file in VS Code at the exact line number.
 
 ---
-
 
 ## Step Stub Generation
 
@@ -118,13 +117,41 @@ If you write a step in your `.feature` file that doesn't exist yet, Gherkin Powe
 1. Write the undefined step.
 2. Place your cursor on the underlined step and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS).
 3. Select **Generate Python Step Definition**.
-4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and insert the stub into your most recently modified `steps.py` file.
+4. The extension automatically extracts string and integer parameters into variables, creates the correct `@given/@when/@then` decorator, and inserts the stub into your most recently modified `steps.py` file.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" />
 </div>
 
 ---
+
+## Step Refactoring
+
+Gherkin PowerTools provides basic step refactoring operations accessible from the editor. All refactoring operations use VS Code's `WorkspaceEdit` API, which allows you to preview and undo all changes.
+
+### Rename Step
+
+The `Rename Symbol` action (`F2`) on a Gherkin step or Python step decorator renames the step text and updates all usages across `.feature` files.
+
+1. Place your cursor on a Gherkin step in a `.feature` file, or on the pattern string inside a Python decorator (`@given("...")`).
+2. Press **`F2`** or right-click and select **Rename Symbol**.
+3. Enter the new step name.
+4. The extension updates the Python decorator **and** all matching Gherkin steps in the workspace.
+
+> **Note:** Rename operates via the Workspace Graph. The step must be indexed (i.e., the Python file must be within your configured `stepGlobs`) for the rename to locate all usages.
+
+### Extract Step
+
+1. In a `.feature` file, select multiple Gherkin step lines.
+2. Press **`Ctrl+.`** (**`Cmd+.`** on macOS) to open the Code Actions lightbulb.
+3. Select **Extract Steps to new definition**.
+4. Enter a name for the new step.
+5. Choose the target Python step file from the list.
+
+The extension inserts a Python stub decorated with the correct `@given`, `@when`, or `@then` keyword, inferred from the keywords present in your selection.
+
+---
+
 
 ## Known Limitations
 

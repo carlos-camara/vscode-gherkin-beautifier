@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [Unreleased]
+
+### 🚀 Added
+- **Step Rename (F2):** Renamed `F2` (`Rename Symbol`) support for Gherkin steps and Python Behave decorators. Pressing `F2` on a Gherkin step or inside a Python `@given/@when/@then` decorator renames the pattern and updates all usages across feature files in a single atomic, undoable `WorkspaceEdit`.
+- **Extract Step (Code Action):** Select multiple Gherkin step lines in a `.feature` file and press `Ctrl+.` (`Cmd+.` on macOS) to extract them into a new Python step definition stub. The extension infers the correct `@given`, `@when`, or `@then` decorator from the keywords present in the selection and prompts you to choose the target Python file.
+- **Move Step Definition command:** Added the `gherkinPowerTools.refactor.moveStep` command as a placeholder for an upcoming move-step-definition-to-another-file workflow.
+
+### 🗑️ Removed
+- **Merge Steps:** The experimental `Merge Steps` refactoring command has been removed. The feature was not sufficiently reliable for general use.
+
 ## [1.8.1] - 2026-07-31
 
 ### 🚀 Added

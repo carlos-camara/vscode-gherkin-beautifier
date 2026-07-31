@@ -87,10 +87,26 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" />
 </div>
 
-## Step Analysis Report is empty or incomplete
-**Symptom:** You run "Analyze Step Definitions" but the report says "0 Total Step Defs" or misses files you know exist.
+## Gherkin Health Dashboard shows 0 step definitions or is incomplete
+**Symptom:** The Gherkin Health Dashboard shows `0 Total Step Defs` or misses files you know exist.
 **Likely Causes:** Your `gherkinPowerTools.behave.stepGlobs` configuration does not cover the locations of all your steps.
-**Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The proactive indexer will automatically scan them upon running the command.
+**Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The indexer will automatically scan them upon opening the dashboard.
+
+## Rename Step (F2) does not find all usages
+**Symptom:** You press `F2` on a Gherkin step, rename it, but some `.feature` files still use the old step name.
+**Likely Causes:** The affected `.feature` files were not yet indexed in the `WorkspaceGraph`.
+**Diagnostic Steps:**
+1. Ensure the Python step file containing the definition is within your configured `stepGlobs`.
+2. Run **Gherkin PowerTools: Diagnose Workspace** and check the "Discovered Steps" and "Workspace Graph" sections.
+**Resolution:** Verify `stepGlobs` covers all relevant step files, then retry the rename. The graph is rebuilt automatically when files are saved.
+
+## Extract Step does not produce a Python stub
+**Symptom:** You select multiple steps and invoke the Code Action, but no stub appears in the target file.
+**Likely Causes:** The selection may not span multiple step lines, or no Python step files were found in the workspace.
+**Diagnostic Steps:**
+1. Ensure you have selected at least two step lines (the selection must include both start and end lines).
+2. Confirm that at least one Python step file exists within your `stepGlobs`.
+**Resolution:** If no Python files appear in the file picker, add the correct glob to `gherkinPowerTools.behave.stepGlobs`.
 
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).
