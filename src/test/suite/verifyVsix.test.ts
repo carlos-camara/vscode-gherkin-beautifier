@@ -30,10 +30,10 @@ suite('VSIX Automated Verification Test Suite', () => {
             fs.mkdirSync(path.join(packageDir, 'extension', 'src'), { recursive: true });
             fs.mkdirSync(path.join(packageDir, 'extension', 'assets'), { recursive: true });
 
-            // Create invalid files: TypeScript source, source map, SKILL.md, validation report
+            // Create invalid files: TypeScript source, source map, unapproved markdown document, validation report
             fs.writeFileSync(path.join(packageDir, 'extension', 'src', 'index.ts'), 'console.log("src");');
             fs.writeFileSync(path.join(packageDir, 'extension', 'extension.js.map'), '{}');
-            fs.writeFileSync(path.join(packageDir, 'extension', 'SKILL.md'), '# Private Skill');
+            fs.writeFileSync(path.join(packageDir, 'extension', 'UNAPPROVED.md'), '# Unapproved');
             fs.writeFileSync(path.join(packageDir, 'extension', 'vsix-validation-report.md'), '# Report');
             fs.writeFileSync(path.join(packageDir, 'extension', 'package.json'), JSON.stringify({ name: 'test', version: '1.0.0', publisher: 'test', main: './dist/extension.js' }));
 
@@ -47,7 +47,7 @@ suite('VSIX Automated Verification Test Suite', () => {
             assert.strictEqual(result.checksPassed, false, 'Validation should fail for invalid package');
             assert.ok(result.violations.some((v: any) => v.file.includes('index.ts')), 'Should detect TypeScript file');
             assert.ok(result.violations.some((v: any) => v.file.includes('extension.js.map')), 'Should detect source map');
-            assert.ok(result.violations.some((v: any) => v.file.includes('SKILL.md')), 'Should detect private metadata file');
+            assert.ok(result.violations.some((v: any) => v.file.includes('UNAPPROVED.md')), 'Should detect unapproved markdown file');
             assert.ok(result.violations.some((v: any) => v.file.includes('vsix-validation-report.md')), 'Should detect validation report file');
             assert.ok(result.violations.some((v: any) => v.type === 'Missing Required Asset'), 'Should detect missing required assets');
             assert.ok(fs.existsSync(reportPath), 'Validation report file should be created');
