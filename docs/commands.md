@@ -67,6 +67,26 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Extract Step
+- **Identifier**: `gherkinPowerTools.refactor.extractStep`
+- **Where it appears**: Code Action / Quick Fix menu.
+- **Required context**: Multiple selected step lines in a `.feature` file.
+- **Input**: Prompts for a new step name, and then presents a file picker to select the target Python step file.
+- **Result**: Extracts the selected steps into a new Python step definition, replacing them in the original feature file.
+- **Default shortcut**: None (Invoked via <kbd>Ctrl+.</kbd> or <kbd>Cmd+.</kbd>).
+
+---
+
+## Move Step Definition
+- **Identifier**: `gherkinPowerTools.refactor.moveStep`
+- **Where it appears**: Command Palette, Editor Context Menu (Right-click on a Python step definition).
+- **Required context**: A Python step definition.
+- **Input**: Prompts to select the target Python file.
+- **Result**: Moves the selected step definition to the target file.
+- **Default shortcut**: None.
+
+---
+
 ## Test Execution Commands (CodeLens / Tree Nodes)
 
 These commands typically appear as CodeLens buttons above Scenarios/Features, or are invoked internally by the Test Explorer.
@@ -90,26 +110,3 @@ These commands typically appear as CodeLens buttons above Scenarios/Features, or
 ### Edit Feature / Edit Scenario
 - **Identifiers**: `gherkinPowerTools.runFeatureWithArgs` / `gherkinPowerTools.runScenarioWithArgs`
 - **Result**: Interactively prompts for custom CLI arguments before running or debugging the target test.
-
----
-
-## Refactoring Commands
-
-These commands assist with step-level refactoring operations in feature files and Python step definition files. They use VS Code `WorkspaceEdit` internally, so all changes are previewed and can be undone (`Ctrl+Z` / `Cmd+Z`).
-
-### Extract Step
-- **Identifier**: `gherkinPowerTools.refactor.extractStep`
-- **Where it appears**: Editor lightbulb (💡) / Code Actions when multiple Gherkin steps are selected in a `.feature` file.
-- **Required context**: An active `.feature` file with a multi-line selection.
-- **Input**: Prompts for a new step name, then asks you to select the target Python step file.
-- **Result**: Extracts the selected steps into a new Python step definition stub, using the appropriate `@given`/`@when`/`@then` decorator inferred from the step keywords in the selection.
-- **Undo support**: Yes — via VS Code's standard undo stack (`Ctrl+Z` / `Cmd+Z`).
-- **Default shortcut**: None (invoked via Code Actions or Command Palette).
-
-### Move Step Definition
-- **Identifier**: `gherkinPowerTools.refactor.moveStep`
-- **Where it appears**: Command Palette.
-- **Required context**: Cursor on a Python step decorator or a Gherkin step that has a definition.
-- **Input**: None.
-- **Result**: Placeholder command for moving a step definition to another Python file. Currently shows an information message; full implementation is in progress.
-- **Default shortcut**: None.

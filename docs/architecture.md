@@ -77,27 +77,3 @@ To enable instantaneous, O(1) semantic queries across massive projects, the exte
 5. **Dashboard Webviews:** The graph directly powers the Gherkin Health Dashboard. The backend queries the graph for complexity metrics, tag distributions, unused, duplicated, and ambiguous nodes, serializes them into a JSON payload, and injects them into an HTML Webview.
    Standard VS Code message passing (`acquireVsCodeApi().postMessage`) bridges the UI clicks back to the extension host to trigger `vscode.window.showTextDocument` for interactive file navigation.
    The extension also uses `MetricsHistory` to persist a lightweight snapshot of the metrics securely inside VS Code's `ExtensionContext.workspaceState`. This local storage enables the dashboard to render Historical Trend Analysis charts using Chart.js without sending any data off the machine.
-
-## Step Refactoring Engine
-
-The `StepRefactoringService` (`src/refactoring.ts`) and `RenameProvider` (`src/renameProvider.ts`) together form the step refactoring subsystem.
-
-### Design Decisions
-
-- **WorkspaceEdit API:** All refactoring operations produce a `vscode.WorkspaceEdit` object rather than applying changes directly. This allows VS Code to preview diffs before applying and integrates with the standard undo stack.
-- **Graph-Backed Resolution:** Instead of performing workspace-wide regex scans at refactoring time, the `StepRefactoringService` queries the `WorkspaceGraph` to resolve step usages in O(1) time. The graph must be initialized before any refactoring operation runs.
-- **Rename Provider (`F2`):** The `GherkinRenameProvider` implements `vscode.RenameProvider` and is registered for the `feature` language. When `F2` is invoked on a Gherkin step, the provider:
-  1. Resolves the step node from the `WorkspaceGraph`.
-  2. Locates the corresponding `StepDefNode` (Python decorator).
-  3. Delegates to `StepRefactoringService.renameStep()` to produce a `WorkspaceEdit` that patches the Python decorator and all Gherkin usages in a single atomic operation.
-- **Extract Step (Code Action):** When the user selects multiple step lines in a `.feature` file and invokes the Code Actions lightbulb, the `GherkinCodeActionProvider` adds an **Extract Steps to new definition** action. The command:
-  1. Prompts for a new step name.
-  2. Presents a file picker limited to Python files already within `stepGlobs`.
-  3. Calls `StepRefactoringService.extractStep()`, which infers the correct Gherkin keyword (`Given`/`When`/`Then`) and Python decorator from the keywords present in the selection.
-- **Keyword Inference Rule:** The extracted step uses `@given` / `Given` if any selected step is a `Given` or `And` resolving to `Given`. Otherwise `@when` / `When` if a `When` is present, and `@then` / `Then` as the fallback.
-
-### Contributor Rules
-
-- Any new refactoring operation must produce a `vscode.WorkspaceEdit` and must **not** apply edits directly using `vscode.workspace.applyEdit` inside the service — command handlers are responsible for applying the edit after user confirmation.
-- The `StepRefactoringService` must call `this.graph.initialize()` before performing any query, as the graph may not have been constructed if the extension activated on a non-Gherkin document.
-- Add a corresponding test case in `src/test/suite/refactoring.test.ts` for every new refactoring operation.

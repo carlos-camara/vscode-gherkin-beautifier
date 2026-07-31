@@ -12,16 +12,12 @@ Here is a breakdown of the core modules located in the `src/` directory:
 
 - **`extension.ts`**: The entry point. Bundled via Esbuild for fast activation. Registers all commands, providers, and diagnostics.
 - **`eventBus.ts`**: The centralized publish/subscribe Workspace Event Bus. It handles file watchers and decouples feature modules from VS Code workspace events.
-- **`graph.ts`**: The `WorkspaceGraph` — an event-driven in-memory graph that maps bi-directional relationships between Gherkin steps (`StepNode`) and Python step definitions (`StepDefNode`). Powers O(1) Go to Definition, Hover, and refactoring operations.
 - **`formatter.ts`**: The core AST-based formatter. It handles indentation, table alignment, auto-casing, and tag wrapping based on `@cucumber/gherkin` parses.
 - **`highlighter.ts`**: Implements custom semantic syntax highlighting via VS Code's `createTextEditorDecorationType` API.
 - **`linter.ts`**: Uses the official `@cucumber/gherkin` AST parser to perform real-time syntax checking. Generates `vscode.Diagnostic` warnings to underline mistakes in the editor.
 - **`definition.ts`**: The Go-To-Definition provider. Accesses `cache.ts` for instant lookups.
-- **`renameProvider.ts`**: The `GherkinRenameProvider` implementing `vscode.RenameProvider` for the `feature` language. Supports `F2` rename operations on Gherkin steps and Python step decorators.
-- **`refactoring.ts`**: The `StepRefactoringService` — provides `renameStep` and `extractStep` operations that return `vscode.WorkspaceEdit` objects for safe, undoable workspace-wide step refactoring.
 - **`outline.ts`**: Constructs the hierarchical tree of `Feature > Rule > Scenario` for the VS Code Outline panel.
 - **`statistics.ts`**: Generates the interactive HTML Webview dashboard by parsing workspace files to count BDD metrics.
-- **`history.ts`**: The `MetricsHistory` service — persists lightweight dashboard metric snapshots in `ExtensionContext.workspaceState` to enable Historical Trend Analysis charts.
 - **`codeAction.ts`**: Generates quick fixes (💡) for undefined steps or syntax typos.
 - **`completion.ts`**: Smart IntelliSense autocompletion parsing regex into Snippets.
 - **`cache.ts`**: Asynchronous caching engine that non-blockingly indexes the workspace via `vscode.workspace.findFiles`.
@@ -98,7 +94,7 @@ The CI/CD pipeline leverages reusable GitHub Actions from the [qa-hub-actions](h
 To create a local `.vsix` file for distribution or local testing:
 
 ```bash
-npx @vscode/vsce package
+npx vsce package
 ```
 
 This will generate a `vscode-gherkin-powertools-x.x.x.vsix` file in the root directory.

@@ -87,10 +87,10 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" />
 </div>
 
-## Gherkin Health Dashboard shows 0 step definitions or is incomplete
-**Symptom:** The Gherkin Health Dashboard shows `0 Total Step Defs` or misses files you know exist.
+## Step Analysis Report is empty or incomplete
+**Symptom:** You run "Show Gherkin Health" but the report says "0 Total Step Defs" or misses files you know exist.
 **Likely Causes:** Your `gherkinPowerTools.behave.stepGlobs` configuration does not cover the locations of all your steps.
-**Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The indexer will automatically scan them upon opening the dashboard.
+**Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The proactive indexer will automatically scan them upon running the command.
 
 ## Rename Step (F2) does not find all usages
 **Symptom:** You press `F2` on a Gherkin step, rename it, but some `.feature` files still use the old step name.
