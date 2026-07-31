@@ -5,7 +5,8 @@ import { discoveryService } from './discovery';
 
 export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
     public static readonly providedCodeActionKinds = [
-        vscode.CodeActionKind.QuickFix
+        vscode.CodeActionKind.QuickFix,
+        vscode.CodeActionKind.RefactorExtract
     ];
 
     public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
@@ -90,6 +91,24 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 action.isPreferred = true;
                 actions.push(action);
             }
+        }
+
+        // Add Refactoring actions if the user selects multiple lines in a feature file
+        if (!_range.isEmpty && _range.start.line !== _range.end.line && document.uri.toString().endsWith('.feature')) {
+            const extractAction = new vscode.CodeAction('Extract Steps to new definition', vscode.CodeActionKind.RefactorExtract);
+            extractAction.command = {
+                command: 'gherkinPowerTools.refactor.extractStep',
+                title: 'Extract Step'
+            };
+            actions.push(extractAction);
+
+            const mergeAction = new vscode.CodeAction('Merge Selected Steps', vscode.CodeActionKind.RefactorExtract);
+            mergeAction.command = {
+                command: 'gherkinPowerTools.refactor.mergeSteps',
+                title: 'Merge Steps'
+            };
+            // Note: mergeSteps currently expects step definition IDs from Python, but providing a UX entrypoint here is useful.
+            actions.push(mergeAction);
         }
 
         return actions;

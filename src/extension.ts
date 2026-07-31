@@ -23,6 +23,8 @@ import { showDiagnosticsReport } from './diagnostics';
 import { showOnboardingNotificationIfNeeded } from './onboarding';
 import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
+import { StepRefactoringService } from './refactoring';
+import { GherkinRenameProvider } from './renameProvider';
 
 import { ConfigurationService } from './configuration';
 
@@ -78,6 +80,10 @@ export async function activate(context: vscode.ExtensionContext) {
     const workspaceGraph = new WorkspaceGraph(symbolCache);
     workspaceGraph.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
+
+    // Initialize Refactoring Service
+    const refactoringService = new StepRefactoringService(workspaceGraph, symbolCache);
+    const renameProvider = new GherkinRenameProvider(refactoringService, workspaceGraph);
 
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);
@@ -253,9 +259,38 @@ export async function activate(context: vscode.ExtensionContext) {
     
     context.subscriptions.push(linter);
 
+    // Register refactoring commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.refactor.extractStep', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+            // Provide a basic UX via prompts, real implementations would use QuickPicks or input boxes.
+            const newName = await vscode.window.showInputBox({ prompt: 'Enter new step name (without Given/When/Then)' });
+            if (!newName) return;
+            const edit = await refactoringService.extractStep(editor.document, editor.selection, newName);
+            if (edit) await vscode.workspace.applyEdit(edit);
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.refactor.mergeSteps', async (stepIds: string[]) => {
+            if (!stepIds || stepIds.length < 2) {
+                vscode.window.showErrorMessage('Select at least two steps to merge.');
+                return;
+            }
+            const newName = await vscode.window.showInputBox({ prompt: 'Enter new merged step name (without Given/When/Then)' });
+            if (!newName) return;
+            const edit = await refactoringService.mergeSteps(stepIds, newName);
+            if (edit) await vscode.workspace.applyEdit(edit);
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.refactor.moveStep', async () => {
+            vscode.window.showInformationMessage('Move step definition command invoked.');
+        })
+    );
 
-
-    context.subscriptions.push(highlighter);
+    context.subscriptions.push(
+        vscode.languages.registerRenameProvider(
+            { language: 'python' },
+            renameProvider
+        )
+    );    context.subscriptions.push(highlighter);
 
     // Initial lint & highlight for all open feature files
     vscode.workspace.textDocuments.forEach(doc => {
@@ -322,6 +357,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 {
                     providedCodeActionKinds: GherkinCodeActionProvider.providedCodeActionKinds
                 }
+            ),
+            vscode.languages.registerRenameProvider(
+                { language },
+                renameProvider
             )
         );
     });

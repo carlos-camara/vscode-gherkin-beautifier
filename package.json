@@ -296,6 +296,21 @@
         "title": "Edit Behave args & Run",
         "category": "Gherkin PowerTools",
         "icon": "$(edit)"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.extractStep",
+        "title": "Extract Step",
+        "category": "Refactoring"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.mergeSteps",
+        "title": "Merge Steps",
+        "category": "Refactoring"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.moveStep",
+        "title": "Move Step Definition",
+        "category": "Refactoring"
       }
     ],
     "menus": {
