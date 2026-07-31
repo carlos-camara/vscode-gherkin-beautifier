@@ -5,6 +5,22 @@ const os = require('os');
 const { execSync } = require('child_process');
 const { verifyVsix, formatBytes, CONFIG } = require('../../../scripts/verify-vsix');
 
+function createZip(sourceDir: string, zipPath: string) {
+    if (process.platform === 'win32') {
+        try {
+            execSync(`powershell -NoProfile -NonInteractive -Command "Compress-Archive -Path '${sourceDir.replace(/'/g, "''")}\\*' -DestinationPath '${zipPath.replace(/'/g, "''")}' -Force"`, { stdio: 'pipe' });
+        } catch (e) {
+            execSync(`tar -a -cf "${zipPath}" -C "${sourceDir}" .`, { stdio: 'pipe' });
+        }
+    } else {
+        try {
+            execSync(`cd "${sourceDir}" && zip -r "${zipPath}" .`, { stdio: 'pipe' });
+        } catch (e) {
+            execSync(`tar -a -cf "${zipPath}" -C "${sourceDir}" .`, { stdio: 'pipe' });
+        }
+    }
+}
+
 suite('VSIX Automated Verification Test Suite', () => {
 
     test('formatBytes: Formats bytes correctly', () => {
@@ -37,8 +53,8 @@ suite('VSIX Automated Verification Test Suite', () => {
             fs.writeFileSync(path.join(packageDir, 'extension', 'vsix-validation-report.md'), '# Report');
             fs.writeFileSync(path.join(packageDir, 'extension', 'package.json'), JSON.stringify({ name: 'test', version: '1.0.0', publisher: 'test', main: './dist/extension.js' }));
 
-            // Zip the dummy directory into a .vsix archive
-            execSync(`cd "${packageDir}" && zip -r "${dummyZipPath}" .`, { stdio: 'pipe' });
+            // Zip the dummy directory into a .vsix archive cross-platform
+            createZip(packageDir, dummyZipPath);
 
             // Run verification
             const reportPath = path.join(tempDir, 'report.md');

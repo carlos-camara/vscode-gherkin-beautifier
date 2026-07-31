@@ -63,6 +63,22 @@ function formatBytes(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+function extractZip(zipPath, targetDir) {
+    if (process.platform === 'win32') {
+        try {
+            execSync(`powershell -NoProfile -NonInteractive -Command "Expand-Archive -Path '${zipPath.replace(/'/g, "''")}' -DestinationPath '${targetDir.replace(/'/g, "''")}' -Force"`, { stdio: 'pipe' });
+        } catch (e) {
+            execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, { stdio: 'pipe' });
+        }
+    } else {
+        try {
+            execSync(`unzip -o -q "${zipPath}" -d "${targetDir}"`, { stdio: 'pipe' });
+        } catch (e) {
+            execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, { stdio: 'pipe' });
+        }
+    }
+}
+
 function verifyVsix(vsixPath, reportOutputPath = null) {
     if (!fs.existsSync(vsixPath)) {
         throw new Error(`VSIX file not found at: ${vsixPath}`);
@@ -84,8 +100,8 @@ function verifyVsix(vsixPath, reportOutputPath = null) {
     };
 
     try {
-        // Unpack VSIX file using unzip
-        execSync(`unzip -o -q "${vsixPath}" -d "${tempDir}"`);
+        // Unpack VSIX file cross-platform
+        extractZip(vsixPath, tempDir);
 
         const allExtractedFiles = getAllFiles(tempDir);
         validation.totalFileCount = allExtractedFiles.length;
