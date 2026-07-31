@@ -80,7 +80,7 @@ To enable instantaneous, O(1) semantic queries across massive projects, the exte
 
 ## Step Refactoring Engine
 
-The `feature/step-refactoring` branch introduced a `StepRefactoringService` (`src/refactoring.ts`) and a `RenameProvider` (`src/renameProvider.ts`) that together form the step refactoring subsystem.
+The `StepRefactoringService` (`src/refactoring.ts`) and `RenameProvider` (`src/renameProvider.ts`) together form the step refactoring subsystem.
 
 ### Design Decisions
 
