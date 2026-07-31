@@ -100,16 +100,31 @@ export class StepRefactoringService {
         // 1. Get original text
         const originalText = document.getText(range);
         
+        // Infer keyword based on the steps being extracted
+        let keyword = 'step'; // fallback for python decorator
+        let featureKeyword = '*'; // fallback for feature file
+
+        if (/^\s*given\b/im.test(originalText)) {
+            keyword = 'given';
+            featureKeyword = 'Given';
+        } else if (/^\s*when\b/im.test(originalText)) {
+            keyword = 'when';
+            featureKeyword = 'When';
+        } else if (/^\s*then\b/im.test(originalText)) {
+            keyword = 'then';
+            featureKeyword = 'Then';
+        }
+        
         // 2. Replace feature file lines with new step
         const leadingWhitespaceMatch = originalText.match(/^([ \t]*)/);
         const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[1] : '';
-        const newStepLine = `${leadingWhitespace}* ${newName}`;
+        const newStepLine = `${leadingWhitespace}${featureKeyword} ${newName}`;
         edit.replace(document.uri, range, newStepLine);
 
         // 3. Create Python stub
         if (targetPythonUri) {
             const pyDoc = await vscode.workspace.openTextDocument(targetPythonUri);
-            let newPyCode = `\n\n@step('${newName}')\ndef step_impl(context):\n    context.execute_steps(u'''\n`;
+            let newPyCode = `\n\n@${keyword}('${newName}')\ndef step_impl(context):\n    context.execute_steps(u'''\n`;
             
             // Indent the original text for the triple-quoted string
             const indentedOriginal = originalText.split('\n').map(line => `        ${line.trim()}`).join('\n');

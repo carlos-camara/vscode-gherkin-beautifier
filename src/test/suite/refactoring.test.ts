@@ -62,11 +62,11 @@ suite('Step Refactoring Engine Test Suite', () => {
         assert.ok(edit);
         const featureEdits = edit.entries().find(e => e[0] && e[0].toString() === featureUri.toString());
         assert.ok(featureEdits, 'Feature file should be edited');
-        assert.strictEqual(featureEdits[1][0].newText, '    * extracted step');
+        assert.strictEqual(featureEdits[1][0].newText, '    Given extracted step');
 
         const pythonEdits = edit.entries().find(e => e[0] && e[0].toString() === pythonUri.toString());
         assert.ok(pythonEdits, 'Python file should be edited');
-        assert.ok(pythonEdits[1][0].newText.includes("@step('extracted step')"));
+        assert.ok(pythonEdits[1][0].newText.includes("@given('extracted step')"));
         assert.ok(pythonEdits[1][0].newText.includes('context.execute_steps'));
         assert.ok(pythonEdits[1][0].newText.includes('Given step 1'));
     });
