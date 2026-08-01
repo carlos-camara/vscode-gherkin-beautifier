@@ -20,6 +20,7 @@ import { discoveryService } from './discovery';
 import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
 
 import { showDiagnosticsReport } from './diagnostics';
+import { BehaveDoctor, DoctorCodeActionProvider } from './doctor';
 import { showOnboardingNotificationIfNeeded } from './onboarding';
 import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
@@ -238,6 +239,22 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    const doctorDiagnostics = vscode.languages.createDiagnosticCollection('behave-doctor');
+    context.subscriptions.push(doctorDiagnostics);
+    const behaveDoctor = new BehaveDoctor(doctorDiagnostics);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.behaveDoctor', () => {
+            behaveDoctor.analyze(symbolCache);
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.doctor.createFolder', async (uri: vscode.Uri) => {
+            await vscode.workspace.fs.createDirectory(uri);
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.doctor.resetStepGlobs', async (uri: vscode.Uri) => {
+            await vscode.workspace.getConfiguration('gherkinPowerTools.behave', uri).update('stepGlobs', undefined);
+        })
+    );
+
     // "Edit args & Run" button in the Testing panel toolbar (pencil icon via view/title menu)
     // Shows the Behave args prompt, contextualized to the active feature file if open.
     context.subscriptions.push(
@@ -299,6 +316,14 @@ export async function activate(context: vscode.ExtensionContext) {
             renameProvider
         )
     );    context.subscriptions.push(highlighter);
+
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider(
+            { scheme: 'file' },
+            new DoctorCodeActionProvider(),
+            { providedCodeActionKinds: DoctorCodeActionProvider.providedCodeActionKinds }
+        )
+    );
 
     // Initial lint & highlight for all open feature files
     vscode.workspace.textDocuments.forEach(doc => {

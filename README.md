@@ -144,6 +144,7 @@ Hover over any tag to calculate exactly how many scenarios and example rows it a
 | **Semantic Highlighting** | Enjoy a curated color palette for Gherkin keywords, tags, parameters, and tables. |
 | **Command Center** | Access all extension capabilities from a single searchable quick-pick menu. |
 | **Workspace Diagnostics** | Generate a health report of your environment, Python path, and discovered step files. |
+| **Behave Doctor** | Run a deep diagnostic analysis covering Python configuration, missing folders, empty configurations, duplicate definitions, and broken imports. Produces a Markdown report and populates the Problems Panel with actionable Quick Fixes. |
 | **Developer Metrics** | Track AST parsing performance, cache hit ratios, and parser failures in real-time. |
 | **Gherkin Health Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |

@@ -295,6 +295,11 @@
         "category": "Gherkin PowerTools"
       },
       {
+        "command": "gherkinPowerTools.behaveDoctor",
+        "title": "Behave Doctor",
+        "category": "Gherkin PowerTools"
+      },
+      {
         "command": "gherkinPowerTools.testExplorerEditAndRun",
         "title": "Edit Behave args & Run",
         "category": "Gherkin PowerTools",
@@ -327,6 +332,11 @@
           "when": "editorLangId == feature",
           "command": "gherkinPowerTools.diagnoseWorkspace",
           "group": "navigation@3"
+        },
+        {
+          "when": "editorLangId == feature",
+          "command": "gherkinPowerTools.behaveDoctor",
+          "group": "navigation@3.1"
         },
         {
           "when": "editorLangId == feature",
@@ -364,6 +374,12 @@
         "command": "gherkinPowerTools.diagnoseWorkspace",
         "key": "ctrl+alt+h",
         "mac": "cmd+alt+h",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.behaveDoctor",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
         "when": "editorLangId == feature"
       },
       {

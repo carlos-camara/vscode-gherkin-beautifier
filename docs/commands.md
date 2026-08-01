@@ -35,6 +35,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Behave Doctor
+- **Identifier**: `gherkinPowerTools.behaveDoctor`
+- **Where it appears**: Command Palette, Editor Context Menu.
+- **Required context**: An active workspace or `.feature` file.
+- **Input**: None.
+- **Result**: Runs a deep diagnostic analysis covering Python configuration, missing folders, empty configurations, duplicate definitions, and broken imports. Produces a Markdown report and populates the **Problems Panel** with actionable **Quick Fixes** (e.g. creating missing folders automatically).
+- **Default shortcut**: <kbd>Ctrl+Alt+D</kbd> (Mac: <kbd>Cmd+Option+D</kbd>).
+
+---
+
 ## Show Gherkin Health
 - **Identifier**: `gherkinPowerTools.showStatistics`
 - **Where it appears**: Command Palette, Editor Context Menu.
