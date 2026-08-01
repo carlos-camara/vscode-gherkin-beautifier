@@ -18,7 +18,7 @@
 
 <br/>
 
-![Generate a Python step stub from undefined Gherkin — press Cmd+. and the function appears](assets/create-step.gif)
+<img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Generate a Python step stub from undefined Gherkin — press Cmd+. and the function appears" width="600" height="340" />
 
 *Automatically generate missing Python Behave steps directly from your feature files with a single keystroke.*
 
@@ -77,7 +77,7 @@ Write a Gherkin step. The linter underlines it if the Python implementation is m
 Open the Testing panel to view a live tree of your features, rules, scenarios, and example rows. Click the Play button to execute, or the Bug icon to attach the Python debugger with full breakpoint support.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer" width="600" height="340" />
 </div>
 
 ### Python Navigation and IntelliSense
@@ -86,21 +86,21 @@ The extension suggests matching steps from your Python backend as you type. Unli
 <kbd>Ctrl+Click</kbd> (<kbd>Cmd+Click</kbd> on macOS) any step to jump to its Python definition, or hover to preview the function signature and docstring.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif" alt="Navigate from a feature file directly to the Python step definition" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif" alt="Navigate from a feature file directly to the Python step definition" width="600" height="340" />
 </div>
 
 ### Real-Time Gherkin Diagnostics and Quick Fixes
 A dialect-aware AST linter flags structural errors across 70+ Gherkin languages. Identify misspelled keywords, malformed tables, and undefined steps immediately. Use Quick Fixes to correct common issues.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/linter.gif" alt="Real-time Gherkin diagnostics and Quick Fixes" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/linter.gif" alt="Real-time Gherkin diagnostics and Quick Fixes" width="600" height="340" />
 </div>
 
 ### Gherkin Formatter
 Align tables, wrap long tags, and standardize indentation using the built-in formatter. Configure formatting profiles to share a consistent baseline across your team.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif" alt="AST-powered Gherkin formatter aligning tables and standardizing indentation" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif" alt="AST-powered Gherkin formatter aligning tables and standardizing indentation" width="600" height="340" />
 </div>
 
 ### Gherkin Health & Recommendation Engine
@@ -119,7 +119,7 @@ Open the dashboard by running **Gherkin PowerTools: Show Gherkin Health** from t
 
 *Note: This analyzes static source structure, not runtime test coverage or execution results.*
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" height="340" />
 </div>
 
 ### Step Refactoring
@@ -131,7 +131,7 @@ Gherkin PowerTools provides step refactoring operations accessible from the edit
 ### Tag Impact Analysis
 Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover over a tag to see its impact across the workspace" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover over a tag to see its impact across the workspace" width="600" height="340" />
 </div>
 
 ---
