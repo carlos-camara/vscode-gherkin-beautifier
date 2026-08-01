@@ -40,11 +40,33 @@ async function main() {
 			esbuildProblemMatcherPlugin,
 		],
 	});
+
+	const cliCtx = await esbuild.context({
+		entryPoints: ['src/cli/index.ts'],
+		bundle: true,
+		format: 'cjs',
+		minify: production,
+		sourcemap: !production,
+		sourcesContent: false,
+		platform: 'node',
+		outfile: 'dist/cli.js',
+		alias: {
+			'vscode': './src/cli/vscode-mock.ts'
+		},
+		logLevel: 'silent',
+		plugins: [
+			esbuildProblemMatcherPlugin,
+		],
+	});
+
 	if (watch) {
 		await ctx.watch();
+		await cliCtx.watch();
 	} else {
 		await ctx.rebuild();
+		await cliCtx.rebuild();
 		await ctx.dispose();
+		await cliCtx.dispose();
 	}
 }
 
