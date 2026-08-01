@@ -116,10 +116,10 @@ Gherkin PowerTools provides step refactoring operations accessible from the edit
 
 ### Rename Step
 
-The `Rename Symbol` action (`F2`) on a Gherkin step or Python step decorator renames the step text and updates all usages across `.feature` files.
+The `Rename Symbol` action (`F2` / `Cmd+Shift+R` on macOS) on a Gherkin step or Python step decorator renames the step text and updates all usages across `.feature` files.
 
-1. Place your cursor on a Gherkin step in a `.feature` file, or on the pattern string inside a Python decorator (`@given("...")`).
-2. Press **`F2`** or right-click and select **Rename Symbol**.
+1. Place your cursor on a step in a `.feature` file, or the string inside `@step(...)` in Python.
+2. Press **`F2`** (or **`Cmd+Shift+R`** on macOS) or right-click and select **Rename Symbol**.
 3. Enter the new step name.
 4. The extension updates the Python decorator **and** all matching Gherkin steps in the workspace.
 
@@ -134,11 +134,6 @@ The `Rename Symbol` action (`F2`) on a Gherkin step or Python step decorator ren
 5. Choose the target Python step file from the list.
 
 The extension inserts a Python stub decorated with the correct `@given`, `@when`, or `@then` keyword, inferred from the keywords present in your selection.
-
-### Move Step Definition
-
-Move a step definition from one file to another.
-1. Use the Command Palette to run **Gherkin PowerTools: Move Step Definition** or select it from the context menu on a Python step definition.
 
 ---
 

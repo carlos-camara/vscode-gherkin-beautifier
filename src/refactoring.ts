@@ -139,32 +139,4 @@ export class StepRefactoringService {
 
 
 
-    /**
-     * Move a step definition to another Python file.
-     */
-    public async moveStepDefinition(definitionId: string, targetPythonUri: vscode.Uri): Promise<vscode.WorkspaceEdit | undefined> {
-        await this.graph.initialize();
-        const edit = new vscode.WorkspaceEdit();
-
-        const defNode = this.graph.getAllStepDefNodes().find(n => n.id === definitionId);
-        if (!defNode) return undefined;
-
-        const cachedDefs = await this.symbolCache.getAllStepDefinitions();
-        const cachedDef = cachedDefs.find(d => `${d.uri.toString()}:${d.decoratorRange.start.line}` === defNode.id);
-        if (!cachedDef || !cachedDef.functionRange) return undefined;
-
-        // 1. Get the source code
-        const sourceDoc = await vscode.workspace.openTextDocument(cachedDef.uri);
-        const sourceCode = sourceDoc.getText(new vscode.Range(cachedDef.decoratorRange.start.line, 0, cachedDef.functionRange.end.line + 1, 0));
-
-        // 2. Delete from source
-        edit.delete(cachedDef.uri, new vscode.Range(cachedDef.decoratorRange.start.line, 0, cachedDef.functionRange.end.line + 1, 0));
-
-        // 3. Append to target
-        const targetDoc = await vscode.workspace.openTextDocument(targetPythonUri);
-        const eof = new vscode.Position(targetDoc.lineCount, 0);
-        edit.insert(targetPythonUri, eof, `\n${sourceCode}`);
-
-        return edit;
-    }
 }

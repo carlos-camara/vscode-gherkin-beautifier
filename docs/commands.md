@@ -10,7 +10,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: None.
 - **Input**: None.
 - **Result**: Opens a unified QuickPick menu giving access to formatting, statistics, running tests, debugging, and workspace diagnostics.
-- **Default shortcut**: None.
+- **Default shortcut**: <kbd>Ctrl+Shift+G</kbd> (Mac: <kbd>Cmd+Shift+G</kbd>).
 
 ---
 
@@ -31,7 +31,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: An active `.feature` file or workspace.
 - **Input**: None.
 - **Result**: Analyzes environment versions, workspace layout, discovered feature/step files, indexed definitions, Python extension status, and `.gherkin-powertoolsrc.json` validity. Generates an Output Channel report with a 1-click `Copy Sanitized Report` action.
-- **Default shortcut**: None.
+- **Default shortcut**: <kbd>Ctrl+Alt+H</kbd> (Mac: <kbd>Cmd+Option+H</kbd>).
 
 ---
 
@@ -41,7 +41,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: An active `.feature` file.
 - **Input**: None.
 - **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing project health, maintainability, tag impact, and complexity distribution.
-- **Default shortcut**: None.
+- **Default shortcut**: <kbd>Ctrl+Alt+S</kbd> (Mac: <kbd>Cmd+Option+S</kbd>).
 
 ---
 
@@ -75,17 +75,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Result**: Extracts the selected steps into a new Python step definition, replacing them in the original feature file.
 - **Default shortcut**: None (Invoked via <kbd>Ctrl+.</kbd> or <kbd>Cmd+.</kbd>).
 
----
 
-## Move Step Definition
-- **Identifier**: `gherkinPowerTools.refactor.moveStep`
-- **Where it appears**: Command Palette, Editor Context Menu (Right-click on a Python step definition).
-- **Required context**: A Python step definition.
-- **Input**: Prompts to select the target Python file.
-- **Result**: Moves the selected step definition to the target file.
-- **Default shortcut**: None.
-
----
 
 ## Test Execution Commands (CodeLens / Tree Nodes)
 

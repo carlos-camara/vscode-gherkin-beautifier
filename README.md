@@ -135,9 +135,8 @@ Open the dashboard by running **Gherkin PowerTools: Show Gherkin Health** from t
 ### Step Refactoring
 Gherkin PowerTools provides step refactoring operations accessible from the editor. All refactoring operations use VS Code's `WorkspaceEdit` API, which allows you to preview and undo all changes.
 
-* **Rename Step (`F2`)**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
+* **Rename Step (`F2` / `Cmd+Shift+R` on macOS)**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
 * **Extract Step (`Ctrl+.`)**: Select multiple Gherkin step lines and extract them to a new Python definition.
-* **Move Step Definition**: Move a Python step definition to a different file.
 
 ### Tag Impact Analysis
 Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.

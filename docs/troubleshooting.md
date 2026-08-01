@@ -92,8 +92,8 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 **Likely Causes:** Your `gherkinPowerTools.behave.stepGlobs` configuration does not cover the locations of all your steps.
 **Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The proactive indexer will automatically scan them upon running the command.
 
-## Rename Step (F2) does not find all usages
-**Symptom:** You press `F2` on a Gherkin step, rename it, but some `.feature` files still use the old step name.
+## Rename Step (F2 / Cmd+Shift+R) does not find all usages
+**Symptom:** You press `F2` (or `Cmd+Shift+R` on macOS) on a Gherkin step, rename it, but some `.feature` files still use the old step name.
 **Likely Causes:** The affected `.feature` files were not yet indexed in the `WorkspaceGraph`.
 **Diagnostic Steps:**
 1. Ensure the Python step file containing the definition is within your configured `stepGlobs`.

@@ -278,11 +278,18 @@ export async function activate(context: vscode.ExtensionContext) {
             if (!selectedTarget) return;
 
             const edit = await refactoringService.extractStep(editor.document, editor.selection, newName, selectedTarget.uri);
-            if (edit) await vscode.workspace.applyEdit(edit);
+            if (edit) {
+                const applied = await vscode.workspace.applyEdit(edit);
+                if (applied) {
+                    await editor.document.save();
+                    const targetDoc = await vscode.workspace.openTextDocument(selectedTarget.uri);
+                    await targetDoc.save();
+                }
+            }
         }),
 
-        vscode.commands.registerCommand('gherkinPowerTools.refactor.moveStep', async () => {
-            vscode.window.showInformationMessage('Move step definition command invoked.');
+        vscode.commands.registerCommand('gherkinPowerTools.refactor.renameStep', async () => {
+            await vscode.commands.executeCommand('editor.action.rename');
         })
     );
 
