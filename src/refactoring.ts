@@ -1,0 +1,142 @@
+import * as vscode from 'vscode';
+import { WorkspaceGraph, StepDefNode } from './graph';
+import { SymbolCache } from './cache';
+
+export class StepRefactoringService {
+    private graph: WorkspaceGraph;
+    private symbolCache: SymbolCache;
+
+    constructor(graph: WorkspaceGraph, symbolCache: SymbolCache) {
+        this.graph = graph;
+        this.symbolCache = symbolCache;
+    }
+
+    /**
+     * Rename a step and all its usages.
+     * @param document The document where the rename was initiated
+     * @param position The position of the cursor
+     * @param newName The new name for the step
+     * @returns A WorkspaceEdit containing the changes
+     */
+    public async renameStep(document: vscode.TextDocument, position: vscode.Position, newName: string): Promise<vscode.WorkspaceEdit | undefined> {
+        await this.graph.initialize(); // Ensure graph is ready
+
+        const edit = new vscode.WorkspaceEdit();
+        const uriStr = document.uri.toString();
+        let targetDefNode: StepDefNode | undefined;
+
+        if (uriStr.endsWith('.feature')) {
+            const stepId = `${uriStr}:${position.line + 1}`;
+            const stepNode = this.graph.getAllStepNodes().find(n => n.id === stepId);
+            if (stepNode && stepNode.definitionId) {
+                targetDefNode = this.graph.getAllStepDefNodes().find(n => n.id === stepNode.definitionId);
+            }
+        } else if (uriStr.endsWith('.py')) {
+            const allDefs = this.graph.getAllStepDefNodes().filter(n => n.uri === uriStr);
+            targetDefNode = allDefs.find(n => position.line === n.line || position.line === n.line + 1); // rough check
+            // For exact check, we should query SymbolCache
+            if (!targetDefNode) {
+                const cachedDefs = await this.symbolCache.getAllStepDefinitions();
+                const matched = cachedDefs.find(d => d.uri.toString() === uriStr && 
+                    (d.decoratorRange.contains(position) || (d.functionRange && d.functionRange.contains(position)))
+                );
+                if (matched) {
+                    targetDefNode = this.graph.getAllStepDefNodes().find(n => n.id === `${uriStr}:${matched.decoratorRange.start.line}`);
+                }
+            }
+        }
+
+        if (!targetDefNode) {
+            return undefined;
+        }
+
+        // 1. Update Python Definition
+        const cachedDefs = await this.symbolCache.getAllStepDefinitions();
+        const defDetails = cachedDefs.find(d => `${d.uri.toString()}:${d.decoratorRange.start.line}` === targetDefNode!.id);
+        
+        if (defDetails) {
+            // Find the string inside the decorator
+            const doc = await vscode.workspace.openTextDocument(defDetails.uri);
+            const decoratorLineText = doc.lineAt(defDetails.decoratorRange.start.line).text;
+            
+            // Reconstruct decorator with new name
+            let newDecorator = decoratorLineText;
+            if (defDetails.matcherType === 're') {
+                newDecorator = `@${defDetails.type}(re.compile(r'${newName}'))`;
+            } else {
+                newDecorator = `@${defDetails.type}('${newName}')`;
+            }
+
+            edit.replace(defDetails.uri, new vscode.Range(defDetails.decoratorRange.start.line, 0, defDetails.decoratorRange.start.line, decoratorLineText.length), newDecorator);
+        }
+
+        // 2. Update Feature Usages
+        const usages = this.graph.getUsages(targetDefNode.id);
+        for (const usage of usages) {
+            const usageUri = vscode.Uri.parse(usage.uri);
+            const usageDoc = await vscode.workspace.openTextDocument(usageUri);
+            const lineIdx = usage.line - 1;
+            const lineText = usageDoc.lineAt(lineIdx).text;
+            
+            // Replace the text after the keyword
+            // Keyword could be Given, When, Then, And, But (with possible spaces)
+            const match = lineText.match(/^(\s*(?:Given|When|Then|And|But|\*)\s+)(.*)$/i);
+            if (match) {
+                const prefix = match[1];
+                const newText = prefix + newName;
+                edit.replace(usageUri, new vscode.Range(lineIdx, 0, lineIdx, lineText.length), newText);
+            }
+        }
+
+        return edit;
+    }
+
+    /**
+     * Extract a selected block of steps into a single step definition.
+     */
+    public async extractStep(document: vscode.TextDocument, range: vscode.Range, newName: string, targetPythonUri?: vscode.Uri): Promise<vscode.WorkspaceEdit | undefined> {
+        const edit = new vscode.WorkspaceEdit();
+        
+        // 1. Get original text
+        const originalText = document.getText(range);
+        
+        // Infer keyword based on the steps being extracted
+        let keyword = 'step'; // fallback for python decorator
+        let featureKeyword = '*'; // fallback for feature file
+
+        if (/^\s*given\b/im.test(originalText)) {
+            keyword = 'given';
+            featureKeyword = 'Given';
+        } else if (/^\s*when\b/im.test(originalText)) {
+            keyword = 'when';
+            featureKeyword = 'When';
+        } else if (/^\s*then\b/im.test(originalText)) {
+            keyword = 'then';
+            featureKeyword = 'Then';
+        }
+        
+        // 2. Replace feature file lines with new step
+        const leadingWhitespaceMatch = originalText.match(/^([ \t]*)/);
+        const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[1] : '';
+        const newStepLine = `${leadingWhitespace}${featureKeyword} ${newName}`;
+        edit.replace(document.uri, range, newStepLine);
+
+        // 3. Create Python stub
+        if (targetPythonUri) {
+            const pyDoc = await vscode.workspace.openTextDocument(targetPythonUri);
+            let newPyCode = `\n\n@${keyword}('${newName}')\ndef step_impl(context):\n    context.execute_steps(u'''\n`;
+            
+            // Indent the original text for the triple-quoted string
+            const indentedOriginal = originalText.split('\n').map(line => `        ${line.trim()}`).join('\n');
+            newPyCode += indentedOriginal + `\n    ''')\n`;
+            
+            const eof = new vscode.Position(pyDoc.lineCount, 0);
+            edit.insert(targetPythonUri, eof, newPyCode);
+        }
+        
+        return edit;
+    }
+
+
+
+}

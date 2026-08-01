@@ -299,6 +299,16 @@
         "title": "Edit Behave args & Run",
         "category": "Gherkin PowerTools",
         "icon": "$(edit)"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.extractStep",
+        "title": "Extract Step",
+        "category": "Refactoring"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.renameStep",
+        "title": "Rename Step",
+        "category": "Refactoring"
       }
     ],
     "menus": {
@@ -307,6 +317,11 @@
           "when": "editorLangId == feature",
           "command": "gherkinPowerTools.format",
           "group": "navigation@2"
+        },
+        {
+          "when": "editorLangId == feature",
+          "command": "gherkinPowerTools.refactor.renameStep",
+          "group": "navigation@2.1"
         },
         {
           "when": "editorLangId == feature",
@@ -327,6 +342,37 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "gherkinPowerTools.format",
+        "key": "shift+alt+f",
+        "mac": "shift+alt+f",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.renameStep",
+        "key": "f2",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.commandCenter",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      },
+      {
+        "command": "gherkinPowerTools.diagnoseWorkspace",
+        "key": "ctrl+alt+h",
+        "mac": "cmd+alt+h",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.showStatistics",
+        "key": "ctrl+alt+s",
+        "mac": "cmd+alt+s",
+        "when": "editorLangId == feature"
+      }
+    ],
     "snippets": [
       {
         "language": "feature",
