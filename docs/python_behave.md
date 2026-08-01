@@ -53,6 +53,10 @@ Suggestions are not simply sorted alphabetically. Gherkin PowerTools uses an int
 ### Scenario Outline Parameters
 If you are inside a `Scenario Outline` table, typing `<` inside a step will automatically prompt you with the column headers from your `Examples:` table.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline-completion.gif" alt="Autocomplete suggesting Examples table column headers" width="600" height="340" />
+</div>
+
 ---
 
 ## Go to Definition
@@ -90,6 +94,10 @@ The Linter actively validates your steps against the Python backend:
 
 - **Undefined Steps:** If a step has no matching Python decorator, it is underlined with a warning.
 - **Ambiguous Steps:** If a step matches multiple regular expressions in your Python files (e.g., overlapping wildcards), it is flagged so you can tighten your patterns.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/recommendation-engine.gif" alt="Diagnostic warnings for ambiguous and undefined steps" width="600" height="340" />
+</div>
 
 ---
 

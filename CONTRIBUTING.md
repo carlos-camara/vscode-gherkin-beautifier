@@ -91,6 +91,12 @@ The CI/CD pipeline leverages reusable GitHub Actions from the [qa-hub-actions](h
 
 ## 📦 Packaging
 
+To verify that the built VSIX package contains only expected files, doesn't leak secrets, and doesn't exceed maximum size limitations:
+
+```bash
+npm run verify:vsix
+```
+
 To create a local `.vsix` file for distribution or local testing:
 
 ```bash
