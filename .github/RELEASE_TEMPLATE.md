@@ -22,7 +22,7 @@
 ## 🎥 Visual Demo
 
 <!-- Replace the filename below with the most representative GIF for this release. -->
-![Demo](https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif)
+<img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Demo" width="600" height="340" />
 
 > 📖 Full documentation: [Gherkin PowerTools Docs](https://carlos-camara.github.io/vscode-gherkin-powertools/)
 

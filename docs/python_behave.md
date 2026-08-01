@@ -47,11 +47,15 @@ Suggestions are not simply sorted alphabetically. Gherkin PowerTools uses an int
 - **Semantic Matching**: Partial matches against the Python definition receive a score boost.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" height="340" />
 </div>
 
 ### Scenario Outline Parameters
 If you are inside a `Scenario Outline` table, typing `<` inside a step will automatically prompt you with the column headers from your `Examples:` table.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline-completion.gif" alt="Autocomplete suggesting Examples table column headers" width="600" height="340" />
+</div>
 
 ---
 
@@ -64,7 +68,7 @@ You can jump from any Gherkin step directly to its implementing Python decorator
 - Or place your cursor on the step and press **`F12`**.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif" alt="Go to Definition - jump from Gherkin step to Python decorator" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif" alt="Go to Definition - jump from Gherkin step to Python decorator" width="600" height="340" />
 </div>
 
 If a step is ambiguous (matches multiple Python definitions), a Peek View will open allowing you to select the correct one.
@@ -79,7 +83,7 @@ Hovering over any valid step in your `.feature` file reveals its Python implemen
 - The Python docstring (if provided).
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-step.gif" alt="Hover on a step - shows the Python function signature and docstring" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-step.gif" alt="Hover on a step - shows the Python function signature and docstring" width="600" height="340" />
 </div>
 
 ---
@@ -90,6 +94,10 @@ The Linter actively validates your steps against the Python backend:
 
 - **Undefined Steps:** If a step has no matching Python decorator, it is underlined with a warning.
 - **Ambiguous Steps:** If a step matches multiple regular expressions in your Python files (e.g., overlapping wildcards), it is flagged so you can tighten your patterns.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/recommendation-engine.gif" alt="Diagnostic warnings for ambiguous and undefined steps" width="600" height="340" />
+</div>
 
 ---
 
@@ -148,7 +156,7 @@ If you write a step in your `.feature` file that doesn't exist yet, Gherkin Powe
 4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and insert the stub into your most recently modified `steps.py` file.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" height="340" />
 </div>
 
 ---

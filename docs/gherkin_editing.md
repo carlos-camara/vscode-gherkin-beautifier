@@ -43,7 +43,7 @@ The real-time AST linter validates your Gherkin structure **as you type**. It gr
 For common structural errors (like a missing colon or misspelled keyword), place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to apply a Quick Fix.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif" alt="Quick Fix - correct keyword typos with one keypress" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif" alt="Quick Fix - correct keyword typos with one keypress" width="600" height="340" />
 </div>
 
 ---
@@ -57,7 +57,7 @@ Gherkin PowerTools provides curated semantic syntax coloring that works cleanly 
 Navigate complex feature files using the VS Code Outline sidebar. The outline generates a hierarchical tree of `Feature > Rule > Scenario > Examples`.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif" alt="Outline - Feature, Rule, Scenario tree in the VS Code sidebar" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif" alt="Outline - Feature, Rule, Scenario tree in the VS Code sidebar" width="600" height="340" />
 </div>
 
 ### Breadcrumbs

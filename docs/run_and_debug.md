@@ -28,7 +28,7 @@ You can run your tests at any level of granularity:
 - **Run Example Row:** Click the Play button next to a single row inside a Scenario Outline.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer" width="600" height="340" />
 </div>
 
 ### Running Individual Example Rows
@@ -36,7 +36,7 @@ You can run your tests at any level of granularity:
 Version 1.7.8 introduced the ability to run or debug specific data rows within a `Scenario Outline`. You will see "Run" and "Debug" icons directly in the editor's gutter for each row under the `Examples:` table. This allows you to isolate and test specific datasets without running the entire matrix.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/examples-run.gif" alt="Run a specific example row inside a Scenario Outline" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/examples-run.gif" alt="Run a specific example row inside a Scenario Outline" width="600" height="340" />
 </div>
 
 ### Console Output & Failure Reporting
@@ -48,14 +48,14 @@ If a test fails, the node in the tree will turn red. To keep your editor clean, 
 As Behave executes your scenarios in the background, Gherkin PowerTools receives real-time `step_start` events. The extension uses VS Code's decoration API to visually highlight the exact step currently executing in the `.feature` file. You can watch your scenario "run" line by line right inside the editor!
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/live-tracking.gif" alt="Live Step Tracking animating the execution of a Gherkin scenario" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/live-tracking.gif" alt="Live Step Tracking animating the execution of a Gherkin scenario" width="600" height="340" />
 </div>
 
 ### Final Context State (Context Snapshot)
 When a scenario finishes executing, Gherkin PowerTools automatically inspects the Behave `context` object and extracts all variables that were dynamically set during the run. This snapshot is formatted and injected directly into the **Test Results** output, allowing you to easily verify your test data state without needing to attach a debugger.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/context-snapshot.gif" alt="Context Snapshot showing Behave variables in the Test Output" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/context-snapshot.gif" alt="Context Snapshot showing Behave variables in the Test Output" width="600" height="340" />
 </div>
 
 **Navigation:** Clicking on any Feature, Scenario, or Example row in the Test Explorer will intuitively navigate you directly to its definition in the `.feature` file.
@@ -81,7 +81,7 @@ Gherkin PowerTools makes attaching the Python debugger to Behave trivial.
 The extension will launch Behave attached to `debugpy`. Execution will halt at your breakpoint, allowing you to inspect variables, step into functions, and evaluate expressions in the Debug Console.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Debug a Behave scenario" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/debug-demo.gif" alt="Debug a Behave scenario" width="600" height="340" />
 </div>
 
 ### Debug vs Run Profiles

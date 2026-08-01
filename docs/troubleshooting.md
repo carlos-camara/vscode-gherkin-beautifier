@@ -84,7 +84,7 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 2. Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run the **Show Developer Metrics** command to identify if specific files have high parsing durations or poor cache hit ratios.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" height="340" />
 </div>
 
 ## Step Analysis Report is empty or incomplete

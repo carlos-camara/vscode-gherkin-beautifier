@@ -75,6 +75,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Result**: Extracts the selected steps into a new Python step definition, replacing them in the original feature file.
 - **Default shortcut**: None (Invoked via <kbd>Ctrl+.</kbd> or <kbd>Cmd+.</kbd>).
 
+---
+
+## Rename Step
+- **Identifier**: `gherkinPowerTools.refactor.renameStep`
+- **Where it appears**: Editor Context Menu (Right-click in `.feature` file).
+- **Required context**: A Gherkin step in a `.feature` file or a Python step decorator string.
+- **Input**: Prompts for the new step name.
+- **Result**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
+- **Default shortcut**: <kbd>F2</kbd> (Mac: <kbd>Cmd+Shift+R</kbd>).
+
 
 
 ## Test Execution Commands (CodeLens / Tree Nodes)

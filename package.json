@@ -1,7 +1,7 @@
 {
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
-  "description": "Gherkin formatting, linting, project analysis, Python/Behave navigation, and execution/debugging for BDD.",
+  "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
   "version": "1.8.1",
   "engines": {
     "vscode": "^1.93.0"
@@ -13,10 +13,13 @@
   ],
   "keywords": [
     "gherkin",
-    "cucumber",
     "bdd",
+    "python",
     "behave",
-    "python"
+    "cucumber",
+    "test-explorer",
+    "intellisense",
+    "linter"
   ],
   "publisher": "carloscamara",
   "author": "Carlos Camara",
