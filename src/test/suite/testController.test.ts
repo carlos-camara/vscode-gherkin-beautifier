@@ -341,4 +341,92 @@ Feature: Skip Feature
             cp.spawn = originalSpawn;
         }
     });
+
+    test('resolveHandler without item discovers workspace files', async () => {
+        // Mock workspace findFiles
+        const originalFindFiles = vscode.workspace.findFiles;
+        let findFilesCalled = false;
+        vscode.workspace.findFiles = async (pattern) => {
+            if (pattern === '**/*.feature') {
+                findFilesCalled = true;
+                return [vscode.Uri.file(path.join(tempDir, 'resolve.feature'))];
+            }
+            return [];
+        };
+
+        const testControllerPrivate = controller as any;
+        // Mock parseTestsInFileContents so it doesn't fail trying to read a non-existent file
+        testControllerPrivate.parseTestsInFileContents = async () => {};
+
+        try {
+            await testControllerPrivate.controller.resolveHandler();
+            assert.strictEqual(findFilesCalled, true, 'Should have searched for .feature files');
+            
+            // It should have created the file item
+            const fileItem = testControllerPrivate.controller.items.get(vscode.Uri.file(path.join(tempDir, 'resolve.feature')).toString());
+            assert.ok(fileItem, 'File item should have been created');
+        } finally {
+            vscode.workspace.findFiles = originalFindFiles;
+        }
+    });
+
+    test('resolveHandler with item parses the file', async () => {
+        const testControllerPrivate = controller as any;
+        let parseCalled = false;
+        testControllerPrivate.parseTestsInFileContents = async (item: vscode.TestItem) => {
+            parseCalled = true;
+        };
+
+        const mockItem = { uri: vscode.Uri.file('mock.feature') } as vscode.TestItem;
+        await testControllerPrivate.controller.resolveHandler(mockItem);
+
+        assert.strictEqual(parseCalled, true, 'Should have called parseTestsInFileContents');
+    });
+
+    test('runHandler in debug mode starts debugger', async () => {
+        const featureUri = vscode.Uri.file(path.join(tempDir, 'debug.feature'));
+        fs.writeFileSync(featureUri.fsPath, `
+Feature: Debug Feature
+  Scenario: Debug scenario
+    Given a step
+`);
+
+        const testControllerPrivate = controller as any;
+        const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
+        await testControllerPrivate.parseTestsInFileContents(fileItem);
+
+        // Mock vscode.debug.startDebugging
+        const originalStartDebugging = vscode.debug.startDebugging;
+        let startDebuggingCalled = false;
+        let debugConfig: any;
+        vscode.debug.startDebugging = async (folder: any, config: any) => {
+            startDebuggingCalled = true;
+            debugConfig = config;
+            return true;
+        };
+
+        const originalCreateTestRun = testControllerPrivate.controller.createTestRun;
+        let endCalled = false;
+        testControllerPrivate.controller.createTestRun = (req: any) => {
+            const run = originalCreateTestRun.call(testControllerPrivate.controller, req);
+            run.end = () => { endCalled = true; };
+            return run;
+        };
+
+        try {
+            const request = new vscode.TestRunRequest([fileItem]);
+            const tokenSource = new vscode.CancellationTokenSource();
+            
+            await testControllerPrivate.runHandler(request, tokenSource.token, 'debug');
+
+            assert.strictEqual(startDebuggingCalled, true, 'startDebugging should have been called');
+            assert.ok(debugConfig, 'Should have passed a debug config');
+            assert.ok(debugConfig.args.includes('debug.feature'), 'Args should include feature file');
+            assert.strictEqual(endCalled, true, 'Run should have been ended immediately in debug mode');
+            
+            testControllerPrivate.controller.createTestRun = originalCreateTestRun;
+        } finally {
+            vscode.debug.startDebugging = originalStartDebugging;
+        }
+    });
 });

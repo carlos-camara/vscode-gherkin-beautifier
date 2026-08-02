@@ -272,4 +272,24 @@ suite('ConfigurationService Test Suite', () => {
 
         vscode.workspace.getConfiguration = originalGetConfig;
     });
+
+    test('13. getBestWorkspaceFolder returns undefined if no workspaces exist', () => {
+        const originalFolders = vscode.workspace.workspaceFolders;
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', {
+            get: () => undefined
+        });
+
+        const folder = configService.getBestWorkspaceFolder();
+        assert.strictEqual(folder, undefined);
+
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', {
+            get: () => originalFolders
+        });
+    });
+
+    test('14. getBestWorkspaceFolder returns specific folder if one is given', () => {
+        const folder = configService.getBestWorkspaceFolder(vscode.workspace.workspaceFolders?.[0].uri);
+        assert.ok(folder);
+        assert.strictEqual(folder.uri.toString(), vscode.workspace.workspaceFolders?.[0].uri.toString());
+    });
 });

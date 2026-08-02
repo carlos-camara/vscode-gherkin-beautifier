@@ -113,7 +113,7 @@ jobs:
 
 ## Configuration
 
-The CLI reads the exact same configuration as the VS Code extension. 
+The CLI reads the exact same configuration as the VS Code extension.
 To share formatting rules and glob patterns across your team and CI/CD pipelines, place a `.gherkin-powertoolsrc.json` file in the root of your workspace:
 
 ```json
