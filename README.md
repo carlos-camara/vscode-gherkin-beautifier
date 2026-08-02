@@ -132,6 +132,12 @@ Gherkin PowerTools provides step refactoring operations accessible from the edit
 * **Rename Step (`F2` / `Cmd+Shift+R` on macOS)**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
 * **Extract Step (`Ctrl+.`)**: Select multiple Gherkin step lines and extract them to a new Python definition.
 
+### Step Impact Analysis
+View the exact blast radius of any step definition before modifying it. A CodeLens appears directly above every step definition in your `.py` files showing its usage impact across the workspace. Clicking the lens displays an interactive menu to quickly navigate to the affected scenarios.
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/impact-analysis.gif" alt="Impact Analysis - Blast Radius CodeLens" width="600" height="340" />
+</div>
+
 ### Tag Impact Analysis
 Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.
 <div align="center">

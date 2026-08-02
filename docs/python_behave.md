@@ -100,6 +100,9 @@ A CodeLens appears directly above every step definition in your `.py` files show
 
 Clicking the CodeLens opens an interactive menu listing every specific scenario that uses this step. Selecting a scenario instantly opens the `.feature` file and navigates to the exact line, allowing you to quickly prioritize your testing when refactoring.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/impact-analysis.gif" alt="Impact Analysis - Blast Radius CodeLens" width="600" height="340" />
+</div>
 *(Note: Impact Analysis can be disabled via the `gherkinPowerTools.impactAnalysis.enabled` setting if you prefer to reduce CodeLens noise).*
 
 ---

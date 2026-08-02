@@ -68,6 +68,10 @@ To generate your first Python step, write an undefined step in your `.feature` f
 
 You can also view the exact **Blast Radius** of your step definitions via interactive CodeLenses that appear directly above your Python functions, showing exactly how many scenarios will be impacted by a change.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/impact-analysis.gif" alt="Impact Analysis - Blast Radius CodeLens" width="600" height="340" />
+</div>
+
 To run your tests, simply open the **Testing** panel in the VS Code sidebar. The extension automatically detects your Scenarios and lets you run, debug, and visually track them in real-time.
 
 ---

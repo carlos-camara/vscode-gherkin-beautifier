@@ -431,10 +431,8 @@ export class GherkinLinter {
             
             // If it already exactly matches a valid keyword (with or without colon for blocks), it's either correct or will be flagged by syntax parser.
             if (expectedKeywords.includes(firstWord) || expectedKeywords.some((k: string) => firstWord === k + ':')) {
-                console.log('Skipping because includes firstWord:', firstWord);
                 continue;
             }
-            console.log('Did not skip:', firstWord);
 
             let bestMatch = '';
             let lowestDistance = 999;
