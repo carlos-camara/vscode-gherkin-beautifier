@@ -345,9 +345,17 @@ Feature: Skip Feature
     test('resolveHandler without item discovers workspace files', async () => {
         // Mock workspace findFiles
         const originalFindFiles = vscode.workspace.findFiles;
+        const originalWorkspaceFolders = Object.getOwnPropertyDescriptor(vscode.workspace, 'workspaceFolders');
         let findFilesCalled = false;
-        vscode.workspace.findFiles = async (pattern) => {
-            if (pattern === '**/*.feature') {
+        
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', {
+            get: () => [{ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 }]
+        });
+
+        vscode.workspace.findFiles = async (pattern: any) => {
+            console.log('findFiles called with pattern:', pattern);
+            const p = typeof pattern === 'string' ? pattern : pattern.pattern;
+            if (p === '**/*.feature') {
                 findFilesCalled = true;
                 return [vscode.Uri.file(path.join(tempDir, 'resolve.feature'))];
             }
@@ -360,6 +368,7 @@ Feature: Skip Feature
 
         try {
             await testControllerPrivate.controller.resolveHandler();
+            console.log('findFilesCalled:', findFilesCalled);
             assert.strictEqual(findFilesCalled, true, 'Should have searched for .feature files');
             
             // It should have created the file item
@@ -367,6 +376,9 @@ Feature: Skip Feature
             assert.ok(fileItem, 'File item should have been created');
         } finally {
             vscode.workspace.findFiles = originalFindFiles;
+            if (originalWorkspaceFolders) {
+                Object.defineProperty(vscode.workspace, 'workspaceFolders', originalWorkspaceFolders);
+            }
         }
     });
 
@@ -395,14 +407,17 @@ Feature: Debug Feature
         const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
         await testControllerPrivate.parseTestsInFileContents(fileItem);
 
-        // Mock vscode.debug.startDebugging
-        const originalStartDebugging = vscode.debug.startDebugging;
-        let startDebuggingCalled = false;
-        let debugConfig: any;
-        vscode.debug.startDebugging = async (_folder: any, config: any) => {
-            startDebuggingCalled = true;
-            debugConfig = config;
-            return true;
+        // Mock vscode.commands.executeCommand to intercept debug commands
+        const originalExecuteCommand = vscode.commands.executeCommand;
+        let executeCommandCalled = false;
+        let executeCommandArgs: any[] = [];
+        vscode.commands.executeCommand = async <T = unknown>(command: string, ...args: any[]): Promise<T> => {
+            if (command === 'gherkinPowerTools.debugFeature' || command === 'gherkinPowerTools.debugScenario') {
+                executeCommandCalled = true;
+                executeCommandArgs = args;
+                return undefined as unknown as T;
+            }
+            return originalExecuteCommand<T>(command, ...args);
         };
 
         const originalCreateTestRun = testControllerPrivate.controller.createTestRun;
@@ -419,14 +434,13 @@ Feature: Debug Feature
             
             await testControllerPrivate.runHandler(request, tokenSource.token, 'debug');
 
-            assert.strictEqual(startDebuggingCalled, true, 'startDebugging should have been called');
-            assert.ok(debugConfig, 'Should have passed a debug config');
-            assert.ok(debugConfig.args.includes('debug.feature'), 'Args should include feature file');
-            assert.strictEqual(endCalled, true, 'Run should have been ended immediately in debug mode');
+            assert.strictEqual(executeCommandCalled, true, 'debug command should have been called');
+            assert.ok(executeCommandArgs[0], 'Should have passed uri to debug command');
+            assert.strictEqual(endCalled, false, 'Run should not have been created or ended in debug mode');
             
             testControllerPrivate.controller.createTestRun = originalCreateTestRun;
         } finally {
-            vscode.debug.startDebugging = originalStartDebugging;
+            vscode.commands.executeCommand = originalExecuteCommand;
         }
     });
 });

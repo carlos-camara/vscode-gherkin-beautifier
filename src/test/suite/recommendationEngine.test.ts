@@ -131,7 +131,7 @@ suite('Recommendation Engine Test Suite', () => {
         const metrics = { ...baseMetrics, stepAnalysis: {
             ...baseMetrics.stepAnalysis,
             unusedSteps: [
-                { uri: 'file:///unused.py', line: 1, rawPattern: 'unused pattern' }
+                { stepDef: { uri: 'file:///unused.py', line: 1, pattern: 'unused pattern' } }
             ]
         } as any};
         const recs = engine.generateRecommendations(mockGraph, metrics);

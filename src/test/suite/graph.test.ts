@@ -72,7 +72,10 @@ suite('WorkspaceGraph Test Suite', () => {
     });
 
     test('indexFeatureFile handles AST with Rule, Background, and Scenario with tags', async () => {
-        const uri = require('vscode').Uri.parse('file:///rule.feature');
+        const vscode = require('vscode');
+        const uri = vscode.Uri.parse('file:///rule.feature');
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', { get: () => [{ uri, getText: () => '' }] });
         const mockAST = {
             feature: {
                 location: { line: 1 },
@@ -133,11 +136,17 @@ suite('WorkspaceGraph Test Suite', () => {
             assert.ok((tagNode as any).targets.includes(scNode.id), 'Tag node should target scenario inside rule');
         } finally {
             astRepository.getAST = originalGetAST;
+            if (originalTextDocuments) {
+                Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+            }
         }
     });
 
     test('indexFeatureFile handles AST errors gracefully', async () => {
-        const uri = require('vscode').Uri.parse('file:///error.feature');
+        const vscode = require('vscode');
+        const uri = vscode.Uri.parse('file:///error.feature');
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', { get: () => [{ uri, getText: () => '' }] });
         const originalGetAST = astRepository.getAST;
         astRepository.getAST = async () => { throw new Error('Parse error'); };
         try {
@@ -146,6 +155,9 @@ suite('WorkspaceGraph Test Suite', () => {
             assert.ok(true);
         } finally {
             astRepository.getAST = originalGetAST;
+            if (originalTextDocuments) {
+                Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+            }
         }
     });
 
