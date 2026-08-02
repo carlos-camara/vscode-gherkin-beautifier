@@ -101,7 +101,7 @@ npx gherkin-pt format --check
 
 ## 8. Contextual Feature Discovery
 
-To help you get the most out of Gherkin PowerTools without getting in your way, the extension includes a non-intrusive **Contextual Feature Discovery** engine. 
+To help you get the most out of Gherkin PowerTools without getting in your way, the extension includes a non-intrusive **Contextual Feature Discovery** engine.
 
 As you work, the engine analyzes your actions locally (e.g., struggling with table alignment, or leaving a step undefined for a while) and surfaces lightweight recommendations (like "Did you know you can auto-format this?" or "Would you like to generate this step?").
 
