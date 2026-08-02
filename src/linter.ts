@@ -165,14 +165,17 @@ export class GherkinLinter {
                             let bestMatch = '';
                             let lowestDistance = 999;
                             const normalizedFirst = firstWord.toLowerCase();
+                            
+                            let prefixMatch = '';
 
                             for (const kw of validKeywords) {
                                 const normalizedKw = kw.toLowerCase();
                                 
                                 // Direct prefix match (e.g. 'whe' -> 'When', 'give' -> 'Given')
                                 if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
-                                    bestMatch = kw;
-                                    break;
+                                    if (!prefixMatch || kw.length < prefixMatch.length) {
+                                        prefixMatch = kw;
+                                    }
                                 }
 
                                 // Typo match (e.g. 'Givn' -> 'Given')
@@ -183,6 +186,10 @@ export class GherkinLinter {
                                     lowestDistance = dist;
                                     bestMatch = kw;
                                 }
+                            }
+                            
+                            if (prefixMatch) {
+                                bestMatch = prefixMatch;
                             }
                             
                             if (bestMatch) {
@@ -444,11 +451,13 @@ export class GherkinLinter {
             }
             
             if (!bestMatch) {
+                let prefixMatch = '';
                 for (const kw of sortedKeywords) {
                     const normalizedKw = kw.toLowerCase();
                     if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
-                        bestMatch = kw;
-                        break;
+                        if (!prefixMatch || kw.length < prefixMatch.length) {
+                            prefixMatch = kw;
+                        }
                     }
                     const dist = getLevenshteinDistance(normalizedFirst, normalizedKw);
                     const threshold = normalizedKw.length <= 4 ? 1 : 2;
@@ -456,6 +465,10 @@ export class GherkinLinter {
                         lowestDistance = dist;
                         bestMatch = kw;
                     }
+                }
+                
+                if (prefixMatch) {
+                    bestMatch = prefixMatch;
                 }
             }
 
@@ -545,11 +558,13 @@ export class GherkinLinter {
                 }
 
                 if (!bestMatch) {
+                    let prefixMatch = '';
                     for (const kw of sortedKeywords) {
                         const normalizedKw = kw.toLowerCase();
                         if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
-                            bestMatch = kw;
-                            break;
+                            if (!prefixMatch || kw.length < prefixMatch.length) {
+                                prefixMatch = kw;
+                            }
                         }
                         const dist = getLevenshteinDistance(normalizedFirst, normalizedKw);
                         const threshold = normalizedKw.length <= 4 ? 1 : 2;
@@ -557,6 +572,9 @@ export class GherkinLinter {
                             lowestDistance = dist;
                             bestMatch = kw;
                         }
+                    }
+                    if (prefixMatch) {
+                        bestMatch = prefixMatch;
                     }
                 }
 
