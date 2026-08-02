@@ -32,10 +32,28 @@ To generate the dashboard:
 A Webview panel will open in VS Code displaying the generated HTML report.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" height="340" />
 </div>
 
 > **Note**: The legacy "Analyze Step Definitions" command has been fully integrated into the new Gherkin Health Dashboard. Both commands now launch the same unified view.
+
+---
+
+## Historical Trend Analysis
+
+To help you monitor your project's quality over time, the Gherkin Health Dashboard tracks historical trends of your main metrics.
+
+Each time you generate the dashboard, a lightweight snapshot is recorded. The dashboard features:
+- **Evolution Charts**: A line chart visualizing how your Overall Health, Maintainability, and Complexity change over time.
+- **Delta Indicators**: Quick visual cues (e.g., `+5 ↗`) showing improvements or regressions compared to the previous dashboard run.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/historical-trends.gif" alt="Historical Trends tracking technical debt over time" width="600" height="340" />
+</div>
+
+> **Privacy First**: All historical data is strictly stored locally on your machine using VS Code's `workspaceState`. No analytics are sent to any external server.
+
+This feature is enabled by default and retains the last 30 snapshots. You can disable it or change the retention policy in your VS Code settings under `Gherkin PowerTools > Analytics > Historical Trends`.
 
 ---
 
@@ -48,7 +66,7 @@ Hover your mouse over any `@tag` in a `.feature` file to calculate exactly how m
 This helps you understand the "blast radius" of executing a specific tag before you push code to CI.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover on a tag - shows the number of scenarios it affects across the workspace" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover on a tag - shows the number of scenarios it affects across the workspace" width="600" height="340" />
 </div>
 
 ---

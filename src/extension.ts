@@ -23,8 +23,11 @@ import { showDiagnosticsReport } from './diagnostics';
 import { showOnboardingNotificationIfNeeded } from './onboarding';
 import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
+import { StepRefactoringService } from './refactoring';
+import { GherkinRenameProvider } from './renameProvider';
 
 import { ConfigurationService } from './configuration';
+import { ContextualFeatureDiscoveryService } from './contextualDiscovery';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 
@@ -78,6 +81,13 @@ export async function activate(context: vscode.ExtensionContext) {
     const workspaceGraph = new WorkspaceGraph(symbolCache);
     workspaceGraph.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
+
+    // Initialize Contextual Feature Discovery
+    new ContextualFeatureDiscoveryService(context, workspaceGraph);
+
+    // Initialize Refactoring Service
+    const refactoringService = new StepRefactoringService(workspaceGraph, symbolCache);
+    const renameProvider = new GherkinRenameProvider(refactoringService, workspaceGraph);
 
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);
@@ -253,9 +263,46 @@ export async function activate(context: vscode.ExtensionContext) {
     
     context.subscriptions.push(linter);
 
+    // Register refactoring commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.refactor.extractStep', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+            // Provide a basic UX via prompts, real implementations would use QuickPicks or input boxes.
+            const newName = await vscode.window.showInputBox({ prompt: 'Enter new step name (without Given/When/Then)' });
+            if (!newName) return;
+            
+            const targetUris = await vscode.workspace.findFiles('**/steps/*.py', '**/node_modules/**');
+            if (targetUris.length === 0) {
+                vscode.window.showErrorMessage('No Python step definition files found.');
+                return;
+            }
+            const targetOptions = targetUris.map(uri => ({ label: vscode.workspace.asRelativePath(uri), uri }));
+            const selectedTarget = await vscode.window.showQuickPick(targetOptions, { placeHolder: 'Select target step definition file' });
+            if (!selectedTarget) return;
 
+            const edit = await refactoringService.extractStep(editor.document, editor.selection, newName, selectedTarget.uri);
+            if (edit) {
+                const applied = await vscode.workspace.applyEdit(edit);
+                if (applied) {
+                    await editor.document.save();
+                    const targetDoc = await vscode.workspace.openTextDocument(selectedTarget.uri);
+                    await targetDoc.save();
+                }
+            }
+        }),
 
-    context.subscriptions.push(highlighter);
+        vscode.commands.registerCommand('gherkinPowerTools.refactor.renameStep', async () => {
+            await vscode.commands.executeCommand('editor.action.rename');
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerRenameProvider(
+            { language: 'python' },
+            renameProvider
+        )
+    );    context.subscriptions.push(highlighter);
 
     // Initial lint & highlight for all open feature files
     vscode.workspace.textDocuments.forEach(doc => {
@@ -322,6 +369,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 {
                     providedCodeActionKinds: GherkinCodeActionProvider.providedCodeActionKinds
                 }
+            ),
+            vscode.languages.registerRenameProvider(
+                { language },
+                renameProvider
             )
         );
     });

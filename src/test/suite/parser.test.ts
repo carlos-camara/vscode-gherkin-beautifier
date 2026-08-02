@@ -1,5 +1,7 @@
 import * as assert from 'assert';
 import { parseGherkin } from '../../parser';
+import { metricsLogger } from '../../metrics';
+import * as sinon from 'sinon';
 
 suite('Parser Architecture Test Suite', () => {
 
@@ -110,5 +112,33 @@ suite('Parser Architecture Test Suite', () => {
         assert.strictEqual(result.errors.length, 0);
         assert.ok(result.document?.feature);
         assert.strictEqual(result.document?.feature?.children.length, 0);
+    });
+
+    test('should record metrics when metricsLogger is enabled', async () => {
+        const stubEnabled = sinon.stub(metricsLogger, 'isEnabled').returns(true);
+        const stubRecord = sinon.stub(metricsLogger, 'recordParse');
+
+        try {
+            const text = `Feature: Feature 1
+  Scenario: Scenario 1
+    Given step 1
+  Rule: Rule 1
+    Background:
+      Given background step
+    Scenario: Scenario 2
+      When step 2
+`;
+            await parseGherkin(text);
+            assert.ok(stubRecord.calledOnce);
+            const args = stubRecord.firstCall.args;
+            // args: [totalDuration, astDuration, features, scenarios, steps, errors]
+            assert.strictEqual(args[2], 1); // features
+            assert.strictEqual(args[3], 2); // scenarios (Scenario 1 + Scenario 2)
+            assert.strictEqual(args[4], 3); // steps (step 1 + step 2 + background step)
+            assert.strictEqual(args[5], 0); // errors
+        } finally {
+            stubEnabled.restore();
+            stubRecord.restore();
+        }
     });
 });

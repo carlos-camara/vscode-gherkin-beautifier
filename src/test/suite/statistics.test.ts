@@ -74,9 +74,14 @@ suite('Project Health Dashboard Test Suite', () => {
     test('showProjectHealthDashboard: creates webview and calculates stats', async () => {
         let webviewHtml = '';
 
+        let store: any = {};
         const mockContext = {
             extension: {
                 packageJSON: { version: '2.0.0' }
+            },
+            workspaceState: {
+                get: (key: string, def: any) => store[key] !== undefined ? store[key] : def,
+                update: (key: string, val: any) => { store[key] = val; return Promise.resolve(); }
             }
         } as any;
 

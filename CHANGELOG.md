@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.1] - 2026-07-31
+
+### 🚀 Added
+- **Contextual Feature Discovery**: A lightweight, non-intrusive recommendation engine that analyzes your workflow in real-time. It seamlessly surfaces advanced features (like generating missing steps, auto-formatting tables, opening the command center, or checking project health) at the exact moment you need them, without disrupting your flow. Includes "Don't show again" functionality.
+- **Historical Trend Analysis**: Gherkin Health Dashboard now automatically tracks and persists lightweight historical snapshots of your project metrics in the workspace state. It visualizes project evolution (complexity, maintainability, technical debt) over time using interactive charts without sending any data off your machine. Configure retention policies or disable it entirely in settings.
+- **Command Line Interface (CLI)**: Gherkin PowerTools now includes a powerful, standalone CLI (`gherkin-pt`) that brings the Workspace Intelligence Engine to your terminal and CI/CD pipelines.
+  - Run `npx gherkin-pt analyze` to enforce Gherkin structural validity and block missing Python steps in Pull Requests.
+  - Run `npx gherkin-pt format --check` to enforce team formatting rules in CI.
+  - Run `npx gherkin-pt stats --json` to export high-level project metrics.
+
+### 🐛 Fixed
+- Fixed an issue where the new Gherkin Health Dashboard failed to load the charting library in some VS Code environments due to `acquireVsCodeApi` strictness.
+
 ## [1.8.0] - 2026-07-30
 
 ### 🚀 Added
@@ -262,7 +275,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — CI/CD Pipelines
 - **PR Labeler** (`labeler.yml`): Auto-labels PRs based on changed file paths (core, documentation, testing, dependencies, DevOps, configuration, assets).
-- **PR Hygiene & Intelligence Gate** (`gate-check.yml`): Validates PR title/description and generates AI-powered summaries on every PR.
+- **PR Hygiene & Intelligence Gate** (`gate-check.yml`): Validates PR title/description and generates automated summaries on every PR.
 - **Release** (`release.yml`): Automatically compiles TypeScript, packages `.vsix` with `@vscode/vsce`, and creates a GitHub Release on `v*` tags.
 - **Deploy Docs** (`pages.yml`): Deploys MkDocs Material documentation to GitHub Pages on pushes to `main`.
 

@@ -47,11 +47,15 @@ Suggestions are not simply sorted alphabetically. Gherkin PowerTools uses an int
 - **Semantic Matching**: Partial matches against the Python definition receive a score boost.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" height="340" />
 </div>
 
 ### Scenario Outline Parameters
 If you are inside a `Scenario Outline` table, typing `<` inside a step will automatically prompt you with the column headers from your `Examples:` table.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline-completion.gif" alt="Autocomplete suggesting Examples table column headers" width="600" height="340" />
+</div>
 
 ---
 
@@ -64,7 +68,7 @@ You can jump from any Gherkin step directly to its implementing Python decorator
 - Or place your cursor on the step and press **`F12`**.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif" alt="Go to Definition - jump from Gherkin step to Python decorator" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/goto-definition.gif" alt="Go to Definition - jump from Gherkin step to Python decorator" width="600" height="340" />
 </div>
 
 If a step is ambiguous (matches multiple Python definitions), a Peek View will open allowing you to select the correct one.
@@ -79,7 +83,7 @@ Hovering over any valid step in your `.feature` file reveals its Python implemen
 - The Python docstring (if provided).
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-step.gif" alt="Hover on a step - shows the Python function signature and docstring" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-step.gif" alt="Hover on a step - shows the Python function signature and docstring" width="600" height="340" />
 </div>
 
 ---
@@ -91,6 +95,10 @@ The Linter actively validates your steps against the Python backend:
 - **Undefined Steps:** If a step has no matching Python decorator, it is underlined with a warning.
 - **Ambiguous Steps:** If a step matches multiple regular expressions in your Python files (e.g., overlapping wildcards), it is flagged so you can tighten your patterns.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/recommendation-engine.gif" alt="Diagnostic warnings for ambiguous and undefined steps" width="600" height="340" />
+</div>
+
 ---
 
 ## Step Definition Analysis
@@ -99,7 +107,7 @@ Gherkin PowerTools includes a comprehensive analyzer that inspects your entire w
 
 **Proactive Indexing**: When you run the analysis, the extension proactively scans and parses all `.feature` and `.py` files across your entire workspace, ensuring 100% accuracy even if you haven't opened those files in your current session.
 
-You can generate this report by running the **Gherkin PowerTools: Analyze Step Definitions** command from the Command Palette. It opens an interactive **Dashboard Webview** displaying:
+You can generate this report by running the **Gherkin PowerTools: Show Gherkin Health** command from the Command Palette. It opens an interactive **Dashboard Webview** displaying:
 
 - **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
 - **Duplicated Implementations:** Finds identical step definitions (same matcher type and regex pattern) across different files which will cause a runtime failure in Behave.
@@ -107,6 +115,37 @@ You can generate this report by running the **Gherkin PowerTools: Analyze Step D
 - **Suspicious Similarities:** Highlights step definitions with very similar regex patterns (>85% similarity). These are often accidental duplicates with minor typos or overly generic patterns that could lead to ambiguity.
 
 **Interactive Navigation**: Every file reference in the dashboard is an interactive link. Click any file path to instantly open that file in VS Code at the exact line number.
+
+---
+
+## Step Refactoring
+
+Gherkin PowerTools provides step refactoring operations accessible from the editor. All refactoring operations use VS Code's `WorkspaceEdit` API, which allows you to preview and undo all changes.
+
+### Rename Step
+
+<figure>
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/rename-step.gif" alt="Rename a Gherkin step across multiple feature files simultaneously" width="600" height="340" />
+</figure>
+
+The `Rename Symbol` action (`F2` / `Cmd+Shift+R` on macOS) on a Gherkin step or Python step decorator renames the step text and updates all usages across `.feature` files.
+
+1. Place your cursor on a step in a `.feature` file, or the string inside `@step(...)` in Python.
+2. Press **`F2`** (or **`Cmd+Shift+R`** on macOS) or right-click and select **Rename Symbol**.
+3. Enter the new step name.
+4. The extension updates the Python decorator **and** all matching Gherkin steps in the workspace.
+
+> **Note:** Rename operates via the Workspace Graph. The step must be indexed (i.e., the Python file must be within your configured `stepGlobs`) for the rename to locate all usages.
+
+### Extract Step
+
+1. In a `.feature` file, select multiple Gherkin step lines.
+2. Press **`Ctrl+.`** (**`Cmd+.`** on macOS) to open the Code Actions lightbulb.
+3. Select **Extract Steps to new definition**.
+4. Enter a name for the new step.
+5. Choose the target Python step file from the list.
+
+The extension inserts a Python stub decorated with the correct `@given`, `@when`, or `@then` keyword, inferred from the keywords present in your selection.
 
 ---
 
@@ -121,7 +160,7 @@ If you write a step in your `.feature` file that doesn't exist yet, Gherkin Powe
 4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and insert the stub into your most recently modified `steps.py` file.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" height="340" />
 </div>
 
 ---
