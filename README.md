@@ -169,6 +169,7 @@ Both `analyze` and `stats` support a `--json` flag for machine-readable output.
 | **Gherkin Health Analysis** | Generate a comprehensive webview report to detect unused, duplicated, ambiguous, and suspiciously similar Python steps. |
 | **Configuration Profiles** | Select from preset formatting rules (`strict`, `team`, `minimal`) to maintain consistency. |
 | **Project Onboarding** | Benefit from automated detection and configuration suggestions for Behave projects. |
+| **Contextual Discovery** | Non-intrusive recommendation engine that surfaces advanced features based on your live workflow. |
 
 ---
 

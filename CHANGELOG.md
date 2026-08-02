@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.1] - 2026-07-31
 
 ### 🚀 Added
+- **Contextual Feature Discovery**: A lightweight, non-intrusive recommendation engine that analyzes your workflow in real-time. It seamlessly surfaces advanced features (like generating missing steps, auto-formatting tables, opening the command center, or checking project health) at the exact moment you need them, without disrupting your flow. Includes "Don't show again" functionality.
 - **Historical Trend Analysis**: Gherkin Health Dashboard now automatically tracks and persists lightweight historical snapshots of your project metrics in the workspace state. It visualizes project evolution (complexity, maintainability, technical debt) over time using interactive charts without sending any data off your machine. Configure retention policies or disable it entirely in settings.
 - **Command Line Interface (CLI)**: Gherkin PowerTools now includes a powerful, standalone CLI (`gherkin-pt`) that brings the Workspace Intelligence Engine to your terminal and CI/CD pipelines.
   - Run `npx gherkin-pt analyze` to enforce Gherkin structural validity and block missing Python steps in Pull Requests.

@@ -108,5 +108,10 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 2. Confirm that at least one Python step file exists within your `stepGlobs`.
 **Resolution:** If no Python files appear in the file picker, add the correct glob to `gherkinPowerTools.behave.stepGlobs`.
 
+## I accidentally dismissed a Contextual Recommendation
+**Symptom:** You clicked "Don't show again" on a helpful popup (like the Formatting or Dashboard recommendation) and want it back.
+**Likely Causes:** The extension saved your dismissal in the VS Code Global State.
+**Resolution:** Currently, VS Code does not expose a UI to edit global state directly. You can reset all internal extension state (including dismissals) by running the **Developer: Reset Extension State** command from the VS Code Command Palette (note that this resets state for *all* extensions).
+
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).
