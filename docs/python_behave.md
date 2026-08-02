@@ -124,6 +124,10 @@ Gherkin PowerTools provides step refactoring operations accessible from the edit
 
 ### Rename Step
 
+<figure>
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/rename-step.gif" alt="Rename a Gherkin step across multiple feature files simultaneously" width="600" height="340" />
+</figure>
+
 The `Rename Symbol` action (`F2` / `Cmd+Shift+R` on macOS) on a Gherkin step or Python step decorator renames the step text and updates all usages across `.feature` files.
 
 1. Place your cursor on a step in a `.feature` file, or the string inside `@step(...)` in Python.
