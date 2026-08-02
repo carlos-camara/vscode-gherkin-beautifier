@@ -147,7 +147,9 @@ export class GherkinLinter {
                         }
 
                         const blockKeywords = dialectService.getBlockKeywords(dialect);
-                        const startsWithBlockKeyword = blockKeywords.find(k => gotText.startsWith(k));
+                        const startsWithBlockKeyword = [...blockKeywords]
+                            .sort((a, b) => b.length - a.length)
+                            .find(k => gotText.startsWith(k));
                         
                         if (startsWithBlockKeyword && !gotText.startsWith(startsWithBlockKeyword + ':')) {
                             code = 'MISSING_COLON';
