@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as sinon from 'sinon';
 import { OnboardingEngine, BehaveDetector, mergeSettingsJson, mergeProjectConfigFile, FirstRunExperience } from '../../onboarding';
 
 suite('Onboarding Engine Test Suite', () => {
@@ -216,15 +217,14 @@ suite('Onboarding Engine Test Suite', () => {
         // Note: we can't easily assert the full flow since checkAndRun accesses vscode.workspace,
         // which returns undefined in this unit test environment unless we mock it, but we can verify the state reset.
 
-        // Mock workspace folders temporarily
-        const originalWorkspaceFolders = vscode.workspace.workspaceFolders;
-        (vscode.workspace as any).workspaceFolders = [];
+        // Mock workspace folders temporarily using sinon
+        const stub = sinon.stub(vscode.workspace, 'workspaceFolders').get(() => []);
 
         try {
             await FirstRunExperience.replayOnboarding(fakeContext);
             assert.strictEqual(hasRun, false);
         } finally {
-            (vscode.workspace as any).workspaceFolders = originalWorkspaceFolders;
+            stub.restore();
         }
     });
 });
