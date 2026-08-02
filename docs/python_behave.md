@@ -140,7 +140,7 @@ The `Rename Symbol` action (`F2` / `Cmd+Shift+R` on macOS) on a Gherkin step or 
 ### Extract Step
 
 <figure>
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/extract-steps.gif" alt="Extract multiple Gherkin steps into a new Python definition" width="600" height="340" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/bugfix/scenario-outline-colon/assets/extract-steps.gif" alt="Extract multiple Gherkin steps into a new Python definition" width="600" height="340" />
 </figure>
 
 1. In a `.feature` file, select multiple Gherkin step lines.

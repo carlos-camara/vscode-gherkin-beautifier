@@ -133,7 +133,7 @@ Gherkin PowerTools provides step refactoring operations accessible from the edit
 * **Extract Step (`Ctrl+.`)**: Select multiple Gherkin step lines and extract them to a new Python definition.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/extract-steps.gif" alt="Extract multiple Gherkin steps into a new Python definition" width="600" height="340" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/bugfix/scenario-outline-colon/assets/extract-steps.gif" alt="Extract multiple Gherkin steps into a new Python definition" width="600" height="340" />
 </div>
 
 ### Tag Impact Analysis
