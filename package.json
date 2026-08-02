@@ -41,6 +41,9 @@
     "onLanguage:feature"
   ],
   "main": "./dist/extension.js",
+  "bin": {
+    "gherkin-pt": "./dist/cli.js"
+  },
   "configurationDefaults": {
     "testing.showCoverageInExplorer": false
   },
@@ -543,6 +546,8 @@
   },
   "dependencies": {
     "@cucumber/gherkin": "^42.0.0",
-    "@cucumber/messages": "^34.2.0"
+    "@cucumber/messages": "^34.2.0",
+    "commander": "^14.0.3",
+    "fast-glob": "^3.3.3"
   }
 }

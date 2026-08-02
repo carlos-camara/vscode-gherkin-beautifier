@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🚀 Added
 - **Historical Trend Analysis**: Gherkin Health Dashboard now automatically tracks and persists lightweight historical snapshots of your project metrics in the workspace state. It visualizes project evolution (complexity, maintainability, technical debt) over time using interactive charts without sending any data off your machine. Configure retention policies or disable it entirely in settings.
+- **Command Line Interface (CLI)**: Gherkin PowerTools now includes a powerful, standalone CLI (`gherkin-pt`) that brings the Workspace Intelligence Engine to your terminal and CI/CD pipelines.
+  - Run `npx gherkin-pt analyze` to enforce Gherkin structural validity and block missing Python steps in Pull Requests.
+  - Run `npx gherkin-pt format --check` to enforce team formatting rules in CI.
+  - Run `npx gherkin-pt stats --json` to export high-level project metrics.
 
 ### 🐛 Fixed
 - Fixed an issue where the new Gherkin Health Dashboard failed to load the charting library in some VS Code environments due to `acquireVsCodeApi` strictness.

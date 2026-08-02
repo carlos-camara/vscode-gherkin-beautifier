@@ -134,6 +134,23 @@ Hover over any tag to calculate exactly how many scenarios and example rows it a
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/hover-tags.gif" alt="Hover over a tag to see its impact across the workspace" width="600" height="340" />
 </div>
 
+### Standalone CLI (CI/CD Ready)
+The `gherkin-pt` CLI exposes the Workspace Intelligence Engine for CI/CD environments without requiring VS Code.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli.gif" alt="Command Line Interface execution" width="600" height="340" />
+</p>
+
+* Enforce team formatting rules in pre-commit hooks (`gherkin-pt format --check`).
+* Block pull requests that contain missing or unused step definitions (`gherkin-pt analyze`).
+* Export workspace complexity and maintainability metrics (`gherkin-pt stats --json`).
+
+* `gherkin-pt analyze` (or `health`): Analyze the workspace and exit with `1` if recommendations are found.
+* `gherkin-pt stats` (or `report`): Generate project health metrics and statistics.
+* `gherkin-pt format [files...]`: Format feature files. Use `--check` to fail in CI if files are unformatted.
+
+Both `analyze` and `stats` support a `--json` flag for machine-readable output.
+
 ---
 
 ## Additional Features

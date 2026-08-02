@@ -82,10 +82,28 @@ This opens an interactive quick-pick menu that groups all the extension's capabi
 
 ---
 
+## 7. Command Line Interface (CLI)
+
+Gherkin PowerTools includes a powerful CLI (`gherkin-pt`) that brings the Workspace Intelligence Engine directly to your terminal or CI/CD pipelines.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli.gif" alt="Command Line Interface execution" width="600" height="340" />
+</div>
+
+Run diagnostics, extract metrics, and enforce formatting headless:
+
+```bash
+npx gherkin-pt analyze
+npx gherkin-pt format --check
+```
+
+---
+
 ## Next Steps
 
 Explore the full capabilities:
 - [Gherkin Editing](gherkin_editing.md) (Formatting & Linting)
 - [Python Behave](python_behave.md) (Navigation & Generation)
 - [Run and Debug](run_and_debug.md) (Test Explorer)
+- [Command Line Interface (CLI)](cli.md) (Headless Execution & CI/CD)
 - [Configuration Reference](configuration.md)
