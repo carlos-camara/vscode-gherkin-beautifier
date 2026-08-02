@@ -78,6 +78,16 @@ To enable instantaneous, O(1) semantic queries across massive projects, the exte
    Standard VS Code message passing (`acquireVsCodeApi().postMessage`) bridges the UI clicks back to the extension host to trigger `vscode.window.showTextDocument` for interactive file navigation.
    The extension also uses `MetricsHistory` to persist a lightweight snapshot of the metrics securely inside VS Code's `ExtensionContext.workspaceState`. This local storage enables the dashboard to render Historical Trend Analysis charts using Chart.js without sending any data off the machine.
 
+## Contextual Feature Discovery
+
+To help users naturally discover advanced capabilities (like formatting, step generation, or the dashboard) without intrusive onboarding popups, the extension implements the **ContextualFeatureDiscoveryService**.
+
+### How Discovery Works
+1. **Event-Driven Heuristics:** The service subscribes to the `WorkspaceEventBus` (e.g., `featureFileChanged`, `textDocumentOpened`). It applies lightweight heuristic rules to user actions to detect when a specific feature would be highly valuable.
+2. **Rules Engine:** Features are modeled as individual "Rules" (e.g., `FormatterRule`, `GenerateStepRule`). Each rule defines an `evaluate()` condition. For instance, the formatter rule fires if the user saves a `.feature` file that contains unaligned tables, while the generate step rule fires when the user pauses on an undefined step.
+3. **State Tracking (Dismissals):** To ensure a non-intrusive experience, the service persists the state of recommendations in VS Code's `ExtensionContext.globalState`. If a user dismisses a recommendation or clicks "Don't show again", that specific rule is permanently silenced.
+4. **Notification Debouncing:** The service queues recommendations and prevents rapid consecutive popups, ensuring users are not overwhelmed during fast editing sessions.
+
 ## Command Line Interface (CLI) Build Architecture
 
 To bring the Workspace Intelligence Engine into CI/CD environments without duplicating logic or maintaining two separate codebases, Gherkin PowerTools exposes a standalone CLI (`gherkin-pt`).
