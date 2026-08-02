@@ -27,6 +27,7 @@ import { StepRefactoringService } from './refactoring';
 import { GherkinRenameProvider } from './renameProvider';
 
 import { ConfigurationService } from './configuration';
+import { ContextualFeatureDiscoveryService } from './contextualDiscovery';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 
@@ -80,6 +81,9 @@ export async function activate(context: vscode.ExtensionContext) {
     const workspaceGraph = new WorkspaceGraph(symbolCache);
     workspaceGraph.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
+
+    // Initialize Contextual Feature Discovery
+    new ContextualFeatureDiscoveryService(context, workspaceGraph);
 
     // Initialize Refactoring Service
     const refactoringService = new StepRefactoringService(workspaceGraph, symbolCache);
