@@ -39,6 +39,11 @@ export class SymbolCache {
         this.eventBusDisposable = this.eventBus.onEvent(e => {
             if (e.type === 'stepFileCreated' || e.type === 'stepFileChanged') {
                 this.updateFile(e.uri);
+            } else if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
+                const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
+                if (doc.languageId === 'python') {
+                    this.updateFile(doc.uri);
+                }
             } else if (e.type === 'stepFileDeleted') {
                 this.removeFile(e.uri);
             } else if (e.type === 'configurationChanged') {
@@ -83,7 +88,31 @@ export class SymbolCache {
         return this.initPromise;
     }
 
+    private updateDebounce: Map<string, { timeout: NodeJS.Timeout, resolves: Array<() => void> }> = new Map();
+
     public async updateFile(uri: vscode.Uri): Promise<void> {
+        const uriString = uri.toString();
+        
+        return new Promise<void>((resolve) => {
+            const existing = this.updateDebounce.get(uriString);
+            if (existing) {
+                clearTimeout(existing.timeout);
+                existing.resolves.push(resolve);
+            }
+            
+            const resolves = existing ? existing.resolves : [resolve];
+
+            const timeout = setTimeout(async () => {
+                this.updateDebounce.delete(uriString);
+                await this.processFile(uri);
+                resolves.forEach(r => r());
+            }, 300);
+
+            this.updateDebounce.set(uriString, { timeout, resolves });
+        });
+    }
+
+    private async processFile(uri: vscode.Uri): Promise<void> {
         try {
             let content = '';
             const openDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
@@ -214,6 +243,7 @@ export class SymbolCache {
             }
 
             this.cache.set(uri.toString(), definitions);
+            this.eventBus?.publish({ type: 'stepDefinitionsUpdated', uri });
         } catch (err) {
             logger.error(`Error updating cache for file ${uri.fsPath}:`, err);
             this.removeFile(uri);
@@ -221,7 +251,14 @@ export class SymbolCache {
     }
 
     public removeFile(uri: vscode.Uri): void {
-        this.cache.delete(uri.toString());
+        const uriString = uri.toString();
+        const existingTimeout = this.updateDebounce.get(uriString);
+        if (existingTimeout) {
+            clearTimeout(existingTimeout.timeout);
+            existingTimeout.resolves.forEach(r => r());
+            this.updateDebounce.delete(uriString);
+        }
+        this.cache.delete(uriString);
     }
 
     public async getStepDefinitions(stepText: string, semanticType?: 'given' | 'when' | 'then' | 'step'): Promise<StepDefinition[]> {

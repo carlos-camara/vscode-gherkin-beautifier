@@ -88,6 +88,15 @@ To enable instantaneous, O(1) semantic queries across massive projects, the exte
    Standard VS Code message passing (`acquireVsCodeApi().postMessage`) bridges the UI clicks back to the extension host to trigger `vscode.window.showTextDocument` for interactive file navigation.
    The extension also uses `MetricsHistory` to persist a lightweight snapshot of the metrics securely inside VS Code's `ExtensionContext.workspaceState`. This local storage enables the dashboard to render Historical Trend Analysis charts using Chart.js without sending any data off the machine.
 
+## Real-Time Impact Analysis Engine
+
+Leveraging the `WorkspaceGraph`, the extension provides a real-time Impact Analysis engine (`ImpactAnalyzer`).
+
+### How Impact Analysis Works
+1. **Graph Traversal**: The `ImpactAnalyzer` queries the `WorkspaceGraph` for usages of a given step definition ID (`getUsages()`).
+2. **Impact Calculation**: It traverses the relationships upwards to find the affected parent `Scenario` and `Feature` nodes. By evaluating the cardinality of affected scenarios, it calculates the severity (e.g., High, Medium, Low, Unused).
+3. **Presentation**: The analysis results are exposed via the `ImpactCodeLensProvider`, which places interactive CodeLenses directly above Python decorators. Clicking the lens displays a quick pick menu of affected scenarios, enabling targeted testing and confident refactoring.
+
 ## Contextual Feature Discovery
 
 To help users naturally discover advanced capabilities (like formatting, step generation, or the dashboard) without intrusive onboarding popups, the extension implements the **ContextualFeatureDiscoveryService**.

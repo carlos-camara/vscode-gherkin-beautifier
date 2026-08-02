@@ -45,6 +45,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Show Impact Details
+- **Identifier**: `gherkin-powertools.showImpactDetails`
+- **Where it appears**: CodeLens directly above Python step definitions.
+- **Required context**: A configured Python Behave workspace and `gherkinPowerTools.impactAnalysis.enabled` must be true.
+- **Input**: Clicking the CodeLens above a step definition.
+- **Result**: Opens a QuickPick menu listing all scenarios that use the selected step definition. Selecting a scenario navigates you directly to it.
+- **Default shortcut**: None.
+
+---
+
 ## Show Developer Metrics
 - **Identifier**: `gherkinPowerTools.showMetrics`
 - **Where it appears**: Command Palette.

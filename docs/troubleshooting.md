@@ -38,6 +38,12 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 **Likely Causes:** You have multiple regular expressions in your Python decorators that match the exact same string (e.g., overlapping wildcards like `(.*)`).
 **Resolution:** Tighten your regular expressions in Python to be mutually exclusive.
 
+## Impact Analysis CodeLenses are not appearing
+**Symptom:** You open a Python step definition file, but you do not see the CodeLenses displaying the number of affected scenarios.
+**Likely Causes:** The feature is disabled in settings, or the `WorkspaceGraph` is still indexing the feature files.
+**Diagnostic Steps:** Check if `"gherkinPowerTools.impactAnalysis.enabled": true` is set in your configuration. Wait for the workspace indexing to complete.
+**Resolution:** Enable the setting and ensure your `.feature` files and Python files are correctly mapped in your `stepGlobs`.
+
 ## Generated step location is wrong
 **Symptom:** The Quick Fix generates a step, but places it in a file you didn't expect.
 **Likely Causes:** The extension tries to append the new step to the most recently modified `.py` file within your `stepGlobs` paths. If you have no step files, it will create one based on standard conventions.

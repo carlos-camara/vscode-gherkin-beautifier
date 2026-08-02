@@ -66,6 +66,8 @@ To generate your first Python step, write an undefined step in your `.feature` f
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" height="340" />
 </div>
 
+You can also view the exact **Blast Radius** of your step definitions via interactive CodeLenses that appear directly above your Python functions, showing exactly how many scenarios will be impacted by a change.
+
 To run your tests, simply open the **Testing** panel in the VS Code sidebar. The extension automatically detects your Scenarios and lets you run, debug, and visually track them in real-time.
 
 ---

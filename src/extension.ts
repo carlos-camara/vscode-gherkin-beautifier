@@ -28,6 +28,8 @@ import { GherkinRenameProvider } from './renameProvider';
 
 import { ConfigurationService } from './configuration';
 import { ContextualFeatureDiscoveryService } from './contextualDiscovery';
+import { ImpactCodeLensProvider } from './impactCodeLens';
+import { ImpactReport } from './impactAnalysis';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 
@@ -89,6 +91,10 @@ export async function activate(context: vscode.ExtensionContext) {
     const refactoringService = new StepRefactoringService(workspaceGraph, symbolCache);
     const renameProvider = new GherkinRenameProvider(refactoringService, workspaceGraph);
 
+    // Initialize Impact Analysis Engine CodeLens
+    const impactCodeLensProvider = new ImpactCodeLensProvider(workspaceGraph);
+    context.subscriptions.push(vscode.languages.registerCodeLensProvider({ language: 'python' }, impactCodeLensProvider));
+
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);
     linter.setEventBus(eventBus);
@@ -116,6 +122,15 @@ export async function activate(context: vscode.ExtensionContext) {
         symbolCache.ensureInitialized().catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
         featureCache.ensureInitialized().catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
         rankingService.usageIndexer.indexWorkspace().catch(err => logger.error(`Error during lazy usage indexer load: ${err}`));
+        workspaceGraph.initialize().then(() => {
+            impactCodeLensProvider.refresh();
+        }).catch(err => logger.error(`Error during lazy workspace graph load: ${err}`));
+
+        eventBus.onEvent(e => {
+            if (['featureFileCreated', 'featureFileChanged', 'featureFileDeleted', 'stepFileCreated', 'stepDefinitionsUpdated', 'stepFileDeleted'].includes(e.type)) {
+                impactCodeLensProvider.refresh();
+            }
+        });
 
         discoveryService.setupWatchers().forEach(w => context.subscriptions.push(w));
 
@@ -204,6 +219,32 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.showStatistics', () => {
             showProjectHealthDashboard(context, workspaceGraph, symbolCache);
+        })
+    );
+
+    // Register Impact Analysis details command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkin-powertools.showImpactDetails', async (report: ImpactReport) => {
+            if (!report || report.affectedScenarios === 0) {
+                vscode.window.showInformationMessage("This step definition is not used in any scenario.");
+                return;
+            }
+            const items = report.scenarios.map(sc => ({
+                label: `$(symbol-event) ${sc.name || 'Unnamed Scenario'}`,
+                description: vscode.workspace.asRelativePath(vscode.Uri.parse(sc.uri)),
+                node: sc
+            }));
+            const selection = await vscode.window.showQuickPick(items, {
+                placeHolder: `Select a scenario to navigate to (Impact: ${report.severity})`
+            });
+            if (selection) {
+                const uri = vscode.Uri.parse(selection.node.uri);
+                const doc = await vscode.workspace.openTextDocument(uri);
+                const editor = await vscode.window.showTextDocument(doc);
+                const pos = new vscode.Position(Math.max(0, selection.node.line - 1), 0);
+                editor.selection = new vscode.Selection(pos, pos);
+                editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+            }
         })
     );
 

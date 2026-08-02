@@ -54,7 +54,7 @@ Deep, localized integration designed exclusively for Python Behave test suites:
 * **1-Click Python Step Generation:** Generate valid Python stubs for undefined steps seamlessly.
 * **Integrated Test Explorer & Debugger:** Run or debug scenarios visually from the sidebar, with live step tracking.
 * **Real-time Context State Inspection:** Inspect internal state variables injected directly into the output panel during execution.
-* **Step Refactoring:** Rename or extract steps across your entire workspace reliably.
+* **Step Refactoring & Impact Analysis:** Rename or extract steps across your entire workspace reliably, and view the exact blast radius of any step definition before modifying it.
 
 ---
 
