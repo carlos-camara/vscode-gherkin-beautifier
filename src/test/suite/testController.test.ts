@@ -353,7 +353,6 @@ Feature: Skip Feature
         });
 
         vscode.workspace.findFiles = async (pattern: any) => {
-            console.log('findFiles called with pattern:', pattern);
             const p = typeof pattern === 'string' ? pattern : pattern.pattern;
             if (p === '**/*.feature') {
                 findFilesCalled = true;
@@ -368,7 +367,6 @@ Feature: Skip Feature
 
         try {
             await testControllerPrivate.controller.resolveHandler();
-            console.log('findFilesCalled:', findFilesCalled);
             assert.strictEqual(findFilesCalled, true, 'Should have searched for .feature files');
             
             // It should have created the file item

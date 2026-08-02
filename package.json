@@ -160,6 +160,13 @@
           "default": false,
           "markdownDescription": "Enable or disable parser diagnostics and performance metrics. When `true`, the extension collects data on AST parsing, cache hits, and document complexity which can be viewed using the 'Show Developer Metrics' command. Keep disabled in normal use to avoid overhead."
         },
+        "gherkinPowerTools.impactAnalysis.enabled": {
+          "type": "boolean",
+          "order": 23,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable or disable the real-time Impact Analysis engine. When `true`, CodeLenses appear above Python step definitions showing their usage blast radius (Low, Medium, High). Useful for prioritizing testing during refactoring."
+        },
         "gherkinPowerTools.linter.enabledRules": {
           "type": "array",
           "order": 21,
@@ -242,6 +249,11 @@
       }
     },
     "commands": [
+      {
+        "command": "gherkin-powertools.showImpactDetails",
+        "title": "Show Impact Details",
+        "category": "Gherkin PowerTools"
+      },
       {
         "command": "gherkinPowerTools.replayOnboarding",
         "title": "Replay Onboarding",

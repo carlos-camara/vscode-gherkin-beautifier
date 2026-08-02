@@ -34,7 +34,7 @@ export class GherkinLinter {
             if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
                 const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
                 this.scheduleLint(doc);
-            } else if (e.type === 'stepFileChanged' || e.type === 'stepFileCreated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
+            } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
                 vscode.workspace.textDocuments.forEach(doc => {
                     this.immediateLint(doc);
                 });
@@ -431,10 +431,8 @@ export class GherkinLinter {
             
             // If it already exactly matches a valid keyword (with or without colon for blocks), it's either correct or will be flagged by syntax parser.
             if (expectedKeywords.includes(firstWord) || expectedKeywords.some((k: string) => firstWord === k + ':')) {
-                console.log('Skipping because includes firstWord:', firstWord);
                 continue;
             }
-            console.log('Did not skip:', firstWord);
 
             let bestMatch = '';
             let lowestDistance = 999;

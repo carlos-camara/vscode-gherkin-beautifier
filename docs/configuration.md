@@ -81,6 +81,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `false`
 
+### `gherkinPowerTools.impactAnalysis.enabled`
+- **Purpose:** Enable or disable the real-time Impact Analysis engine (blast radius CodeLenses on Python step definitions).
+- **Type:** `boolean`
+- **Default:** `true`
+
 ### `gherkinPowerTools.linter.enabledRules`
 - **Purpose:** Whitelist of linting rule IDs to enforce. An empty array enables ALL rules.
 - **Type:** `array` of strings

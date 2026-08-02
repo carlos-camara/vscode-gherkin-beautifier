@@ -88,6 +88,25 @@ Hovering over any valid step in your `.feature` file reveals its Python implemen
 
 ---
 
+## Impact Analysis (Blast Radius)
+
+When modifying existing Python step definitions, it is critical to know how many scenarios will be affected. Gherkin PowerTools includes a real-time **Impact Analysis** engine.
+
+A CodeLens appears directly above every step definition in your `.py` files showing its usage impact:
+- **Impact: High** (Used in 20+ scenarios)
+- **Impact: Medium** (Used in 5+ scenarios)
+- **Impact: Low** (Used in 1 to 4 scenarios)
+- **Impact: Unused** (Not referenced anywhere)
+
+Clicking the CodeLens opens an interactive menu listing every specific scenario that uses this step. Selecting a scenario instantly opens the `.feature` file and navigates to the exact line, allowing you to quickly prioritize your testing when refactoring.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/impact-analysis.gif" alt="Impact Analysis - Blast Radius CodeLens" width="600" height="340" />
+</div>
+*(Note: Impact Analysis can be disabled via the `gherkinPowerTools.impactAnalysis.enabled` setting if you prefer to reduce CodeLens noise).*
+
+---
+
 ## Diagnostics: Undefined & Ambiguous Steps
 
 The Linter actively validates your steps against the Python backend:
