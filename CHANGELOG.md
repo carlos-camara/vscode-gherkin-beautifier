@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.1] - 2026-07-31
 
 ### 🚀 Added
-- **Real-Time Impact Analysis Engine**: Added a new blast radius impact analyzer that places an interactive CodeLens above every Python step definition. It calculates how many scenarios depend on a step, grouping them by severity (High, Medium, Low, or Unused). Clicking the CodeLens opens a QuickPick menu to instantly navigate to the affected scenarios, significantly reducing the risk of refactoring. This feature can be disabled via the `gherkinPowerTools.impactAnalysis.enabled` setting.
+- **Real-Time Impact Analysis Engine**: Added a new blast radius impact analyzer that places an interactive CodeLens above every Python step definition.
+  It calculates how many scenarios depend on a step, grouping them by severity (High, Medium, Low, or Unused).
+  Clicking the CodeLens opens a QuickPick menu to instantly navigate to the affected scenarios, significantly reducing the risk of refactoring.
+  This feature can be disabled via the `gherkinPowerTools.impactAnalysis.enabled` setting.
 - **Automated First-Run Experience**: Added an intelligent, non-intrusive onboarding experience. When you open a Python Behave project for the first time, Gherkin PowerTools automatically detects it, counts your features, and presents a welcome notification with quick actions to launch the Walkthrough or the Health Dashboard.
 - **Contextual Feature Discovery**: A lightweight, non-intrusive recommendation engine that analyzes your workflow in real-time. It seamlessly surfaces advanced features (like generating missing steps, auto-formatting tables, opening the command center, or checking project health) at the exact moment you need them, without disrupting your flow. Includes "Don't show again" functionality.
 - **Historical Trend Analysis**: Gherkin Health Dashboard now automatically tracks and persists lightweight historical snapshots of your project metrics in the workspace state. It visualizes project evolution (complexity, maintainability, technical debt) over time using interactive charts without sending any data off your machine. Configure retention policies or disable it entirely in settings.
