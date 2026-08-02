@@ -132,10 +132,6 @@ Gherkin PowerTools provides step refactoring operations accessible from the edit
 * **Rename Step (`F2` / `Cmd+Shift+R` on macOS)**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
 * **Extract Step (`Ctrl+.`)**: Select multiple Gherkin step lines and extract them to a new Python definition.
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/bugfix/scenario-outline-colon/assets/extract-steps.gif" alt="Extract multiple Gherkin steps into a new Python definition" width="600" height="340" />
-</div>
-
 ### Tag Impact Analysis
 Hover over any tag to calculate exactly how many scenarios and example rows it affects across your workspace, helping you understand the execution scope before running tests.
 <div align="center">
