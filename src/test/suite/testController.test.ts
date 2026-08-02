@@ -373,7 +373,7 @@ Feature: Skip Feature
     test('resolveHandler with item parses the file', async () => {
         const testControllerPrivate = controller as any;
         let parseCalled = false;
-        testControllerPrivate.parseTestsInFileContents = async (item: vscode.TestItem) => {
+        testControllerPrivate.parseTestsInFileContents = async (_item: vscode.TestItem) => {
             parseCalled = true;
         };
 
@@ -399,7 +399,7 @@ Feature: Debug Feature
         const originalStartDebugging = vscode.debug.startDebugging;
         let startDebuggingCalled = false;
         let debugConfig: any;
-        vscode.debug.startDebugging = async (folder: any, config: any) => {
+        vscode.debug.startDebugging = async (_folder: any, config: any) => {
             startDebuggingCalled = true;
             debugConfig = config;
             return true;

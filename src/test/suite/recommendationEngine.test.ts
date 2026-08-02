@@ -98,7 +98,7 @@ suite('Recommendation Engine Test Suite', () => {
 
     test('OversizedScenarioRule triggers when scenario size > 10', () => {
         const metrics = { ...baseMetrics, largestScenarios: [
-            { uri: 'file:///huge.feature', name: 'Huge Scenario', size: 15 }
+            { uri: 'file:///huge.feature', line: 1, name: 'Huge Scenario', size: 15 }
         ]};
         const recs = engine.generateRecommendations(mockGraph, metrics);
         const oversizedScen = recs.find(r => r.title.startsWith('Oversized Scenario'));

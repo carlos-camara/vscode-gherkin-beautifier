@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import { WorkspaceGraph } from '../../graph';
 import { SymbolCache } from '../../cache';
 import { WorkspaceEventBus } from '../../eventBus';
+import { astRepository } from '../../ast';
 
 suite('WorkspaceGraph Test Suite', () => {
     let graph: WorkspaceGraph;
@@ -107,35 +108,45 @@ suite('WorkspaceGraph Test Suite', () => {
                 ]
             }
         };
-        symbolCache.getFeatureAST = async () => mockAST as any;
-        await (graph as any).indexFeatureFile(uri);
+        const originalGetAST = astRepository.getAST;
+        astRepository.getAST = async () => ({ document: mockAST } as any);
+        try {
+            await (graph as any).indexFeatureFile(uri);
 
-        const nodes = graph.getAllNodes();
-        const ruleNode = nodes.find(n => n.type === 'Rule');
-        assert.ok(ruleNode, 'Should create Rule node');
-        assert.strictEqual((ruleNode as any).tags[0], '@rule');
+            const nodes = graph.getAllNodes();
+            const ruleNode = nodes.find(n => n.type === 'Rule');
+            assert.ok(ruleNode, 'Should create Rule node');
+            assert.strictEqual((ruleNode as any).tags[0], '@rule');
 
-        const bgNode = nodes.find(n => n.type === 'Background');
-        assert.ok(bgNode, 'Should create Background node');
+            const bgNode = nodes.find(n => n.type === 'Background');
+            assert.ok(bgNode, 'Should create Background node');
 
-        const scNode = nodes.find(n => n.type === 'Scenario');
-        assert.ok(scNode, 'Should create Scenario node');
-        assert.ok((scNode as any).tags.includes('@scenario'));
+            const scNode = nodes.find(n => n.type === 'Scenario');
+            assert.ok(scNode, 'Should create Scenario node');
+            assert.ok((scNode as any).tags.includes('@scenario'));
 
-        const exNode = nodes.find(n => n.type === 'Example');
-        assert.ok(exNode, 'Should create Example node');
+            const exNode = nodes.find(n => n.type === 'Example');
+            assert.ok(exNode, 'Should create Example node');
 
-        const tagNode = nodes.find(n => n.type === 'Tag' && n.id === 'Tag:@rule');
-        assert.ok(tagNode, 'Should create Tag node for @rule');
-        assert.ok((tagNode as any).targets.includes(scNode.id), 'Tag node should target scenario inside rule');
+            const tagNode = nodes.find(n => n.type === 'Tag' && n.id === 'Tag:@rule');
+            assert.ok(tagNode, 'Should create Tag node for @rule');
+            assert.ok((tagNode as any).targets.includes(scNode.id), 'Tag node should target scenario inside rule');
+        } finally {
+            astRepository.getAST = originalGetAST;
+        }
     });
 
     test('indexFeatureFile handles AST errors gracefully', async () => {
         const uri = require('vscode').Uri.parse('file:///error.feature');
-        symbolCache.getFeatureAST = async () => { throw new Error('Parse error'); };
-        await (graph as any).indexFeatureFile(uri);
-        // Should not throw, should just log and exit
-        assert.ok(true);
+        const originalGetAST = astRepository.getAST;
+        astRepository.getAST = async () => { throw new Error('Parse error'); };
+        try {
+            await (graph as any).indexFeatureFile(uri);
+            // Should not throw, should just log and exit
+            assert.ok(true);
+        } finally {
+            astRepository.getAST = originalGetAST;
+        }
     });
 
     test('indexPythonFile handles file with no definitions', async () => {
