@@ -66,6 +66,7 @@ nav:
   - Gherkin Health & Analytics: gherkin_health.md
   - Configuration: configuration.md
   - Commands: commands.md
+  - CLI: cli.md
   - Performance: performance.md
   - Compatibility: compatibility.md
   - Troubleshooting: troubleshooting.md

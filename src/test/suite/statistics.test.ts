@@ -55,11 +55,17 @@ suite('Project Health Dashboard Test Suite', () => {
             }
         };
 
-        const html = getDashboardHtml(dummyMetrics, [], '1.8.0');
+        const dummySnapshots = [
+            { timestamp: new Date(Date.now() - 10000).toISOString(), health: 80, maintainability: 90, complexity: 10, techDebtTotal: 0 },
+            { timestamp: new Date().toISOString(), health: 88, maintainability: 95, complexity: 20, techDebtTotal: 0 }
+        ];
+
+        const html = getDashboardHtml(dummyMetrics, [], '1.8.0', dummySnapshots);
 
         assert.ok(html.includes('Very long scenario with &lt;script&gt;'));
         assert.ok(html.includes('@smoke'));
         assert.ok(html.includes('88')); // health score
+        assert.ok(html.includes('Chart.defaults.color')); // verify script block was included
     });
 
     test('calculateHealthMetrics: Handles empty graph gracefully', async () => {
@@ -74,9 +80,14 @@ suite('Project Health Dashboard Test Suite', () => {
     test('showProjectHealthDashboard: creates webview and calculates stats', async () => {
         let webviewHtml = '';
 
+        let store: any = {};
         const mockContext = {
             extension: {
                 packageJSON: { version: '2.0.0' }
+            },
+            workspaceState: {
+                get: (key: string, def: any) => store[key] !== undefined ? store[key] : def,
+                update: (key: string, val: any) => { store[key] = val; return Promise.resolve(); }
             }
         } as any;
 

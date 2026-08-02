@@ -4,6 +4,12 @@ This guide addresses common problems organized by observable symptoms.
 
 ---
 
+## First-Run Onboarding did not appear
+**Symptom:** You installed the extension but you never saw the welcome notification for Python Behave projects.
+**Likely Causes:** The workspace doesn't have any `.feature` files, it isn't recognized as a Python Behave project, or you dismissed the notification previously.
+**Diagnostic Steps:** Ensure you have `.feature` files in your workspace.
+**Resolution:** Run **Gherkin PowerTools: Replay Onboarding** from the Command Palette to reset the state and manually trigger the detection process.
+
 ## Formatting does not run or `.feature` file is not detected
 **Symptom:** You press <kbd>Shift+Alt+F</kbd> and nothing happens, or the extension doesn't seem to activate.
 **Likely Causes:** The file is not recognized as a Gherkin document, or the formatter is disabled.
@@ -31,6 +37,12 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 **Symptom:** The linter flags a step as "Ambiguous" even though Behave runs it fine.
 **Likely Causes:** You have multiple regular expressions in your Python decorators that match the exact same string (e.g., overlapping wildcards like `(.*)`).
 **Resolution:** Tighten your regular expressions in Python to be mutually exclusive.
+
+## Impact Analysis CodeLenses are not appearing
+**Symptom:** You open a Python step definition file, but you do not see the CodeLenses displaying the number of affected scenarios.
+**Likely Causes:** The feature is disabled in settings, or the `WorkspaceGraph` is still indexing the feature files.
+**Diagnostic Steps:** Check if `"gherkinPowerTools.impactAnalysis.enabled": true` is set in your configuration. Wait for the workspace indexing to complete.
+**Resolution:** Enable the setting and ensure your `.feature` files and Python files are correctly mapped in your `stepGlobs`.
 
 ## Generated step location is wrong
 **Symptom:** The Quick Fix generates a step, but places it in a file you didn't expect.
@@ -83,10 +95,35 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 1. Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores all dependency directories.
 2. Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run the **Show Developer Metrics** command to identify if specific files have high parsing durations or poor cache hit ratios.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" height="340" />
+</div>
+
 ## Step Analysis Report is empty or incomplete
-**Symptom:** You run "Analyze Step Definitions" but the report says "0 Total Step Defs" or misses files you know exist.
+**Symptom:** You run "Show Gherkin Health" but the report says "0 Total Step Defs" or misses files you know exist.
 **Likely Causes:** Your `gherkinPowerTools.behave.stepGlobs` configuration does not cover the locations of all your steps.
 **Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The proactive indexer will automatically scan them upon running the command.
+
+## Rename Step (F2 / Cmd+Shift+R) does not find all usages
+**Symptom:** You press `F2` (or `Cmd+Shift+R` on macOS) on a Gherkin step, rename it, but some `.feature` files still use the old step name.
+**Likely Causes:** The affected `.feature` files were not yet indexed in the `WorkspaceGraph`.
+**Diagnostic Steps:**
+1. Ensure the Python step file containing the definition is within your configured `stepGlobs`.
+2. Run **Gherkin PowerTools: Diagnose Workspace** and check the "Discovered Steps" and "Workspace Graph" sections.
+**Resolution:** Verify `stepGlobs` covers all relevant step files, then retry the rename. The graph is rebuilt automatically when files are saved.
+
+## Extract Step does not produce a Python stub
+**Symptom:** You select multiple steps and invoke the Code Action, but no stub appears in the target file.
+**Likely Causes:** The selection may not span multiple step lines, or no Python step files were found in the workspace.
+**Diagnostic Steps:**
+1. Ensure you have selected at least two step lines (the selection must include both start and end lines).
+2. Confirm that at least one Python step file exists within your `stepGlobs`.
+**Resolution:** If no Python files appear in the file picker, add the correct glob to `gherkinPowerTools.behave.stepGlobs`.
+
+## I accidentally dismissed a Contextual Recommendation
+**Symptom:** You clicked "Don't show again" on a helpful popup (like the Formatting or Dashboard recommendation) and want it back.
+**Likely Causes:** The extension saved your dismissal in the VS Code Global State.
+**Resolution:** Currently, VS Code does not expose a UI to edit global state directly. You can reset all internal extension state (including dismissals) by running the **Developer: Reset Extension State** command from the VS Code Command Palette (note that this resets state for *all* extensions).
 
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).

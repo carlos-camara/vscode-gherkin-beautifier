@@ -1,8 +1,8 @@
 {
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
-  "description": "Gherkin formatting, linting, project analysis, Python/Behave navigation, and execution/debugging for BDD.",
-  "version": "1.8.0",
+  "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
+  "version": "1.8.1",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -13,10 +13,13 @@
   ],
   "keywords": [
     "gherkin",
-    "cucumber",
     "bdd",
+    "python",
     "behave",
-    "python"
+    "cucumber",
+    "test-explorer",
+    "intellisense",
+    "linter"
   ],
   "publisher": "carloscamara",
   "author": "Carlos Camara",
@@ -38,6 +41,9 @@
     "onLanguage:feature"
   ],
   "main": "./dist/extension.js",
+  "bin": {
+    "gherkin-pt": "./dist/cli.js"
+  },
   "configurationDefaults": {
     "testing.showCoverageInExplorer": false
   },
@@ -154,6 +160,13 @@
           "default": false,
           "markdownDescription": "Enable or disable parser diagnostics and performance metrics. When `true`, the extension collects data on AST parsing, cache hits, and document complexity which can be viewed using the 'Show Developer Metrics' command. Keep disabled in normal use to avoid overhead."
         },
+        "gherkinPowerTools.impactAnalysis.enabled": {
+          "type": "boolean",
+          "order": 23,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable or disable the real-time Impact Analysis engine. When `true`, CodeLenses appear above Python step definitions showing their usage blast radius (Low, Medium, High). Useful for prioritizing testing during refactoring."
+        },
         "gherkinPowerTools.linter.enabledRules": {
           "type": "array",
           "order": 21,
@@ -216,13 +229,49 @@
           },
           "default": [],
           "markdownDescription": "Extra flags appended to **every** Behave invocation from the Test Explorer.\n\n**Examples:** `[\"--no-capture\"]` · `[\"-D\", \"env=staging\"]` · `[\"--format\", \"progress\"]`"
+        },
+        "gherkinPowerTools.analytics.historicalTrends.enabled": {
+          "type": "boolean",
+          "order": 40,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable or disable historical trend analysis for Gherkin Health. When enabled, dashboard metrics are persisted locally to visualize project evolution over time."
+        },
+        "gherkinPowerTools.analytics.historicalTrends.retentionSnapshots": {
+          "type": "number",
+          "order": 41,
+          "scope": "resource",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 365,
+          "markdownDescription": "Maximum number of historical snapshots to retain for trend analysis."
         }
       }
     },
     "commands": [
       {
+        "command": "gherkin-powertools.showImpactDetails",
+        "title": "Show Impact Details",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.replayOnboarding",
+        "title": "Replay Onboarding",
+        "category": "Gherkin PowerTools"
+      },
+      {
         "command": "gherkinPowerTools.commandCenter",
         "title": "Gherkin PowerTools: Command Center",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.demoQuickFix",
+        "title": "Demo Quick Fix",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.demoGoToDefinition",
+        "title": "Demo Go to Definition",
         "category": "Gherkin PowerTools"
       },
       {
@@ -280,6 +329,16 @@
         "title": "Edit Behave args & Run",
         "category": "Gherkin PowerTools",
         "icon": "$(edit)"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.extractStep",
+        "title": "Extract Step",
+        "category": "Refactoring"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.renameStep",
+        "title": "Rename Step",
+        "category": "Refactoring"
       }
     ],
     "menus": {
@@ -288,6 +347,11 @@
           "when": "editorLangId == feature",
           "command": "gherkinPowerTools.format",
           "group": "navigation@2"
+        },
+        {
+          "when": "editorLangId == feature",
+          "command": "gherkinPowerTools.refactor.renameStep",
+          "group": "navigation@2.1"
         },
         {
           "when": "editorLangId == feature",
@@ -308,6 +372,37 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "gherkinPowerTools.format",
+        "key": "shift+alt+f",
+        "mac": "shift+alt+f",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.refactor.renameStep",
+        "key": "f2",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.commandCenter",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      },
+      {
+        "command": "gherkinPowerTools.diagnoseWorkspace",
+        "key": "ctrl+alt+h",
+        "mac": "cmd+alt+h",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.showStatistics",
+        "key": "ctrl+alt+s",
+        "mac": "cmd+alt+s",
+        "when": "editorLangId == feature"
+      }
+    ],
     "snippets": [
       {
         "language": "feature",
@@ -331,12 +426,12 @@
           {
             "id": "formatDocument",
             "title": "Format your Gherkin",
-            "description": "Format your features to align tables and standardize indentation. [Format Document](command:editor.action.formatDocument)",
+            "description": "Format your features to align tables and standardize indentation. [Format Document](command:gherkinPowerTools.format)",
             "media": {
               "markdown": "assets/walkthrough/2_format.md"
             },
             "completionEvents": [
-              "onCommand:editor.action.formatDocument"
+              "onCommand:gherkinPowerTools.format"
             ]
           },
           {
@@ -364,12 +459,12 @@
           {
             "id": "goToDefinition",
             "title": "Navigate to Python Steps",
-            "description": "Right-click a step and select **Go to Definition** (F12) to jump straight to the Python implementation. [Go to Definition](command:editor.action.revealDefinition)",
+            "description": "Right-click a step and select **Go to Definition** (F12) to jump straight to the Python implementation. [Go to Definition](command:gherkinPowerTools.demoGoToDefinition)",
             "media": {
               "markdown": "assets/walkthrough/5_navigation.md"
             },
             "completionEvents": [
-              "onCommand:editor.action.revealDefinition"
+              "onCommand:gherkinPowerTools.demoGoToDefinition"
             ]
           },
           {
@@ -397,12 +492,12 @@
           {
             "id": "codeActions",
             "title": "Intelligent Quick Fixes",
-            "description": "Press `Cmd + .` or `Ctrl + .` to generate missing steps, insert colons, or fix block structure. [Quick Fix](command:editor.action.quickFix)",
+            "description": "Press `Cmd + .` or `Ctrl + .` to generate missing steps, insert colons, or fix block structure. [Quick Fix](command:gherkinPowerTools.demoQuickFix)",
             "media": {
               "markdown": "assets/walkthrough/9_codeactions.md"
             },
             "completionEvents": [
-              "onCommand:editor.action.quickFix"
+              "onCommand:gherkinPowerTools.demoQuickFix"
             ]
           },
           {
@@ -452,11 +547,12 @@
     "test": "vscode-test --label unitTests",
     "test:e2e": "vscode-test --label e2eTests",
     "check:config": "node scripts/check-config-sync.js",
+    "verify:vsix": "node scripts/verify-vsix.js",
     "coverage": "vscode-test --label unitTests --coverage --coverage-reporter=lcov --coverage-reporter=text --coverage-reporter=html --coverage-reporter=json-summary"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.1.2",
     "@types/sinon": "^22.0.0",
     "@types/vscode": "^1.93.0",
     "@vscode/test-cli": "^0.0.15",
@@ -477,6 +573,8 @@
   },
   "dependencies": {
     "@cucumber/gherkin": "^42.0.0",
-    "@cucumber/messages": "^34.2.0"
+    "@cucumber/messages": "^34.2.0",
+    "commander": "^14.0.3",
+    "fast-glob": "^3.3.3"
   }
 }

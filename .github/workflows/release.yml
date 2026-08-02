@@ -48,10 +48,7 @@ jobs:
 
       - name: 🛡️ Verify VSIX
         run: |
-          if [ ! -s "${{ steps.vars.outputs.vsix }}" ]; then
-            echo "Error: VSIX file is missing or empty!"
-            exit 1
-          fi
+          npm run verify:vsix -- ${{ steps.vars.outputs.vsix }}
 
       - name: 🏷️ Ensure Git Tag
         env:

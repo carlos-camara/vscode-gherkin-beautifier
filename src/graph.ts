@@ -40,7 +40,7 @@ export class WorkspaceGraph {
                 this.indexFeatureFile(e.uri);
             } else if (e.type === 'featureFileDeleted') {
                 this.removeNodesByUri(e.uri.toString());
-            } else if (e.type === 'stepFileChanged' || e.type === 'stepFileCreated') {
+            } else if (e.type === 'stepDefinitionsUpdated') {
                 this.indexPythonFile(e.uri);
             } else if (e.type === 'stepFileDeleted') {
                 this.removeNodesByUri(e.uri.toString());
@@ -371,6 +371,10 @@ export class WorkspaceGraph {
 
     public getAllNodes(): GraphNode[] {
         return Array.from(this.nodes.values());
+    }
+
+    public getNode(id: string): GraphNode | undefined {
+        return this.nodes.get(id);
     }
 
     public dispose() {

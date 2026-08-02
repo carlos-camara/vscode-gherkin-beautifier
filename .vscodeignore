@@ -30,3 +30,4 @@ esbuild.js
 *.vsix
 .venv/**
 venv/**
+vsix-validation-report.md

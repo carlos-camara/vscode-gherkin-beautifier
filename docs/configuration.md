@@ -81,6 +81,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `false`
 
+### `gherkinPowerTools.impactAnalysis.enabled`
+- **Purpose:** Enable or disable the real-time Impact Analysis engine (blast radius CodeLenses on Python step definitions).
+- **Type:** `boolean`
+- **Default:** `true`
+
 ### `gherkinPowerTools.linter.enabledRules`
 - **Purpose:** Whitelist of linting rule IDs to enforce. An empty array enables ALL rules.
 - **Type:** `array` of strings
@@ -112,6 +117,20 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `array` of strings
 - **Default:** `[]`
 - **Example:** `["--no-capture"]`
+
+---
+
+## Analytics Settings
+
+### `gherkinPowerTools.analytics.historicalTrends.enabled`
+- **Purpose:** Enable or disable historical trend analysis for Gherkin Health. When enabled, dashboard metrics are persisted locally to visualize project evolution over time.
+- **Type:** `boolean`
+- **Default:** `true`
+
+### `gherkinPowerTools.analytics.historicalTrends.retentionSnapshots`
+- **Purpose:** Maximum number of historical snapshots to retain for trend analysis.
+- **Type:** `number` (1–365)
+- **Default:** `30`
 
 ---
 

@@ -46,9 +46,18 @@ Here is a breakdown of the core modules located in the `src/` directory:
    ```bash
    npm run compile
    ```
-5. **Run the Extension**:
+5. **Build the CLI executable**:
+   ```bash
+   npm run esbuild
+   ```
+6. **Run the Extension**:
    - Press `F5` in VS Code to open a new "Extension Development Host" window.
    - Any changes you make to the code can be tested by reloading the Development Host (`Cmd + R` / `Ctrl + R`).
+
+To test the CLI locally after building:
+```bash
+node dist/cli.js --help
+```
 
 ---
 
@@ -60,6 +69,12 @@ The official `@vscode/test-electron` framework coupled with Mocha is used to run
 To verify that all configuration settings in `package.json`, `gherkin-powertools.schema.json`, `src/configuration.ts`, `README.md`, and documentation are 100% synchronized:
 ```bash
 npm run check:config
+```
+
+### CLI Tests
+To run the integration tests specifically for the Command Line Interface:
+```bash
+npm run test:cli
 ```
 
 ### Unit and Architecture Tests
@@ -90,6 +105,12 @@ The CI/CD pipeline leverages reusable GitHub Actions from the [qa-hub-actions](h
 ---
 
 ## 📦 Packaging
+
+To verify that the built VSIX package contains only expected files, doesn't leak secrets, and doesn't exceed maximum size limitations:
+
+```bash
+npm run verify:vsix
+```
 
 To create a local `.vsix` file for distribution or local testing:
 

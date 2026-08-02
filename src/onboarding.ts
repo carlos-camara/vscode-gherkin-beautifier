@@ -316,3 +316,60 @@ export async function showOnboardingNotificationIfNeeded(
 
     return notificationShown;
 }
+
+export class FirstRunExperience {
+    public static async checkAndRun(context: vscode.ExtensionContext): Promise<void> {
+        const stateKey = 'gherkinPowerTools.hasRunOnboarding';
+        const hasRun = context.globalState.get<boolean>(stateKey, false);
+
+        if (hasRun) {
+            return;
+        }
+
+        const workspaceFolders = vscode.workspace.workspaceFolders || [];
+        if (workspaceFolders.length === 0) {
+            return;
+        }
+
+        for (const folder of workspaceFolders) {
+            const detection = await BehaveDetector.detectBehaveUsage(folder.uri);
+            if (detection.isBehaveProject) {
+                let featureCount = 0;
+                try {
+                    const featureFiles = await vscode.workspace.findFiles(
+                        new vscode.RelativePattern(folder.uri, '**/*.feature'),
+                        '{**/node_modules/**,**/.venv/**,**/venv/**,**/env/**}',
+                        100
+                    );
+                    featureCount = featureFiles.length;
+                } catch {
+                    featureCount = 0;
+                }
+
+                const featureText = featureCount >= 100 ? '100+ features' : `${featureCount} feature(s)`;
+
+                const choice = await vscode.window.showInformationMessage(
+                    `🚀 Welcome to Gherkin PowerTools! Detected a Python Behave project with ${featureText}. Let's get started.`,
+                    'Start Walkthrough',
+                    'Show Project Health',
+                    'Dismiss'
+                );
+
+                if (choice === 'Start Walkthrough') {
+                    vscode.commands.executeCommand('workbench.action.openWalkthrough', 'carloscamara.vscode-gherkin-powertools#gherkinPowerTools.walkthrough');
+                } else if (choice === 'Show Project Health') {
+                    vscode.commands.executeCommand('gherkinPowerTools.showStatistics');
+                }
+
+                await context.globalState.update(stateKey, true);
+                break; // Only show for the first detected project
+            }
+        }
+    }
+
+    public static async replayOnboarding(context: vscode.ExtensionContext): Promise<void> {
+        const stateKey = 'gherkinPowerTools.hasRunOnboarding';
+        await context.globalState.update(stateKey, false);
+        await this.checkAndRun(context);
+    }
+}

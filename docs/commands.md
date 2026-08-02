@@ -10,7 +10,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: None.
 - **Input**: None.
 - **Result**: Opens a unified QuickPick menu giving access to formatting, statistics, running tests, debugging, and workspace diagnostics.
-- **Default shortcut**: None.
+- **Default shortcut**: <kbd>Ctrl+Shift+G</kbd> (Mac: <kbd>Cmd+Shift+G</kbd>).
 
 ---
 
@@ -31,7 +31,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: An active `.feature` file or workspace.
 - **Input**: None.
 - **Result**: Analyzes environment versions, workspace layout, discovered feature/step files, indexed definitions, Python extension status, and `.gherkin-powertoolsrc.json` validity. Generates an Output Channel report with a 1-click `Copy Sanitized Report` action.
-- **Default shortcut**: None.
+- **Default shortcut**: <kbd>Ctrl+Alt+H</kbd> (Mac: <kbd>Cmd+Option+H</kbd>).
 
 ---
 
@@ -41,6 +41,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: An active `.feature` file.
 - **Input**: None.
 - **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing project health, maintainability, tag impact, and complexity distribution.
+- **Default shortcut**: <kbd>Ctrl+Alt+S</kbd> (Mac: <kbd>Cmd+Option+S</kbd>).
+
+---
+
+## Show Impact Details
+- **Identifier**: `gherkin-powertools.showImpactDetails`
+- **Where it appears**: CodeLens directly above Python step definitions.
+- **Required context**: A configured Python Behave workspace and `gherkinPowerTools.impactAnalysis.enabled` must be true.
+- **Input**: Clicking the CodeLens above a step definition.
+- **Result**: Opens a QuickPick menu listing all scenarios that use the selected step definition. Selecting a scenario navigates you directly to it.
 - **Default shortcut**: None.
 
 ---
@@ -56,6 +66,17 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Replay Onboarding
+- **Identifier**: `gherkinPowerTools.replayOnboarding`
+- **Where it appears**: Command Palette.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Resets the extension's first-run state and triggers the workspace discovery process again, showing the welcome notification if a Python Behave project is detected.
+- **Default shortcut**: None.
+
+---
+
+
 ## Edit Behave args & Run
 - **Identifier**: `gherkinPowerTools.testExplorerEditAndRun`
 - **Where it appears**: Testing Sidebar (Title Menu).
@@ -66,6 +87,26 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Default shortcut**: None.
 
 ---
+
+## Extract Step
+- **Identifier**: `gherkinPowerTools.refactor.extractStep`
+- **Where it appears**: Code Action / Quick Fix menu.
+- **Required context**: Multiple selected step lines in a `.feature` file.
+- **Input**: Prompts for a new step name, and then presents a file picker to select the target Python step file.
+- **Result**: Extracts the selected steps into a new Python step definition, replacing them in the original feature file.
+- **Default shortcut**: None (Invoked via <kbd>Ctrl+.</kbd> or <kbd>Cmd+.</kbd>).
+
+---
+
+## Rename Step
+- **Identifier**: `gherkinPowerTools.refactor.renameStep`
+- **Where it appears**: Editor Context Menu (Right-click in `.feature` file).
+- **Required context**: A Gherkin step in a `.feature` file or a Python step decorator string.
+- **Input**: Prompts for the new step name.
+- **Result**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
+- **Default shortcut**: <kbd>F2</kbd> (Mac: <kbd>Cmd+Shift+R</kbd>).
+
+
 
 ## Test Execution Commands (CodeLens / Tree Nodes)
 

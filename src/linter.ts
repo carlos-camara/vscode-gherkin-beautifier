@@ -34,7 +34,7 @@ export class GherkinLinter {
             if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
                 const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
                 this.scheduleLint(doc);
-            } else if (e.type === 'stepFileChanged' || e.type === 'stepFileCreated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
+            } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
                 vscode.workspace.textDocuments.forEach(doc => {
                     this.immediateLint(doc);
                 });
@@ -147,7 +147,9 @@ export class GherkinLinter {
                         }
 
                         const blockKeywords = dialectService.getBlockKeywords(dialect);
-                        const startsWithBlockKeyword = blockKeywords.find(k => gotText.startsWith(k));
+                        const startsWithBlockKeyword = [...blockKeywords]
+                            .sort((a, b) => b.length - a.length)
+                            .find(k => gotText.startsWith(k));
                         
                         if (startsWithBlockKeyword && !gotText.startsWith(startsWithBlockKeyword + ':')) {
                             code = 'MISSING_COLON';
@@ -163,14 +165,17 @@ export class GherkinLinter {
                             let bestMatch = '';
                             let lowestDistance = 999;
                             const normalizedFirst = firstWord.toLowerCase();
+                            
+                            let prefixMatch = '';
 
                             for (const kw of validKeywords) {
                                 const normalizedKw = kw.toLowerCase();
                                 
                                 // Direct prefix match (e.g. 'whe' -> 'When', 'give' -> 'Given')
                                 if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
-                                    bestMatch = kw;
-                                    break;
+                                    if (!prefixMatch || kw.length < prefixMatch.length) {
+                                        prefixMatch = kw;
+                                    }
                                 }
 
                                 // Typo match (e.g. 'Givn' -> 'Given')
@@ -181,6 +186,10 @@ export class GherkinLinter {
                                     lowestDistance = dist;
                                     bestMatch = kw;
                                 }
+                            }
+                            
+                            if (prefixMatch) {
+                                bestMatch = prefixMatch;
                             }
                             
                             if (bestMatch) {
@@ -428,18 +437,36 @@ export class GherkinLinter {
             let bestMatch = '';
             let lowestDistance = 999;
             const normalizedFirst = firstWord.toLowerCase();
+            const normalizedTrimmed = trimmed.toLowerCase();
 
-            for (const kw of expectedKeywords) {
-                const normalizedKw = kw.toLowerCase();
-                if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
+            const sortedKeywords = [...expectedKeywords].sort((a, b) => b.length - a.length);
+
+            for (const kw of sortedKeywords) {
+                if (normalizedTrimmed.startsWith(kw.toLowerCase())) {
                     bestMatch = kw;
                     break;
                 }
-                const dist = getLevenshteinDistance(normalizedFirst, normalizedKw);
-                const threshold = normalizedKw.length <= 4 ? 1 : 2;
-                if (dist < lowestDistance && dist <= threshold) {
-                    lowestDistance = dist;
-                    bestMatch = kw;
+            }
+            
+            if (!bestMatch) {
+                let prefixMatch = '';
+                for (const kw of sortedKeywords) {
+                    const normalizedKw = kw.toLowerCase();
+                    if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
+                        if (!prefixMatch || kw.length < prefixMatch.length) {
+                            prefixMatch = kw;
+                        }
+                    }
+                    const dist = getLevenshteinDistance(normalizedFirst, normalizedKw);
+                    const threshold = normalizedKw.length <= 4 ? 1 : 2;
+                    if (dist < lowestDistance && dist <= threshold) {
+                        lowestDistance = dist;
+                        bestMatch = kw;
+                    }
+                }
+                
+                if (prefixMatch) {
+                    bestMatch = prefixMatch;
                 }
             }
 
@@ -453,14 +480,16 @@ export class GherkinLinter {
                 let code = 'MISSPELLED_KEYWORD';
                 let message = '';
                 let suggestedEdit = '';
+                
+                const isExactMatch = normalizedTrimmed.startsWith(bestMatch.toLowerCase());
 
-                if (normalizedFirst === bestMatch.toLowerCase()) {
+                if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                     if (isBlockKeyword) {
                         code = 'MISSING_COLON';
                         message = `Missing colon (':') after ${bestMatch}`;
                         suggestedEdit = bestMatch + ':';
                     } else {
-                        message = `Incorrect casing: '${firstWord}'. Did you mean '${bestMatch}'?`;
+                        message = `Incorrect casing: '${isExactMatch ? bestMatch.toLowerCase() : firstWord}'. Did you mean '${bestMatch}'?`;
                         suggestedEdit = bestMatch;
                     }
                 } else {
@@ -515,20 +544,35 @@ export class GherkinLinter {
                 let bestMatch = '';
                 let lowestDistance = 999;
                 const normalizedFirst = firstWord.toLowerCase();
+                const normalizedTrimmed = trimmed.toLowerCase();
 
-                // Do not scan arbitrary description text aggressively.
-                // We only fuzzily match against structural keywords EXPECTED in this section.
-                for (const kw of expectedKeywords) {
-                    const normalizedKw = kw.toLowerCase();
-                    if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
+                const sortedKeywords = [...expectedKeywords].sort((a, b) => b.length - a.length);
+
+                for (const kw of sortedKeywords) {
+                    if (normalizedTrimmed.startsWith(kw.toLowerCase())) {
                         bestMatch = kw;
                         break;
                     }
-                    const dist = getLevenshteinDistance(normalizedFirst, normalizedKw);
-                    const threshold = normalizedKw.length <= 4 ? 1 : 2;
-                    if (dist < lowestDistance && dist <= threshold) {
-                        lowestDistance = dist;
-                        bestMatch = kw;
+                }
+
+                if (!bestMatch) {
+                    let prefixMatch = '';
+                    for (const kw of sortedKeywords) {
+                        const normalizedKw = kw.toLowerCase();
+                        if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
+                            if (!prefixMatch || kw.length < prefixMatch.length) {
+                                prefixMatch = kw;
+                            }
+                        }
+                        const dist = getLevenshteinDistance(normalizedFirst, normalizedKw);
+                        const threshold = normalizedKw.length <= 4 ? 1 : 2;
+                        if (dist < lowestDistance && dist <= threshold) {
+                            lowestDistance = dist;
+                            bestMatch = kw;
+                        }
+                    }
+                    if (prefixMatch) {
+                        bestMatch = prefixMatch;
                     }
                 }
 
@@ -544,8 +588,10 @@ export class GherkinLinter {
                     let code = '';
                     let message = '';
                     let suggestedEdit = '';
+                    
+                    const isExactMatch = normalizedTrimmed.startsWith(bestMatch.toLowerCase());
 
-                    if (normalizedFirst === bestMatch.toLowerCase()) {
+                    if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                         // Exact match (case insensitive)
                         if (isBlockKeyword) {
                             // They spelled it perfectly but it's in the description. They forgot the colon!
@@ -554,14 +600,14 @@ export class GherkinLinter {
                             suggestedEdit = bestMatch + ':';
                         } else {
                             // Step keyword.
-                            if (firstWord === bestMatch) {
+                            if (isExactMatch && trimmed.startsWith(bestMatch)) {
                                 // Exactly correctly cased. It's just out of place (likely due to structural error above). Do not flag.
                                 currentLineIdx++;
                                 continue;
                             } else {
                                 // e.g., 'given' instead of 'Given'. Offer to fix casing.
                                 code = 'MISSPELLED_KEYWORD';
-                                message = `Incorrect casing: '${firstWord}'. Did you mean '${bestMatch}'?`;
+                                message = `Incorrect casing: '${isExactMatch ? bestMatch.toLowerCase() : firstWord}'. Did you mean '${bestMatch}'?`;
                                 suggestedEdit = bestMatch;
                             }
                         }
@@ -574,7 +620,7 @@ export class GherkinLinter {
                             suggestedEdit = bestMatch + ':';
                         } else {
                             code = 'MISSPELLED_KEYWORD';
-                            message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
+                            message = `Misspelled or incomplete step keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
                             suggestedEdit = bestMatch;
                         }
                     }
