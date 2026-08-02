@@ -39,7 +39,7 @@ suite('CLI Integration Tests', () => {
             const output = err.stdout;
             assert.ok(output.includes('Found'));
             assert.ok(output.includes('recommendation(s)'));
-            assert.ok(output.includes('[WARNING]') || output.includes('[ERROR]') || output.includes('[INFO]'));
+            assert.ok(output.includes('[LOW]') || output.includes('[MEDIUM]') || output.includes('[HIGH]'));
         }
     });
 
