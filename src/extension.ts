@@ -20,7 +20,7 @@ import { discoveryService } from './discovery';
 import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
 
 import { showDiagnosticsReport } from './diagnostics';
-import { showOnboardingNotificationIfNeeded } from './onboarding';
+import { showOnboardingNotificationIfNeeded, FirstRunExperience } from './onboarding';
 import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
 import { StepRefactoringService } from './refactoring';
@@ -33,7 +33,7 @@ const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 /**
  * Activates the Gherkin PowerTools extension.
  * This method is called when the extension is activated by VS Code.
- * 
+ *
  * @param context The extension context provided by VS Code.
  */
 export async function activate(context: vscode.ExtensionContext) {
@@ -41,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const eventBus = new WorkspaceEventBus();
     context.subscriptions.push(eventBus);
 
-    
+
     registerExecutionListeners(context);
 
     const configDiagnostics = vscode.languages.createDiagnosticCollection('gherkin-configuration');
@@ -59,7 +59,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const formatter = new GherkinFormattingEditProvider(configService);
     const symbolProvider = new GherkinDocumentSymbolProvider();
-    
+
     // Initialize Symbol Cache for definitions
     const symbolCache = new SymbolCache();
     symbolCache.setEventBus(eventBus);
@@ -88,12 +88,12 @@ export async function activate(context: vscode.ExtensionContext) {
     // Non-blocking activation: initialize caches lazily after VS Code startup
     const linter = new GherkinLinter(symbolCache, configService);
     linter.setEventBus(eventBus);
-    
+
     const highlighter = new GherkinHighlighter();
     highlighter.setEventBus(eventBus);
 
 
-    
+
     // Rebuild discovery logic on configuration change
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('gherkinPowerTools')) {
@@ -101,30 +101,35 @@ export async function activate(context: vscode.ExtensionContext) {
             eventBus.publish({ type: 'configurationChanged', event: e });
         }
     }));
-    
+
     // Listen to changes in project configuration files
     configWatcher.onDidChange(() => eventBus.publish({ type: 'configurationChanged' }));
     configWatcher.onDidCreate(() => eventBus.publish({ type: 'configurationChanged' }));
     configWatcher.onDidDelete(() => eventBus.publish({ type: 'configurationChanged' }));
-    
+
     // Defer heavy I/O scanning and watcher setup to allow VS Code to start up quickly
     setTimeout(() => {
         symbolCache.ensureInitialized().catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
         featureCache.ensureInitialized().catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
         rankingService.usageIndexer.indexWorkspace().catch(err => logger.error(`Error during lazy usage indexer load: ${err}`));
-        
+
         discoveryService.setupWatchers().forEach(w => context.subscriptions.push(w));
-        
+
         const featureWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
         featureWatcher.onDidCreate(uri => eventBus.publish({ type: 'featureFileCreated', uri }));
         featureWatcher.onDidChange(uri => eventBus.publish({ type: 'featureFileChanged', uri }));
         featureWatcher.onDidDelete(uri => eventBus.publish({ type: 'featureFileDeleted', uri }));
         context.subscriptions.push(featureWatcher);
     }, 2000);
-    
+
     // Asynchronously trigger onboarding recommendation check
     showOnboardingNotificationIfNeeded(context, configService).catch(err => {
         logger.error(`Error checking onboarding notification: ${err}`);
+    });
+
+    // First run experience check
+    FirstRunExperience.checkAndRun(context).catch(err => {
+        logger.error(`Error checking first run experience: ${err}`);
     });
 
     // Asynchronously trigger peek view recommendation check
@@ -134,9 +139,31 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register the context menu command to format the document
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.format', async () => {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) return;
-            
+            let editor = vscode.window.activeTextEditor;
+            if (!editor || editor.document.languageId !== 'feature') {
+                const featureEditor = vscode.window.visibleTextEditors.find(e => e.document.languageId === 'feature');
+                if (featureEditor) {
+                    editor = featureEditor;
+                } else {
+                    const messyGherkin = `Feature: Formatting Demo
+  Scenario: Look at this messy file
+  Given some precondition
+    When I perform an action
+        Then it should be formatted perfectly
+  | column 1 | col 2 |
+|val 1| value 2|
+`;
+                    const document = await vscode.workspace.openTextDocument({
+                        content: messyGherkin,
+                        language: 'feature'
+                    });
+                    editor = await vscode.window.showTextDocument(document, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+                    
+                    vscode.window.showInformationMessage("Gherkin PowerTools: Watch the magic! Auto-formatting in 2 seconds...");
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
             const config = configService.getConfiguration(editor.document.uri);
             if (config.formatter?.enabled === false) {
                 vscode.window.showWarningMessage("Gherkin PowerTools: Formatter is disabled in settings ('gherkinPowerTools.formatter.enabled' is false).");
@@ -156,6 +183,9 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('gherkinPowerTools.showMetrics', () => {
             metricsLogger.showMetrics();
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.replayOnboarding', () => {
+            FirstRunExperience.replayOnboarding(context);
         })
     );
 
@@ -194,7 +224,49 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.runFeature', (uri?: vscode.Uri) => {
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
-            if (finalUri) return runBehave(finalUri, undefined, configService);
+            if (finalUri && finalUri.fsPath.endsWith('.feature')) {
+                return runBehave(finalUri, undefined, configService);
+            } else {
+                vscode.window.showInformationMessage("Gherkin PowerTools: Open a saved .feature file first to run it, or click the Play button in the Test Explorer.");
+            }
+        })
+    );
+    
+    // Register interactive demo commands for Walkthrough
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.demoQuickFix', async () => {
+            let editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.languageId === 'feature') {
+                vscode.commands.executeCommand('editor.action.quickFix');
+                return;
+            }
+            const messyGherkin = `Feature: Quick Fix Demo\n  Scenario: Missing steps\n    Given this step does not exist in Python\n`;
+            const document = await vscode.workspace.openTextDocument({
+                content: messyGherkin,
+                language: 'feature'
+            });
+            editor = await vscode.window.showTextDocument(document, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+            
+            // Move cursor to the undefined step
+            const position = new vscode.Position(2, 10);
+            editor.selection = new vscode.Selection(position, position);
+            vscode.window.showInformationMessage("Gherkin PowerTools: Press Cmd+. (or Ctrl+.) or click the lightbulb to see Quick Fixes!");
+            
+            // Trigger quick fix menu automatically after a short delay
+            setTimeout(() => {
+                vscode.commands.executeCommand('editor.action.quickFix');
+            }, 2000);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkinPowerTools.demoGoToDefinition', async () => {
+            let editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.languageId === 'feature') {
+                vscode.commands.executeCommand('editor.action.revealDefinition');
+                return;
+            }
+            vscode.window.showInformationMessage("Gherkin PowerTools: To test Go to Definition, please open a saved .feature file from your workspace, right-click a step and select 'Go to Definition'.");
         })
     );
     context.subscriptions.push(
@@ -256,7 +328,7 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         })
     );
-    
+
     context.subscriptions.push(linter);
 
     // Register refactoring commands
@@ -267,7 +339,7 @@ export async function activate(context: vscode.ExtensionContext) {
             // Provide a basic UX via prompts, real implementations would use QuickPicks or input boxes.
             const newName = await vscode.window.showInputBox({ prompt: 'Enter new step name (without Given/When/Then)' });
             if (!newName) return;
-            
+
             const targetUris = await vscode.workspace.findFiles('**/steps/*.py', '**/node_modules/**');
             if (targetUris.length === 0) {
                 vscode.window.showErrorMessage('No Python step definition files found.');
@@ -324,7 +396,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
         vscode.workspace.onDidCloseTextDocument(doc => linter.clear(doc))
     );
-    
+
     if (vscode.window.activeTextEditor) {
         eventBus.publish({ type: 'activeEditorChanged', editor: vscode.window.activeTextEditor });
     }
@@ -334,11 +406,11 @@ export async function activate(context: vscode.ExtensionContext) {
     GHERKIN_LANGUAGES.forEach(language => {
         context.subscriptions.push(
             vscode.languages.registerDocumentFormattingEditProvider(
-                { language }, 
+                { language },
                 formatter
             ),
             vscode.languages.registerDocumentRangeFormattingEditProvider(
-                { language }, 
+                { language },
                 formatter
             ),
 
@@ -387,27 +459,27 @@ export function deactivate() {
 async function checkPeekViewRecommendation(context: vscode.ExtensionContext) {
     const stateKey = 'gherkinPowerTools.promptedPeekView';
     const prompted = context.globalState.get<boolean>(stateKey, false);
-    
+
     if (prompted) {
         return;
     }
 
     const testingConfig = vscode.workspace.getConfiguration('testing');
     const currentValue = testingConfig.get<string>('automaticallyOpenPeekView');
-    
+
     if (currentValue !== 'never') {
         const choice = await vscode.window.showInformationMessage(
             "For the best BDD experience with Gherkin PowerTools, we recommend disabling the automatic Test Peek View.",
             "Disable Peek View", "Keep Current"
         );
-        
+
         if (choice === "Disable Peek View") {
             // Set it in the user's global settings to affect their standard VS Code experience
             await testingConfig.update('automaticallyOpenPeekView', 'never', vscode.ConfigurationTarget.Global);
             logger.info("testing.automaticallyOpenPeekView has been set to 'never'");
         }
     }
-    
+
     // Mark as prompted so we don't bother the user again
     await context.globalState.update(stateKey, true);
 }

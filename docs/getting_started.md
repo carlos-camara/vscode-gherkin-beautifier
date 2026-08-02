@@ -58,7 +58,7 @@ Place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.
 
 If you are using Python Behave, Gherkin PowerTools provides advanced step generation, navigation, and Test Explorer integration.
 
-On first run in a Python workspace, the **Onboarding Engine** automatically detects your `steps/` directory. If it needs a non-standard configuration, you will see a notification allowing you to 1-click configure your `stepGlobs`.
+On your first run in a Python workspace, the **First-Run Onboarding Experience** automatically detects if it is a Behave project. If detected, a welcome notification will appear, providing a quick summary of the features found and direct links to the Walkthrough and Project Health Dashboard.
 
 To generate your first Python step, write an undefined step in your `.feature` file, press <kbd>Ctrl+.</kbd>, and select **Generate Python Step Definition**.
 

@@ -64,7 +64,7 @@ Deep, localized integration designed exclusively for Python Behave test suites:
 2. **Open** any `.feature` file to activate the extension.
 3. **Format** the document by pressing <kbd>Shift+Alt+F</kbd> (<kbd>⇧⌥F</kbd> on macOS).
 
-*Note: For Python Behave projects, the extension automatically discovers your step definitions. Check the [Configuration](#configuration) section if your files are in a custom location.*
+*Note: For Python Behave projects, the extension automatically discovers your project and offers a guided Walkthrough and Health Dashboard on your first run. Check the [Configuration](#configuration) section if your files are in a custom location.*
 
 ---
 
