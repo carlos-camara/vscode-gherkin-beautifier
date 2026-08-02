@@ -243,8 +243,23 @@
     },
     "commands": [
       {
+        "command": "gherkinPowerTools.replayOnboarding",
+        "title": "Replay Onboarding",
+        "category": "Gherkin PowerTools"
+      },
+      {
         "command": "gherkinPowerTools.commandCenter",
         "title": "Gherkin PowerTools: Command Center",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.demoQuickFix",
+        "title": "Demo Quick Fix",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.demoGoToDefinition",
+        "title": "Demo Go to Definition",
         "category": "Gherkin PowerTools"
       },
       {
@@ -399,12 +414,12 @@
           {
             "id": "formatDocument",
             "title": "Format your Gherkin",
-            "description": "Format your features to align tables and standardize indentation. [Format Document](command:editor.action.formatDocument)",
+            "description": "Format your features to align tables and standardize indentation. [Format Document](command:gherkinPowerTools.format)",
             "media": {
               "markdown": "assets/walkthrough/2_format.md"
             },
             "completionEvents": [
-              "onCommand:editor.action.formatDocument"
+              "onCommand:gherkinPowerTools.format"
             ]
           },
           {
@@ -432,12 +447,12 @@
           {
             "id": "goToDefinition",
             "title": "Navigate to Python Steps",
-            "description": "Right-click a step and select **Go to Definition** (F12) to jump straight to the Python implementation. [Go to Definition](command:editor.action.revealDefinition)",
+            "description": "Right-click a step and select **Go to Definition** (F12) to jump straight to the Python implementation. [Go to Definition](command:gherkinPowerTools.demoGoToDefinition)",
             "media": {
               "markdown": "assets/walkthrough/5_navigation.md"
             },
             "completionEvents": [
-              "onCommand:editor.action.revealDefinition"
+              "onCommand:gherkinPowerTools.demoGoToDefinition"
             ]
           },
           {
@@ -465,12 +480,12 @@
           {
             "id": "codeActions",
             "title": "Intelligent Quick Fixes",
-            "description": "Press `Cmd + .` or `Ctrl + .` to generate missing steps, insert colons, or fix block structure. [Quick Fix](command:editor.action.quickFix)",
+            "description": "Press `Cmd + .` or `Ctrl + .` to generate missing steps, insert colons, or fix block structure. [Quick Fix](command:gherkinPowerTools.demoQuickFix)",
             "media": {
               "markdown": "assets/walkthrough/9_codeactions.md"
             },
             "completionEvents": [
-              "onCommand:editor.action.quickFix"
+              "onCommand:gherkinPowerTools.demoQuickFix"
             ]
           },
           {

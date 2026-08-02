@@ -56,6 +56,17 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Replay Onboarding
+- **Identifier**: `gherkinPowerTools.replayOnboarding`
+- **Where it appears**: Command Palette.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Resets the extension's first-run state and triggers the workspace discovery process again, showing the welcome notification if a Python Behave project is detected.
+- **Default shortcut**: None.
+
+---
+
+
 ## Edit Behave args & Run
 - **Identifier**: `gherkinPowerTools.testExplorerEditAndRun`
 - **Where it appears**: Testing Sidebar (Title Menu).

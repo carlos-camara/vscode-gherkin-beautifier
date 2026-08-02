@@ -4,6 +4,12 @@ This guide addresses common problems organized by observable symptoms.
 
 ---
 
+## First-Run Onboarding did not appear
+**Symptom:** You installed the extension but you never saw the welcome notification for Python Behave projects.
+**Likely Causes:** The workspace doesn't have any `.feature` files, it isn't recognized as a Python Behave project, or you dismissed the notification previously.
+**Diagnostic Steps:** Ensure you have `.feature` files in your workspace.
+**Resolution:** Run **Gherkin PowerTools: Replay Onboarding** from the Command Palette to reset the state and manually trigger the detection process.
+
 ## Formatting does not run or `.feature` file is not detected
 **Symptom:** You press <kbd>Shift+Alt+F</kbd> and nothing happens, or the extension doesn't seem to activate.
 **Likely Causes:** The file is not recognized as a Gherkin document, or the formatter is disabled.

@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import { OnboardingEngine, BehaveDetector, mergeSettingsJson, mergeProjectConfigFile } from '../../onboarding';
+import * as sinon from 'sinon';
+import { OnboardingEngine, BehaveDetector, mergeSettingsJson, mergeProjectConfigFile, FirstRunExperience } from '../../onboarding';
 
 suite('Onboarding Engine Test Suite', () => {
     let tempDir: string;
@@ -171,5 +172,59 @@ suite('Onboarding Engine Test Suite', () => {
         const analysis = await engine.analyzeWorkspaceFolder(folderUri, ['**/features/steps/**/*.py'], ['**/.venv/**']);
 
         assert.strictEqual(analysis.uncoveredStepFiles.length, 0);
+    });
+
+    test('FirstRunExperience does not run if already run', async () => {
+        let updateCalled = false;
+        const fakeContext: any = {
+            globalState: {
+                get: (key: string, defaultValue: boolean) => {
+                    if (key === 'gherkinPowerTools.hasRunOnboarding') {
+                        return true; // Already run
+                    }
+                    return defaultValue;
+                },
+                update: (_key: string, _value: any) => {
+                    updateCalled = true;
+                    return Promise.resolve();
+                }
+            }
+        };
+
+        await FirstRunExperience.checkAndRun(fakeContext);
+        assert.strictEqual(updateCalled, false);
+    });
+
+    test('FirstRunExperience.replayOnboarding resets state and calls checkAndRun', async () => {
+        let hasRun = true;
+        const fakeContext: any = {
+            globalState: {
+                get: (key: string, defaultValue: boolean) => {
+                    if (key === 'gherkinPowerTools.hasRunOnboarding') {
+                        return hasRun;
+                    }
+                    return defaultValue;
+                },
+                update: (key: string, value: any) => {
+                    if (key === 'gherkinPowerTools.hasRunOnboarding') {
+                        hasRun = value;
+                    }
+                    return Promise.resolve();
+                }
+            }
+        };
+
+        // Note: we can't easily assert the full flow since checkAndRun accesses vscode.workspace,
+        // which returns undefined in this unit test environment unless we mock it, but we can verify the state reset.
+
+        // Mock workspace folders temporarily using sinon
+        const stub = sinon.stub(vscode.workspace, 'workspaceFolders').get(() => []);
+
+        try {
+            await FirstRunExperience.replayOnboarding(fakeContext);
+            assert.strictEqual(hasRun, false);
+        } finally {
+            stub.restore();
+        }
     });
 });
