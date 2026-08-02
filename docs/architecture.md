@@ -46,6 +46,16 @@ To provide intelligent Behave step autocomplete locally and deterministically, t
 ### Lifecycle & Disposal
 Every service that calls `eventBus.onEvent()` tracks its subscription with an `eventBusDisposable`. When a service is disposed, it automatically unregisters itself from the Event Bus. When the extension deactivates, the Event Bus itself is disposed, severing all active subscriptions and preventing memory leaks.
 
+## First-Run Onboarding Experience
+
+To provide a zero-configuration setup experience, Gherkin PowerTools includes a dedicated `FirstRunExperience` module.
+
+### How Onboarding Works
+1. **Lazy Loading:** The onboarding check is deferred using a `setTimeout` inside the extension's activation lifecycle. This ensures that the heavy work of scanning the workspace for Python Behave indicators does not block VS Code's critical startup path, adhering to strict performance best practices.
+2. **State Tracking:** The extension queries `context.globalState` to determine if the user has previously completed or dismissed the onboarding.
+3. **Workspace Discovery:** If it's a first run, the `BehaveDetector` lightly scans the workspace. If it finds `.feature` files and indications of a Behave project, it triggers a welcome notification. If no Behave indicators are found, the extension remains completely silent to avoid annoying non-Behave users.
+4. **Actionable Outcomes:** The notification routes users immediately to the Walkthrough or the Gherkin Health Dashboard, driving immediate time-to-value.
+
 ## AST Repository
 
 To optimize performance and eliminate redundant parsing of the same document across multiple providers (formatter, linter, hover, definitions), Gherkin PowerTools centralizes Gherkin parsing through the **AST Repository** (`AstRepository`).
