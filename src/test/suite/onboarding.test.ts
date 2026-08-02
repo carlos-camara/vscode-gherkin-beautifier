@@ -183,7 +183,7 @@ suite('Onboarding Engine Test Suite', () => {
                     }
                     return defaultValue;
                 },
-                update: (key: string, value: any) => {
+                update: (_key: string, _value: any) => {
                     updateCalled = true;
                     return Promise.resolve();
                 }
