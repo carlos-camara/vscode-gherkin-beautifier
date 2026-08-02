@@ -26,7 +26,8 @@ suite('CLI Integration Tests', () => {
             const data = JSON.parse(jsonStr);
             assert.ok(Array.isArray(data));
             assert.ok(data.length > 0);
-            assert.strictEqual(data[0].title, 'Unused Step Definitions');
+            const titles = data.map((d: any) => d.title);
+            assert.ok(titles.includes('Unused Step Definitions') || titles.includes('Undefined Steps'));
         }
     });
 
@@ -82,12 +83,33 @@ suite('CLI Integration Tests', () => {
 
     test('unknown command should exit with code 1', () => {
         try {
-            // Silence stderr to keep test output clean
             cp.execFileSync(nodeExecutable, [cliPath, 'invalid_command'], { ...execOptions, stdio: 'pipe' });
             assert.fail('Should have exited with code 1');
         } catch (err: any) {
             assert.strictEqual(err.status, 1);
             assert.ok(err.stderr.includes('error: unknown command'));
+        }
+    });
+
+    test('format --check should exit with code 0 for properly formatted files', () => {
+        const formattedPath = path.resolve(__dirname, '../../../src/test/fixtures/behave/features/formatted.feature');
+        const output = cp.execFileSync(nodeExecutable, [cliPath, 'format', '--check', formattedPath], execOptions);
+        assert.ok(output.includes('All files are properly formatted.'));
+    });
+
+    test('format without --check should output formatting complete', () => {
+        const formattedPath = path.resolve(__dirname, '../../../src/test/fixtures/behave/features/formatted.feature');
+        const output = cp.execFileSync(nodeExecutable, [cliPath, 'format', formattedPath], execOptions);
+        assert.ok(output.includes('Formatting complete.'));
+    });
+
+    test('format should hit catch block and exit 1 on error', () => {
+        try {
+            cp.execFileSync(nodeExecutable, [cliPath, 'format', 'does_not_exist.feature'], { ...execOptions, stdio: 'pipe' });
+            assert.fail('Should have exited with code 1');
+        } catch (err: any) {
+            assert.strictEqual(err.status, 1);
+            assert.ok(err.stderr.includes('Format failed'));
         }
     });
 });

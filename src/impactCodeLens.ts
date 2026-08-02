@@ -45,11 +45,11 @@ export class ImpactCodeLensProvider implements vscode.CodeLensProvider {
             matchedDefs.add(def.id);
             const report = this.analyzer.calculateImpact(def.id);
             
-            let title = `Impact: ${report.severity}`;
+            let title = '';
             if (report.affectedScenarios > 0) {
-                title += ` (${report.affectedScenarios} Scenario${report.affectedScenarios > 1 ? 's' : ''})`;
+                title = `Impact: ${report.severity} (${report.affectedScenarios} Scenario${report.affectedScenarios > 1 ? 's' : ''})`;
             } else {
-                title += ` (Unused)`;
+                title = `Impact: Unused`;
             }
 
             const range = new vscode.Range(dec.startLine, 0, dec.startLine, 0);

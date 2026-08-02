@@ -222,6 +222,67 @@ Feature: Run Feature
         }
     });
 
+    test('Handles Step Failure and Error Location processing', async () => {
+        const featureUri = vscode.Uri.file(path.join(tempDir, 'fail.feature'));
+        fs.writeFileSync(featureUri.fsPath, `
+Feature: Fail Feature
+  Scenario: Fail scenario
+    Given a failing step
+`);
+
+        const testControllerPrivate = controller as any;
+        const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
+        await testControllerPrivate.parseTestsInFileContents(fileItem);
+
+        // Mock child_process.spawn to simulate Behave events
+        const cp = require('child_process');
+        const originalSpawn = cp.spawn;
+        cp.spawn = () => {
+            const EventEmitter = require('events');
+            const child: any = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
+            child.kill = () => {};
+            
+            setTimeout(() => {
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Fail scenario"}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step", "data": {"status": "failed", "error_message": "AssertionError", "error_file": "steps.py", "error_line": 10}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "failed", "line": 3}}\n'));
+                child.emit('close', 1);
+            }, 10);
+            
+            return child;
+        };
+
+        try {
+            const request = new vscode.TestRunRequest([fileItem]);
+            const tokenSource = new vscode.CancellationTokenSource();
+            
+            await testControllerPrivate.runHandler(request, tokenSource.token, 'run');
+
+            let scenarioItem: vscode.TestItem | undefined;
+            const findScenario = (node: vscode.TestItem) => {
+                if (node.label.includes('Fail scenario')) {
+                    scenarioItem = node;
+                }
+                node.children.forEach(findScenario);
+            };
+            findScenario(fileItem);
+            assert.ok(scenarioItem, 'Should find Fail scenario');
+            
+            // Should have created an error child item
+            let foundErrorChild = false;
+            scenarioItem.children.forEach((child: vscode.TestItem) => {
+                if (child.id.includes('#error:')) {
+                    foundErrorChild = true;
+                }
+            });
+            assert.ok(foundErrorChild, 'Should have created an error child item');
+        } finally {
+            cp.spawn = originalSpawn;
+        }
+    });
+
     test('Handles Behave error exit with no processed items', async () => {
         const featureUri = vscode.Uri.file(path.join(tempDir, 'error.feature'));
         fs.writeFileSync(featureUri.fsPath, `

@@ -501,7 +501,7 @@ export function deactivate() {
     discoveryService.dispose();
 }
 
-async function checkPeekViewRecommendation(context: vscode.ExtensionContext) {
+export async function checkPeekViewRecommendation(context: vscode.ExtensionContext) {
     const stateKey = 'gherkinPowerTools.promptedPeekView';
     const prompted = context.globalState.get<boolean>(stateKey, false);
 
