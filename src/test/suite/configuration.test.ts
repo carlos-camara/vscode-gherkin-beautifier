@@ -272,4 +272,30 @@ suite('ConfigurationService Test Suite', () => {
 
         vscode.workspace.getConfiguration = originalGetConfig;
     });
+
+    test('13. Loads behave execution settings from workspace configuration correctly', () => {
+        const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
+        if (fs.existsSync(configPath)) {
+            fs.unlinkSync(configPath);
+        }
+
+        const originalGetConfig = vscode.workspace.getConfiguration;
+        vscode.workspace.getConfiguration = () => ({
+            get: () => undefined,
+            inspect: (key: string) => {
+                if (key === 'behave.command') return { workspaceValue: 'pipenv run behave' };
+                if (key === 'behave.additionalArguments') return { workspaceValue: ['--no-capture'] };
+                if (key === 'behave.ignoreGlobs') return { workspaceValue: ['**/venv/**'] };
+                return undefined;
+            }
+        } as any);
+
+        const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+
+        assert.strictEqual(config.behave.command, 'pipenv run behave');
+        assert.deepStrictEqual(config.behave.additionalArguments, ['--no-capture']);
+        assert.deepStrictEqual(config.behave.ignoreGlobs, ['**/venv/**']);
+
+        vscode.workspace.getConfiguration = originalGetConfig;
+    });
 });

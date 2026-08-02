@@ -50,6 +50,7 @@ Place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/linter.gif" alt="Linter - flags structural errors as you type" width="600" height="340" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif" alt="Quick Fix - correct keyword typos with one keypress" width="600" height="340" />
 </div>
 
 ---

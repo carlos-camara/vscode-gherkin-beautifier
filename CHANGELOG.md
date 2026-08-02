@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
-## [1.8.1] - 2026-07-31
+## [1.8.1] - 2026-08-03
 
 ### 🚀 Added
 - **Real-Time Impact Analysis Engine**: Added a new blast radius impact analyzer that places an interactive CodeLens above every Python step definition.

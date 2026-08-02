@@ -27,6 +27,66 @@ suite('WorkspaceGraph Test Suite', () => {
         assert.strictEqual(dups.length, 0);
     });
 
+    test('should resolve impacted scenarios for a tag', () => {
+        const tagNode = {
+            id: 'Tag:@smoke',
+            type: 'Tag',
+            name: '@smoke',
+            targets: ['sc1']
+        };
+        const scenarioNode = {
+            id: 'sc1',
+            type: 'Scenario',
+            name: 'Scenario 1',
+            uri: 'file:///feature.feature',
+            line: 1,
+            steps: []
+        };
+        (graph as any).nodes.set('Tag:@smoke', tagNode);
+        (graph as any).nodes.set('sc1', scenarioNode);
+
+        const scenarios = graph.getImpactedScenarios('@smoke');
+        assert.strictEqual(scenarios.length, 1);
+        assert.strictEqual(scenarios[0].name, 'Scenario 1');
+    });
+
+    test('should identify duplicate step implementations', () => {
+        const def1: any = {
+            id: 'def1',
+            type: 'StepDefinition',
+            matcherType: 'regex',
+            pattern: 'I do something',
+            uri: 'file:///steps1.py',
+            line: 10
+        };
+        const def2: any = {
+            id: 'def2',
+            type: 'StepDefinition',
+            matcherType: 'regex',
+            pattern: 'I do something',
+            uri: 'file:///steps2.py',
+            line: 20
+        };
+        const def3: any = {
+            id: 'def3',
+            type: 'StepDefinition',
+            matcherType: 'regex',
+            pattern: 'I do something else',
+            uri: 'file:///steps3.py',
+            line: 30
+        };
+
+        (graph as any).nodes.set('def1', def1);
+        (graph as any).nodes.set('def2', def2);
+        (graph as any).nodes.set('def3', def3);
+
+        const duplicates = graph.getDuplicateImplementations();
+        assert.strictEqual(duplicates.length, 1);
+        assert.strictEqual(duplicates[0].length, 2);
+        assert.strictEqual(duplicates[0][0].id, 'def1');
+        assert.strictEqual(duplicates[0][1].id, 'def2');
+    });
+
     test('getImpactedScenarios returns empty for non-existent tag', () => {
         const impacted = graph.getImpactedScenarios('Tag:@nonexistent');
         assert.strictEqual(impacted.length, 0);

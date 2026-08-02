@@ -169,11 +169,13 @@ class TextDocument {
 
     constructor(uri: Uri, content: string) {
         this.uri = uri;
-        this.lines = content.split('\n');
+        this.eol = content.includes('\r\n') ? EndOfLine.CRLF : EndOfLine.LF;
+        this.lines = content.split(/\r?\n/);
     }
 
     getText(): string {
-        return this.lines.join('\n');
+        const eolStr = this.eol === EndOfLine.CRLF ? '\r\n' : '\n';
+        return this.lines.join(eolStr);
     }
     
     lineAt(line: number): { text: string } {

@@ -94,6 +94,7 @@ A dialect-aware AST linter flags structural errors across 70+ Gherkin languages.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/linter.gif" alt="Real-time Gherkin diagnostics and Quick Fixes" width="600" height="340" />
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif" alt="Quick Fix - correct keyword typos with one keypress" width="600" height="340" />
 </div>
 
 ### Gherkin Formatter

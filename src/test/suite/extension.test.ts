@@ -97,4 +97,42 @@ suite('Extension Test Suite', () => {
         await vscode.commands.executeCommand('gherkinPowerTools.refactor.extractStep');
         assert.ok(inputStub.called);
     });
+
+    test('gherkinPowerTools.refactor.extractStep command applies edit and saves', async () => {
+        const inputStub = sinon.stub(vscode.window, 'showInputBox').resolves('new_step');
+        const targetUri = vscode.Uri.file(path.resolve(__dirname, '../../../src/test/fixtures/behave/features/steps/steps.py'));
+        sinon.stub(vscode.workspace, 'findFiles').resolves([targetUri]);
+        sinon.stub(vscode.window, 'showQuickPick').resolves({ label: 'steps.py', uri: targetUri } as any);
+        
+        const featureUri = vscode.Uri.file(path.resolve(__dirname, '../../../src/test/fixtures/behave/features/formatted.feature'));
+        const doc = await vscode.workspace.openTextDocument(featureUri);
+        await vscode.window.showTextDocument(doc);
+        
+        const saveStub = sinon.stub(doc, 'save').resolves(true);
+        sinon.stub(vscode.workspace, 'applyEdit').resolves(true);
+
+        const targetDocMock = {
+            save: sinon.stub().resolves(true)
+        };
+        sinon.stub(vscode.workspace, 'openTextDocument').resolves(targetDocMock as any);
+        
+        await vscode.commands.executeCommand('gherkinPowerTools.refactor.extractStep');
+        
+        assert.ok(inputStub.called);
+        assert.ok(saveStub.called);
+        assert.ok(targetDocMock.save.called);
+    });
+
+    test('gherkinPowerTools.refactor.renameStep delegates to editor.action.rename', async () => {
+        const executeStub = sinon.stub(vscode.commands, 'executeCommand').resolves();
+        // Since we are mocking executeCommand globally, we must call the inner callback directly or mock the specific command
+        // But the easiest way is to call the callback from the registry if we can, or just trust VSCode API.
+        // Actually executeCommand('gherkinPowerTools.refactor.renameStep') would trigger the real one, which then calls editor.action.rename
+        // Wait, if we mock executeCommand, the outer command might not run. Let's call the callback directly if possible, or use a workaround.
+        executeStub.withArgs('editor.action.rename').resolves();
+        executeStub.callThrough(); // allow other commands to pass
+        
+        await vscode.commands.executeCommand('gherkinPowerTools.refactor.renameStep');
+        assert.ok(executeStub.calledWith('editor.action.rename'));
+    });
 });
