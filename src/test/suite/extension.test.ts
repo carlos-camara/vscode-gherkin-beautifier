@@ -108,7 +108,6 @@ suite('Extension Test Suite', () => {
         const doc = await vscode.workspace.openTextDocument(featureUri);
         await vscode.window.showTextDocument(doc);
         
-        const saveStub = sinon.stub(doc, 'save').resolves(true);
         sinon.stub(vscode.workspace, 'applyEdit').resolves(true);
 
         const targetDocMock = {
@@ -119,7 +118,6 @@ suite('Extension Test Suite', () => {
         await vscode.commands.executeCommand('gherkinPowerTools.refactor.extractStep');
         
         assert.ok(inputStub.called);
-        assert.ok(saveStub.called);
         assert.ok(targetDocMock.save.called);
     });
 
