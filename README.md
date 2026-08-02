@@ -136,7 +136,14 @@ Hover over any tag to calculate exactly how many scenarios and example rows it a
 
 ### Standalone CLI (CI/CD Ready)
 The `gherkin-pt` CLI exposes the Workspace Intelligence Engine for CI/CD environments without requiring VS Code.
-Use it to automate formatting and detect health issues in your pipeline.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli.gif" alt="Command Line Interface execution" width="600" height="340" />
+</p>
+
+* Enforce team formatting rules in pre-commit hooks (`gherkin-pt format --check`).
+* Block pull requests that contain missing or unused step definitions (`gherkin-pt analyze`).
+* Export workspace complexity and maintainability metrics (`gherkin-pt stats --json`).
 
 * `gherkin-pt analyze` (or `health`): Analyze the workspace and exit with `1` if recommendations are found.
 * `gherkin-pt stats` (or `report`): Generate project health metrics and statistics.
