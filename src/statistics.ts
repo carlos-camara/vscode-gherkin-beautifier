@@ -265,9 +265,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         .severity-badge {
             padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase;
         }
-        .severity-high { background: #e74c3c; color: white; }
-        .severity-medium { background: #f39c12; color: white; }
-        .severity-low { background: #3498db; color: white; }
+        .severity-error { background: #e74c3c; color: white; }
+        .severity-warning { background: #f39c12; color: white; }
+        .severity-info { background: #3498db; color: white; }
         .rec-explanation { margin: 0 0 20px 0; color: var(--vscode-descriptionForeground); flex-grow: 1; }
         .rec-fix {
             background-color: rgba(46, 204, 113, 0.1); border-left: 4px solid #2ecc71; padding: 12px 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9em;
