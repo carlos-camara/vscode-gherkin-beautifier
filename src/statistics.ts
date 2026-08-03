@@ -522,7 +522,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     ` : ''}
 
     ${recommendations.length > 0 ? `
-    <h2 class="section-title">Actionable Insights</h2>
+    <h2 class="section-title">Actionable Anti-patterns</h2>
     <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized recommendations to improve the health, maintenance, and reliability of your Gherkin tests.</p>
     <div class="rec-grid">
         ${recommendations.map(rec => `
