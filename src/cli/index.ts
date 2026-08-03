@@ -31,7 +31,7 @@ async function initializeEngines() {
 
 program.command('analyze')
     .alias('health')
-    .description('Analyze the workspace and provide actionable recommendations')
+    .description('Analyze the workspace and provide actionable anti-patterns')
     .option('--json', 'Output results in JSON format')
     .action(async (options) => {
         try {
@@ -51,14 +51,14 @@ program.command('analyze')
                 "inconsistent-formatting": "info",
                 "poor-maintainability": "warning"
             };
-            const recommendations = engine.generateAntiPatterns(graph, metrics, ruleConfig);
+            const antiPatterns = engine.generateAntiPatterns(graph, metrics, ruleConfig);
 
             if (options.json) {
-                console.log(JSON.stringify(recommendations, null, 2));
-                process.exit(recommendations.length > 0 ? 1 : 0);
+                console.log(JSON.stringify(antiPatterns, null, 2));
+                process.exit(antiPatterns.length > 0 ? 1 : 0);
             } else {
-                console.log(`\nFound ${recommendations.length} recommendation(s):\n`);
-                recommendations.forEach(r => {
+                console.log(`\nFound ${antiPatterns.length} anti-pattern(s):\n`);
+                antiPatterns.forEach(r => {
                     console.log(`[${r.severity.toUpperCase()}] ${r.title}`);
                     console.log(`  ${r.explanation}`);
                     console.log(`  Fix: ${r.suggestedFix}`);
@@ -68,7 +68,7 @@ program.command('analyze')
                     }
                     console.log('');
                 });
-                process.exit(recommendations.length > 0 ? 1 : 0);
+                process.exit(antiPatterns.length > 0 ? 1 : 0);
             }
         } catch (e: any) {
             console.error('[Error] Analysis failed:', e.message || e);
