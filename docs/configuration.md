@@ -94,6 +94,34 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 ---
 
+## Anti-pattern Detection Engine Settings
+
+### `gherkinPowerTools.antiPatterns.enabled`
+- **Purpose:** Enable or disable the BDD Anti-pattern Detection Engine. When enabled, it runs in the background and populates the editor with diagnostics and the Dashboard with Anti-pattern insights.
+- **Type:** `boolean`
+- **Default:** `true`
+
+### `gherkinPowerTools.antiPatterns.rules`
+- **Purpose:** Configure severity levels for individual anti-pattern rules.
+- **Type:** `object` (Key-value pairs of rule ID to severity level)
+- **Default:**
+  ```json
+  {
+      "oversized-feature": "warning",
+      "oversized-scenario": "warning",
+      "duplicated-step-defs": "error",
+      "unused-step-defs": "warning",
+      "ambiguous-steps": "error",
+      "undefined-steps": "error",
+      "excessive-tags": "info",
+      "poor-maintainability": "warning",
+      "inconsistent-formatting": "hint"
+  }
+  ```
+- **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+
+---
+
 ## Behave Discovery & Execution Settings
 
 ### `gherkinPowerTools.behave.stepGlobs`

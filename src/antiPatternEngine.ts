@@ -1,6 +1,5 @@
 import { WorkspaceGraph, FeatureNode, ScenarioNode, StepNode } from './graph';
 import { ProjectHealthMetrics } from './statistics';
-import * as vscode from 'vscode';
 
 export type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
 
