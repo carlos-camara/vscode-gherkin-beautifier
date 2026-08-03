@@ -147,10 +147,10 @@ Gherkin PowerTools provides step refactoring operations accessible from the edit
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/rename-step.gif" alt="Rename a Gherkin step across multiple feature files simultaneously" width="600" height="340" />
 </figure>
 
-The `Rename Symbol` action (`F2` / `Cmd+Shift+R` on macOS) on a Gherkin step or Python step decorator renames the step text and updates all usages across `.feature` files.
+The `Rename Symbol` action (<kbd>F2</kbd> or <kbd>Cmd+Shift+R</kbd> on macOS) on a Gherkin step or Python step decorator renames the step text and updates all usages across `.feature` files.
 
 1. Place your cursor on a step in a `.feature` file, or the string inside `@step(...)` in Python.
-2. Press **`F2`** (or **`Cmd+Shift+R`** on macOS) or right-click and select **Rename Symbol**.
+2. Press <kbd>F2</kbd> (or <kbd>Cmd+Shift+R</kbd> on macOS) or right-click and select **Rename Symbol**.
 3. Enter the new step name.
 4. The extension updates the Python decorator **and** all matching Gherkin steps in the workspace.
 
@@ -159,7 +159,7 @@ The `Rename Symbol` action (`F2` / `Cmd+Shift+R` on macOS) on a Gherkin step or 
 ### Extract Step
 
 1. In a `.feature` file, select multiple Gherkin step lines.
-2. Press **`Ctrl+.`** (**`Cmd+.`** on macOS) to open the Code Actions lightbulb.
+2. Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to open the Code Actions lightbulb.
 3. Select **Extract Steps to new definition**.
 4. Enter a name for the new step.
 5. Choose the target Python step file from the list.

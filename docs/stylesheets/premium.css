@@ -1,0 +1,81 @@
+/* Premium-Style Refinements for MkDocs Material */
+
+/* 1. Glassmorphism Header */
+.md-header {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: none !important;
+}
+[data-md-color-scheme="slate"] .md-header {
+  background-color: rgba(30, 30, 32, 0.7) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 2. Soft Shadows and Curves */
+.md-typeset pre > code,
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+[data-md-color-scheme="slate"] .md-typeset pre > code,
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+/* Images */
+.md-typeset img {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+[data-md-color-scheme="slate"] .md-typeset img {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+/* 3. Clean Typography & Layout */
+.md-typeset h1, 
+.md-typeset h2, 
+.md-typeset h3 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* Navigation Sidebar */
+.md-nav__link--active {
+  font-weight: 600;
+}
+.md-nav__item .md-nav__link--active {
+  background-color: rgba(0, 122, 255, 0.08); /* Soft blue highlight */
+  border-radius: 6px;
+}
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active {
+  background-color: rgba(10, 132, 255, 0.15);
+}
+
+/* Header text color (since background is white/light) */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  fill: #1d1d1f;
+}
+.md-header__title, 
+.md-header__button {
+  color: #1d1d1f !important;
+}
+[data-md-color-scheme="slate"] .md-header__title, 
+[data-md-color-scheme="slate"] .md-header__button {
+  color: #f5f5f7 !important;
+}
+
+/* Search bar styling */
+.md-search__input {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  border-radius: 8px !important;
+}
+[data-md-color-scheme="slate"] .md-search__input {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}

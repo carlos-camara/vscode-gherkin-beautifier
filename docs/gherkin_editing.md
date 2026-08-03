@@ -53,6 +53,10 @@ For common structural errors (like a missing colon or misspelled keyword), place
 ### Syntax Highlighting
 Gherkin PowerTools provides curated semantic syntax coloring that works cleanly on any VS Code theme (Dark or Light), highlighting keywords, tags, parameters, and table cells appropriately.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/highlighting.gif" alt="Semantic syntax highlighting" width="600" height="340" />
+</div>
+
 ### Document Outline
 Navigate complex feature files using the VS Code Outline sidebar. The outline generates a hierarchical tree of `Feature > Rule > Scenario > Examples`.
 
