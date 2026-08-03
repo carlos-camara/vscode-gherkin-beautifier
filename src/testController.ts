@@ -384,7 +384,8 @@ export class GherkinTestController {
                                     if (event.data.error_message) {
                                         currentScenarioErrorMessage = event.data.error_message;
                                     }
-                                    const msgText = currentScenarioErrorMessage || "Scenario failed";
+                                    const rawMsg = currentScenarioErrorMessage || "Scenario failed";
+                                    const msgText = rawMsg.split('\n').filter((line, index, arr) => index === 0 || line !== arr[index - 1]).join('\n');
                                     const msg = new vscode.TestMessage(msgText);
                                     let stepItem: vscode.TestItem | undefined;
                                     if (currentScenarioErrorFile && currentScenarioErrorLine !== undefined) {
