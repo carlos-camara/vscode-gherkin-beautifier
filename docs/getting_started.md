@@ -9,7 +9,7 @@
 The fastest way to install is via the VS Code Marketplace:
 
 1. Open Visual Studio Code.
-2. Open the Extensions panel: `Ctrl+Shift+X` (Windows/Linux) or `Cmd+Shift+X` (macOS).
+2. Open the Extensions panel: <kbd>Ctrl+Shift+X</kbd> (<kbd>Cmd+Shift+X</kbd> on macOS).
 3. Search for **"Gherkin PowerTools"**.
 4. Click **Install**.
 
@@ -60,6 +60,10 @@ Place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.
 If you are using Python Behave, Gherkin PowerTools provides advanced step generation, navigation, and Test Explorer integration.
 
 On your first run in a Python workspace, the **First-Run Onboarding Experience** automatically detects if it is a Behave project. If detected, a welcome notification will appear, providing a quick summary of the features found and direct links to the Walkthrough and Project Health Dashboard.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/onboarding.gif" alt="First-Run Onboarding Experience" width="600" height="340" />
+</div>
 
 To generate your first Python step, write an undefined step in your `.feature` file, press <kbd>Ctrl+.</kbd>, and select **Generate Python Step Definition**.
 
