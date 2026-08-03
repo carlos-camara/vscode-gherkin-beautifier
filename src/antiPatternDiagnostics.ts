@@ -84,8 +84,11 @@ export class AntiPatternDiagnosticsManager {
                         diagnosticsMap.set(uriString, []);
                     }
                     
-                    // We assume line is 1-indexed from our models, VS Code ranges are 0-indexed
-                    const line = item.line && item.line > 0 ? item.line - 1 : 0;
+                    // We assume line is 1-indexed for feature files (from AST), VS Code ranges are 0-indexed
+                    // For Python files, decoratorRange is already 0-indexed
+                    const isFeatureFile = uriString.endsWith('.feature');
+                    const line = item.line !== undefined ? (isFeatureFile && item.line > 0 ? item.line - 1 : item.line) : 0;
+                    
                     const range = new vscode.Range(line, 0, line, 200); // Highlight the whole line roughly
                     
                     const diag = new vscode.Diagnostic(range, `${pattern.title}: ${pattern.explanation}\n\nSuggested Fix: ${pattern.suggestedFix}`, vscodeSeverity);
