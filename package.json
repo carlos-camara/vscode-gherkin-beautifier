@@ -245,6 +245,30 @@
           "minimum": 1,
           "maximum": 365,
           "markdownDescription": "Maximum number of historical snapshots to retain for trend analysis."
+        },
+        "gherkinPowerTools.antiPatterns.enabled": {
+          "type": "boolean",
+          "order": 42,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable the BDD Anti-pattern Detection engine to show diagnostics and health issues."
+        },
+        "gherkinPowerTools.antiPatterns.rules": {
+          "type": "object",
+          "order": 43,
+          "scope": "resource",
+          "default": {
+            "oversized-scenario": "warning",
+            "oversized-feature": "info",
+            "duplicated-steps": "error",
+            "unused-steps": "info",
+            "ambiguous-steps": "error",
+            "undefined-steps": "error",
+            "excessive-tags": "info",
+            "inconsistent-formatting": "info",
+            "poor-maintainability": "warning"
+          },
+          "markdownDescription": "Configure severity overrides for specific anti-pattern rules. Values can be `error`, `warning`, `info`, `hint`, or `off`."
         }
       }
     },

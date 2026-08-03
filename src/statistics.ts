@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, TagNode } from './graph';
 import { SymbolCache } from './cache';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
-import { Recommendation, RecommendationEngine } from './recommendationEngine';
+import { AntiPattern, AntiPatternEngine } from './antiPatternEngine';
 import { MetricsHistory, MetricsSnapshot } from './history';
 
 export function escapeHtml(unsafe: string) {
@@ -58,8 +58,10 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
         }, async () => {
             await graph.initialize();
             const metrics = await calculateHealthMetrics(graph, symbolCache);
-            const engine = new RecommendationEngine();
-            const recommendations = engine.generateRecommendations(graph, metrics);
+            const engine = new AntiPatternEngine();
+            const rawConfig = vscode.workspace.getConfiguration('gherkinPowerTools.antiPatterns').get('rules') || {};
+            const ruleConfig = rawConfig as Record<string, string>;
+            const recommendations = engine.generateAntiPatterns(graph, metrics, ruleConfig);
             
             const history = new MetricsHistory(context);
             const snapshots = history.addSnapshot(metrics);
@@ -167,7 +169,7 @@ export function getLoadingHtml() {
     return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Gherkin Health...</h2><p>Scanning graph...</p></body></html>`;
 }
 
-export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: Recommendation[], version: string, snapshots: MetricsSnapshot[] = []): string {
+export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: AntiPattern[], version: string, snapshots: MetricsSnapshot[] = []): string {
     const renderLink = (uri: string, line: number, text: string) => {
         return `<a href="#" class="file-link" onclick="openFile('${escapeHtml(uri)}', ${line})">${escapeHtml(text)}</a>`;
     };
@@ -229,7 +231,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             background: var(--vscode-editor-background);
         }
 
-        /* Recommendations Card Styles */
+        /* Anti-Patterns Card Styles */
         .rec-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -563,8 +565,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         `).join('')}
     </div>
     ` : `
-    <h2 class="section-title">Actionable Insights</h2>
-    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized recommendations to improve the health, maintenance, and reliability of your Gherkin tests.</p>
+    <h3 id="antipatterns-header" style="margin-bottom: 20px; font-weight: 500;">Actionable Anti-patterns</h3>
     <div class="rec-grid">
         <div class="rec-card" style="text-align: center; grid-column: 1 / -1; padding: 40px;">
             <span style="font-size: 32px; display: block; margin-bottom: 16px;">🎉</span>
@@ -645,6 +646,10 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.js"></script>
     <script>
         const snapshots = ${JSON.stringify(snapshots)};
+        const recs = ${JSON.stringify(recommendations)};
+        const header = document.getElementById('antipatterns-header');
+        if (header) header.innerHTML = \`Actionable Anti-patterns (\${recs.length})\`;
+        
         const ctx = document.getElementById('trendsChart').getContext('2d');
         
         const labels = snapshots.map(s => {

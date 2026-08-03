@@ -7,7 +7,7 @@ import * as path from 'path';
 import { SymbolCache } from '../cache';
 import { FeatureCache } from '../cache';
 import { WorkspaceGraph } from '../graph';
-import { RecommendationEngine } from '../recommendationEngine';
+import { AntiPatternEngine } from '../antiPatternEngine';
 import { calculateHealthMetrics } from '../statistics';
 import { GherkinFormattingEditProvider } from '../formatter';
 import { ConfigurationService } from '../configuration';
@@ -38,8 +38,20 @@ program.command('analyze')
             const { graph, symbolCache } = await initializeEngines();
             
             const metrics = await calculateHealthMetrics(graph, symbolCache);
-            const engine = new RecommendationEngine();
-            const recommendations = engine.generateRecommendations(graph, metrics);
+            const engine = new AntiPatternEngine();
+            // In CLI, we default to the standard config rules
+            const ruleConfig = {
+                "oversized-scenario": "warning",
+                "oversized-feature": "info",
+                "duplicated-steps": "error",
+                "unused-steps": "info",
+                "ambiguous-steps": "error",
+                "undefined-steps": "error",
+                "excessive-tags": "info",
+                "inconsistent-formatting": "info",
+                "poor-maintainability": "warning"
+            };
+            const recommendations = engine.generateAntiPatterns(graph, metrics, ruleConfig);
 
             if (options.json) {
                 console.log(JSON.stringify(recommendations, null, 2));
