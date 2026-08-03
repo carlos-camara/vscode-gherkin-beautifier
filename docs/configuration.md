@@ -107,15 +107,15 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:**
   ```json
   {
-      "oversized-feature": "warning",
       "oversized-scenario": "warning",
-      "duplicated-step-defs": "error",
-      "unused-step-defs": "warning",
+      "oversized-feature": "info",
+      "duplicated-steps": "error",
+      "unused-steps": "info",
       "ambiguous-steps": "error",
       "undefined-steps": "error",
       "excessive-tags": "info",
-      "poor-maintainability": "warning",
-      "inconsistent-formatting": "hint"
+      "inconsistent-formatting": "info",
+      "poor-maintainability": "warning"
   }
   ```
 - **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`

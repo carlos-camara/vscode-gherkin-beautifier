@@ -53,7 +53,7 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
     try {
         const { metrics, recommendations, snapshots } = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "Calculating Gherkin Health & Recommendations",
+            title: "Calculating Gherkin Health & Anti-patterns",
             cancellable: false
         }, async () => {
             await graph.initialize();
@@ -523,7 +523,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
 
     ${recommendations.length > 0 ? `
     <h2 class="section-title">Actionable Anti-patterns</h2>
-    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized recommendations to improve the health, maintenance, and reliability of your Gherkin tests.</p>
+    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized anti-patterns affecting the health, maintenance, and reliability of your Gherkin tests.</p>
     <div class="rec-grid">
         ${recommendations.map(rec => `
             <div class="rec-card">
@@ -570,7 +570,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         <div class="rec-card" style="text-align: center; grid-column: 1 / -1; padding: 40px;">
             <span style="font-size: 32px; display: block; margin-bottom: 16px;">🎉</span>
             <h3 style="margin: 0;">Amazing!</h3>
-            <p style="color: var(--vscode-descriptionForeground);">Your workspace is perfectly healthy. No recommendations found.</p>
+            <p style="color: var(--vscode-descriptionForeground);">Your workspace is perfectly healthy. No anti-patterns found.</p>
         </div>
     </div>
     `}
