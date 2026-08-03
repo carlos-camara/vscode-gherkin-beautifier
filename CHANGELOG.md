@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.2] - 2026-08-03
+
+### 📖 Documentation
+- **Visual Overhaul**: Applied a new glassmorphism and soft-shadow styling to the MkDocs documentation.
+- **Hero Image Update**: Swapped the main hero GIF in the README to showcase the Test Explorer execution & debugging.
+- **Content Restructuring**: Re-organized and numbered the "Two-Tiered Capabilities" and "Detailed Features" lists in the README.
+
 ## [1.8.1] - 2026-08-03
 
 ### 🚀 Added
@@ -313,7 +320,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.0] - 2026-06-25
 ### Added
-- **Multi-language Support (i18n)**: Formatter now fully supports formatting, indenting, and Auto-Casing for English, Spanish, French, and German Gherkin keywords.
+- **Multi-language Support (i18n)**: Formatter now fully supports formatting and indenting for English, Spanish, French, and German Gherkin keywords.
 - **Diagnostic Provider (Linter)**: Hardened the linter rules to strictly enforce colons (`:`) on block keywords and spaces on step keywords, immediately flagging syntax errors.
 - **Cascading Indentation**: The formatter now uses a beautiful cascading (stair-step) indentation style by default: 2 spaces for `Scenario`, 3 for `Given/When/Then`, and 4 for `And/But`.
 - **Inline Comment Alignment**: Formatter now dynamically aligns inline comments (`#`) to the same vertical column for perfect visual readability.
@@ -334,7 +341,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.0] - 2026-06-24
 ### Added
-- **Auto-Casing**: Formatter now automatically PascalCases Gherkin keywords (`Given`, `When`, `Then`, `Feature`, etc.) regardless of user input.
+
 - **Tag Sorting & Formatting**: Sorts tags alphabetically (e.g., `@smoke @api` -> `@api @smoke`) and formats them based on user configuration. By default, it wraps tags if they exceed 80 characters, but this can be configured to remain on a single line.
 - **Whitespace Cleanup**: Automatically collapses consecutive empty lines into a standardized format and trims all trailing whitespace, preventing dirty git commits.
 - **Inline Comment Alignment**: Dynamically aligns inline comments (`#`) to the same vertical column within the same code block, creating a beautiful and consistent reading experience.
