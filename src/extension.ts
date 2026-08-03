@@ -30,6 +30,7 @@ import { ConfigurationService } from './configuration';
 import { ContextualFeatureDiscoveryService } from './contextualDiscovery';
 import { ImpactCodeLensProvider } from './impactCodeLens';
 import { ImpactReport } from './impactAnalysis';
+import { AntiPatternDiagnosticsManager } from './antiPatternDiagnostics';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 
@@ -83,6 +84,10 @@ export async function activate(context: vscode.ExtensionContext) {
     const workspaceGraph = new WorkspaceGraph(symbolCache);
     workspaceGraph.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
+
+    // Initialize AntiPattern Diagnostics Manager
+    const antiPatternDiagnostics = new AntiPatternDiagnosticsManager(workspaceGraph, symbolCache, eventBus);
+    context.subscriptions.push(antiPatternDiagnostics);
 
     // Initialize Contextual Feature Discovery
     new ContextualFeatureDiscoveryService(context, workspaceGraph);

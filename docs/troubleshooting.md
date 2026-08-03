@@ -38,6 +38,12 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 **Likely Causes:** You have multiple regular expressions in your Python decorators that match the exact same string (e.g., overlapping wildcards like `(.*)`).
 **Resolution:** Tighten your regular expressions in Python to be mutually exclusive.
 
+## I see double squiggles for Undefined or Ambiguous Steps
+**Symptom:** Your feature file displays two overlapping underlines (e.g., one yellow, one red) for the same undefined or ambiguous step.
+**Likely Causes:** Both the realtime Linter and the BDD Anti-pattern Detection Engine are configured to report on the same file, but the filtering mechanism failed or configuration is conflicting.
+**Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps` and `ambiguous-steps` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the Quick Fixes).
+**Resolution:** This should be handled automatically by the extension. If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.antiPatterns.rules`.
+
 ## Impact Analysis CodeLenses are not appearing
 **Symptom:** You open a Python step definition file, but you do not see the CodeLenses displaying the number of affected scenarios.
 **Likely Causes:** The feature is disabled in settings, or the `WorkspaceGraph` is still indexing the feature files.

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.2] - 2026-08-03
 
+### 🚀 Added
+- **BDD Anti-pattern Detection Engine**: A powerful new static analysis engine replacing the legacy Recommendation Engine. It proactively scans your entire workspace to detect and surface anti-patterns such as Oversized Features, Oversized Scenarios, Duplicated/Unused/Ambiguous/Undefined Python step definitions, Excessive Tags, and Inconsistent Formatting.
+  - Fully configurable via `gherkinPowerTools.antiPatterns.rules` to set severities (`error`, `warning`, `info`, `hint`, `off`) for individual rules.
+  - Safely integrates with the Real-time Linter to prevent double-squiggles on feature files.
+
 ### 📖 Documentation
 - **Visual Overhaul**: Applied a new glassmorphism and soft-shadow styling to the MkDocs documentation.
 - **Hero Image Update**: Swapped the main hero GIF in the README to showcase the Test Explorer execution & debugging.

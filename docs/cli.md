@@ -23,12 +23,12 @@ npx gherkin-pt --help
 ## Available Commands
 
 ### 1. `analyze` (or `health`)
-Scans your entire workspace (both `.feature` files and Python Behave steps) to detect:
-- Missing step definitions.
-- Unused step definitions.
-- Duplicated step definitions.
-- Ambiguous step definitions.
-- Gherkin structural and syntax errors.
+Scans your entire workspace (both `.feature` files and Python Behave steps) using the **BDD Anti-pattern Detection Engine** to detect:
+- Oversized Features and Scenarios.
+- Unused or Duplicated Python step definitions.
+- Ambiguous and Undefined steps.
+- Excessive Tags and Inconsistent Formatting.
+- General structural and syntax errors.
 
 **Usage:**
 ```bash

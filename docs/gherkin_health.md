@@ -6,15 +6,15 @@ Gherkin PowerTools includes a built-in **Gherkin Health Dashboard** that provide
 
 ## What the Dashboard Does
 
-The Analytics Dashboard analyzes your workspace in real-time leveraging the in-memory **Workspace Graph** (which connects Features, Scenarios, Steps, and Python Step Definitions) and the **Recommendation Engine**.
+The Analytics Dashboard analyzes your workspace in real-time leveraging the in-memory **Workspace Graph** (which connects Features, Scenarios, Steps, and Python Step Definitions) and the **BDD Anti-pattern Detection Engine**.
 
 It generates deep heuristics and scores, including:
 
 - **Overall Health Score**: A unified metric indicating the general state of your test suite.
 - **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files.
 - **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
-- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Recommendation Engine.
-- **Actionable Insights**: Prioritized recommendations (High, Medium, Low severity) such as breaking down oversized scenarios or removing duplicated regex patterns.
+- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
+- **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint) such as breaking down oversized scenarios, removing duplicated regex patterns, or cleaning up excessive tags and inconsistent formatting.
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
 **Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.

@@ -114,7 +114,7 @@ npx gherkin-pt format --check
 
 To help you get the most out of Gherkin PowerTools without getting in your way, the extension includes a non-intrusive **Contextual Feature Discovery** engine.
 
-As you work, the engine analyzes your actions locally (e.g., struggling with table alignment, or leaving a step undefined for a while) and surfaces lightweight recommendations (like "Did you know you can auto-format this?" or "Would you like to generate this step?").
+As you work, the engine analyzes your actions locally (e.g., struggling with table alignment, or leaving a step undefined for a while) and surfaces lightweight contextual popups (like "Did you know you can auto-format this?" or "Would you like to generate this step?"). (Note: This is distinct from the static *BDD Anti-pattern Detection Engine* which runs globally via the Dashboard).
 
 You can always dismiss these suggestions or click "Don't show again" to permanently silence a specific recommendation.
 
