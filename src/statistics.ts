@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, TagNode } from './graph';
 import { SymbolCache } from './cache';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
-import { Recommendation, RecommendationEngine } from './recommendationEngine';
-import { MetricsHistory, MetricsSnapshot } from './history';
+import { AntiPattern, AntiPatternEngine } from './antiPatternEngine';
+import { MetricsHistory, VersionedSnapshot } from './history';
 
 export function escapeHtml(unsafe: string) {
     return unsafe
@@ -53,13 +53,15 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
     try {
         const { metrics, recommendations, snapshots } = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "Calculating Gherkin Health & Recommendations",
+            title: "Calculating Gherkin Health & Anti-patterns",
             cancellable: false
         }, async () => {
             await graph.initialize();
             const metrics = await calculateHealthMetrics(graph, symbolCache);
-            const engine = new RecommendationEngine();
-            const recommendations = engine.generateRecommendations(graph, metrics);
+            const engine = new AntiPatternEngine();
+            const rawConfig = vscode.workspace.getConfiguration('gherkinPowerTools.antiPatterns').get('rules') || {};
+            const ruleConfig = rawConfig as Record<string, string>;
+            const recommendations = engine.generateAntiPatterns(graph, metrics, ruleConfig);
             
             const history = new MetricsHistory(context);
             const snapshots = history.addSnapshot(metrics);
@@ -76,7 +78,7 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
                     const uri = vscode.Uri.parse(message.uri);
                     const doc = await vscode.workspace.openTextDocument(uri);
                     const editor = await vscode.window.showTextDocument(doc, { preview: false });
-                    const line = message.line;
+                    const line = typeof message.line === 'number' && message.line > 0 ? message.line - 1 : 0;
                     const range = new vscode.Range(line, 0, line, 0);
                     editor.selection = new vscode.Selection(range.start, range.end);
                     editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
@@ -167,7 +169,7 @@ export function getLoadingHtml() {
     return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Gherkin Health...</h2><p>Scanning graph...</p></body></html>`;
 }
 
-export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: Recommendation[], version: string, snapshots: MetricsSnapshot[] = []): string {
+export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: AntiPattern[], version: string, snapshots: VersionedSnapshot[] = []): string {
     const renderLink = (uri: string, line: number, text: string) => {
         return `<a href="#" class="file-link" onclick="openFile('${escapeHtml(uri)}', ${line})">${escapeHtml(text)}</a>`;
     };
@@ -229,7 +231,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             background: var(--vscode-editor-background);
         }
 
-        /* Recommendations Card Styles */
+        /* Anti-Patterns Card Styles */
         .rec-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -263,9 +265,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         .severity-badge {
             padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase;
         }
-        .severity-high { background: #e74c3c; color: white; }
-        .severity-medium { background: #f39c12; color: white; }
-        .severity-low { background: #3498db; color: white; }
+        .severity-error { background: #e74c3c; color: white; }
+        .severity-warning { background: #f39c12; color: white; }
+        .severity-info { background: #3498db; color: white; }
         .rec-explanation { margin: 0 0 20px 0; color: var(--vscode-descriptionForeground); flex-grow: 1; }
         .rec-fix {
             background-color: rgba(46, 204, 113, 0.1); border-left: 4px solid #2ecc71; padding: 12px 15px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9em;
@@ -520,8 +522,8 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     ` : ''}
 
     ${recommendations.length > 0 ? `
-    <h2 class="section-title">Actionable Insights</h2>
-    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized recommendations to improve the health, maintenance, and reliability of your Gherkin tests.</p>
+    <h2 class="section-title">Actionable Anti-patterns</h2>
+    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized anti-patterns affecting the health, maintenance, and reliability of your Gherkin tests.</p>
     <div class="rec-grid">
         ${recommendations.map(rec => `
             <div class="rec-card">
@@ -542,7 +544,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                             ${rec.affectedItems.map(item => `
                                 <li>
                                     <div class="step-def" style="margin-bottom: 4px; display: block;">${escapeHtml(item.label)}</div>
-                                    <a href="#" class="file-link" style="font-size: 12px; margin-left: 8px;" onclick="openFile('${escapeHtml(item.uri)}', ${item.line || 0})">↳ ${escapeHtml(item.uri.split('/').pop() || item.uri)}${item.line ? `:${item.line + 1}` : ''}</a>
+                                    <a href="#" class="file-link" style="font-size: 12px; margin-left: 8px;" onclick="openFile('${escapeHtml(item.uri)}', ${item.line || 0})">↳ ${escapeHtml(item.uri.split('/').pop() || item.uri)}${item.line ? `:${item.line}` : ''}</a>
                                 </li>
                             `).join('')}
                         </ul>
@@ -563,13 +565,12 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         `).join('')}
     </div>
     ` : `
-    <h2 class="section-title">Actionable Insights</h2>
-    <p style="color: var(--vscode-descriptionForeground); margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized recommendations to improve the health, maintenance, and reliability of your Gherkin tests.</p>
+    <h3 id="antipatterns-header" style="margin-bottom: 20px; font-weight: 500;">Actionable Anti-patterns</h3>
     <div class="rec-grid">
         <div class="rec-card" style="text-align: center; grid-column: 1 / -1; padding: 40px;">
             <span style="font-size: 32px; display: block; margin-bottom: 16px;">🎉</span>
             <h3 style="margin: 0;">Amazing!</h3>
-            <p style="color: var(--vscode-descriptionForeground);">Your workspace is perfectly healthy. No recommendations found.</p>
+            <p style="color: var(--vscode-descriptionForeground);">Your workspace is perfectly healthy. No anti-patterns found.</p>
         </div>
     </div>
     `}
@@ -645,6 +646,10 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.js"></script>
     <script>
         const snapshots = ${JSON.stringify(snapshots)};
+        const recs = ${JSON.stringify(recommendations)};
+        const header = document.getElementById('antipatterns-header');
+        if (header) header.innerHTML = \`Actionable Anti-patterns (\${recs.length})\`;
+        
         const ctx = document.getElementById('trendsChart').getContext('2d');
         
         const labels = snapshots.map(s => {
@@ -659,6 +664,15 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         Chart.defaults.color = textColor;
         Chart.defaults.font.family = style.getPropertyValue('--vscode-font-family');
         
+        const pointStyles = snapshots.map((s, i) => {
+            if (i === 0) return 'circle';
+            return s.metricsAlgorithmVersion !== snapshots[i-1].metricsAlgorithmVersion ? 'rectRot' : 'circle';
+        });
+        const pointRadii = snapshots.map((s, i) => {
+            if (i === 0) return 3;
+            return s.metricsAlgorithmVersion !== snapshots[i-1].metricsAlgorithmVersion ? 6 : 3;
+        });
+
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -670,7 +684,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.1)',
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        pointStyle: pointStyles,
+                        pointRadius: pointRadii
                     },
                     {
                         label: 'Maintainability',
@@ -678,7 +694,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         borderColor: '#f59e0b',
                         backgroundColor: 'rgba(245, 158, 11, 0.1)',
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        pointStyle: pointStyles,
+                        pointRadius: pointRadii
                     },
                     {
                         label: 'Complexity',
@@ -686,7 +704,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         borderColor: '#ef4444',
                         backgroundColor: 'rgba(239, 68, 68, 0.1)',
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        pointStyle: pointStyles,
+                        pointRadius: pointRadii
                     }
                 ]
             },

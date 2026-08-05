@@ -46,6 +46,7 @@ The advanced integrations (Go to Definition, Hover, Autocomplete, Step Generatio
 
 - **Multi-Root Workspaces:** Supported. Configuration settings in `.vscode/settings.json` apply to their specific workspace folders.
 - **Paths with Spaces / Unicode Paths:** Supported. The extension uses native URI parsing to properly encode/decode file paths for regex matching and command execution.
+- **Case-Insensitive File Systems:** Supported. The extension uses strict case-insensitive URI normalization (added in v1.8.2) to prevent duplicate index entries or cache misses natively on macOS and Windows.
 - **Monorepos:** Supported. Configure `gherkinPowerTools.behave.stepGlobs` to point to all sub-directories where steps reside.
 - **Large Workspaces:** Supported. The AST parser and file system watchers are deferred and operate in the background. Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores virtual environments to prevent parsing timeouts.
 

@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import glob from 'fast-glob';
+import { DEFAULT_CONFIG } from '../defaults';
 
 // --- Types ---
 export class Uri {
@@ -128,11 +129,11 @@ export class ThemeIcon {
 // --- Workspace ---
 class WorkspaceConfiguration {
     get<T>(section: string, defaultValue?: T): T {
-        // Return sensible defaults for CLI
-        if (section === 'behave.stepGlobs') return ['**/steps/**/*.py', '**/features/steps/**/*.py'] as any;
-        if (section === 'behave.ignoreGlobs') return ['**/node_modules/**', '**/.venv/**', '**/venv/**', '**/env/**'] as any;
-        if (section === 'format.indentation.steps') return 4 as any;
-        if (section === 'format.emptyLines.betweenScenarios') return 1 as any;
+        // Return sensible defaults for CLI from the shared source of truth
+        if (section === 'behave.stepGlobs') return DEFAULT_CONFIG.behave.stepGlobs as any;
+        if (section === 'behave.ignoreGlobs') return DEFAULT_CONFIG.behave.ignoreGlobs as any;
+        if (section === 'format.indentation.steps') return DEFAULT_CONFIG.indentation.steps as any;
+        if (section === 'format.emptyLines.betweenScenarios') return DEFAULT_CONFIG.emptyLines.betweenScenarios as any;
         return defaultValue as any;
     }
     inspect(section: string): any {
@@ -231,16 +232,16 @@ export const workspace = {
 
 // --- Window ---
 export const window = {
-    showInformationMessage: async (message: string) => { console.log(message); return undefined; },
+    showInformationMessage: async (message: string) => { console.error(message); return undefined; },
     showWarningMessage: async (message: string) => { console.warn(message); return undefined; },
     showErrorMessage: async (message: string) => { console.error(message); return undefined; },
     withProgress: async (options: any, task: (progress: any, token: any) => Promise<any>) => {
-        console.log(`[Progress] ${options.title || 'Loading...'}`);
+        console.error(`[Progress] ${options.title || 'Loading...'}`);
         return task({ report: () => {} }, { isCancellationRequested: false, onDidChange: new EventEmitter().event });
     },
     createOutputChannel: (name: string) => ({
-        appendLine: (msg: string) => console.log(`[${name}] ${msg}`),
-        append: (msg: string) => process.stdout.write(msg),
+        appendLine: (msg: string) => console.error(`[${name}] ${msg}`),
+        append: (msg: string) => process.stderr.write(msg),
         clear: () => {},
         show: () => {},
         dispose: () => {}

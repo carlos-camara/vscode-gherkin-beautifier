@@ -104,11 +104,11 @@ suite('WorkspaceGraph Test Suite', () => {
 
     test('Removes nodes correctly when a file is deleted', () => {
         const uri = 'file:///test.feature';
-        
+
         // Manually inject some nodes to simulate parsing
         (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
         (graph as any).nodes.set(`${uri}:Scenario:1`, { id: `${uri}:Scenario:1`, type: 'Scenario', uri, parent: `${uri}:Feature:Test`, tags: [] });
-        
+
         assert.ok(graph.getAllNodes().length > 0, 'Graph should have nodes after update');
 
         // Simulate file removal
@@ -117,12 +117,28 @@ suite('WorkspaceGraph Test Suite', () => {
         assert.strictEqual(nodesAfter.length, 0, 'Nodes should be removed for the URI');
     });
 
+    test('Removes nodes correctly when a file is deleted with different URI casing', () => {
+        const uriUpper = 'file:///TEST_CASE.feature';
+        const uriLower = 'file:///test_case.feature';
+
+        // Manually inject using lowercase
+        (graph as any).nodes.set(`${uriLower}:Feature:Test`, { id: `${uriLower}:Feature:Test`, type: 'Feature', uri: uriLower });
+        (graph as any).nodes.set(`${uriLower}:Scenario:1`, { id: `${uriLower}:Scenario:1`, type: 'Scenario', uri: uriLower, parent: `${uriLower}:Feature:Test`, tags: [] });
+
+        assert.ok(graph.getAllNodes().length > 0, 'Graph should have nodes after update');
+
+        // Simulate file removal using uppercase
+        (graph as any).removeNodesByUri(uriUpper);
+        const nodesAfter = graph.getAllNodes().filter(n => n.uri === uriLower);
+        assert.strictEqual(nodesAfter.length, 0, 'Nodes should be removed for the URI regardless of casing');
+    });
+
     test('Handles cyclic or repeated updates gracefully', async () => {
-        // Since we cannot mock AST safely here without complex setup, 
+        // Since we cannot mock AST safely here without complex setup,
         // we test that dispose and remove don't crash and leave state clean
         const uri = 'file:///test.feature';
         (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
-        
+
         const nodeCount1 = graph.getAllNodes().length;
         (graph as any).removeNodesByUri(uri);
         (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
@@ -225,9 +241,71 @@ suite('WorkspaceGraph Test Suite', () => {
         const uri = require('vscode').Uri.parse('file:///empty.py');
         symbolCache.getAllStepDefinitions = async () => [];
         await (graph as any).indexPythonFile(uri);
-        
+
         const nodes = graph.getAllNodes();
         const pyNodes = nodes.filter(n => n.uri === uri.toString());
         assert.strictEqual(pyNodes.length, 0, 'Should not create nodes for empty python file');
+    });
+    test('Tracks semantic types for And/But steps', async () => {
+        const vscode = require('vscode');
+        const uri = vscode.Uri.parse('file:///semantic.feature');
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', { get: () => [{ uri, getText: () => 'Feature: test' }] });
+
+        const mockAST = {
+            feature: {
+                location: { line: 1 },
+                name: 'Test Feature',
+                tags: [],
+                children: [
+                    {
+                        scenario: {
+                            location: { line: 2 },
+                            name: 'Scenario',
+                            tags: [],
+                            steps: [
+                                { location: { line: 3 }, keyword: 'Given ', text: 'given step' },
+                                { location: { line: 4 }, keyword: 'And ', text: 'and step after given' },
+                                { location: { line: 5 }, keyword: 'When ', text: 'when step' },
+                                { location: { line: 6 }, keyword: 'But ', text: 'but step after when' },
+                                { location: { line: 7 }, keyword: 'Then ', text: 'then step' },
+                                { location: { line: 8 }, keyword: 'And ', text: 'and step after then' }
+                            ]
+                        }
+                    }
+                ]
+            }
+        };
+        const originalGetAST = astRepository.getAST;
+        astRepository.getAST = async () => ({ document: mockAST } as any);
+        try {
+            await (graph as any).indexFeatureFile(uri);
+
+            const nodes = graph.getAllNodes().filter(n => n.type === 'Step') as import('../../graph').StepNode[];
+            assert.strictEqual(nodes.length, 6);
+
+            const step3 = nodes.find(n => n.line === 3);
+            assert.strictEqual(step3?.semanticType, 'given');
+
+            const step4 = nodes.find(n => n.line === 4);
+            assert.strictEqual(step4?.semanticType, 'given'); // Inherits from Given
+
+            const step5 = nodes.find(n => n.line === 5);
+            assert.strictEqual(step5?.semanticType, 'when');
+
+            const step6 = nodes.find(n => n.line === 6);
+            assert.strictEqual(step6?.semanticType, 'when'); // Inherits from When
+
+            const step7 = nodes.find(n => n.line === 7);
+            assert.strictEqual(step7?.semanticType, 'then');
+
+            const step8 = nodes.find(n => n.line === 8);
+            assert.strictEqual(step8?.semanticType, 'then'); // Inherits from Then
+        } finally {
+            astRepository.getAST = originalGetAST;
+            if (originalTextDocuments) {
+                Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+            }
+        }
     });
 });

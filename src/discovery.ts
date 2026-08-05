@@ -13,15 +13,17 @@ export class BehaveFileDiscoveryService {
      * Subscribes to the Workspace Event Bus to receive configuration changes.
      * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
      */
-    public set eventBus(bus: WorkspaceEventBus) {
+    public set eventBus(bus: WorkspaceEventBus | undefined) {
         this._eventBus = bus;
         this.eventBusDisposable?.dispose();
-        this.eventBusDisposable = this._eventBus.onEvent(e => {
-            if (e.type === 'configurationChanged') {
-                this.disposeWatchers();
-                this.setupWatchers();
-            }
-        });
+        if (this._eventBus) {
+            this.eventBusDisposable = this._eventBus.onEvent(e => {
+                if (e.type === 'configurationChanged') {
+                    this.disposeWatchers();
+                    this.setupWatchers();
+                }
+            });
+        }
     }
 
     public get eventBus(): WorkspaceEventBus | undefined {
@@ -38,8 +40,9 @@ export class BehaveFileDiscoveryService {
     }
 
     public getStepGlobs(uri?: vscode.Uri): string[] {
-        if (this.configService) {
-            return this.configService.getConfiguration(uri).behave.stepGlobs;
+        const globs = this.configService?.getConfiguration(uri).behave.stepGlobs;
+        if (globs && globs.length > 0) {
+            return globs;
         }
         return ['**/steps/**/*.py', '**/features/steps/**/*.py'];
     }
