@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.3] - Unreleased
 
 ### 🚀 Added
-- *(To be documented)*
+- **Scoped CLI Package**: The Standalone CLI is now distributed as a secure, dedicated scoped npm package (`@carlos-camara/gherkin-pt`). This eliminates supply chain squatting risks and ensures the executable name does not conflict with global namespace packages.
 
 ### ✨ Improved
-- *(To be documented)*
+- **CLI Documentation**: Fully updated documentation across README, CLI guides, and Getting Started pages to reflect the new `npx @carlos-camara/gherkin-pt` execution model.
 
 ### 🐛 Fixed
-- *(To be documented)*
+- **CLI Dependency Resolution**: Fixed an issue where the standalone CLI could fail to resolve peer dependencies like `@cucumber/gherkin` when executed via `npx`. The build script now natively injects root workspace dependencies into the CLI's `package.json`.
 
 ## [1.8.2] - 2026-08-05
 
@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Automated First-Run Experience**: Added an intelligent, non-intrusive onboarding experience. When you open a Python Behave project for the first time, Gherkin PowerTools automatically detects it, counts your features, and presents a welcome notification with quick actions to launch the Walkthrough or the Health Dashboard.
 - **Contextual Feature Discovery**: A lightweight, non-intrusive recommendation engine that analyzes your workflow in real-time. It seamlessly surfaces advanced features (like generating missing steps, auto-formatting tables, opening the command center, or checking project health) at the exact moment you need them, without disrupting your flow. Includes "Don't show again" functionality.
 - **Historical Trend Analysis**: Gherkin Health Dashboard now automatically tracks and persists lightweight historical snapshots of your project metrics in the workspace state. It visualizes project evolution (complexity, maintainability, technical debt) over time using interactive charts without sending any data off your machine. Configure retention policies or disable it entirely in settings.
-- **Command Line Interface (CLI)**: Gherkin PowerTools now includes a powerful, standalone CLI (`gherkin-pt`) that brings the Workspace Intelligence Engine to your terminal and CI/CD pipelines.
+- **Command Line Interface (CLI)**: Gherkin PowerTools now includes a powerful, standalone CLI (`@carlos-camara/gherkin-pt`) that brings the Workspace Intelligence Engine to your terminal and CI/CD pipelines.
   - Run `npx @carlos-camara/gherkin-pt analyze` to enforce Gherkin structural validity and block missing Python steps in Pull Requests.
   - Run `npx @carlos-camara/gherkin-pt format --check` to enforce team formatting rules in CI.
   - Run `npx @carlos-camara/gherkin-pt stats --json` to export high-level project metrics.

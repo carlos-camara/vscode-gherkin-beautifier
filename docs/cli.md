@@ -1,6 +1,6 @@
 # Command Line Interface (CLI)
 
-Gherkin PowerTools includes a powerful, standalone CLI (`gherkin-pt`) that brings the **Workspace Intelligence Engine** to your terminal and CI/CD pipelines. It allows you to run the exact same formatter, diagnostics, and metrics that run in VS Code, directly from the command line.
+Gherkin PowerTools includes a powerful, standalone CLI (`@carlos-camara/gherkin-pt`) that brings the **Workspace Intelligence Engine** to your terminal and CI/CD pipelines. It allows you to run the exact same formatter, diagnostics, and metrics that run in VS Code, directly from the command line.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli.gif" alt="Command Line Interface execution" width="600" height="340" />

@@ -114,6 +114,13 @@ If you need to change arguments on the fly (e.g., adding `--tags=@wip` for a sin
 
 ---
 
+## Remote Workspaces (Dev Containers, WSL, SSH)
+
+Gherkin PowerTools fully supports remote development environments. Because the extension executes the `gherkinPowerTools.behave.command` directly in the integrated terminal/shell of the workspace, Behave tests will seamlessly run inside your Docker container, WSL instance, or remote SSH machine exactly as they do locally.
+No additional configuration is required, just ensure Behave is installed in the remote environment's Python path.
+
+---
+
 ## Troubleshooting Execution
 
 - **"Behave command not found":** Ensure the virtual environment containing Behave is active, or update `gherkinPowerTools.behave.command` to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).

@@ -91,7 +91,7 @@ Gherkin PowerTools acts in two tiers depending on your project:
 - **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
 - **Step Refactoring:** Safely rename or extract steps across your entire workspace (<kbd>F2</kbd>).
 - **Test Explorer Integration:** Run and debug features with line-by-line execution tracking.
-- **Standalone CLI (`gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension.
+- **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension.
 
 ---
 

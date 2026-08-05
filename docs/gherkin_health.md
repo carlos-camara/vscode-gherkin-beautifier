@@ -30,6 +30,22 @@ Note that Ambiguous and Undefined Steps are handled instantly by the real-time L
 
 ---
 
+## Configuration
+
+You can configure the Anti-pattern Detection Engine's behavior and rule severities in your workspace settings or `.gherkin-powertoolsrc.json`:
+
+```json
+"gherkinPowerTools.antiPatterns.enabled": true,
+"gherkinPowerTools.antiPatterns.rules": {
+    "oversized-scenario": "warning",
+    "duplicated-steps": "error",
+    "ambiguous-steps": "error"
+}
+```
+See the [Configuration Reference](configuration.md#anti-pattern-detection-engine-settings) for the full list of rules.
+
+---
+
 ## How to View the Dashboard
 
 To generate the dashboard:
@@ -42,7 +58,7 @@ A Webview panel will open in VS Code displaying the generated HTML report.
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" height="340" />
 </div>
 
-> **Note**: The legacy "Analyze Step Definitions" command has been fully integrated into the new Gherkin Health Dashboard. Both commands now launch the same unified view.
+> **Note**: The legacy "Analyze Step Definitions" command has been fully replaced by the unified Gherkin Health Dashboard.
 
 ---
 

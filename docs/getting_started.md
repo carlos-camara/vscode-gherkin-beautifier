@@ -95,7 +95,7 @@ This opens an interactive quick-pick menu that groups all the extension's capabi
 
 ## 7. Command Line Interface (CLI)
 
-Gherkin PowerTools includes a powerful CLI (`gherkin-pt`) that brings the Workspace Intelligence Engine directly to your terminal or CI/CD pipelines.
+Gherkin PowerTools includes a powerful CLI (`@carlos-camara/gherkin-pt`) that brings the Workspace Intelligence Engine directly to your terminal or CI/CD pipelines.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli.gif" alt="Command Line Interface execution" width="600" height="340" />
