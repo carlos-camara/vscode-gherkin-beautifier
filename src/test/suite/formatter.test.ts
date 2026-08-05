@@ -418,7 +418,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // line 4 ('  hello')
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
-        assert.strictEqual(result, '        """\n          hello\n        """');
+        assert.strictEqual(result, '            """\n              hello\n            """');
     });
 
     test('Range formatting: tags', async () => {

@@ -7,10 +7,10 @@ import * as path from 'path';
 import { SymbolCache } from '../cache';
 import { FeatureCache } from '../cache';
 import { WorkspaceGraph } from '../graph';
-import { RecommendationEngine } from '../recommendationEngine';
+import { AntiPatternEngine } from '../antiPatternEngine';
 import { calculateHealthMetrics } from '../statistics';
 import { GherkinFormattingEditProvider } from '../formatter';
-import { ConfigurationService } from '../configuration';
+import { ConfigurationService, DEFAULT_RULE_CONFIG } from '../configuration';
 
 const program = new Command();
 
@@ -19,8 +19,10 @@ program
     .description('Gherkin PowerTools CLI')
     .version('1.8.1');
 
-async function initializeEngines() {
-    console.log('[Info] Initializing Workspace Engine...');
+async function initializeEngines(isJson: boolean = false) {
+    if (!isJson) {
+        console.error('[Info] Initializing Workspace Engine...');
+    }
     const symbolCache = new SymbolCache();
     const tagCache = new FeatureCache();
     const graph = new WorkspaceGraph(symbolCache);
@@ -31,22 +33,22 @@ async function initializeEngines() {
 
 program.command('analyze')
     .alias('health')
-    .description('Analyze the workspace and provide actionable recommendations')
+    .description('Analyze the workspace and provide actionable anti-patterns')
     .option('--json', 'Output results in JSON format')
     .action(async (options) => {
         try {
-            const { graph, symbolCache } = await initializeEngines();
+            const { graph, symbolCache } = await initializeEngines(options.json);
             
             const metrics = await calculateHealthMetrics(graph, symbolCache);
-            const engine = new RecommendationEngine();
-            const recommendations = engine.generateRecommendations(graph, metrics);
+            const engine = new AntiPatternEngine();
+            const antiPatterns = engine.generateAntiPatterns(graph, metrics, DEFAULT_RULE_CONFIG);
 
             if (options.json) {
-                console.log(JSON.stringify(recommendations, null, 2));
-                process.exit(recommendations.length > 0 ? 1 : 0);
+                console.log(JSON.stringify(antiPatterns, null, 2));
+                process.exit(antiPatterns.length > 0 ? 1 : 0);
             } else {
-                console.log(`\nFound ${recommendations.length} recommendation(s):\n`);
-                recommendations.forEach(r => {
+                console.log(`\nFound ${antiPatterns.length} anti-pattern(s):\n`);
+                antiPatterns.forEach(r => {
                     console.log(`[${r.severity.toUpperCase()}] ${r.title}`);
                     console.log(`  ${r.explanation}`);
                     console.log(`  Fix: ${r.suggestedFix}`);
@@ -56,7 +58,7 @@ program.command('analyze')
                     }
                     console.log('');
                 });
-                process.exit(recommendations.length > 0 ? 1 : 0);
+                process.exit(antiPatterns.length > 0 ? 1 : 0);
             }
         } catch (e: any) {
             console.error('[Error] Analysis failed:', e.message || e);
@@ -70,7 +72,7 @@ program.command('stats')
     .option('--json', 'Output results in JSON format')
     .action(async (options) => {
         try {
-            const { graph, symbolCache } = await initializeEngines();
+            const { graph, symbolCache } = await initializeEngines(options.json);
             const metrics = await calculateHealthMetrics(graph, symbolCache);
 
             if (options.json) {

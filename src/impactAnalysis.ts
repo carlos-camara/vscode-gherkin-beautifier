@@ -10,9 +10,16 @@ export interface ImpactReport {
 }
 
 export class ImpactAnalyzer {
+    private cache = new Map<string, { version: number, report: ImpactReport }>();
+
     constructor(private graph: WorkspaceGraph) {}
 
     public calculateImpact(stepDefId: string): ImpactReport {
+        const cached = this.cache.get(stepDefId);
+        if (cached && cached.version === this.graph.graphVersion) {
+            return cached.report;
+        }
+
         const usages = this.graph.getUsages(stepDefId);
         
         const affectedScenarios = new Set<string>();
@@ -69,11 +76,14 @@ export class ImpactAnalyzer {
         if (numScenarios >= 20) severity = 'High';
         else if (numScenarios >= 5) severity = 'Medium';
 
-        return {
+        const report = {
             affectedFeatures: affectedFeatures.size,
             affectedScenarios: numScenarios,
             severity,
             scenarios: scenarioNodes
         };
+
+        this.cache.set(stepDefId, { version: this.graph.graphVersion, report });
+        return report;
     }
 }

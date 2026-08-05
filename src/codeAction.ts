@@ -122,7 +122,7 @@ export function serializeToPythonString(text: string): string {
  * Extracts parameters (quoted strings, standalone numbers) from step text.
  * Returns the modified pattern string and the list of parameter names.
  */
-export function extractStepParameters(text: string): { pattern: string, funcArgs: string[] } {
+function extractStepParameters(text: string): { pattern: string, funcArgs: string[] } {
     let pattern = text;
     const funcArgs: string[] = [];
     let paramIndex = 1;

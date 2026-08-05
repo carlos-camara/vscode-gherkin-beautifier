@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -106,6 +106,13 @@
           "scope": "resource",
           "default": true,
           "markdownDescription": "When `true`, the left border of Data Tables and Examples tables is dynamically padded to align with the text start of the preceding step keyword — not a fixed column.\n\nSet to `false` for a simpler fixed-column alignment."
+        },
+        "gherkinPowerTools.docStrings.alignToKeyword": {
+          "type": "boolean",
+          "order": 12,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "When `true`, DocStrings are dynamically padded to align with the text start of the preceding step keyword.\n\nSet to `false` for a simpler fixed-column alignment."
         },
         "gherkinPowerTools.emptyLines.betweenScenarios": {
           "type": "number",
@@ -244,7 +251,40 @@
           "default": 30,
           "minimum": 1,
           "maximum": 365,
-          "markdownDescription": "Maximum number of historical snapshots to retain for trend analysis."
+          "markdownDescription": "Maximum number of historical snapshots to retain for trend analysis per branch."
+        },
+        "gherkinPowerTools.analytics.historicalTrends.maxStorageBytes": {
+          "type": "number",
+          "order": 42,
+          "scope": "resource",
+          "default": 500000,
+          "minimum": 10000,
+          "maximum": 5000000,
+          "markdownDescription": "Maximum size (in bytes) allowed for the historical trend storage in this workspace. If exceeded, oldest snapshots are pruned regardless of branch."
+        },
+        "gherkinPowerTools.antiPatterns.enabled": {
+          "type": "boolean",
+          "order": 42,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable the BDD Anti-pattern Detection engine to show diagnostics and health issues."
+        },
+        "gherkinPowerTools.antiPatterns.rules": {
+          "type": "object",
+          "order": 43,
+          "scope": "resource",
+          "default": {
+            "oversized-scenario": "warning",
+            "oversized-feature": "info",
+            "duplicated-steps": "error",
+            "unused-steps": "info",
+            "ambiguous-steps": "error",
+            "undefined-steps": "error",
+            "excessive-tags": "info",
+            "inconsistent-formatting": "info",
+            "poor-maintainability": "warning"
+          },
+          "markdownDescription": "Configure severity overrides for specific anti-pattern rules. Values can be `error`, `warning`, `info`, `hint`, or `off`."
         }
       }
     },
@@ -339,6 +379,16 @@
         "command": "gherkinPowerTools.refactor.renameStep",
         "title": "Rename Step",
         "category": "Refactoring"
+      },
+      {
+        "command": "gherkinPowerTools.analytics.exportHistory",
+        "title": "Export History as JSON",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.analytics.clearHistory",
+        "title": "Clear History",
+        "category": "Gherkin PowerTools"
       }
     ],
     "menus": {
