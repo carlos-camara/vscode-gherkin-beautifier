@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as sinon from 'sinon';
 import { SymbolCache, FeatureCache } from '../../cache';
 import { discoveryService } from '../../discovery';
 import { astRepository } from '../../ast';
@@ -237,7 +238,11 @@ def step_impl(
 def step_impl(context, count): pass
         `;
         const tempFile = path.join(tempDir, 'UPPER_case.py');
-        fs.writeFileSync(tempFile, mockPythonCode);
+        
+        const textDocStub = sinon.stub(vscode.workspace, 'textDocuments').get(() => [{
+            uri: vscode.Uri.file(tempFile.toLowerCase()),
+            getText: () => mockPythonCode
+        }]);
 
         // Update using lowercase path
         const lowerUri = vscode.Uri.file(tempFile.toLowerCase());
@@ -254,6 +259,8 @@ def step_impl(context, count): pass
         // Cache should be empty because getCanonicalUri matches them
         const remainingDefs = await cache.getAllStepDefinitions();
         assert.strictEqual(remainingDefs.length, 0);
+        
+        textDocStub.restore();
     });
 
     test('Tag Blast Radius: Handles inherited tags from Feature and multiplies by Examples', async () => {
