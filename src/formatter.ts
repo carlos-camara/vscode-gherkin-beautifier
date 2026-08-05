@@ -6,6 +6,7 @@ import { ConfigurationService } from './configuration';
 export interface FormatterOptions {
     stepIndentation: number;
     alignTableToKeyword: boolean;
+    docStrings?: { alignToKeyword: boolean };
     tagsFormat: 'wrap' | 'singleLine';
     tagsSort: 'preserve' | 'alphabetical';
     emptyLinesBetweenScenarios: number;
@@ -41,6 +42,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         return {
             stepIndentation: config.indentation?.steps ?? 4,
             alignTableToKeyword: config.tables?.alignToKeyword ?? true,
+            docStrings: { alignToKeyword: config.docStrings?.alignToKeyword ?? true },
             tagsFormat: config.tags?.format ?? 'wrap',
             tagsSort: config.tags?.sort ?? 'preserve',
             emptyLinesBetweenScenarios: config.emptyLines?.betweenScenarios ?? 1
@@ -394,9 +396,10 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                 const contentLines = step.docString.content.split(/\r?\n/);
                 const endLine = startLine + contentLines.length + 1;
                 
+                const docStringIndent = options.docStrings?.alignToKeyword ? stepIndent + (step.keyword?.length || 6) : stepIndent + 2;
                 map.set(startLine, { 
                     type: 'DocString', 
-                    indent: stepIndent + 2, 
+                    indent: docStringIndent, 
                     keyword: step.docString.delimiter,
                     lines: contentLines
                 });

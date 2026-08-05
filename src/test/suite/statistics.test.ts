@@ -47,7 +47,7 @@ suite('Project Health Dashboard Test Suite', () => {
             largestScenarios: [{ uri: 'file:///test.feature', line: 5, name: 'Very long scenario with <script>', size: 5 }],
             undefinedSteps: [],
             tagFrequencies: [{ name: '@smoke', count: 3 }],
-            stepAnalysis: { totalStepDefs: 1, unusedSteps: [], duplicatedSteps: [], ambiguousSteps: [], suspiciousSimilarities: [] },
+            stepAnalysis: { totalStepDefs: 1, unusedSteps: [], duplicatedSteps: [], ambiguousSteps: [] },
             scores: {
                 complexity: 20,
                 maintainability: 95,
@@ -56,8 +56,8 @@ suite('Project Health Dashboard Test Suite', () => {
         };
 
         const dummySnapshots = [
-            { timestamp: new Date(Date.now() - 10000).toISOString(), health: 80, maintainability: 90, complexity: 10, techDebtTotal: 0 },
-            { timestamp: new Date().toISOString(), health: 88, maintainability: 95, complexity: 20, techDebtTotal: 0 }
+            { timestamp: new Date(Date.now() - 10000).toISOString(), health: 80, maintainability: 90, complexity: 10, techDebtTotal: 0, metricsAlgorithmVersion: '1.0.0' },
+            { timestamp: new Date().toISOString(), health: 88, maintainability: 95, complexity: 20, techDebtTotal: 0, metricsAlgorithmVersion: '1.0.0' }
         ];
 
         const html = getDashboardHtml(dummyMetrics, [], '1.8.0', dummySnapshots);

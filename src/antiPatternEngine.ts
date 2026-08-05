@@ -1,7 +1,7 @@
 import { WorkspaceGraph, FeatureNode, ScenarioNode, StepNode } from './graph';
 import { ProjectHealthMetrics } from './statistics';
 
-export type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
+type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
 
 export interface AntiPattern {
     title: string;
@@ -12,12 +12,12 @@ export interface AntiPattern {
     suggestedFix: string;
 }
 
-export interface AntiPatternRule {
+interface AntiPatternRule {
     id: string;
     analyze(graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[];
 }
 
-export class OversizedFeatureRule implements AntiPatternRule {
+class OversizedFeatureRule implements AntiPatternRule {
     id = 'oversized-feature';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
@@ -37,7 +37,7 @@ export class OversizedFeatureRule implements AntiPatternRule {
     }
 }
 
-export class OversizedScenarioRule implements AntiPatternRule {
+class OversizedScenarioRule implements AntiPatternRule {
     id = 'oversized-scenario';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
@@ -57,7 +57,7 @@ export class OversizedScenarioRule implements AntiPatternRule {
     }
 }
 
-export class DuplicatedStepsRule implements AntiPatternRule {
+class DuplicatedStepsRule implements AntiPatternRule {
     id = 'duplicated-steps';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.stepAnalysis.duplicatedSteps.length === 0) return [];
@@ -76,7 +76,7 @@ export class DuplicatedStepsRule implements AntiPatternRule {
     }
 }
 
-export class UnusedStepsRule implements AntiPatternRule {
+class UnusedStepsRule implements AntiPatternRule {
     id = 'unused-steps';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.stepAnalysis.unusedSteps.length === 0) return [];
@@ -95,7 +95,7 @@ export class UnusedStepsRule implements AntiPatternRule {
     }
 }
 
-export class AmbiguousStepsRule implements AntiPatternRule {
+class AmbiguousStepsRule implements AntiPatternRule {
     id = 'ambiguous-steps';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.stepAnalysis.ambiguousSteps.length === 0) return [];
@@ -114,7 +114,7 @@ export class AmbiguousStepsRule implements AntiPatternRule {
     }
 }
 
-export class UndefinedStepsRule implements AntiPatternRule {
+class UndefinedStepsRule implements AntiPatternRule {
     id = 'undefined-steps';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.undefinedSteps.length === 0) return [];
@@ -133,7 +133,7 @@ export class UndefinedStepsRule implements AntiPatternRule {
     }
 }
 
-export class ExcessiveTagsRule implements AntiPatternRule {
+class ExcessiveTagsRule implements AntiPatternRule {
     id = 'excessive-tags';
     analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
@@ -169,7 +169,7 @@ export class ExcessiveTagsRule implements AntiPatternRule {
     }
 }
 
-export class PoorMaintainabilityRule implements AntiPatternRule {
+class PoorMaintainabilityRule implements AntiPatternRule {
     id = 'poor-maintainability';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
@@ -186,7 +186,7 @@ export class PoorMaintainabilityRule implements AntiPatternRule {
     }
 }
 
-export class InconsistentFormattingRule implements AntiPatternRule {
+class InconsistentFormattingRule implements AntiPatternRule {
     id = 'inconsistent-formatting';
     analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];

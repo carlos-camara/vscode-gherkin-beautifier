@@ -13,11 +13,13 @@ It generates deep heuristics and scores, including:
 - **Overall Health Score**: A unified metric indicating the general state of your test suite.
 - **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files.
 - **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
-- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
+- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine. The engine uses semantic context tracking to accurately resolve `And` and `But` steps. It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then), ensuring that step definitions reused across different contexts are not falsely flagged as duplicated.
 - **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint) such as breaking down oversized scenarios, removing duplicated regex patterns, or cleaning up excessive tags and inconsistent formatting.
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
 **Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.
+
+**Real-Time Editor Diagnostics**: Beyond the dashboard, the Anti-pattern Engine integrates directly with VS Code's problems view. When enabled, it underlines rule violations (like Duplicated Steps or Oversized Scenarios) directly in your `.feature` and `.py` files. To keep your editor responsive, these diagnostics are debounced by 1.5 seconds after a file change. Note that Ambiguous and Undefined Steps are handled instantly by the real-time Linter, so they are filtered out from the debounced anti-pattern diagnostics to prevent duplicate squiggles.
 
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 
@@ -53,7 +55,20 @@ Each time you generate the dashboard, a lightweight snapshot is recorded. The da
 
 > **Privacy First**: All historical data is strictly stored locally on your machine using VS Code's `workspaceState`. No analytics are sent to any external server.
 
-This feature is enabled by default and retains the last 30 snapshots. You can disable it or change the retention policy in your VS Code settings under `Gherkin PowerTools > Analytics > Historical Trends`.
+This feature is enabled by default and retains the last 30 snapshots (configurable).
+
+### Storage and Isolation
+
+The metrics history is designed to be highly reliable:
+- **Versioned Schema**: Data is stored using a versioned schema (`HistorySchemaV1`), ensuring that future updates will not corrupt your history.
+- **Branch Isolation**: To prevent mixing metrics from different streams of work, historical snapshots are isolated per Git branch. Changing branches will automatically load the history specific to that branch.
+- **Deduplication**: Equivalent consecutive snapshots are automatically deduplicated to save space.
+
+### Managing History
+
+You can manage your historical data using the Command Palette:
+- **Export History**: Run `Gherkin PowerTools: Export History as JSON` to dump the raw snapshot data for use in your own reporting tools or CI pipelines.
+- **Clear History**: Run `Gherkin PowerTools: Clear History` if you wish to reset your metrics data for the active workspace.
 
 ---
 

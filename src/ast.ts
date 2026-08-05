@@ -3,7 +3,7 @@ import { WorkspaceEventBus } from './eventBus';
 import { ParseResult, parseGherkin } from './parser';
 import { metricsLogger } from './metrics';
 
-export interface ASTDocument {
+interface ASTDocument {
     uri: vscode.Uri;
     version: number;
     getText(): string;
@@ -15,7 +15,7 @@ interface CacheEntry {
     lastAccessed: number;
 }
 
-export class AstRepository {
+class AstRepository {
     private cache = new Map<string, CacheEntry>();
     private eventBusDisposable?: vscode.Disposable;
     private maxCacheSize = 100;

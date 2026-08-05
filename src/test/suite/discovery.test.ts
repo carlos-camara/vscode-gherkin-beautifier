@@ -5,12 +5,19 @@ import { discoveryService } from '../../discovery';
 suite('BehaveFileDiscoveryService Test Suite', () => {
     let service: typeof discoveryService;
 
+    let originalConfigService: any;
+    let originalEventBus: any;
+
     setup(() => {
         service = discoveryService;
+        originalConfigService = service.configService;
+        originalEventBus = service.eventBus;
     });
 
     teardown(() => {
         service.disposeWatchers();
+        service.configService = originalConfigService;
+        service.eventBus = originalEventBus;
     });
 
     test('normalizeGlobs returns defaults when provided invalid or empty inputs', () => {

@@ -113,6 +113,7 @@ The realtime Linter actively validates your steps against the Python backend:
 
 - **Undefined Steps:** If a step has no matching Python decorator, it is underlined with a warning.
 - **Ambiguous Steps:** If a step matches multiple regular expressions in your Python files (e.g., overlapping wildcards), it is flagged so you can tighten your patterns.
+- **Semantic And/But Matching:** Steps using the `And` or `But` keywords inherit the semantic context of their preceding step (`Given`, `When`, or `Then`). This ensures precise pattern matching, preventing false positives for "Unused Steps" and accurately disambiguating steps that share the same regex but have different keyword decorators.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/recommendation-engine.gif" alt="Diagnostic warnings for ambiguous and undefined steps" width="600" height="340" />
@@ -128,8 +129,8 @@ Gherkin PowerTools includes a comprehensive **BDD Anti-pattern Detection Engine*
 
 You can generate this report by running the **Gherkin PowerTools: Show Gherkin Health** command from the Command Palette. It opens an interactive **Dashboard Webview** displaying actionable Anti-patterns:
 
-- **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
-- **Duplicated Implementations:** Finds identical step definitions (same matcher type and regex pattern) across different files which will cause a runtime failure in Behave.
+- **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace, nor invoked programmatically via `context.execute_steps()` in other Python files. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
+- **Duplicated Implementations:** Finds identical step definitions (same matcher type, keyword, and regex pattern) across different files which will cause a runtime failure in Behave. Semantic analysis ensures identical patterns with different keywords (e.g. `@given` vs `@then`) are correctly allowed.
 - **Ambiguous Step Usages:** Identifies specific steps in your feature files that match multiple definitions, helping you pinpoint exactly where Behave will fail.
 - **Oversized Scenarios & Excessive Tags:** Flags overly complex features that degrade test maintainability.
 

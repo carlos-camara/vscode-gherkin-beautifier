@@ -66,12 +66,52 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Export History as JSON
+- **Identifier**: `gherkinPowerTools.analytics.exportHistory`
+- **Where it appears**: Command Palette.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Prompts for a file path and exports the complete snapshot history of your workspace metrics in JSON format.
+- **Default shortcut**: None.
+
+---
+
+## Clear History
+- **Identifier**: `gherkinPowerTools.analytics.clearHistory`
+- **Where it appears**: Command Palette.
+- **Required context**: None.
+- **Input**: A confirmation dialog.
+- **Result**: Irreversibly deletes all historical metric snapshots for the active workspace.
+- **Default shortcut**: None.
+
+---
+
 ## Replay Onboarding
 - **Identifier**: `gherkinPowerTools.replayOnboarding`
 - **Where it appears**: Command Palette.
 - **Required context**: None.
 - **Input**: None.
 - **Result**: Resets the extension's first-run state and triggers the workspace discovery process again, showing the welcome notification if a Python Behave project is detected.
+- **Default shortcut**: None.
+
+---
+
+## Demo Quick Fix (Internal)
+- **Identifier**: `gherkinPowerTools.demoQuickFix`
+- **Where it appears**: VS Code Walkthrough.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Opens a sample feature file to demonstrate the Quick Fix Code Actions.
+- **Default shortcut**: None.
+
+---
+
+## Demo Go to Definition (Internal)
+- **Identifier**: `gherkinPowerTools.demoGoToDefinition`
+- **Where it appears**: VS Code Walkthrough.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Opens a sample feature file to demonstrate the Go To Definition feature.
 - **Default shortcut**: None.
 
 ---

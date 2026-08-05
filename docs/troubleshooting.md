@@ -105,8 +105,8 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" height="340" />
 </div>
 
-## Step Analysis Report is empty or incomplete
-**Symptom:** You run "Show Gherkin Health" but the report says "0 Total Step Defs" or misses files you know exist.
+## Gherkin Health Dashboard is empty or incomplete
+**Symptom:** You run "Show Gherkin Health" but the dashboard says "0 Total Step Defs" or misses files you know exist.
 **Likely Causes:** Your `gherkinPowerTools.behave.stepGlobs` configuration does not cover the locations of all your steps.
 **Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The proactive indexer will automatically scan them upon running the command.
 
