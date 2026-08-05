@@ -15,7 +15,7 @@ suite('CLI Parity & Conformance Test Suite', () => {
     const runCli = (cmd: string, cwd: string) => {
         const cmdArgs = [cliPath, ...cmd.split(' ')];
         try {
-            const nodePath = process.env.NVM_BIN ? `${process.env.NVM_BIN}/node` : '/Users/carlos/.nvm/versions/node/v20.20.2/bin/node';
+            const nodePath = 'node';
             const result = require('child_process').spawnSync(nodePath, cmdArgs, { cwd, encoding: 'utf8', env: process.env });
             if (result.error) throw result.error;
             if (result.status !== 0 && !result.stdout) throw new Error(result.stderr || 'Command failed');
