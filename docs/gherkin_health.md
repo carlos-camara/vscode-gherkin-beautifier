@@ -13,13 +13,18 @@ It generates deep heuristics and scores, including:
 - **Overall Health Score**: A unified metric indicating the general state of your test suite.
 - **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files.
 - **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
-- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine. The engine uses semantic context tracking to accurately resolve `And` and `But` steps. It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then), ensuring that step definitions reused across different contexts are not falsely flagged as duplicated.
+- **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
+  The engine uses semantic context tracking to accurately resolve `And` and `But` steps.
+  It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then), ensuring that step definitions reused across different contexts are not falsely flagged as duplicated.
 - **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint) such as breaking down oversized scenarios, removing duplicated regex patterns, or cleaning up excessive tags and inconsistent formatting.
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
 **Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.
 
-**Real-Time Editor Diagnostics**: Beyond the dashboard, the Anti-pattern Engine integrates directly with VS Code's problems view. When enabled, it underlines rule violations (like Duplicated Steps or Oversized Scenarios) directly in your `.feature` and `.py` files. To keep your editor responsive, these diagnostics are debounced by 1.5 seconds after a file change. Note that Ambiguous and Undefined Steps are handled instantly by the real-time Linter, so they are filtered out from the debounced anti-pattern diagnostics to prevent duplicate squiggles.
+**Real-Time Editor Diagnostics**: Beyond the dashboard, the Anti-pattern Engine integrates directly with VS Code's problems view.
+When enabled, it underlines rule violations (like Duplicated Steps or Oversized Scenarios) directly in your `.feature` and `.py` files.
+To keep your editor responsive, these diagnostics are debounced by 1.5 seconds after a file change.
+Note that Ambiguous and Undefined Steps are handled instantly by the real-time Linter, so they are filtered out from the debounced anti-pattern diagnostics to prevent duplicate squiggles.
 
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 
