@@ -40,8 +40,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
                 totalStepDefs: 1,
                 unusedSteps: [],
                 duplicatedSteps: [],
-                ambiguousSteps: [],
-                suspiciousSimilarities: []
+                ambiguousSteps: []
             },
             scores: { complexity: 0, maintainability: 100, health: 100 },
             largestFeatures: [],

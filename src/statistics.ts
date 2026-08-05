@@ -3,7 +3,7 @@ import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, Ta
 import { SymbolCache } from './cache';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
 import { AntiPattern, AntiPatternEngine } from './antiPatternEngine';
-import { MetricsHistory, MetricsSnapshot } from './history';
+import { MetricsHistory, VersionedSnapshot } from './history';
 
 export function escapeHtml(unsafe: string) {
     return unsafe
@@ -78,7 +78,7 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
                     const uri = vscode.Uri.parse(message.uri);
                     const doc = await vscode.workspace.openTextDocument(uri);
                     const editor = await vscode.window.showTextDocument(doc, { preview: false });
-                    const line = message.line;
+                    const line = typeof message.line === 'number' && message.line > 0 ? message.line - 1 : 0;
                     const range = new vscode.Range(line, 0, line, 0);
                     editor.selection = new vscode.Selection(range.start, range.end);
                     editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
@@ -169,7 +169,7 @@ export function getLoadingHtml() {
     return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Gherkin Health...</h2><p>Scanning graph...</p></body></html>`;
 }
 
-export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: AntiPattern[], version: string, snapshots: MetricsSnapshot[] = []): string {
+export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: AntiPattern[], version: string, snapshots: VersionedSnapshot[] = []): string {
     const renderLink = (uri: string, line: number, text: string) => {
         return `<a href="#" class="file-link" onclick="openFile('${escapeHtml(uri)}', ${line})">${escapeHtml(text)}</a>`;
     };
@@ -544,7 +544,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                             ${rec.affectedItems.map(item => `
                                 <li>
                                     <div class="step-def" style="margin-bottom: 4px; display: block;">${escapeHtml(item.label)}</div>
-                                    <a href="#" class="file-link" style="font-size: 12px; margin-left: 8px;" onclick="openFile('${escapeHtml(item.uri)}', ${item.line || 0})">↳ ${escapeHtml(item.uri.split('/').pop() || item.uri)}${item.line ? `:${item.line + 1}` : ''}</a>
+                                    <a href="#" class="file-link" style="font-size: 12px; margin-left: 8px;" onclick="openFile('${escapeHtml(item.uri)}', ${item.line || 0})">↳ ${escapeHtml(item.uri.split('/').pop() || item.uri)}${item.line ? `:${item.line}` : ''}</a>
                                 </li>
                             `).join('')}
                         </ul>
@@ -664,6 +664,15 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         Chart.defaults.color = textColor;
         Chart.defaults.font.family = style.getPropertyValue('--vscode-font-family');
         
+        const pointStyles = snapshots.map((s, i) => {
+            if (i === 0) return 'circle';
+            return s.metricsAlgorithmVersion !== snapshots[i-1].metricsAlgorithmVersion ? 'rectRot' : 'circle';
+        });
+        const pointRadii = snapshots.map((s, i) => {
+            if (i === 0) return 3;
+            return s.metricsAlgorithmVersion !== snapshots[i-1].metricsAlgorithmVersion ? 6 : 3;
+        });
+
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -675,7 +684,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.1)',
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        pointStyle: pointStyles,
+                        pointRadius: pointRadii
                     },
                     {
                         label: 'Maintainability',
@@ -683,7 +694,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         borderColor: '#f59e0b',
                         backgroundColor: 'rgba(245, 158, 11, 0.1)',
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        pointStyle: pointStyles,
+                        pointRadius: pointRadii
                     },
                     {
                         label: 'Complexity',
@@ -691,7 +704,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         borderColor: '#ef4444',
                         backgroundColor: 'rgba(239, 68, 68, 0.1)',
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        pointStyle: pointStyles,
+                        pointRadius: pointRadii
                     }
                 ]
             },

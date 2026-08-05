@@ -34,7 +34,7 @@ export function registerExecutionListeners(context: vscode.ExtensionContext) {
     );
 }
 
-export function getExecutionSignature(uri: vscode.Uri, line: number | undefined): string {
+function getExecutionSignature(uri: vscode.Uri, line: number | undefined): string {
     return `${uri.toString()}#${line ?? 'all'}`;
 }
 

@@ -5,6 +5,7 @@ import { GherkinDocumentSymbolProvider } from './outline';
 import { GherkinLinter } from './linter';
 import { GherkinHighlighter } from './highlighter';
 import { showProjectHealthDashboard } from './statistics';
+import { MetricsHistory } from './history';
 
 import { GherkinDefinitionProvider } from './definition';
 import { SymbolCache, FeatureCache } from './cache';
@@ -224,6 +225,17 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.showStatistics', () => {
             showProjectHealthDashboard(context, workspaceGraph, symbolCache);
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.analytics.exportHistory', async () => {
+            const history = new MetricsHistory(context);
+            const data = history.exportHistory();
+            const doc = await vscode.workspace.openTextDocument({ content: data, language: 'json' });
+            await vscode.window.showTextDocument(doc);
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.analytics.clearHistory', () => {
+            const history = new MetricsHistory(context);
+            history.clearHistory();
+            vscode.window.showInformationMessage("Gherkin PowerTools: Historical trends cleared.");
         })
     );
 

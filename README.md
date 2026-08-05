@@ -62,8 +62,8 @@ Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to instantly generate a vali
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Generate a Python step stub from undefined Gherkin" width="600" height="340" />
 </div>
 
-### 2. Gherkin Health Dashboard & Analytics
-Identify unused, duplicated, or highly complex step definitions visually. Gherkin PowerTools calculates Technical Debt and Maintainability, persisting historical snapshots to visualize your project's evolution.
+### 2. Gherkin Health Dashboard & Anti-pattern Engine
+Powered by the new **BDD Anti-pattern Detection Engine**, you can now visually identify unused, duplicated, ambiguous, or highly complex step definitions and scenarios. Gherkin PowerTools calculates Technical Debt and Maintainability, persisting branch-isolated historical snapshots to securely visualize your project's evolution over time.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" height="340" />
@@ -83,15 +83,15 @@ A Blast Radius CodeLens appears above every Python step definition. View exactly
 Gherkin PowerTools acts in two tiers depending on your project:
 
 ### Generic BDD Frameworks (Cucumber, SpecFlow, Playwright)
-* **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd>).
-* **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
-* **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
+- **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd>).
+- **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
+- **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
 
 ### Exclusive to Python Behave
-* **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
-* **Step Refactoring:** Safely rename or extract steps across your entire workspace (<kbd>F2</kbd>).
-* **Test Explorer Integration:** Run and debug features with line-by-line execution tracking.
-* **Standalone CLI (`gherkin-pt`):** Enforce formatting and step validity in your CI/CD pipelines.
+- **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
+- **Step Refactoring:** Safely rename or extract steps across your entire workspace (<kbd>F2</kbd>).
+- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking.
+- **Standalone CLI (`gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension.
 
 ---
 
@@ -110,9 +110,9 @@ Share team formatting rules by committing a `.gherkin-powertoolsrc.json` to your
 ---
 ## Support & Contributions
 
-* 📖 **[Read the Full Documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/)**
-* 💬 **[Join GitHub Discussions](https://github.com/carlos-camara/vscode-gherkin-powertools/discussions)**
-* 🐛 **[Report an Issue](https://github.com/carlos-camara/vscode-gherkin-powertools/issues)**
+- 📖 **[Read the Full Documentation](https://carlos-camara.github.io/vscode-gherkin-powertools/)**
+- 💬 **[Join GitHub Discussions](https://github.com/carlos-camara/vscode-gherkin-powertools/discussions)**
+- 🐛 **[Report an Issue](https://github.com/carlos-camara/vscode-gherkin-powertools/issues)**
 
 Contributions are welcome! Please read the [Contributing Guide](https://github.com/carlos-camara/vscode-gherkin-powertools/blob/main/CONTRIBUTING.md).
 

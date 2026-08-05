@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { parsePythonDecorators } from '../../tokenizer';
+import { parsePythonDecorators, parseExecuteSteps } from '../../tokenizer';
 
 suite('Python Tokenizer Test Suite', () => {
     test('Basic decorator', () => {
@@ -58,7 +58,7 @@ with valid credentials""")`;
         const content = `@given(MY_CONSTANT)\n@when(get_step_name())\n@then("str" + "ing")`;
         const res = parsePythonDecorators(content);
         assert.strictEqual(res.length, 3);
-        
+
         assert.strictEqual(res[0].type, 'given');
         assert.strictEqual(res[0].argumentText, 'MY_CONSTANT');
         assert.strictEqual(res[0].isStringLiteral, false);
@@ -113,5 +113,41 @@ with valid credentials""")`;
         const res = parsePythonDecorators(content);
         assert.strictEqual(res.length, 1);
         assert.strictEqual(res[0].argumentText, 'I am real');
+    });
+
+    test('parseExecuteSteps parses programmatic step invocations', () => {
+        const content = `
+@when('I do X')
+def step_impl(context):
+    context.execute_steps(u'''
+        Given I do A
+        When I do B
+        Then I do C
+    ''')
+
+@then("I check Y")
+def step_impl(context):
+    context.execute_steps('Given I do something else')
+        `;
+
+        const res = parseExecuteSteps(content);
+
+        assert.strictEqual(res.length, 4);
+
+        assert.strictEqual(res[0].keyword, 'Given');
+        assert.strictEqual(res[0].text, 'I do A');
+        assert.strictEqual(res[0].line, 4);
+
+        assert.strictEqual(res[1].keyword, 'When');
+        assert.strictEqual(res[1].text, 'I do B');
+        assert.strictEqual(res[1].line, 5);
+
+        assert.strictEqual(res[2].keyword, 'Then');
+        assert.strictEqual(res[2].text, 'I do C');
+        assert.strictEqual(res[2].line, 6);
+
+        assert.strictEqual(res[3].keyword, 'Given');
+        assert.strictEqual(res[3].text, 'I do something else');
+        assert.strictEqual(res[3].line, 11);
     });
 });

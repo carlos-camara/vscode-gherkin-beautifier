@@ -160,11 +160,23 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `number` (1–365)
 - **Default:** `30`
 
+### `gherkinPowerTools.analytics.historicalTrends.maxStorageBytes`
+- **Purpose:** Maximum size (in bytes) allowed for the historical trend storage in this workspace. If exceeded, oldest snapshots are pruned regardless of branch.
+- **Type:** `number` (10000–5000000)
+- **Default:** `500000`
+
 ---
 
 ## Shared Team Configuration (`.gherkin-powertoolsrc.json`)
 
-You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root to standardize formatting and discovery for the whole team, regardless of their individual VS Code settings.
+You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root to standardize formatting and discovery for the whole team, regardless of their individual VS Code settings. The Standalone CLI (`gherkin-pt`) also automatically detects and respects this file.
+
+### Precedence Hierarchy
+Configuration settings are resolved in the following order of precedence (highest to lowest):
+1. **Project-level `.gherkin-powertoolsrc.json`**: Used to override settings for the entire team and CI/CD.
+2. **VS Code Workspace/User Settings**: Settings configured in `.vscode/settings.json` or globally.
+3. **Profile Defaults**: The base profile specified (e.g. `team` or `strict`).
+4. **Extension Defaults**: Standard baseline if nothing is configured.
 
 Example:
 ```json

@@ -10,7 +10,7 @@ import { WorkspaceGraph } from '../graph';
 import { AntiPatternEngine } from '../antiPatternEngine';
 import { calculateHealthMetrics } from '../statistics';
 import { GherkinFormattingEditProvider } from '../formatter';
-import { ConfigurationService } from '../configuration';
+import { ConfigurationService, DEFAULT_RULE_CONFIG } from '../configuration';
 
 const program = new Command();
 
@@ -19,8 +19,10 @@ program
     .description('Gherkin PowerTools CLI')
     .version('1.8.1');
 
-async function initializeEngines() {
-    console.log('[Info] Initializing Workspace Engine...');
+async function initializeEngines(isJson: boolean = false) {
+    if (!isJson) {
+        console.error('[Info] Initializing Workspace Engine...');
+    }
     const symbolCache = new SymbolCache();
     const tagCache = new FeatureCache();
     const graph = new WorkspaceGraph(symbolCache);
@@ -35,23 +37,11 @@ program.command('analyze')
     .option('--json', 'Output results in JSON format')
     .action(async (options) => {
         try {
-            const { graph, symbolCache } = await initializeEngines();
+            const { graph, symbolCache } = await initializeEngines(options.json);
             
             const metrics = await calculateHealthMetrics(graph, symbolCache);
             const engine = new AntiPatternEngine();
-            // In CLI, we default to the standard config rules
-            const ruleConfig = {
-                "oversized-scenario": "warning",
-                "oversized-feature": "info",
-                "duplicated-steps": "error",
-                "unused-steps": "info",
-                "ambiguous-steps": "error",
-                "undefined-steps": "error",
-                "excessive-tags": "info",
-                "inconsistent-formatting": "info",
-                "poor-maintainability": "warning"
-            };
-            const antiPatterns = engine.generateAntiPatterns(graph, metrics, ruleConfig);
+            const antiPatterns = engine.generateAntiPatterns(graph, metrics, DEFAULT_RULE_CONFIG);
 
             if (options.json) {
                 console.log(JSON.stringify(antiPatterns, null, 2));
@@ -82,7 +72,7 @@ program.command('stats')
     .option('--json', 'Output results in JSON format')
     .action(async (options) => {
         try {
-            const { graph, symbolCache } = await initializeEngines();
+            const { graph, symbolCache } = await initializeEngines(options.json);
             const metrics = await calculateHealthMetrics(graph, symbolCache);
 
             if (options.json) {

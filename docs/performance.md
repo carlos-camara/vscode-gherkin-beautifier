@@ -21,7 +21,7 @@ When Behave is detected, the extension builds a robust index to provide navigati
   Instead, the `WorkspaceGraph` maintains a live, event-driven representation of relationships between Gherkin steps and Python code.
   This completely eliminates duplicate regex parsing overhead and keeps response times consistently at 0ms, even in enterprise-scale codebases.
 - **Impact Analysis CodeLenses**: The real-time Blast Radius CodeLenses rely on the `WorkspaceGraph` to resolve usages instantaneously, ensuring that no file-system scanning is performed when you open a Python step definition file.
-- **Proactive Step Analysis Indexing**: When running the Step Definition Analysis report, the extension actively fetches and parses all `.feature` and `.py` files to ensure 100% accurate coverage. This one-off deep scan guarantees accuracy but is isolated to the execution of that specific command, preserving editor responsiveness during normal typing.
+- **Proactive BDD Anti-pattern Analysis**: When generating the Gherkin Health Dashboard, the Anti-pattern Engine actively fetches and parses all `.feature` and `.py` files to ensure 100% accurate coverage. This one-off deep scan guarantees accuracy but is isolated to the execution of that specific command, preserving editor responsiveness during normal typing.
 
 ## Parser Diagnostics & Developer Metrics
 

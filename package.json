@@ -107,6 +107,13 @@
           "default": true,
           "markdownDescription": "When `true`, the left border of Data Tables and Examples tables is dynamically padded to align with the text start of the preceding step keyword — not a fixed column.\n\nSet to `false` for a simpler fixed-column alignment."
         },
+        "gherkinPowerTools.docStrings.alignToKeyword": {
+          "type": "boolean",
+          "order": 12,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "When `true`, DocStrings are dynamically padded to align with the text start of the preceding step keyword.\n\nSet to `false` for a simpler fixed-column alignment."
+        },
         "gherkinPowerTools.emptyLines.betweenScenarios": {
           "type": "number",
           "order": 12,
@@ -244,7 +251,16 @@
           "default": 30,
           "minimum": 1,
           "maximum": 365,
-          "markdownDescription": "Maximum number of historical snapshots to retain for trend analysis."
+          "markdownDescription": "Maximum number of historical snapshots to retain for trend analysis per branch."
+        },
+        "gherkinPowerTools.analytics.historicalTrends.maxStorageBytes": {
+          "type": "number",
+          "order": 42,
+          "scope": "resource",
+          "default": 500000,
+          "minimum": 10000,
+          "maximum": 5000000,
+          "markdownDescription": "Maximum size (in bytes) allowed for the historical trend storage in this workspace. If exceeded, oldest snapshots are pruned regardless of branch."
         },
         "gherkinPowerTools.antiPatterns.enabled": {
           "type": "boolean",
@@ -363,6 +379,16 @@
         "command": "gherkinPowerTools.refactor.renameStep",
         "title": "Rename Step",
         "category": "Refactoring"
+      },
+      {
+        "command": "gherkinPowerTools.analytics.exportHistory",
+        "title": "Export History as JSON",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.analytics.clearHistory",
+        "title": "Clear History",
+        "category": "Gherkin PowerTools"
       }
     ],
     "menus": {
