@@ -126,6 +126,11 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 2. Confirm that at least one Python step file exists within your `stepGlobs`.
 **Resolution:** If no Python files appear in the file picker, add the correct glob to `gherkinPowerTools.behave.stepGlobs`.
 
+## Files are missed or falsely flagged as duplicates (macOS/Windows)
+**Symptom:** When scanning large workspaces, some `.feature` or `.py` files are ignored, or Behave step definitions are falsely reported as duplicated.
+**Likely Causes:** In earlier versions, case-insensitive file systems could cause path mismatches inside the internal graph.
+**Resolution:** Ensure you are running version 1.8.2 or newer, which includes robust case-insensitive URI normalization for macOS and Windows.
+
 ## I accidentally dismissed a Contextual Recommendation
 **Symptom:** You clicked "Don't show again" on a helpful popup (like the Formatting or Dashboard recommendation) and want it back.
 **Likely Causes:** The extension saved your dismissal in the VS Code Global State.
