@@ -41,9 +41,6 @@
     "onLanguage:feature"
   ],
   "main": "./dist/extension.js",
-  "bin": {
-    "gherkin-pt": "./dist/cli.js"
-  },
   "configurationDefaults": {
     "testing.showCoverageInExplorer": false
   },
@@ -588,6 +585,7 @@
     ]
   },
   "scripts": {
+    "build:cli": "node scripts/build-npm-cli.js",
     "vscode:prepublish": "npm run esbuild -- --production",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",

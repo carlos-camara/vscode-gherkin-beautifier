@@ -11,5 +11,6 @@ site/
 .venv/
 venv/
 vsix-validation-report.md
-
+dist-cli/
+*.tgz
 

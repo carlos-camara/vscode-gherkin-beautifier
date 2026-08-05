@@ -104,8 +104,8 @@ Gherkin PowerTools includes a powerful CLI (`gherkin-pt`) that brings the Worksp
 Run diagnostics, extract metrics, and enforce formatting headless:
 
 ```bash
-npx gherkin-pt analyze
-npx gherkin-pt format --check
+npx @carlos-camara/gherkin-pt analyze
+npx @carlos-camara/gherkin-pt format --check
 ```
 
 ---
