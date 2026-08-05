@@ -39,8 +39,8 @@ suite('CLI Integration Tests', () => {
             assert.strictEqual(err.status, 1);
             const output = err.stdout;
             assert.ok(output.includes('Found'));
-            assert.ok(output.includes('recommendation(s)'));
-            assert.ok(output.includes('[LOW]') || output.includes('[MEDIUM]') || output.includes('[HIGH]'));
+            assert.ok(output.includes('anti-pattern(s)'));
+            assert.ok(output.includes('[ERROR]') || output.includes('[WARNING]') || output.includes('[INFO]'));
         }
     });
 

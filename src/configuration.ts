@@ -5,6 +5,7 @@ import * as path from 'path';
 export interface Configuration {
     indentation: { steps: number; };
     tables: { alignToKeyword: boolean; };
+    docStrings: { alignToKeyword: boolean; };
     tags: { format: 'wrap' | 'singleLine'; sort: 'preserve' | 'alphabetical'; };
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
@@ -12,22 +13,11 @@ export interface Configuration {
     behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; command: string; };
 }
 
-export const DEFAULT_CONFIG: Configuration = {
-    indentation: { steps: 4 },
-    tables: { alignToKeyword: true },
-    tags: { format: 'wrap', sort: 'preserve' },
-    emptyLines: { betweenScenarios: 1 },
-    formatter: { enabled: true },
-    linter: { enabled: true, enabledRules: [] },
-    behave: {
-        stepGlobs: ["**/steps/**/*.py", "**/features/steps/**/*.py"],
-        ignoreGlobs: ["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"],
-        additionalArguments: [],
-        command: "behave"
-    }
-};
+import { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG } from './defaults';
 
-export const PROFILES: Record<string, Configuration> = {
+export { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG };
+
+const PROFILES: Record<string, Partial<Configuration>> = {
     custom: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
     strict: {
         ...JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
@@ -38,13 +28,15 @@ export const PROFILES: Record<string, Configuration> = {
         ...JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
         indentation: { steps: 2 },
         tables: { alignToKeyword: false },
+        docStrings: { alignToKeyword: false },
         tags: { format: 'singleLine', sort: 'preserve' },
         emptyLines: { betweenScenarios: 0 }
     },
     legacy: {
         ...JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
         indentation: { steps: 2 },
-        tables: { alignToKeyword: false }
+        tables: { alignToKeyword: false },
+        docStrings: { alignToKeyword: true }
     }
 };
 export interface ConfigError {
@@ -57,7 +49,7 @@ export interface ConfigError {
  * Respects precedence when baseConfig is provided (Project > Workspace > User > Default).
  * Extracted to allow CLI/testing usage without depending on VS Code API.
  */
-export function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { errors: ConfigError[], config: Configuration } {
+function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { errors: ConfigError[], config: Configuration } {
     const errors: ConfigError[] = [];
     const config: Configuration = JSON.parse(JSON.stringify(baseConfig || DEFAULT_CONFIG));
 
@@ -66,7 +58,7 @@ export function validateAndMergeConfig(parsed: any, baseConfig?: Configuration):
         return { errors, config };
     }
 
-    const validSections = ['profile', 'indentation', 'tables', 'tags', 'emptyLines', 'formatter', 'linter', 'behave'];
+    const validSections = ['profile', 'indentation', 'tables', 'docStrings', 'tags', 'emptyLines', 'formatter', 'linter', 'behave'];
 
     for (const key of Object.keys(parsed)) {
         if (!validSections.includes(key)) {
@@ -110,6 +102,18 @@ export function validateAndMergeConfig(parsed: any, baseConfig?: Configuration):
                     }
                 } else {
                     errors.push({ key: subKey, message: `Unknown property in tables: "${subKey}".` });
+                }
+            }
+        } else if (key === 'docStrings') {
+            for (const subKey of Object.keys(section)) {
+                if (subKey === 'alignToKeyword') {
+                    if (typeof section[subKey] !== 'boolean') {
+                        errors.push({ key: subKey, message: `"docStrings.alignToKeyword" must be a boolean.` });
+                    } else {
+                        config.docStrings.alignToKeyword = section[subKey];
+                    }
+                } else {
+                    errors.push({ key: subKey, message: `Unknown property in docStrings: "${subKey}".` });
                 }
             }
         } else if (key === 'tags') {
@@ -311,6 +315,11 @@ export class ConfigurationService {
         const alignToKeyword = getOverride<boolean>('tables.alignToKeyword');
         if (alignToKeyword !== undefined && typeof alignToKeyword === 'boolean') {
             config.tables.alignToKeyword = alignToKeyword;
+        }
+
+        const docStringsAlignToKeyword = getOverride<boolean>('docStrings.alignToKeyword');
+        if (docStringsAlignToKeyword !== undefined && typeof docStringsAlignToKeyword === 'boolean') {
+            config.docStrings.alignToKeyword = docStringsAlignToKeyword;
         }
 
         const tagsFormat = getOverride<'wrap' | 'singleLine'>('tags.format');

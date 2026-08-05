@@ -23,12 +23,12 @@ npx gherkin-pt --help
 ## Available Commands
 
 ### 1. `analyze` (or `health`)
-Scans your entire workspace (both `.feature` files and Python Behave steps) to detect:
-- Missing step definitions.
-- Unused step definitions.
-- Duplicated step definitions.
-- Ambiguous step definitions.
-- Gherkin structural and syntax errors.
+Scans your entire workspace (both `.feature` files and Python Behave steps) using the **BDD Anti-pattern Detection Engine** to detect:
+- Oversized Features and Scenarios.
+- Unused or Duplicated Python step definitions.
+- Ambiguous and Undefined steps.
+- Excessive Tags and Inconsistent Formatting.
+- General structural and syntax errors.
 
 **Usage:**
 ```bash
@@ -113,8 +113,8 @@ jobs:
 
 ## Configuration
 
-The CLI reads the exact same configuration as the VS Code extension.
-To share formatting rules and glob patterns across your team and CI/CD pipelines, place a `.gherkin-powertoolsrc.json` file in the root of your workspace:
+The CLI features 100% configuration parity with the VS Code extension because it leverages a unified configuration layer.
+To share formatting rules and glob patterns across your team and CI/CD pipelines natively, place a `.gherkin-powertoolsrc.json` file in the root of your workspace:
 
 ```json
 {

@@ -3,7 +3,9 @@ import { WorkspaceEventBus } from './eventBus';
 import { astRepository } from './ast';
 import { SymbolCache } from './cache';
 import { logger } from './logger';
+import { DialectService } from './dialect';
 import type { Tag, Step } from '@cucumber/messages';
+import { parseExecuteSteps } from './tokenizer';
 
 export type NodeType = 'Feature' | 'Rule' | 'Background' | 'Scenario' | 'Step' | 'Example' | 'Tag' | 'StepDefinition' | 'PythonFile';
 
@@ -18,13 +20,14 @@ export interface FeatureNode extends GraphNode { type: 'Feature'; children: stri
 export interface RuleNode extends GraphNode { type: 'Rule'; children: string[]; tags: string[]; parent: string; name: string; }
 export interface ScenarioNode extends GraphNode { type: 'Scenario'; steps: string[]; examples: string[]; tags: string[]; parent: string; name: string; }
 export interface BackgroundNode extends GraphNode { type: 'Background'; steps: string[]; parent: string; }
-export interface StepNode extends GraphNode { type: 'Step'; text: string; definitionId?: string; parent: string; keyword: string; }
+export interface StepNode extends GraphNode { type: 'Step'; text: string; definitionId?: string; parent: string; keyword: string; semanticType?: 'given' | 'when' | 'then' | 'step'; }
 export interface ExampleNode extends GraphNode { type: 'Example'; tags: string[]; parent: string; name: string; }
 export interface TagNode extends GraphNode { type: 'Tag'; name: string; targets: string[]; }
-export interface StepDefNode extends GraphNode { type: 'StepDefinition'; pattern: string; matcherType: string; pythonFile: string; usages: string[]; }
+export interface StepDefNode extends GraphNode { type: 'StepDefinition'; pattern: string; matcherType: string; semanticType?: 'given' | 'when' | 'then' | 'step'; pythonFile: string; usages: string[]; }
 export interface PythonFileNode extends GraphNode { type: 'PythonFile'; definitions: string[]; }
 
 export class WorkspaceGraph {
+    public graphVersion: number = 0;
     private nodes = new Map<string, GraphNode>();
     private eventBusDisposable?: vscode.Disposable;
     private symbolCache: SymbolCache;
@@ -33,17 +36,28 @@ export class WorkspaceGraph {
         this.symbolCache = symbolCache;
     }
 
+    private getCanonicalUri(uri: vscode.Uri | string): string {
+        const uriStr = typeof uri === 'string' ? uri : uri.toString();
+        const lowerUriStr = uriStr.toLowerCase();
+        for (const node of this.nodes.values()) {
+            if (node.uri && node.uri.toLowerCase() === lowerUriStr) {
+                return node.uri;
+            }
+        }
+        return uriStr;
+    }
+
     public setEventBus(eventBus: WorkspaceEventBus) {
         this.eventBusDisposable?.dispose();
         this.eventBusDisposable = eventBus.onEvent(e => {
             if (e.type === 'featureFileChanged' || e.type === 'featureFileCreated') {
                 this.indexFeatureFile(e.uri);
             } else if (e.type === 'featureFileDeleted') {
-                this.removeNodesByUri(e.uri.toString());
+                this.removeNodesByUri(this.getCanonicalUri(e.uri));
             } else if (e.type === 'stepDefinitionsUpdated') {
                 this.indexPythonFile(e.uri);
             } else if (e.type === 'stepFileDeleted') {
-                this.removeNodesByUri(e.uri.toString());
+                this.removeNodesByUri(this.getCanonicalUri(e.uri));
             }
         });
     }
@@ -73,8 +87,9 @@ export class WorkspaceGraph {
     }
 
     private async indexFeatureFile(uri: vscode.Uri) {
+        this.graphVersion++;
         try {
-            const uriStr = uri.toString();
+            const uriStr = this.getCanonicalUri(uri);
             this.removeNodesByUri(uriStr);
 
             let content = '';
@@ -111,14 +126,32 @@ export class WorkspaceGraph {
                 children: [], tags: featureTags, name: docAST.feature.name
             };
 
+            const dialectService = new DialectService();
+            const dialect = dialectService.detectDialect(content);
+            const givenKeywords = dialect.given.map(k => k.trim());
+            const whenKeywords = dialect.when.map(k => k.trim());
+            const thenKeywords = dialect.then.map(k => k.trim());
+
+            let currentSemanticType: 'given' | 'when' | 'then' | 'step' = 'step';
+
             const traverseSteps = (steps: readonly Step[] | undefined, parentId: string): string[] => {
                 if (!steps) return [];
                 const stepIds: string[] = [];
                 for (const step of steps) {
                     const stepId = `${uriStr}:${step.location.line}`;
+                    const kw = step.keyword ? step.keyword.trim() : '';
+                    if (givenKeywords.includes(kw)) {
+                        currentSemanticType = 'given';
+                    } else if (whenKeywords.includes(kw)) {
+                        currentSemanticType = 'when';
+                    } else if (thenKeywords.includes(kw)) {
+                        currentSemanticType = 'then';
+                    }
+
                     const stepNode: StepNode = {
                         id: stepId, type: 'Step', uri: uriStr, line: step.location.line,
-                        text: step.text, parent: parentId, keyword: step.keyword
+                        text: step.text, parent: parentId, keyword: step.keyword,
+                        semanticType: currentSemanticType
                     };
                     this.nodes.set(stepId, stepNode);
                     stepIds.push(stepId);
@@ -226,16 +259,17 @@ export class WorkspaceGraph {
             this.nodes.set(featureId, featureNode);
 
         } catch (err) {
-            logger.error(`WorkspaceGraph: Error indexing feature file ${uri.toString()}`, err);
+            logger.error(`WorkspaceGraph: Error indexing feature file ${this.getCanonicalUri(uri)}`, err);
         }
     }
 
     private async indexPythonFile(uri: vscode.Uri) {
-        const uriStr = uri.toString();
+        this.graphVersion++;
+        const uriStr = this.getCanonicalUri(uri);
         this.removeNodesByUri(uriStr);
 
         const allDefs = await this.symbolCache.getAllStepDefinitions();
-        const fileDefs = allDefs.filter(d => d.uri.toString() === uriStr);
+        const fileDefs = allDefs.filter(d => this.getCanonicalUri(d.uri) === uriStr);
 
         if (fileDefs.length === 0) return;
 
@@ -247,10 +281,59 @@ export class WorkspaceGraph {
             const defId = `${uriStr}:${def.decoratorRange.start.line}`;
             const defNode: StepDefNode = {
                 id: defId, type: 'StepDefinition', uri: uriStr, line: def.decoratorRange.start.line,
-                pattern: def.rawPattern, matcherType: def.matcherType, pythonFile: uriStr, usages: []
+                pattern: def.rawPattern, matcherType: def.matcherType, semanticType: def.type, pythonFile: uriStr, usages: []
             };
             this.nodes.set(defId, defNode);
             pyFileNode.definitions.push(defId);
+        }
+
+        try {
+            let content = '';
+            const openDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+            if (openDoc) {
+                content = openDoc.getText();
+            } else {
+                const bytes = await vscode.workspace.fs.readFile(uri);
+                content = new TextDecoder('utf8').decode(bytes);
+            }
+
+            const executeSteps = parseExecuteSteps(content);
+            const dialectService = new DialectService();
+            const dialect = dialectService.detectDialect(content);
+            const givenKeywords = dialect.given.map(k => k.trim());
+            const whenKeywords = dialect.when.map(k => k.trim());
+            const thenKeywords = dialect.then.map(k => k.trim());
+
+            let currentSemanticType: 'given' | 'when' | 'then' | 'step' = 'step';
+
+            for (const exStep of executeSteps) {
+                const stepId = `${uriStr}:execute_steps:${exStep.line}:${Math.random().toString(36).substr(2, 5)}`;
+                const kw = exStep.keyword;
+                if (givenKeywords.includes(kw)) {
+                    currentSemanticType = 'given';
+                } else if (whenKeywords.includes(kw)) {
+                    currentSemanticType = 'when';
+                } else if (thenKeywords.includes(kw)) {
+                    currentSemanticType = 'then';
+                }
+
+                let parentDefId = uriStr;
+                for (const def of fileDefs) {
+                    if (def.functionRange && exStep.line >= def.functionRange.start.line && exStep.line <= def.functionRange.end.line) {
+                        parentDefId = `${uriStr}:${def.decoratorRange.start.line}`;
+                        break;
+                    }
+                }
+
+                const stepNode: StepNode = {
+                    id: stepId, type: 'Step', uri: uriStr, line: exStep.line,
+                    text: exStep.text, parent: parentDefId, keyword: kw,
+                    semanticType: currentSemanticType
+                };
+                this.nodes.set(stepId, stepNode);
+            }
+        } catch (err) {
+            logger.error(`WorkspaceGraph: Error parsing execute_steps for ${uriStr}`, err);
         }
 
         this.nodes.set(uriStr, pyFileNode);
@@ -258,9 +341,11 @@ export class WorkspaceGraph {
     }
 
     private removeNodesByUri(uri: string) {
+        this.graphVersion++;
+        const normalizedUri = uri.toLowerCase();
         const toDelete: string[] = [];
         this.nodes.forEach((node, id) => {
-            if (node.uri === uri) {
+            if (node.uri.toLowerCase() === normalizedUri) {
                 toDelete.push(id);
                 // Also clean up Tag targets if this was a Feature file
                 if (node.type === 'Scenario') {
@@ -299,10 +384,11 @@ export class WorkspaceGraph {
     private async resolveStepDefinition(stepNode: StepNode) {
         if (!stepNode.text) return;
 
-        const defs = await this.symbolCache.getStepDefinitions(stepNode.text);
+        const defs = await this.symbolCache.getStepDefinitions(stepNode.text, stepNode.semanticType);
         if (defs.length > 0) {
             const def = defs[0];
-            const defId = `${def.uri.toString()}:${def.decoratorRange.start.line}`;
+            const defUriStr = this.getCanonicalUri(def.uri);
+            const defId = `${defUriStr}:${def.decoratorRange.start.line}`;
             stepNode.definitionId = defId;
 
             const defNode = this.nodes.get(defId) as StepDefNode | undefined;

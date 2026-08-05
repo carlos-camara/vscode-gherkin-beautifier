@@ -71,7 +71,7 @@ export async function showCommandCenter() {
         },
         {
             label: '$(graph) Show Gherkin Health',
-            description: 'Generates a visual dashboard of project metrics and actionable insights',
+            description: 'Generates a visual dashboard of project metrics and actionable anti-patterns',
             commandId: 'gherkinPowerTools.showStatistics'
         },
         {

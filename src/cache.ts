@@ -29,6 +29,17 @@ export class SymbolCache {
     private eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
 
+    private getCanonicalUri(uri: vscode.Uri | string): string {
+        const uriStr = typeof uri === 'string' ? uri : uri.toString();
+        const lowerUriStr = uriStr.toLowerCase();
+        for (const existingKey of this.cache.keys()) {
+            if (existingKey.toLowerCase() === lowerUriStr) {
+                return existingKey;
+            }
+        }
+        return uriStr;
+    }
+
     /**
      * Subscribes to the Workspace Event Bus to receive file system and editor changes.
      * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
@@ -91,7 +102,7 @@ export class SymbolCache {
     private updateDebounce: Map<string, { timeout: NodeJS.Timeout, resolves: Array<() => void> }> = new Map();
 
     public async updateFile(uri: vscode.Uri): Promise<void> {
-        const uriString = uri.toString();
+        const uriString = this.getCanonicalUri(uri);
         
         return new Promise<void>((resolve) => {
             const existing = this.updateDebounce.get(uriString);
@@ -242,7 +253,7 @@ export class SymbolCache {
                     });
             }
 
-            this.cache.set(uri.toString(), definitions);
+            this.cache.set(this.getCanonicalUri(uri), definitions);
             this.eventBus?.publish({ type: 'stepDefinitionsUpdated', uri });
         } catch (err) {
             logger.error(`Error updating cache for file ${uri.fsPath}:`, err);
@@ -251,7 +262,7 @@ export class SymbolCache {
     }
 
     public removeFile(uri: vscode.Uri): void {
-        const uriString = uri.toString();
+        const uriString = this.getCanonicalUri(uri);
         const existingTimeout = this.updateDebounce.get(uriString);
         if (existingTimeout) {
             clearTimeout(existingTimeout.timeout);
@@ -308,6 +319,17 @@ export class FeatureCache {
     private eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
 
+    private getCanonicalUri(uri: vscode.Uri | string): string {
+        const uriStr = typeof uri === 'string' ? uri : uri.toString();
+        const lowerUriStr = uriStr.toLowerCase();
+        for (const existingKey of this.fileTagCounts.keys()) {
+            if (existingKey.toLowerCase() === lowerUriStr) {
+                return existingKey;
+            }
+        }
+        return uriStr;
+    }
+
     /**
      * Subscribes to the Workspace Event Bus to receive file system and editor changes.
      * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
@@ -348,7 +370,7 @@ export class FeatureCache {
     }
 
     public async updateFile(uri: vscode.Uri): Promise<void> {
-        const uriString = uri.toString();
+        const uriString = this.getCanonicalUri(uri);
         
         return new Promise<void>((resolve) => {
             const existing = this.updateDebounce.get(uriString);
@@ -383,7 +405,7 @@ export class FeatureCache {
         } catch (err) {
             logger.error(`Error reading feature file ${uri.toString()}:`, err);
             // File read failure (e.g. temporary unreachability for remote fs). Retain old state but mark stale.
-            const existing = this.fileTagCounts.get(uri.toString());
+            const existing = this.fileTagCounts.get(this.getCanonicalUri(uri));
             if (existing) {
                 existing.status = 'stale';
             }
@@ -445,16 +467,16 @@ export class FeatureCache {
                     }
                 }
                 const status = errors.length > 0 ? 'partial' : 'current';
-                this.updateIncrementalTagCounts(uri.toString(), tagCounts, status);
+                this.updateIncrementalTagCounts(this.getCanonicalUri(uri), tagCounts, status);
             } else {
                 // Partial or unparsable AST, use fallback
                 const fallbackCounts = this.fallbackParseTags(content);
-                this.updateIncrementalTagCounts(uri.toString(), fallbackCounts, 'partial');
+                this.updateIncrementalTagCounts(this.getCanonicalUri(uri), fallbackCounts, 'partial');
             }
         } catch (err) {
             logger.error(`Error parsing feature file ${uri.toString()}:`, err);
             const fallbackCounts = this.fallbackParseTags(content);
-            this.updateIncrementalTagCounts(uri.toString(), fallbackCounts, 'partial');
+            this.updateIncrementalTagCounts(this.getCanonicalUri(uri), fallbackCounts, 'partial');
         }
     }
 
@@ -547,7 +569,7 @@ export class FeatureCache {
     }
 
     public removeFile(uri: vscode.Uri): void {
-        const uriString = uri.toString();
+        const uriString = this.getCanonicalUri(uri);
         const existingTimeout = this.updateDebounce.get(uriString);
         if (existingTimeout) {
             clearTimeout(existingTimeout.timeout);
@@ -571,7 +593,7 @@ export class FeatureCache {
     }
 
     public getFileState(uri: vscode.Uri): FileState | undefined {
-        return this.fileTagCounts.get(uri.toString());
+        return this.fileTagCounts.get(this.getCanonicalUri(uri));
     }
 
     public async hasStaleOrPartialFilesForTag(tag: string): Promise<boolean> {

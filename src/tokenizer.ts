@@ -1,4 +1,4 @@
-export interface TokenizedDecorator {
+interface TokenizedDecorator {
     type: 'given' | 'when' | 'then' | 'step';
     argumentText: string;
     isStringLiteral: boolean;
@@ -21,7 +21,7 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
         if (char === '@') {
             const startLine = line;
             const startCol = col;
-            
+
             // Check for given/when/then/step
             let matchType: 'given' | 'when' | 'then' | 'step' | null = null;
             const rest = content.substring(i + 1, i + 10).toLowerCase();
@@ -33,7 +33,7 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
             if (matchType) {
                 // Move i past the keyword
                 advance(matchType.length + 1); // +1 for '@'
-                
+
                 // Find '('
                 let foundParen = false;
                 while (i < len) {
@@ -90,9 +90,9 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
                                 if (quoteIndex > i) {
                                     advance(quoteIndex - i);
                                 }
-                                
+
                                 const quoteChar = content[quoteIndex];
-                                
+
                                 // Check for triple quotes
                                 let isTriple = false;
                                 if (quoteIndex + 2 < len && content[quoteIndex + 1] === quoteChar && content[quoteIndex + 2] === quoteChar) {
@@ -177,4 +177,43 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
             i++;
         }
     }
+}
+
+export interface TokenizedExecuteStep {
+    keyword: string;
+    text: string;
+    line: number;
+}
+
+export function parseExecuteSteps(content: string): TokenizedExecuteStep[] {
+    const steps: TokenizedExecuteStep[] = [];
+    const regex = /execute_steps\s*\(\s*(?:u|f|r|b)?(?:'''|"""|'|")([\s\S]*?)(?:'''|"""|'|")\s*\)/g;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+        const executeString = match[1];
+        const matchStart = match.index;
+
+        // Calculate 0-indexed line number where the string starts
+        const upToMatch = content.substring(0, matchStart);
+        const upToMatchLines = upToMatch.split(/\r?\n/);
+        let currentLine = upToMatchLines.length - 1;
+
+        const executeCallPart = match[0].substring(0, match[0].indexOf(match[1]));
+        currentLine += executeCallPart.split(/\r?\n/).length - 1;
+
+        const stringLines = executeString.split(/\r?\n/);
+        for (let i = 0; i < stringLines.length; i++) {
+            const trimmed = stringLines[i].trim();
+            const keywordMatch = trimmed.match(/^(Given|When|Then|And|But)\s+(.*)$/i);
+            if (keywordMatch) {
+                steps.push({
+                    keyword: keywordMatch[1],
+                    text: keywordMatch[2],
+                    line: currentLine + i
+                });
+            }
+        }
+    }
+    return steps;
 }

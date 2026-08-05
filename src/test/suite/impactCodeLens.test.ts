@@ -96,14 +96,16 @@ suite('ImpactCodeLensProvider Test Suite', () => {
             // test1 should have Low impact (1 scenario)
             const lens1 = lenses.find(l => l.range.start.line === 0);
             assert.ok(lens1);
-            assert.strictEqual(lens1.command?.title, 'Impact: Low (1 Scenario)');
-            assert.strictEqual(lens1.command?.command, 'gherkin-powertools.showImpactDetails');
-            assert.ok(lens1.command?.arguments && lens1.command.arguments.length > 0);
+            const resolvedLens1 = provider.resolveCodeLens(lens1, new vscode.CancellationTokenSource().token);
+            assert.strictEqual(resolvedLens1?.command?.title, 'Impact: Low (1 Scenario)');
+            assert.strictEqual(resolvedLens1?.command?.command, 'gherkin-powertools.showImpactDetails');
+            assert.ok(resolvedLens1?.command?.arguments && resolvedLens1.command.arguments.length > 0);
 
             // test2 should be Unused
             const lens2 = lenses.find(l => l.range.start.line === 3);
             assert.ok(lens2);
-            assert.strictEqual(lens2.command?.title, 'Impact: Unused');
+            const resolvedLens2 = provider.resolveCodeLens(lens2, new vscode.CancellationTokenSource().token);
+            assert.strictEqual(resolvedLens2?.command?.title, 'Impact: Unused');
         } finally {
             Object.defineProperty(vscode.workspace, 'getConfiguration', { value: originalGetConfiguration, writable: true });
         }
@@ -138,7 +140,8 @@ suite('ImpactCodeLensProvider Test Suite', () => {
             assert.strictEqual(lenses.length, 1);
             
             const lens = lenses[0];
-            assert.strictEqual(lens.command?.title, 'Impact: Medium (5 Scenarios)');
+            const resolvedLens = provider.resolveCodeLens(lens, new vscode.CancellationTokenSource().token);
+            assert.strictEqual(resolvedLens?.command?.title, 'Impact: Medium (5 Scenarios)');
         } finally {
             Object.defineProperty(vscode.workspace, 'getConfiguration', { value: originalGetConfiguration, writable: true });
         }

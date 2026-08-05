@@ -6,6 +6,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.2] - 2026-08-05
+
+### 🚀 Added
+- **Command Line Interface (CLI) Conformance**: The standalone CLI now features 100% execution parity with the VS Code extension by leveraging a unified `defaults.ts` configuration layer.
+- **Strict Configuration Hierarchy**: Enforced a clear precedence pipeline across the extension and CLI (Project `.gherkin-powertoolsrc.json` > Workspace Settings > User Settings > Defaults) via centralized configuration resolution.
+- **BDD Anti-pattern Detection Engine**: A powerful new static analysis engine replacing the legacy Recommendation Engine. It proactively scans your entire workspace to detect and surface anti-patterns such as Oversized Features, Oversized Scenarios, Duplicated/Unused/Ambiguous/Undefined Python step definitions, Excessive Tags, and Inconsistent Formatting.
+  - Fully configurable via `gherkinPowerTools.antiPatterns.rules` to set severities (`error`, `warning`, `info`, `hint`, `off`) for individual rules.
+  - Safely integrates with the Real-time Linter to prevent double-squiggles on feature files.
+- **Case-Insensitive URI Normalization**: Implemented robust case-insensitive path normalization across the `WorkspaceGraph` and `SymbolCache` for macOS and Windows, fixing false positives where files were seen as duplicates or missed entirely.
+
+### ✨ Improved
+- **Anti-Pattern Step Keyword Extraction**: Refined the duplicate and unused step detection algorithms. The engine now dynamically normalizes step keywords (Given/When/Then), preventing false positives when identical regular expressions are registered with different decorators to support multiple execution contexts.
+- **Semantic Ambiguous Step Resolution**: Fixed a major bug in the Ambiguous Step Linter. Continuation steps using `And` or `But` now accurately inherit their parent `Given`, `When`, or `Then` semantic type, preventing false-positive Ambiguous or Unused step warnings when multiple steps share the same regular expression pattern but use different decorators.
+- **Historical Trends Persistence**: Hardened the Gherkin Health Dashboard metrics storage. The history is now rigorously versioned (`HistorySchemaV1`), fully deduplicated to conserve space, and smartly isolated per Git branch to prevent cross-branch contamination of project metrics. Added `Export History as JSON` and `Clear History` commands.
+- **Performance Optimization**: Removed the computationally heavy `suspiciousSimilarities` check from the background analyzer and removed `ts-node` dependency to improve extension host memory usage and reduce bundle size.
+
+### 🐛 Fixed
+- **UI Error Deduplication**: Deduplicated consecutive lines in test error output to prevent `behave` from spamming the Test Explorer console.
+- **Diagnostic Line Alignment**: Prevented an off-by-one line shift in Python files when rendering inline squiggles from the Anti-pattern engine.
+- **Dashboard Styling**: Fixed CSS severity classes for badges to ensure Anti-pattern severities display the correct colors in the HTML dashboard.
+- **CLI Output**: Updated Standalone CLI output terminology and test assertions to match the new Anti-pattern rules.
+
+### 📖 Documentation
+- **Visual Overhaul**: Applied a new glassmorphism and soft-shadow styling to the MkDocs documentation.
+- **Hero Image Update**: Swapped the main hero GIF in the README to showcase the Test Explorer execution & debugging.
+- **Content Restructuring**: Re-organized and numbered the "Two-Tiered Capabilities" and "Detailed Features" lists in the README.
+
 ## [1.8.1] - 2026-08-03
 
 ### 🚀 Added
@@ -313,7 +340,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.0] - 2026-06-25
 ### Added
-- **Multi-language Support (i18n)**: Formatter now fully supports formatting, indenting, and Auto-Casing for English, Spanish, French, and German Gherkin keywords.
+- **Multi-language Support (i18n)**: Formatter now fully supports formatting and indenting for English, Spanish, French, and German Gherkin keywords.
 - **Diagnostic Provider (Linter)**: Hardened the linter rules to strictly enforce colons (`:`) on block keywords and spaces on step keywords, immediately flagging syntax errors.
 - **Cascading Indentation**: The formatter now uses a beautiful cascading (stair-step) indentation style by default: 2 spaces for `Scenario`, 3 for `Given/When/Then`, and 4 for `And/But`.
 - **Inline Comment Alignment**: Formatter now dynamically aligns inline comments (`#`) to the same vertical column for perfect visual readability.
@@ -334,7 +361,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.0] - 2026-06-24
 ### Added
-- **Auto-Casing**: Formatter now automatically PascalCases Gherkin keywords (`Given`, `When`, `Then`, `Feature`, etc.) regardless of user input.
+
 - **Tag Sorting & Formatting**: Sorts tags alphabetically (e.g., `@smoke @api` -> `@api @smoke`) and formats them based on user configuration. By default, it wraps tags if they exceed 80 characters, but this can be configured to remain on a single line.
 - **Whitespace Cleanup**: Automatically collapses consecutive empty lines into a standardized format and trims all trailing whitespace, preventing dirty git commits.
 - **Inline Comment Alignment**: Dynamically aligns inline comments (`#`) to the same vertical column within the same code block, creating a beautiful and consistent reading experience.
