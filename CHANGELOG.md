@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Fixed
 - **CLI Dependency Resolution**: Fixed an issue where the standalone CLI could fail to resolve peer dependencies like `@cucumber/gherkin` when executed via `npx`. The build script now natively injects root workspace dependencies into the CLI's `package.json`.
+- **Test Explorer Integration**: Removed an invalid global `testing.showCoverageInExplorer` configuration override from the extension manifest. This prevents Gherkin PowerTools from inadvertently hiding the coverage buttons of other third-party extensions (like Python Pytest or Jest) in the VS Code Test Explorer.
 
 ## [1.8.2] - 2026-08-05
 
