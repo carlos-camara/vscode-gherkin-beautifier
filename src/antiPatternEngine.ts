@@ -34,7 +34,7 @@ class OversizedFeatureRule implements AntiPatternRule {
                 affectedItems: oversized.map(f => ({
                     label: `${f.name || 'Unnamed'} (${f.size} steps)`,
                     uri: f.uri,
-                    line: f.line
+                    line: 0
                 })),
                 suggestedFix: 'Break down these features into multiple smaller, more focused feature files (ideally under 10-15 steps per feature).'
             });
@@ -238,6 +238,7 @@ class InconsistentFormattingRule implements AntiPatternRule {
         if (stepsWithTrailingSpaces.length > 0) {
             const uris = Array.from(new Set(stepsWithTrailingSpaces.map(s => s.uri)));
             antiPatterns.push({
+                id: this.id,
                 title: 'Inconsistent Formatting: Trailing Spaces',
                 explanation: `Found ${stepsWithTrailingSpaces.length} step(s) with trailing spaces. This can cause parsing issues or mismatch with step definitions.`,
                 severity,

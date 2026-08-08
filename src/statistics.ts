@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, TagNode, parseFeatureFile, DocumentNode, buildWorkspaceGraph } from './graph';
+import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, TagNode } from './graph';
 import { SymbolCache } from './cache';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
 import { AntiPattern, AntiPatternEngine } from './antiPatternEngine';
@@ -1111,13 +1111,13 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.45s;">
         ${(() => {
-            const aggregated = {};
+            const aggregated: Record<string, number> = {};
             recommendations.forEach(r => {
                 const type = r.title.includes(':') ? r.title.split(':')[0].trim() : r.title;
                 const count = (r.affectedItems && r.affectedItems.length) || (r.affectedFiles && r.affectedFiles.length) || 1;
                 aggregated[type] = (aggregated[type] || 0) + count;
             });
-            const emojis = {
+            const emojis: Record<string, string> = {
                 'Undefined Steps': '🔴',
                 'Oversized Scenario': '🐘',
                 'Oversized Feature': '📚',
@@ -1175,7 +1175,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                     <details>
                         <summary class="rec-summary">Show all <span class="summary-count">${rec.affectedItems.length}</span> items</summary>
                         ${(() => {
-                            const grouped = {};
+                            const grouped: Record<string, any[]> = {};
                             rec.affectedItems.forEach(item => {
                                 if (!grouped[item.uri]) grouped[item.uri] = [];
                                 grouped[item.uri].push(item);
@@ -1193,7 +1193,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                             <span class="badge" style="background: transparent; border: 1px solid var(--vscode-badge-background); color: var(--vscode-foreground);">${grouped[uri].length} items</span>
                                         </div>
                                         <div class="inner-items-container" data-visible="10" style="padding-left: 28px; display: flex; flex-direction: column; gap: 6px;">
-                                            ${grouped[uri].map((item, j) => `
+                                            ${grouped[uri].map((item: any, j: number) => `
                                                 <div class="inner-item" style="display: ${j >= 10 ? 'none' : 'flex'}; gap: 8px; font-size: 0.95em; align-items: flex-start;">
                                                     <span style="color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; opacity: 0.8; min-width: 35px;">L${item.line || 0}</span>
                                                     <span style="flex-grow: 1; font-family: var(--vscode-editor-font-family);">
@@ -1201,7 +1201,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                                         ${item.description ? `<div style="font-size: 0.9em; opacity: 0.8; margin-top: 6px; margin-bottom: 4px; padding-left: 8px; border-left: 2px solid var(--vscode-focusBorder); line-height: 1.4;">${escapeHtml(item.description).replace(/\\n/g, '<br>')}
                                                             ${item.subItems && item.subItems.length > 0 ? `
                                                                 <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-                                                                    ${item.subItems.map(sub => `
+                                                                    ${item.subItems.map((sub: any) => `
                                                                         <div style="display: flex; gap: 8px; font-size: 1em; align-items: center; width: 100%;">
                                                                             <span style="color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; opacity: 0.8; min-width: 30px;">L${sub.line || 0}</span>
                                                                             <span style="flex-grow: 1; font-family: var(--vscode-editor-font-family);">${escapeHtml(sub.label)} <span style="opacity: 0.6; font-size: 0.9em;">(${escapeHtml(sub.uri.split('/').pop() || sub.uri)})</span></span>
