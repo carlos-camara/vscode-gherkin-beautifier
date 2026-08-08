@@ -99,6 +99,7 @@ suite('Project Health Dashboard Test Suite', () => {
                 set html(value: string) { webviewHtml = value; },
                 onDidReceiveMessage: () => {}
             },
+            onDidDispose: () => {},
             dispose: () => {}
         } as any);
 
