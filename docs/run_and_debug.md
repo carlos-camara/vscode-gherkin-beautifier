@@ -135,5 +135,7 @@ No additional configuration is required, just ensure Behave is installed in the 
 ## Troubleshooting Execution
 
 - **"Behave command not found":** Ensure the virtual environment containing Behave is active, or use `gherkinPowerTools.behave.localExecutable` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
+- **"Tests are not discovered or do not run":** Ensure your workspace is Trusted. For security reasons, the extension blocks Behave execution in Untrusted (Restricted) workspaces.
+
 - **Tests run but show no output:** Ensure you aren't passing arguments that suppress output, or add `--no-capture` to `additionalArguments` if you need to see `print()` statements.
 - **Breakpoints not hitting:** Ensure you are clicking the "Debug" icon (bug), not the "Run" icon (play). Confirm your Python extension is active.
