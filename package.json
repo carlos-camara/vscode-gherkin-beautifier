@@ -225,7 +225,7 @@
         "gherkinPowerTools.behave.execution": {
           "type": "object",
           "order": 32,
-          "scope": "machine-overridable",
+          "scope": "resource",
           "properties": {
             "executable": {
               "type": "string",
@@ -245,7 +245,13 @@
             "executable": "behave",
             "arguments": []
           },
-          "markdownDescription": "Securely configured execution model for Behave.\n\n**Examples:**\n- `{\"executable\": \"python\", \"arguments\": [\"-m\", \"behave\"]}`\n- `{\"executable\": \"poetry\", \"arguments\": [\"run\", \"behave\"]}`"
+          "markdownDescription": "Portable, shareable framework execution strategy for Behave. This setting specifies the base runner and arguments.\n\n**Examples:**\n- `{\"executable\": \"python\", \"arguments\": [\"-m\", \"behave\"]}`\n- `{\"executable\": \"poetry\", \"arguments\": [\"run\", \"behave\"]}`"
+        },
+        "gherkinPowerTools.behave.localExecutable": {
+          "type": "string",
+          "order": 33,
+          "scope": "machine-overridable",
+          "markdownDescription": "Absolute path to a local Behave executable or Python interpreter. If provided, this strictly overrides the `executable` specified in `gherkinPowerTools.behave.execution`.\n\nThis is a **machine-specific** setting and should preferably be set in User Settings to prevent absolute paths from being committed or synchronized across machines.\n\n**Examples:** `\"C:\\\\Python39\\\\python.exe\"` · `\"/home/user/.venv/bin/behave\"`"
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",

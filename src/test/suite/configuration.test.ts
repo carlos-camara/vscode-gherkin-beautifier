@@ -142,7 +142,8 @@ suite('ConfigurationService Test Suite', () => {
             behave: {
                 command: 123,
                 execution: { executable: 456, arguments: "not array" },
-                additionalArguments: "not an array"
+                additionalArguments: "not an array",
+                localExecutable: "C:\\Python39\\python.exe"
             }
         }));
 
@@ -158,7 +159,7 @@ suite('ConfigurationService Test Suite', () => {
         assert.deepStrictEqual(config.behave.execution.executable, 'behave');
         assert.deepStrictEqual(config.behave.execution.arguments, []);
         assert.deepStrictEqual(config.behave.additionalArguments, []);
-        assert.strictEqual(diagnostics.length, 6); // indentation, tags, and 4 for behave (command, 2 for execution, 1 for args)
+        assert.strictEqual(diagnostics.length, 7); // indentation, tags, and 5 for behave (command, 2 for execution, 1 for args, 1 for localExecutable)
     });
 
     test('7. Handles unknown keys and unknown root sections gracefully', () => {
@@ -306,6 +307,30 @@ suite('ConfigurationService Test Suite', () => {
         assert.deepStrictEqual(config.behave.execution.arguments, ['run', 'behave']);
         assert.deepStrictEqual(config.behave.additionalArguments, ['--no-capture']);
         assert.deepStrictEqual(config.behave.ignoreGlobs, ['**/venv/**']);
+
+        vscode.workspace.getConfiguration = originalGetConfig;
+    });
+
+    test('14. localExecutable overrides execution.executable', () => {
+        const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
+        if (fs.existsSync(configPath)) {
+            fs.unlinkSync(configPath);
+        }
+
+        const originalGetConfig = vscode.workspace.getConfiguration;
+        vscode.workspace.getConfiguration = () => ({
+            get: () => undefined,
+            inspect: (key: string) => {
+                if (key === 'behave.execution') return { workspaceValue: { executable: 'poetry', arguments: ['run', 'behave'] } };
+                if (key === 'behave.localExecutable') return { globalValue: '/absolute/path/to/venv/bin/behave' };
+                return undefined;
+            }
+        } as any);
+
+        const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+
+        assert.strictEqual(config.behave.execution.executable, 'poetry');
+        assert.strictEqual(config.behave.localExecutable, '/absolute/path/to/venv/bin/behave');
 
         vscode.workspace.getConfiguration = originalGetConfig;
     });

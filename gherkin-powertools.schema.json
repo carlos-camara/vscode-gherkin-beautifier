@@ -125,7 +125,16 @@
         "command": {
           "type": "string",
           "default": "behave",
-          "description": "The base command used to invoke Behave from the Test Explorer. Override when using a virtual environment manager: 'poetry run behave', 'pipenv run behave', '.venv/bin/behave', 'python -m behave'."
+          "description": "(Deprecated) The base command used to invoke Behave. Use 'execution' instead."
+        },
+        "execution": {
+          "type": "object",
+          "properties": {
+            "executable": { "type": "string", "default": "behave" },
+            "arguments": { "type": "array", "items": { "type": "string" }, "default": [] }
+          },
+          "default": { "executable": "behave", "arguments": [] },
+          "description": "Portable, shareable framework execution strategy for Behave. Specifies the base runner and arguments."
         },
         "additionalArguments": {
           "type": "array",

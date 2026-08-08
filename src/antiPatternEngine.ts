@@ -4,11 +4,12 @@ import { ProjectHealthMetrics } from './statistics';
 type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
 
 export interface AntiPattern {
+    id: string;
     title: string;
     explanation: string;
     severity: AntiPatternSeverity;
     affectedFiles: string[]; // Generic fallback
-    affectedItems?: { label: string; uri: string; line?: number }[]; // Detailed actionable items
+    affectedItems?: { label: string; uri: string; line?: number; description?: string; subItems?: { label: string; uri: string; line?: number }[] }[]; // Detailed actionable items
     suggestedFix: string;
 }
 
@@ -22,16 +23,21 @@ class OversizedFeatureRule implements AntiPatternRule {
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
-        for (const feature of metrics.largestFeatures) {
-            if (feature.size > 20) {
-                antiPatterns.push({
-                    title: `Oversized Feature: ${feature.name}`,
-                    explanation: `This feature contains ${feature.size} steps, which makes it hard to read and maintain. Large features often indicate that too many concerns are mixed into one file.`,
-                    severity,
-                    affectedFiles: [feature.uri],
-                    suggestedFix: 'Split the feature into multiple, smaller feature files focused on specific business capabilities.'
-                });
-            }
+        const oversized = metrics.largestFeatures.filter(f => f.size > 50);
+        if (oversized.length > 0) {
+            antiPatterns.push({
+                id: this.id,
+                title: 'Oversized Feature',
+                explanation: `Found ${oversized.length} feature(s) containing more than 50 steps, which makes them hard to read and maintain. Large features often indicate that too many concerns are mixed into one file.`,
+                severity,
+                affectedFiles: oversized.map(f => f.uri),
+                affectedItems: oversized.map(f => ({
+                    label: `${f.name || 'Unnamed'} (${f.size} steps)`,
+                    uri: f.uri,
+                    line: f.line
+                })),
+                suggestedFix: 'Break down these features into multiple smaller, more focused feature files (ideally under 10-15 steps per feature).'
+            });
         }
         return antiPatterns;
     }
@@ -42,16 +48,21 @@ class OversizedScenarioRule implements AntiPatternRule {
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
-        for (const scenario of metrics.largestScenarios) {
-            if (scenario.size > 10) {
-                antiPatterns.push({
-                    title: `Oversized Scenario: ${scenario.name || 'Unnamed'}`,
-                    explanation: `This scenario contains ${scenario.size} steps. Long scenarios are harder to understand, debug, and maintain.`,
-                    severity,
-                    affectedFiles: [scenario.uri],
-                    suggestedFix: 'Refactor the scenario by using Background steps for common setup, extracting reusable logic into higher-level step definitions, or splitting the scenario.'
-                });
-            }
+        const oversized = metrics.largestScenarios.filter(s => s.size > 15);
+        if (oversized.length > 0) {
+            antiPatterns.push({
+                id: this.id,
+                title: 'Oversized Scenario',
+                explanation: `Found ${oversized.length} scenario(s) containing more than 15 steps. Long scenarios are brittle, hard to debug, and usually violate the single-responsibility principle of BDD.`,
+                severity,
+                affectedFiles: oversized.map(s => s.uri),
+                affectedItems: oversized.map(s => ({
+                    label: `${s.name || 'Unnamed'} (${s.size} steps)`,
+                    uri: s.uri,
+                    line: s.line
+                })),
+                suggestedFix: 'Split the scenario into multiple independent scenarios or use a Scenario Outline if you are repeating steps with different data.'
+            });
         }
         return antiPatterns;
     }
@@ -60,38 +71,48 @@ class OversizedScenarioRule implements AntiPatternRule {
 class DuplicatedStepsRule implements AntiPatternRule {
     id = 'duplicated-steps';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
-        if (severity === 'off' || metrics.stepAnalysis.duplicatedSteps.length === 0) return [];
-        return [{
-            title: 'Duplicated Step Definitions',
-            explanation: `Found ${metrics.stepAnalysis.duplicatedSteps.length} step definition(s) that share identical regex patterns, causing conflicts during execution.`,
-            severity,
-            affectedFiles: [],
-            affectedItems: metrics.stepAnalysis.duplicatedSteps.flatMap(d => d.stepDefs.map(sd => ({
-                label: `Duplicated pattern: ${d.pattern}`,
-                uri: sd.uri,
-                line: sd.line
-            }))),
-            suggestedFix: 'Remove or consolidate the duplicate step definitions. Ensure pattern uniqueness.'
-        }];
+        if (severity === 'off') return [];
+        const antiPatterns: AntiPattern[] = [];
+        for (const dupGroup of metrics.stepAnalysis.duplicatedSteps) {
+            antiPatterns.push({
+                id: this.id,
+                title: `Duplicate Step Definition: ${dupGroup.pattern}`,
+                explanation: `The step pattern "${dupGroup.pattern}" is defined in ${dupGroup.stepDefs.length} places. This will cause ambiguous step errors during execution.`,
+                severity,
+                affectedFiles: Array.from(new Set(dupGroup.stepDefs.map(sd => sd.uri))),
+                affectedItems: dupGroup.stepDefs.map(sd => ({
+                    label: sd.uri.split('/').pop() + `:${sd.line + 1}`,
+                    uri: sd.uri,
+                    line: sd.line + 1
+                })),
+                suggestedFix: 'Remove or consolidate the duplicate definitions so the pattern is only defined once.'
+            });
+        }
+        return antiPatterns;
     }
 }
 
 class UnusedStepsRule implements AntiPatternRule {
     id = 'unused-steps';
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
-        if (severity === 'off' || metrics.stepAnalysis.unusedSteps.length === 0) return [];
-        return [{
-            title: 'Unused Step Definitions',
-            explanation: `Found ${metrics.stepAnalysis.unusedSteps.length} step definition(s) that are never used in any feature file. This bloats the codebase and increases maintenance cost.`,
-            severity,
-            affectedFiles: [],
-            affectedItems: metrics.stepAnalysis.unusedSteps.map(u => ({
-                label: u.stepDef.pattern,
-                uri: u.stepDef.uri,
-                line: u.stepDef.line
-            })),
-            suggestedFix: 'Delete the unused step definitions or verify if they are meant to be used in upcoming features.'
-        }];
+        if (severity === 'off') return [];
+        const antiPatterns: AntiPattern[] = [];
+        if (metrics.stepAnalysis.unusedSteps.length > 0) {
+            antiPatterns.push({
+                id: this.id,
+                title: 'Unused Step Definitions',
+                explanation: `Found ${metrics.stepAnalysis.unusedSteps.length} step definitions that are never used in any feature file. This adds dead code to the project.`,
+                severity,
+                affectedFiles: Array.from(new Set(metrics.stepAnalysis.unusedSteps.map(u => u.stepDef.uri))),
+                affectedItems: metrics.stepAnalysis.unusedSteps.map(u => ({
+                    label: u.stepDef.pattern,
+                    uri: u.stepDef.uri,
+                    line: u.stepDef.line + 1
+                })),
+                suggestedFix: 'Delete the unused step definitions to keep the codebase clean.'
+            });
+        }
+        return antiPatterns;
     }
 }
 
@@ -100,6 +121,7 @@ class AmbiguousStepsRule implements AntiPatternRule {
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.stepAnalysis.ambiguousSteps.length === 0) return [];
         return [{
+            id: this.id,
             title: 'Ambiguous Steps in Feature Files',
             explanation: `Found ${metrics.stepAnalysis.ambiguousSteps.length} step(s) that match multiple step definitions. This can lead to unpredictable test execution.`,
             severity,
@@ -107,7 +129,13 @@ class AmbiguousStepsRule implements AntiPatternRule {
             affectedItems: metrics.stepAnalysis.ambiguousSteps.map(a => ({
                 label: `Step: ${a.step.keyword} ${a.step.text} (Matches ${a.matchingDefs.length} defs)`,
                 uri: a.step.uri,
-                line: a.step.line
+                line: a.step.line,
+                description: 'Matches the following definitions:',
+                subItems: a.matchingDefs.map(d => ({
+                    label: d.pattern,
+                    uri: d.uri,
+                    line: d.line + 1
+                }))
             })),
             suggestedFix: 'Refine your step definition regex patterns to be more specific, so they do not overlap.'
         }];
@@ -119,16 +147,17 @@ class UndefinedStepsRule implements AntiPatternRule {
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.undefinedSteps.length === 0) return [];
         return [{
+            id: this.id,
             title: 'Undefined Steps',
             explanation: `Found ${metrics.undefinedSteps.length} step(s) that do not match any step definition. These steps will fail during test execution.`,
             severity,
-            affectedFiles: [],
+            affectedFiles: Array.from(new Set(metrics.undefinedSteps.map(u => u.uri))),
             affectedItems: metrics.undefinedSteps.map(u => ({
                 label: `Step: ${u.keyword} ${u.text}`,
                 uri: u.uri,
                 line: u.line
             })),
-            suggestedFix: 'Implement the missing step definitions using the "Create Step Definition" command.'
+            suggestedFix: 'Implement the missing step definitions in your step files.'
         }];
     }
 }
@@ -142,28 +171,38 @@ class ExcessiveTagsRule implements AntiPatternRule {
         const features = allNodes.filter(n => n.type === 'Feature') as FeatureNode[];
         const scenarios = allNodes.filter(n => n.type === 'Scenario') as ScenarioNode[];
         
-        for (const feature of features) {
-            if (feature.tags.length > 5) {
-                antiPatterns.push({
-                    title: `Excessive Tags on Feature: ${feature.name}`,
-                    explanation: `This feature has ${feature.tags.length} tags. Too many tags can make execution filtering confusing and indicates poor tag taxonomy.`,
-                    severity,
-                    affectedFiles: [feature.uri],
-                    suggestedFix: 'Review and consolidate tags. Group related tags or remove obsolete ones.'
-                });
-            }
+        const heavyFeatures = features.filter(f => f.tags.length > 5);
+        if (heavyFeatures.length > 0) {
+            antiPatterns.push({
+                id: this.id,
+                title: 'Excessive Tags on Feature',
+                explanation: `Found ${heavyFeatures.length} feature(s) with more than 5 tags. Heavy tagging at the feature level is often a sign of over-categorization.`,
+                severity,
+                affectedFiles: heavyFeatures.map(f => f.uri),
+                affectedItems: heavyFeatures.map(f => ({
+                    label: `${f.name || 'Unnamed'} (${f.tags.length} tags)`,
+                    uri: f.uri,
+                    line: f.line
+                })),
+                suggestedFix: 'Review and consolidate feature tags. Consider grouping related functionality into separate files rather than using tags to differentiate them.'
+            });
         }
         
-        for (const scenario of scenarios) {
-            if (scenario.tags.length > 5) {
-                antiPatterns.push({
-                    title: `Excessive Tags on Scenario: ${scenario.name || 'Unnamed'}`,
-                    explanation: `This scenario has ${scenario.tags.length} tags.`,
-                    severity,
-                    affectedFiles: [scenario.uri],
-                    suggestedFix: 'Reduce the number of tags by utilizing Feature-level tags or unifying overlapping tags.'
-                });
-            }
+        const heavyScenarios = scenarios.filter(s => s.tags.length > 5);
+        if (heavyScenarios.length > 0) {
+            antiPatterns.push({
+                id: this.id,
+                title: 'Excessive Tags on Scenario',
+                explanation: `Found ${heavyScenarios.length} scenario(s) with more than 5 tags.`,
+                severity,
+                affectedFiles: heavyScenarios.map(s => s.uri),
+                affectedItems: heavyScenarios.map(s => ({
+                    label: `${s.name || 'Unnamed'} (${s.tags.length} tags)`,
+                    uri: s.uri,
+                    line: s.line
+                })),
+                suggestedFix: 'Reduce the number of tags by utilizing Feature-level tags or unifying overlapping tags.'
+            });
         }
         return antiPatterns;
     }
@@ -175,11 +214,12 @@ class PoorMaintainabilityRule implements AntiPatternRule {
         if (severity === 'off') return [];
         if (metrics.scores.maintainability < 60) {
             return [{
-                title: 'Poor Project Maintainability',
+                id: this.id,
+                title: 'Low Maintainability Score',
                 explanation: `The project maintainability score is ${metrics.scores.maintainability}/100. This is typically caused by high numbers of unused, duplicated, or undefined steps.`,
                 severity,
                 affectedFiles: [],
-                suggestedFix: 'Focus on cleaning up the step definition library and implementing missing steps to improve the score.'
+                suggestedFix: 'Resolve the unused and undefined steps issues to improve maintainability.'
             }];
         }
         return [];

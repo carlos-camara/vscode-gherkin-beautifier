@@ -133,6 +133,28 @@ suite('Execution Test Suite', () => {
         assert.deepStrictEqual(details.args, ['run', 'behave', '--no-capture', './features/test.feature:42']);
     });
 
+    test('resolveBehaveExecutionDetails overrides executable if localExecutable is present', async () => {
+        const localExecutableConfigService = {
+            getConfiguration: () => ({
+                behave: {
+                    command: 'behave',
+                    execution: {
+                        executable: 'behave',
+                        arguments: []
+                    },
+                    localExecutable: '/home/user/.venv/bin/behave',
+                    additionalArguments: ['--no-capture']
+                }
+            })
+        } as unknown as ConfigurationService;
+        
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+        const details = await resolveBehaveExecutionDetails(uri, 42, localExecutableConfigService);
+        assert.ok(details);
+        assert.strictEqual(details.executable, '/home/user/.venv/bin/behave');
+        assert.deepStrictEqual(details.args, ['-m', 'behave', '--no-capture', './features/test.feature:42']);
+    });
+
     test('resolveBehaveExecutionDetails handles shell injection characters securely as distinct arguments', async () => {
         const maliciousConfigService = {
             getConfiguration: () => ({

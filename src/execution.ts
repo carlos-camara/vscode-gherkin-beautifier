@@ -135,6 +135,10 @@ export async function resolveBehaveExecutionDetails(
         }
     }
 
+    if (config.behave.localExecutable && config.behave.localExecutable.trim().length > 0) {
+        executable = config.behave.localExecutable.trim();
+    }
+
     let additionalArgs: string[];
     if (memoryAdditionalArgs !== undefined) {
         additionalArgs = parseArgsStringToVector(memoryAdditionalArgs);

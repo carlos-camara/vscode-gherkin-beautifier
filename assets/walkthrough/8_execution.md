@@ -63,11 +63,17 @@ Click **✏️** to open the **Edit Args** dialog before running:
 
 **Custom Behave command:**
 
-If you use `pipenv`, `poetry`, or a virtual environment, configure the base command:
+If you use `pipenv`, `poetry`, or a virtual environment, configure the base command securely for your project:
 
 ```json
 "gherkinPowerTools.behave.execution": {
     "executable": "pipenv",
     "arguments": ["run", "behave"]
 }
+```
+
+If you need a strictly local machine-specific override (e.g., an absolute path to a Python interpreter or virtual environment), configure `localExecutable` in your **User Settings**:
+
+```json
+"gherkinPowerTools.behave.localExecutable": "/home/user/.venv/bin/behave"
 ```
