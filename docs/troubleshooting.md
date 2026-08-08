@@ -136,5 +136,10 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 **Likely Causes:** The extension saved your dismissal in the VS Code Global State.
 **Resolution:** Currently, VS Code does not expose a UI to edit global state directly. You can reset all internal extension state (including dismissals) by running the **Developer: Reset Extension State** command from the VS Code Command Palette (note that this resets state for *all* extensions).
 
+## Standalone CLI fails to resolve dependencies
+**Symptom:** Running `npx @carlos-camara/gherkin-pt analyze` fails with a "Cannot find module '@cucumber/gherkin'" error.
+**Likely Causes:** The CLI was installed globally or npm cached an outdated, non-scoped version of the CLI package.
+**Resolution:** Ensure you are using the explicitly scoped package (`@carlos-camara/gherkin-pt`) and force a cache clear by running `npx --yes --clear-cache @carlos-camara/gherkin-pt`.
+
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).

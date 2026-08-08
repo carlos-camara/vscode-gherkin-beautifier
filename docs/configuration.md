@@ -52,6 +52,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
+### `gherkinPowerTools.docStrings.alignToKeyword`
+- **Purpose:** When `true`, DocStrings are dynamically padded to align with the text start of the preceding step keyword. Set to `false` for a simpler fixed-column alignment.
+- **Type:** `boolean`
+- **Default:** `true`
+
 ### `gherkinPowerTools.emptyLines.betweenScenarios`
 - **Purpose:** Enforced blank lines between Scenario/Rule blocks.
 - **Type:** `number` (0–3)
@@ -169,7 +174,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 ## Shared Team Configuration (`.gherkin-powertoolsrc.json`)
 
-You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root to standardize formatting and discovery for the whole team, regardless of their individual VS Code settings. The Standalone CLI (`gherkin-pt`) also automatically detects and respects this file.
+You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root to standardize formatting and discovery for the whole team, regardless of their individual VS Code settings. The Standalone CLI (`@carlos-camara/gherkin-pt`) also automatically detects and respects this file.
 
 ### Precedence Hierarchy
 Configuration settings are resolved in the following order of precedence (highest to lowest):
