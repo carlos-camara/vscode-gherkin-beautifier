@@ -10,7 +10,7 @@ export interface Configuration {
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
-    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; command: string; };
+    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; command: string; execution: { executable: string; arguments: string[] } };
 }
 
 import { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG } from './defaults';
@@ -193,6 +193,23 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                     } else {
                         config.behave.command = section[subKey];
                     }
+                } else if (subKey === 'execution') {
+                    const execObj = section[subKey];
+                    if (typeof execObj !== 'object' || execObj === null || Array.isArray(execObj)) {
+                        errors.push({ key: subKey, message: `"behave.execution" must be an object.` });
+                    } else {
+                        if (typeof execObj.executable === 'string') {
+                            config.behave.execution.executable = execObj.executable;
+                        } else if (execObj.executable !== undefined) {
+                            errors.push({ key: 'execution.executable', message: `"behave.execution.executable" must be a string.` });
+                        }
+                        
+                        if (Array.isArray(execObj.arguments) && execObj.arguments.every((i: any) => typeof i === 'string')) {
+                            config.behave.execution.arguments = execObj.arguments;
+                        } else if (execObj.arguments !== undefined) {
+                            errors.push({ key: 'execution.arguments', message: `"behave.execution.arguments" must be an array of strings.` });
+                        }
+                    }
                 } else {
                     errors.push({ key: subKey, message: `Unknown property in behave: "${subKey}".` });
                 }
@@ -371,6 +388,16 @@ export class ConfigurationService {
         const command = getOverride<string>('behave.command');
         if (command !== undefined && typeof command === 'string') {
             config.behave.command = command;
+        }
+
+        const execution = getOverride<{ executable: string; arguments: string[] }>('behave.execution');
+        if (execution !== undefined && typeof execution === 'object' && execution !== null) {
+            if (typeof execution.executable === 'string') {
+                config.behave.execution.executable = execution.executable;
+            }
+            if (Array.isArray(execution.arguments) && execution.arguments.every(i => typeof i === 'string')) {
+                config.behave.execution.arguments = execution.arguments;
+            }
         }
 
         return config;

@@ -103,7 +103,7 @@ Share team formatting rules by committing a `.gherkin-powertoolsrc.json` to your
 | --- | --- | --- |
 | `gherkinPowerTools.profile` | `"custom"` | Formatting baseline: `strict`, `team`, `minimal`, `legacy`, or `custom`. |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", ...]` | Paths to Python step definitions. |
-| `gherkinPowerTools.behave.command` | `"behave"` | Test Explorer execution command (e.g., `"poetry run behave"`). |
+| `gherkinPowerTools.behave.execution` | `{"executable": "behave", "arguments": []}` | Secure Test Explorer execution command (e.g., `{"executable": "poetry", "arguments": ["run", "behave"]}`). |
 
 *Visit the **[Configuration Reference](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/)** for all available settings.*
 

@@ -282,9 +282,19 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('gherkinPowerTools.commandCenter', showCommandCenter)
     );
 
+    // Utility function to enforce Workspace Trust
+    function checkWorkspaceTrust(): boolean {
+        if (!vscode.workspace.isTrusted) {
+            vscode.window.showWarningMessage("Gherkin PowerTools: Execution is disabled in untrusted workspaces for security reasons.");
+            return false;
+        }
+        return true;
+    }
+
     // Register Behave execution commands
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.runFeature', (uri?: vscode.Uri) => {
+            if (!checkWorkspaceTrust()) return;
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             if (finalUri && finalUri.fsPath.endsWith('.feature')) {
                 return runBehave(finalUri, undefined, configService);
@@ -333,6 +343,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.runScenario', (uri?: vscode.Uri, line?: number) => {
+            if (!checkWorkspaceTrust()) return;
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             const finalLine = line !== undefined ? line : vscode.window.activeTextEditor?.selection.active.line;
             if (finalUri) return runBehave(finalUri, finalLine, configService);
@@ -340,12 +351,14 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.runFeatureWithArgs', (uri?: vscode.Uri) => {
+            if (!checkWorkspaceTrust()) return;
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             if (finalUri) runBehaveWithPrompt(finalUri, undefined, configService);
         })
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.runScenarioWithArgs', (uri?: vscode.Uri, line?: number) => {
+            if (!checkWorkspaceTrust()) return;
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             const finalLine = line !== undefined ? line : vscode.window.activeTextEditor?.selection.active.line;
             if (finalUri) runBehaveWithPrompt(finalUri, finalLine, configService);
@@ -353,6 +366,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.debugScenario', (uri?: vscode.Uri, line?: number) => {
+            if (!checkWorkspaceTrust()) return;
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             const finalLine = line !== undefined ? line : vscode.window.activeTextEditor?.selection.active.line;
             if (finalUri) return debugBehave(finalUri, finalLine, configService);
@@ -360,6 +374,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.debugFeature', (uri?: vscode.Uri) => {
+            if (!checkWorkspaceTrust()) return;
             const finalUri = uri || vscode.window.activeTextEditor?.document.uri;
             if (finalUri) return debugBehave(finalUri, undefined, configService);
         })
@@ -376,6 +391,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // Shows the Behave args prompt, contextualized to the active feature file if open.
     context.subscriptions.push(
         vscode.commands.registerCommand('gherkinPowerTools.testExplorerEditAndRun', async () => {
+            if (!checkWorkspaceTrust()) return;
             const activeEditor = vscode.window.activeTextEditor;
             const uri = activeEditor?.document.uri;
             if (uri && (activeEditor.document.languageId === 'feature' || uri.fsPath.endsWith('.feature'))) {

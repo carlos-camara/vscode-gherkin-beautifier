@@ -62,13 +62,21 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 Wait a few seconds for the lazy-initialization to complete. If it still doesn't appear, ensure your `.feature` files contain valid Gherkin syntax (at least a `Feature:` keyword).
 **Resolution:** Fix any critical syntax errors in your Gherkin.
 
+## Test Execution is Blocked
+**Symptom:** You attempt to run a test from the Test Explorer, but VS Code blocks the execution.
+**Likely Causes:** The extension uses VS Code's Workspace Trust API to prevent arbitrary command execution. If your workspace is marked as "Untrusted" (Restricted Mode), test execution is disabled.
+**Resolution:** Click the "Restricted Mode" banner in the bottom status bar and select "Trust Workspace & Install" to enable test execution.
+
 ## Run fails (Behave executable is not found)
 **Symptom:** You click "Play" in the Test Explorer, but the test immediately fails with a "Command not found" or "behave is not recognized" error in the output.
 **Likely Causes:** `behave` is not installed, or your virtual environment is not active in the shell that VS Code spawns.
 **Resolution:**
 If using a virtual environment manager like Poetry or Pipenv, update your configuration:
 ```json
-"gherkinPowerTools.behave.command": "poetry run behave"
+"gherkinPowerTools.behave.execution": {
+    "executable": "poetry",
+    "arguments": ["run", "behave"]
+}
 ```
 Or use the absolute path to your virtual environment's executable: `".venv/bin/behave"`.
 

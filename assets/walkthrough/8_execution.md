@@ -66,5 +66,8 @@ Click **✏️** to open the **Edit Args** dialog before running:
 If you use `pipenv`, `poetry`, or a virtual environment, configure the base command:
 
 ```json
-"gherkinPowerTools.behave.command": "pipenv run behave"
+"gherkinPowerTools.behave.execution": {
+    "executable": "pipenv",
+    "arguments": ["run", "behave"]
+}
 ```
