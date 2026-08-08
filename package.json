@@ -214,14 +214,6 @@
           ],
           "markdownDescription": "Glob patterns **excluded** from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches and performance degradation.\n\nChanges take effect **immediately** — no restart required."
         },
-        "gherkinPowerTools.behave.command": {
-          "type": "string",
-          "order": 32,
-          "scope": "resource",
-          "default": "behave",
-          "deprecationMessage": "This setting is deprecated in favor of the structured 'gherkinPowerTools.behave.execution' setting for improved security.",
-          "markdownDescription": "The base command used to invoke Behave from the Test Explorer. Override this when using a virtual environment manager.\n\n**Examples:** `\"poetry run behave\"` · `\"pipenv run behave\"` · `\".venv/bin/behave\"` · `\"python -m behave\"`"
-        },
         "gherkinPowerTools.behave.execution": {
           "type": "object",
           "order": 32,

@@ -122,11 +122,6 @@
           "default": ["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"],
           "description": "Glob patterns excluded from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches. Changes take effect immediately."
         },
-        "command": {
-          "type": "string",
-          "default": "behave",
-          "description": "(Deprecated) The base command used to invoke Behave. Use 'execution' instead."
-        },
         "execution": {
           "type": "object",
           "properties": {

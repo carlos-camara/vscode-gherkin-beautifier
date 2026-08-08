@@ -10,7 +10,7 @@ export interface Configuration {
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
-    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; command: string; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
+    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
 }
 
 import { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG } from './defaults';
@@ -186,12 +186,6 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                         if (subKey === 'stepGlobs') { config.behave.stepGlobs = section[subKey]; }
                         if (subKey === 'ignoreGlobs') { config.behave.ignoreGlobs = section[subKey]; }
                         if (subKey === 'additionalArguments') { config.behave.additionalArguments = section[subKey]; }
-                    }
-                } else if (subKey === 'command') {
-                    if (typeof section[subKey] !== 'string') {
-                        errors.push({ key: subKey, message: `"behave.command" must be a string.` });
-                    } else {
-                        config.behave.command = section[subKey];
                     }
                 } else if (subKey === 'execution') {
                     const execObj = section[subKey];
@@ -385,11 +379,6 @@ export class ConfigurationService {
         const additionalArguments = getOverride<string[]>('behave.additionalArguments');
         if (additionalArguments !== undefined && Array.isArray(additionalArguments) && additionalArguments.every(i => typeof i === 'string')) {
             config.behave.additionalArguments = additionalArguments;
-        }
-
-        const command = getOverride<string>('behave.command');
-        if (command !== undefined && typeof command === 'string') {
-            config.behave.command = command;
         }
 
         const execution = getOverride<{ executable: string; arguments: string[] }>('behave.execution');

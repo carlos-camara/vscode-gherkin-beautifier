@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI Documentation**: Fully updated documentation across README, CLI guides, and Getting Started pages to reflect the new `npx @carlos-camara/gherkin-pt` execution model.
 
 ### 🐛 Fixed
+- **Zero-Config Python Environment Detection**: Completely removed the deprecated `behave.command` setting to enforce a zero-config paradigm. Behave execution now automatically discovers virtual environments by directly leveraging the official Microsoft Python extension API. This eliminates the need to hardcode absolute environment paths and automatically migrates legacy configurations on startup.
 - **CLI Dependency Resolution**: Fixed an issue where the standalone CLI could fail to resolve peer dependencies like `@cucumber/gherkin` when executed via `npx`. The build script now natively injects root workspace dependencies into the CLI's `package.json`.
 - **Test Explorer Integration**: Removed an invalid global `testing.showCoverageInExplorer` configuration override from the extension manifest. This prevents Gherkin PowerTools from inadvertently hiding the coverage buttons of other third-party extensions (like Python Pytest or Jest) in the VS Code Test Explorer.
 - **Linter Edge Case**: Fixed a semantic validation bug where misspelled step keywords were not highlighted if they were incorrectly parsed as part of a Feature or Rule description due to missing colons (e.g., a missing colon on a `Scenario`).
