@@ -151,11 +151,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** *None*
 - **Example:** `"/home/user/.venv/bin/behave"`
 
-### `gherkinPowerTools.behave.command` *(Deprecated)*
-- **Purpose:** Legacy free-form execution command for Behave.
-- **Type:** `string`
-- **Default:** `"behave"`
-- **Note:** This setting is deprecated for security reasons and is automatically migrated to `gherkinPowerTools.behave.execution`.
 
 ### `gherkinPowerTools.behave.additionalArguments`
 - **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer.

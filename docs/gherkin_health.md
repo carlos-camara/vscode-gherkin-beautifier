@@ -16,7 +16,12 @@ It generates deep heuristics and scores, including:
 - **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
   The engine uses semantic context tracking to accurately resolve `And` and `But` steps.
   It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then), ensuring that step definitions reused across different contexts are not falsely flagged as duplicated.
-- **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint) such as breaking down oversized scenarios, removing duplicated regex patterns, or cleaning up excessive tags and inconsistent formatting.
+- **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint, Off). The engine actively detects:
+  - **Oversized Features** and **Oversized Scenarios**
+  - **Duplicated**, **Unused**, **Ambiguous**, and **Undefined** Python step definitions
+  - **Excessive Tags**
+  - **Inconsistent Formatting**
+  - **Poor Maintainability**
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
 **Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.

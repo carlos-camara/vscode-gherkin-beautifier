@@ -227,7 +227,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register the project health dashboard command
     context.subscriptions.push(
-        vscode.commands.registerCommand('gherkinPowerTools.showStatistics', () => {
+        vscode.commands.registerCommand('gherkinPowerTools.showGherkinHealth', () => {
             showProjectHealthDashboard(context, workspaceGraph, symbolCache);
         }),
         vscode.commands.registerCommand('gherkinPowerTools.analytics.exportHistory', async () => {

@@ -338,7 +338,7 @@
         "category": "Gherkin PowerTools"
       },
       {
-        "command": "gherkinPowerTools.showStatistics",
+        "command": "gherkinPowerTools.showGherkinHealth",
         "title": "Show Gherkin Health",
         "category": "Gherkin PowerTools"
       },
@@ -428,7 +428,7 @@
         },
         {
           "when": "editorLangId == feature",
-          "command": "gherkinPowerTools.showStatistics",
+          "command": "gherkinPowerTools.showGherkinHealth",
           "group": "navigation@4"
         }
       ],
@@ -465,7 +465,7 @@
         "when": "editorLangId == feature"
       },
       {
-        "command": "gherkinPowerTools.showStatistics",
+        "command": "gherkinPowerTools.showGherkinHealth",
         "key": "ctrl+alt+s",
         "mac": "cmd+alt+s",
         "when": "editorLangId == feature"
@@ -538,12 +538,12 @@
           {
             "id": "projectStatistics",
             "title": "View Gherkin Health",
-            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showStatistics)",
+            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showGherkinHealth)",
             "media": {
               "markdown": "assets/walkthrough/6_statistics.md"
             },
             "completionEvents": [
-              "onCommand:gherkinPowerTools.showStatistics"
+              "onCommand:gherkinPowerTools.showGherkinHealth"
             ]
           },
           {

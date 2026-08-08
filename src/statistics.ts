@@ -110,14 +110,14 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
                         const targetUri = await batchCreateStepDefinitions(stepsToFix);
                         if (targetUri) {
                             await symbolCache.updateFile(targetUri);
-                            vscode.commands.executeCommand('gherkinPowerTools.showStatistics');
+                            vscode.commands.executeCommand('gherkinPowerTools.showGherkinHealth');
                         }
                     } else {
                         vscode.window.showInformationMessage('No undefined steps to fix.');
                     }
                 }
             } else if (message.command === 'refresh') {
-                vscode.commands.executeCommand('gherkinPowerTools.showStatistics');
+                vscode.commands.executeCommand('gherkinPowerTools.showGherkinHealth');
             }
         });
     } catch (error) {
