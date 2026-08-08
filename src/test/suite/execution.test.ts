@@ -18,6 +18,10 @@ suite('Execution Test Suite', () => {
         getConfiguration: () => ({
             behave: {
                 command: 'behave',
+                execution: {
+                    executable: 'behave',
+                    arguments: []
+                },
                 additionalArguments: ['--no-capture']
             }
         })
@@ -92,6 +96,10 @@ suite('Execution Test Suite', () => {
             getConfiguration: () => ({
                 behave: {
                     command: 'poetry run behave',
+                    execution: {
+                        executable: 'behave',
+                        arguments: []
+                    },
                     additionalArguments: ['--no-capture']
                 }
             })
@@ -102,6 +110,50 @@ suite('Execution Test Suite', () => {
         assert.ok(details);
         assert.strictEqual(details.executable, 'poetry');
         assert.deepStrictEqual(details.args, ['run', 'behave', '--no-capture', './features/test.feature:42']);
+    });
+
+    test('resolveBehaveExecutionDetails uses structured execution object', async () => {
+        const structuredConfigService = {
+            getConfiguration: () => ({
+                behave: {
+                    command: 'behave', // Legacy, should be ignored
+                    execution: {
+                        executable: 'uv',
+                        arguments: ['run', 'behave']
+                    },
+                    additionalArguments: ['--no-capture']
+                }
+            })
+        } as unknown as ConfigurationService;
+        
+        const uri = vscode.Uri.file('/workspace/features/test.feature');
+        const details = await resolveBehaveExecutionDetails(uri, 42, structuredConfigService);
+        assert.ok(details);
+        assert.strictEqual(details.executable, 'uv');
+        assert.deepStrictEqual(details.args, ['run', 'behave', '--no-capture', './features/test.feature:42']);
+    });
+
+    test('resolveBehaveExecutionDetails handles shell injection characters securely as distinct arguments', async () => {
+        const maliciousConfigService = {
+            getConfiguration: () => ({
+                behave: {
+                    command: 'behave',
+                    execution: {
+                        executable: 'python',
+                        arguments: ['-m', 'behave']
+                    },
+                    additionalArguments: ['--tags=@dev; rm -rf /']
+                }
+            })
+        } as unknown as ConfigurationService;
+        
+        const uri = vscode.Uri.file('/workspace/features/test "$(echo inject)".feature');
+        (vscode.workspace as any).asRelativePath = () => 'features/test "$(echo inject)".feature';
+        
+        const details = await resolveBehaveExecutionDetails(uri, undefined, maliciousConfigService);
+        assert.ok(details);
+        // The injection strings must remain intact as distinct arguments, not split or evaluated
+        assert.deepStrictEqual(details.args, ['-m', 'behave', '--tags=@dev; rm -rf /', './features/test "$(echo inject)".feature']);
     });
 
     test('resolveBehaveExecutionDetails correctly appends Example row line number to arguments', async () => {

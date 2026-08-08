@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.3] - Unreleased
 
 ### 🚀 Added
+- **Secure Execution Model**: Redesigned Behave test execution (`gherkinPowerTools.behave.execution`) to use structured arguments and `spawn({ shell: false })` instead of raw shell commands, mitigating command injection risks.
+- **Workspace Trust**: Integrated VS Code's Workspace Trust API to explicitly block automated Behave execution in untrusted environments.
 - **Scoped CLI Package**: The Standalone CLI is now distributed as a secure, dedicated scoped npm package (`@carlos-camara/gherkin-pt`). This eliminates supply chain squatting risks and ensures the executable name does not conflict with global namespace packages.
 
 ### ✨ Improved

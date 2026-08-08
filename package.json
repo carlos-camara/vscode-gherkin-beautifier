@@ -219,7 +219,33 @@
           "order": 32,
           "scope": "resource",
           "default": "behave",
+          "deprecationMessage": "This setting is deprecated in favor of the structured 'gherkinPowerTools.behave.execution' setting for improved security.",
           "markdownDescription": "The base command used to invoke Behave from the Test Explorer. Override this when using a virtual environment manager.\n\n**Examples:** `\"poetry run behave\"` · `\"pipenv run behave\"` · `\".venv/bin/behave\"` · `\"python -m behave\"`"
+        },
+        "gherkinPowerTools.behave.execution": {
+          "type": "object",
+          "order": 32,
+          "scope": "machine-overridable",
+          "properties": {
+            "executable": {
+              "type": "string",
+              "default": "behave",
+              "description": "The executable or runner to invoke (e.g., 'behave', 'poetry', 'python')."
+            },
+            "arguments": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "Base arguments passed to the executable (e.g., ['run', 'behave'] or ['-m', 'behave'])."
+            }
+          },
+          "default": {
+            "executable": "behave",
+            "arguments": []
+          },
+          "markdownDescription": "Securely configured execution model for Behave.\n\n**Examples:**\n- `{\"executable\": \"python\", \"arguments\": [\"-m\", \"behave\"]}`\n- `{\"executable\": \"poetry\", \"arguments\": [\"run\", \"behave\"]}`"
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",

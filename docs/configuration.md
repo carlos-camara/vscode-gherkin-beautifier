@@ -139,11 +139,17 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `array` of strings
 - **Default:** `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]`
 
-### `gherkinPowerTools.behave.command`
-- **Purpose:** Base command used to invoke Behave from the Test Explorer.
+### `gherkinPowerTools.behave.execution`
+- **Purpose:** Securely configured execution model for Behave from the Test Explorer.
+- **Type:** `object` (with `executable` string and `arguments` array)
+- **Default:** `{"executable": "behave", "arguments": []}`
+- **Example:** `{"executable": "poetry", "arguments": ["run", "behave"]}`
+
+### `gherkinPowerTools.behave.command` *(Deprecated)*
+- **Purpose:** Legacy free-form execution command for Behave.
 - **Type:** `string`
 - **Default:** `"behave"`
-- **Example:** `"poetry run behave"`
+- **Note:** This setting is deprecated for security reasons and is automatically migrated to `gherkinPowerTools.behave.execution`.
 
 ### `gherkinPowerTools.behave.additionalArguments`
 - **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer.
@@ -197,7 +203,10 @@ Example:
         "stepGlobs": [
             "**/features/steps/**/*.py"
         ],
-        "command": "behave"
+        "execution": {
+            "executable": "behave",
+            "arguments": []
+        }
     }
 }
 ```

@@ -53,16 +53,57 @@ export async function resolveBehaveExecutionDetails(
     let executable: string;
     let baseArgs: string[] = [];
     
-    const configuredCommand = config.behave.command || 'behave';
+    const configuredExecution = config.behave.execution;
+    const legacyCommand = config.behave.command;
     
-    if (configuredCommand.trim() !== 'behave') {
-        const parts = parseArgsStringToVector(configuredCommand);
-        if (parts.length === 0) {
-            vscode.window.showErrorMessage('Configured Behave command is empty.');
-            return undefined;
+    // Check if user is using the old setting actively
+    if (legacyCommand !== 'behave') {
+        const hasLegacyBeenMigrated = vscode.workspace.getConfiguration('gherkinPowerTools.behave').get('commandHasBeenMigrated') === true;
+        if (!hasLegacyBeenMigrated) {
+            // Check if execution is still the default (not overridden by user)
+            if (configuredExecution.executable === 'behave' && configuredExecution.arguments.length === 0) {
+                vscode.window.showWarningMessage(
+                    `Gherkin PowerTools: 'behave.command' is deprecated for security reasons. Your command "${legacyCommand}" is being translated automatically to 'behave.execution'. Please update your settings.json.`,
+                    'Dismiss'
+                ).then(async (selection) => {
+                    if (selection === 'Dismiss') {
+                        // Suppress further warnings
+                        await vscode.workspace.getConfiguration('gherkinPowerTools.behave').update('commandHasBeenMigrated', true, vscode.ConfigurationTarget.Global);
+                    }
+                });
+                
+                // Perform translation for this run
+                const parts = parseArgsStringToVector(legacyCommand);
+                if (parts.length > 0) {
+                    executable = parts[0];
+                    baseArgs = parts.slice(1);
+                } else {
+                    executable = 'behave';
+                }
+            } else {
+                // If they have execution configured, use that and ignore the old command
+                executable = configuredExecution.executable;
+                baseArgs = [...configuredExecution.arguments];
+            }
+        } else {
+            // Warned before, try translation if execution is default
+            if (configuredExecution.executable === 'behave' && configuredExecution.arguments.length === 0) {
+                const parts = parseArgsStringToVector(legacyCommand);
+                if (parts.length > 0) {
+                    executable = parts[0];
+                    baseArgs = parts.slice(1);
+                } else {
+                    executable = 'behave';
+                }
+            } else {
+                executable = configuredExecution.executable;
+                baseArgs = [...configuredExecution.arguments];
+            }
         }
-        executable = parts[0];
-        baseArgs = parts.slice(1);
+    } else if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
+        // Use the new structured config
+        executable = configuredExecution.executable;
+        baseArgs = [...configuredExecution.arguments];
     } else {
         const pythonExt = vscode.extensions.getExtension('ms-python.python');
         let pythonExecParts: string[] | undefined;
@@ -397,7 +438,7 @@ export async function runBehaveForTestRun(
 
         const child = cp.spawn(details.executable, details.args, {
             cwd,
-            shell: false,
+            shell: false, // Security constraint: Never use shell execution
             env
         });
 
