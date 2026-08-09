@@ -16,7 +16,12 @@ It generates deep heuristics and scores, including:
 - **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
   The engine uses semantic context tracking to accurately resolve `And` and `But` steps.
   It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then), ensuring that step definitions reused across different contexts are not falsely flagged as duplicated.
-- **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint) such as breaking down oversized scenarios, removing duplicated regex patterns, or cleaning up excessive tags and inconsistent formatting.
+- **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint, Off). The engine actively detects:
+  - **Oversized Features** and **Oversized Scenarios**
+  - **Duplicated**, **Unused**, **Ambiguous**, and **Undefined** Python step definitions
+  - **Excessive Tags**
+  - **Inconsistent Formatting**
+  - **Poor Maintainability**
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
 **Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.
@@ -27,6 +32,22 @@ To keep your editor responsive, these diagnostics are debounced by 1.5 seconds a
 Note that Ambiguous and Undefined Steps are handled instantly by the real-time Linter, so they are filtered out from the debounced anti-pattern diagnostics to prevent duplicate squiggles.
 
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
+
+---
+
+## Configuration
+
+You can configure the Anti-pattern Detection Engine's behavior and rule severities in your workspace settings or `.gherkin-powertoolsrc.json`:
+
+```json
+"gherkinPowerTools.antiPatterns.enabled": true,
+"gherkinPowerTools.antiPatterns.rules": {
+    "oversized-scenario": "warning",
+    "duplicated-steps": "error",
+    "ambiguous-steps": "error"
+}
+```
+See the [Configuration Reference](configuration.md#anti-pattern-detection-engine-settings) for the full list of rules.
 
 ---
 
@@ -42,7 +63,7 @@ A Webview panel will open in VS Code displaying the generated HTML report.
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" height="340" />
 </div>
 
-> **Note**: The legacy "Analyze Step Definitions" command has been fully integrated into the new Gherkin Health Dashboard. Both commands now launch the same unified view.
+> **Note**: The legacy "Analyze Step Definitions" command has been fully replaced by the unified Gherkin Health Dashboard.
 
 ---
 
