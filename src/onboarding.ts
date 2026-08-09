@@ -358,7 +358,7 @@ export class FirstRunExperience {
                 if (choice === 'Start Walkthrough') {
                     vscode.commands.executeCommand('workbench.action.openWalkthrough', 'carloscamara.vscode-gherkin-powertools#gherkinPowerTools.walkthrough');
                 } else if (choice === 'Show Project Health') {
-                    vscode.commands.executeCommand('gherkinPowerTools.showStatistics');
+                    vscode.commands.executeCommand('gherkinPowerTools.showGherkinHealth');
                 }
 
                 await context.globalState.update(stateKey, true);

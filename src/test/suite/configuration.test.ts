@@ -140,9 +140,9 @@ suite('ConfigurationService Test Suite', () => {
             indentation: { steps: "not a number" },
             tags: { format: "invalidFormat" },
             behave: {
-                command: 123,
                 execution: { executable: 456, arguments: "not array" },
-                additionalArguments: "not an array"
+                additionalArguments: "not an array",
+                localExecutable: "C:\\Python39\\python.exe"
             }
         }));
 
@@ -154,11 +154,10 @@ suite('ConfigurationService Test Suite', () => {
         // Fallbacks to default
         assert.strictEqual(config.indentation.steps, 4);
         assert.strictEqual(config.tags.format, 'wrap');
-        assert.strictEqual(config.behave.command, 'behave');
-        assert.deepStrictEqual(config.behave.execution.executable, 'behave');
+        assert.strictEqual(config.behave.execution.executable, 'behave');
         assert.deepStrictEqual(config.behave.execution.arguments, []);
         assert.deepStrictEqual(config.behave.additionalArguments, []);
-        assert.strictEqual(diagnostics.length, 6); // indentation, tags, and 4 for behave (command, 2 for execution, 1 for args)
+        assert.strictEqual(diagnostics.length, 6); // indentation, tags, and 4 for behave (execution.executable, execution.args, additionalArgs, localExecutable)
     });
 
     test('7. Handles unknown keys and unknown root sections gracefully', () => {
@@ -183,7 +182,6 @@ suite('ConfigurationService Test Suite', () => {
         
         fs.writeFileSync(configPath, JSON.stringify({
             behave: {
-                command: 'poetry run behave',
                 execution: {
                     executable: 'poetry',
                     arguments: ['run', 'behave']
@@ -194,7 +192,6 @@ suite('ConfigurationService Test Suite', () => {
 
         const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
 
-        assert.strictEqual(config.behave.command, 'poetry run behave');
         assert.strictEqual(config.behave.execution.executable, 'poetry');
         assert.deepStrictEqual(config.behave.execution.arguments, ['run', 'behave']);
         assert.deepStrictEqual(config.behave.additionalArguments, ['-f', 'json']);
@@ -223,7 +220,7 @@ suite('ConfigurationService Test Suite', () => {
             tables: { alignToKeyword: "not_a_bool", unknownTableKey: true },
             tags: { sort: "alphabetical", unknownTagKey: 1 },
             emptyLines: { betweenScenarios: "not_a_number", unknownEmptyKey: 2 },
-            behave: { command: 123, stepGlobs: "not_an_array", unknownBehaveKey: "foo" }
+            behave: { stepGlobs: "not_an_array", unknownBehaveKey: "foo" }
         }));
 
         let diagnostics: vscode.Diagnostic[] = [];
@@ -234,8 +231,7 @@ suite('ConfigurationService Test Suite', () => {
         assert.strictEqual(config.tags.sort, 'alphabetical');
         assert.strictEqual(config.tables.alignToKeyword, true); // fallback
         assert.strictEqual(config.emptyLines.betweenScenarios, 1); // fallback
-        assert.strictEqual(config.behave.command, 'behave'); // fallback
-        assert.ok(diagnostics.length >= 6);
+        assert.ok(diagnostics.length >= 5);
     });
 
     test('11. Handles non-object JSON values gracefully', () => {
@@ -291,7 +287,6 @@ suite('ConfigurationService Test Suite', () => {
         vscode.workspace.getConfiguration = () => ({
             get: () => undefined,
             inspect: (key: string) => {
-                if (key === 'behave.command') return { workspaceValue: 'pipenv run behave' };
                 if (key === 'behave.execution') return { workspaceValue: { executable: 'pipenv', arguments: ['run', 'behave'] } };
                 if (key === 'behave.additionalArguments') return { workspaceValue: ['--no-capture'] };
                 if (key === 'behave.ignoreGlobs') return { workspaceValue: ['**/venv/**'] };
@@ -301,11 +296,34 @@ suite('ConfigurationService Test Suite', () => {
 
         const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
 
-        assert.strictEqual(config.behave.command, 'pipenv run behave');
         assert.strictEqual(config.behave.execution.executable, 'pipenv');
         assert.deepStrictEqual(config.behave.execution.arguments, ['run', 'behave']);
         assert.deepStrictEqual(config.behave.additionalArguments, ['--no-capture']);
         assert.deepStrictEqual(config.behave.ignoreGlobs, ['**/venv/**']);
+
+        vscode.workspace.getConfiguration = originalGetConfig;
+    });
+
+    test('14. localExecutable overrides execution.executable', () => {
+        const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
+        if (fs.existsSync(configPath)) {
+            fs.unlinkSync(configPath);
+        }
+
+        const originalGetConfig = vscode.workspace.getConfiguration;
+        vscode.workspace.getConfiguration = () => ({
+            get: () => undefined,
+            inspect: (key: string) => {
+                if (key === 'behave.execution') return { workspaceValue: { executable: 'poetry', arguments: ['run', 'behave'] } };
+                if (key === 'behave.localExecutable') return { globalValue: '/absolute/path/to/venv/bin/behave' };
+                return undefined;
+            }
+        } as any);
+
+        const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+
+        assert.strictEqual(config.behave.execution.executable, 'poetry');
+        assert.strictEqual(config.behave.localExecutable, '/absolute/path/to/venv/bin/behave');
 
         vscode.workspace.getConfiguration = originalGetConfig;
     });

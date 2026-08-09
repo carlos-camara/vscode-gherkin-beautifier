@@ -18,7 +18,6 @@ export interface DiagnosticReport {
     indexedDefinitionsCount: number;
     pythonExtensionInstalled: boolean;
     pythonInterpreterPath?: string;
-    behaveCommand: string;
     behaveExecution: string;
     behaveExecutableStatus: string;
     projectConfigStatus: string;
@@ -71,7 +70,6 @@ export class DiagnosticEngine {
             behave: {
                 stepGlobs: ['**/steps/**/*.py', '**/features/steps/**/*.py'],
                 ignoreGlobs: ['**/node_modules/**', '**/.venv/**', '**/venv/**', '**/env/**'],
-                command: 'behave',
                 execution: {
                     executable: 'behave',
                     arguments: []
@@ -81,7 +79,6 @@ export class DiagnosticEngine {
 
         const stepGlobs = config.behave.stepGlobs;
         const ignoreGlobs = config.behave.ignoreGlobs;
-        const behaveCommand = config.behave.command;
         const behaveExecution = JSON.stringify(config.behave.execution || { executable: 'behave', arguments: [] });
 
         // Discovered files
@@ -128,10 +125,8 @@ export class DiagnosticEngine {
         let behaveExecutableStatus = 'Configured';
         if (config.behave.execution && config.behave.execution.executable) {
             behaveExecutableStatus = `Configured as "${config.behave.execution.executable}" (with ${config.behave.execution.arguments.length} args)`;
-        } else if (!behaveCommand || behaveCommand.trim().length === 0) {
-            behaveExecutableStatus = 'Not configured';
         } else {
-            behaveExecutableStatus = `Configured (Legacy) as "${behaveCommand}"`;
+            behaveExecutableStatus = 'Not configured';
         }
 
         // Project config file status (.gherkin-powertoolsrc.json)
@@ -195,7 +190,6 @@ export class DiagnosticEngine {
             indexedDefinitionsCount,
             pythonExtensionInstalled,
             pythonInterpreterPath: pythonInterpreterPath ? redactPath(pythonInterpreterPath) : undefined,
-            behaveCommand,
             behaveExecution,
             behaveExecutableStatus,
             projectConfigStatus,
@@ -229,7 +223,6 @@ export class DiagnosticEngine {
         if (report.pythonInterpreterPath) {
             lines.push(`Interpreter Path        : ${report.pythonInterpreterPath}`);
         }
-        lines.push(`Behave Command (Legacy): ${report.behaveCommand}`);
         lines.push(`Behave Execution        : ${report.behaveExecution}`);
         lines.push(`Behave Executable       : ${report.behaveExecutableStatus}`);
         lines.push(`Project Config (.json)  : ${report.projectConfigStatus}`);

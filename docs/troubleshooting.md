@@ -71,14 +71,17 @@ Wait a few seconds for the lazy-initialization to complete. If it still doesn't 
 **Symptom:** You click "Play" in the Test Explorer, but the test immediately fails with a "Command not found" or "behave is not recognized" error in the output.
 **Likely Causes:** `behave` is not installed, or your virtual environment is not active in the shell that VS Code spawns.
 **Resolution:**
-If using a virtual environment manager like Poetry or Pipenv, update your configuration:
+If using a virtual environment manager like Poetry or Pipenv, update your configuration in `.gherkin-powertoolsrc.json` or `.vscode/settings.json`:
 ```json
 "gherkinPowerTools.behave.execution": {
     "executable": "poetry",
     "arguments": ["run", "behave"]
 }
 ```
-Or use the absolute path to your virtual environment's executable: `".venv/bin/behave"`.
+If you need to point to a specific local Python virtual environment via an absolute path, configure the machine-specific override in your global User Settings to prevent committing absolute paths to your repository:
+```json
+"gherkinPowerTools.behave.localExecutable": "/absolute/path/to/.venv/bin/behave"
+```
 
 ## Debugging does not stop at breakpoints
 **Symptom:** You click the "Debug" icon, the test runs, but it ignores your red breakpoints.

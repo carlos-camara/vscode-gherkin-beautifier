@@ -214,18 +214,10 @@
           ],
           "markdownDescription": "Glob patterns **excluded** from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches and performance degradation.\n\nChanges take effect **immediately** — no restart required."
         },
-        "gherkinPowerTools.behave.command": {
-          "type": "string",
-          "order": 32,
-          "scope": "resource",
-          "default": "behave",
-          "deprecationMessage": "This setting is deprecated in favor of the structured 'gherkinPowerTools.behave.execution' setting for improved security.",
-          "markdownDescription": "The base command used to invoke Behave from the Test Explorer. Override this when using a virtual environment manager.\n\n**Examples:** `\"poetry run behave\"` · `\"pipenv run behave\"` · `\".venv/bin/behave\"` · `\"python -m behave\"`"
-        },
         "gherkinPowerTools.behave.execution": {
           "type": "object",
           "order": 32,
-          "scope": "machine-overridable",
+          "scope": "resource",
           "properties": {
             "executable": {
               "type": "string",
@@ -245,7 +237,13 @@
             "executable": "behave",
             "arguments": []
           },
-          "markdownDescription": "Securely configured execution model for Behave.\n\n**Examples:**\n- `{\"executable\": \"python\", \"arguments\": [\"-m\", \"behave\"]}`\n- `{\"executable\": \"poetry\", \"arguments\": [\"run\", \"behave\"]}`"
+          "markdownDescription": "Portable, shareable framework execution strategy for Behave. This setting specifies the base runner and arguments.\n\n**Examples:**\n- `{\"executable\": \"python\", \"arguments\": [\"-m\", \"behave\"]}`\n- `{\"executable\": \"poetry\", \"arguments\": [\"run\", \"behave\"]}`"
+        },
+        "gherkinPowerTools.behave.localExecutable": {
+          "type": "string",
+          "order": 33,
+          "scope": "machine-overridable",
+          "markdownDescription": "Absolute path to a local Behave executable or Python interpreter. If provided, this strictly overrides the `executable` specified in `gherkinPowerTools.behave.execution`.\n\nThis is a **machine-specific** setting and should preferably be set in User Settings to prevent absolute paths from being committed or synchronized across machines.\n\n**Examples:** `\"C:\\\\Python39\\\\python.exe\"` · `\"/home/user/.venv/bin/behave\"`"
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",
@@ -340,7 +338,7 @@
         "category": "Gherkin PowerTools"
       },
       {
-        "command": "gherkinPowerTools.showStatistics",
+        "command": "gherkinPowerTools.showGherkinHealth",
         "title": "Show Gherkin Health",
         "category": "Gherkin PowerTools"
       },
@@ -430,7 +428,7 @@
         },
         {
           "when": "editorLangId == feature",
-          "command": "gherkinPowerTools.showStatistics",
+          "command": "gherkinPowerTools.showGherkinHealth",
           "group": "navigation@4"
         }
       ],
@@ -467,7 +465,7 @@
         "when": "editorLangId == feature"
       },
       {
-        "command": "gherkinPowerTools.showStatistics",
+        "command": "gherkinPowerTools.showGherkinHealth",
         "key": "ctrl+alt+s",
         "mac": "cmd+alt+s",
         "when": "editorLangId == feature"
@@ -540,12 +538,12 @@
           {
             "id": "projectStatistics",
             "title": "View Gherkin Health",
-            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showStatistics)",
+            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showGherkinHealth)",
             "media": {
               "markdown": "assets/walkthrough/6_statistics.md"
             },
             "completionEvents": [
-              "onCommand:gherkinPowerTools.showStatistics"
+              "onCommand:gherkinPowerTools.showGherkinHealth"
             ]
           },
           {

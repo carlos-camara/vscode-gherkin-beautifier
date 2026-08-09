@@ -11,7 +11,7 @@ Gherkin PowerTools includes a powerful, standalone CLI (`@carlos-camara/gherkin-
 When you install Gherkin PowerTools locally in your project, the CLI is automatically added to your environment:
 
 ```bash
-npm install --save-dev vscode-gherkin-powertools
+npm install --save-dev @carlos-camara/gherkin-pt
 ```
 
 You can then run the CLI using `npx`:
@@ -102,7 +102,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install -D vscode-gherkin-powertools
+        run: npm install -D @carlos-camara/gherkin-pt
 
       - name: Enforce Formatting
         run: npx @carlos-camara/gherkin-pt format --check

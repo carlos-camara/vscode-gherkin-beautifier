@@ -18,7 +18,7 @@ import { astRepository } from './ast';
 import { WorkspaceGraph } from './graph';
 import { metricsLogger } from './metrics';
 import { discoveryService } from './discovery';
-import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners } from './execution';
+import { runBehave, runBehaveWithPrompt, debugBehave, registerExecutionListeners, parseArgsStringToVector } from './execution';
 
 import { showDiagnosticsReport } from './diagnostics';
 import { showOnboardingNotificationIfNeeded, FirstRunExperience } from './onboarding';
@@ -43,6 +43,10 @@ const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
  */
 export async function activate(context: vscode.ExtensionContext) {
     logger.info('Extension "vscode-gherkin-powertools" is now active.');
+    
+    // Migrate legacy command configurations automatically on start
+    await migrateLegacyExecutionSettings();
+
     const eventBus = new WorkspaceEventBus();
     context.subscriptions.push(eventBus);
 
@@ -223,7 +227,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register the project health dashboard command
     context.subscriptions.push(
-        vscode.commands.registerCommand('gherkinPowerTools.showStatistics', () => {
+        vscode.commands.registerCommand('gherkinPowerTools.showGherkinHealth', () => {
             showProjectHealthDashboard(context, workspaceGraph, symbolCache);
         }),
         vscode.commands.registerCommand('gherkinPowerTools.analytics.exportHistory', async () => {
@@ -560,4 +564,41 @@ export async function checkPeekViewRecommendation(context: vscode.ExtensionConte
 
     // Mark as prompted so we don't bother the user again
     await context.globalState.update(stateKey, true);
+}
+
+/**
+ * Automates the migration from the deprecated string-based `behave.command` 
+ * to the new structured `behave.execution` object setting. 
+ * This ensures users don't face execution errors without manual action.
+ */
+async function migrateLegacyExecutionSettings() {
+    const config = vscode.workspace.getConfiguration('gherkinPowerTools.behave');
+    const inspection = config.inspect<string>('command');
+
+    if (!inspection) { return; }
+
+    const migrateTarget = async (value: string | undefined, target: vscode.ConfigurationTarget) => {
+        if (value && value !== 'behave') {
+            const parts = parseArgsStringToVector(value);
+            if (parts.length > 0) {
+                const executable = parts[0];
+                const args = parts.slice(1);
+                // Save to the new execution object
+                await config.update('execution', { executable, arguments: args }, target);
+                logger.info(`Migrated legacy behave.command "${value}" to behave.execution at target ${target}.`);
+            }
+        }
+        // Always delete the legacy command to clean up their settings
+        if (value !== undefined) {
+            await config.update('command', undefined, target);
+        }
+    };
+
+    // Migrate in order of priority to ensure all overrides are migrated
+    await migrateTarget(inspection.globalValue, vscode.ConfigurationTarget.Global);
+    await migrateTarget(inspection.workspaceValue, vscode.ConfigurationTarget.Workspace);
+    if (inspection.workspaceFolderValue !== undefined) {
+        // We do not pass a folder URI, so workspaceFolderValue will be undefined here. 
+        // We only migrate global and workspace settings.
+    }
 }

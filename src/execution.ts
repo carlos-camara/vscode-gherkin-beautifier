@@ -54,53 +54,8 @@ export async function resolveBehaveExecutionDetails(
     let baseArgs: string[] = [];
     
     const configuredExecution = config.behave.execution;
-    const legacyCommand = config.behave.command;
     
-    // Check if user is using the old setting actively
-    if (legacyCommand !== 'behave') {
-        const hasLegacyBeenMigrated = vscode.workspace.getConfiguration('gherkinPowerTools.behave').get('commandHasBeenMigrated') === true;
-        if (!hasLegacyBeenMigrated) {
-            // Check if execution is still the default (not overridden by user)
-            if (configuredExecution.executable === 'behave' && configuredExecution.arguments.length === 0) {
-                vscode.window.showWarningMessage(
-                    `Gherkin PowerTools: 'behave.command' is deprecated for security reasons. Your command "${legacyCommand}" is being translated automatically to 'behave.execution'. Please update your settings.json.`,
-                    'Dismiss'
-                ).then(async (selection) => {
-                    if (selection === 'Dismiss') {
-                        // Suppress further warnings
-                        await vscode.workspace.getConfiguration('gherkinPowerTools.behave').update('commandHasBeenMigrated', true, vscode.ConfigurationTarget.Global);
-                    }
-                });
-                
-                // Perform translation for this run
-                const parts = parseArgsStringToVector(legacyCommand);
-                if (parts.length > 0) {
-                    executable = parts[0];
-                    baseArgs = parts.slice(1);
-                } else {
-                    executable = 'behave';
-                }
-            } else {
-                // If they have execution configured, use that and ignore the old command
-                executable = configuredExecution.executable;
-                baseArgs = [...configuredExecution.arguments];
-            }
-        } else {
-            // Warned before, try translation if execution is default
-            if (configuredExecution.executable === 'behave' && configuredExecution.arguments.length === 0) {
-                const parts = parseArgsStringToVector(legacyCommand);
-                if (parts.length > 0) {
-                    executable = parts[0];
-                    baseArgs = parts.slice(1);
-                } else {
-                    executable = 'behave';
-                }
-            } else {
-                executable = configuredExecution.executable;
-                baseArgs = [...configuredExecution.arguments];
-            }
-        }
-    } else if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
+    if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
         // Use the new structured config
         executable = configuredExecution.executable;
         baseArgs = [...configuredExecution.arguments];
@@ -133,6 +88,10 @@ export async function resolveBehaveExecutionDetails(
             executable = 'behave';
             baseArgs = [];
         }
+    }
+
+    if (config.behave.localExecutable && config.behave.localExecutable.trim().length > 0) {
+        executable = config.behave.localExecutable.trim();
     }
 
     let additionalArgs: string[];
