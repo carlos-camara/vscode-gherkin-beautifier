@@ -4,7 +4,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
-## Gherkin PowerTools: Command Center
+## Command Center
 - **Identifier**: `gherkinPowerTools.commandCenter`
 - **Where it appears**: Command Palette.
 - **Required context**: None.
@@ -46,7 +46,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 ---
 
 ## Show Impact Details
-- **Identifier**: `gherkin-powertools.showImpactDetails`
+- **Identifier**: `gherkinPowerTools.showImpactDetails`
 - **Where it appears**: CodeLens directly above Python step definitions.
 - **Required context**: A configured Python Behave workspace and `gherkinPowerTools.impactAnalysis.enabled` must be true.
 - **Input**: Clicking the CodeLens above a step definition.

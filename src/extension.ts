@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GherkinPowerToolsCommands } from './commands';
 import { WorkspaceEventBus } from './eventBus';
 import { GherkinFormattingEditProvider } from './formatter';
 import { GherkinDocumentSymbolProvider } from './outline';
@@ -245,7 +246,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register Impact Analysis details command
     context.subscriptions.push(
-        vscode.commands.registerCommand('gherkin-powertools.showImpactDetails', async (report: ImpactReport) => {
+        vscode.commands.registerCommand(GherkinPowerToolsCommands.showImpactDetails.id, async (report: ImpactReport) => {
             if (!report || report.affectedScenarios === 0) {
                 vscode.window.showInformationMessage("This step definition is not used in any scenario.");
                 return;
@@ -526,6 +527,12 @@ export async function activate(context: vscode.ExtensionContext) {
             )
         );
     });
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('gherkin-powertools.showImpactDetails', async (...args) => {
+            return vscode.commands.executeCommand(GherkinPowerToolsCommands.showImpactDetails.id, ...args);
+        })
+    );
 
     logger.info('Activation finished successfully.');
 }
