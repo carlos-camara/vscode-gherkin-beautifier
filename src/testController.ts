@@ -231,6 +231,11 @@ export class GherkinTestController {
         token: vscode.CancellationToken,
         mode: 'run' | 'debug' | 'edit'
     ) {
+        if (!vscode.workspace.isTrusted) {
+            vscode.window.showWarningMessage("Gherkin PowerTools: Test execution is disabled in untrusted workspaces for security reasons.");
+            return;
+        }
+
         const run = mode !== 'debug' ? this.controller.createTestRun(request) : undefined;
 
         const itemsToRun: vscode.TestItem[] = [];

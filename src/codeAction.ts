@@ -292,3 +292,146 @@ export async function createStepDefinition(stepText: string, keyword: string, do
     return undefined;
 }
 
+/**
+ * Handles batch creation of missing Python step definitions.
+ */
+export async function batchCreateStepDefinitions(steps: {text: string, keyword: string}[], documentUri?: vscode.Uri): Promise<vscode.Uri | undefined> {
+    if (!steps || steps.length === 0) return undefined;
+
+    const pyFiles = await discoveryService.getStepFiles();
+    let targetUri: vscode.Uri | undefined;
+    let isNewFile = false;
+
+    if (pyFiles.length === 0) {
+        const workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : discoveryService.getBestWorkspaceFolder(vscode.Uri.file('/'));
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
+            return undefined;
+        }
+
+        const defaultStepsDir = vscode.Uri.joinPath(workspaceFolder.uri, 'features', 'steps');
+        targetUri = vscode.Uri.joinPath(defaultStepsDir, 'step_definitions.py');
+
+        const createAction = "Create features/steps/step_definitions.py";
+        const selection = await vscode.window.showInformationMessage(
+            "No Python step files found. Would you like to create one for all undefined steps?",
+            createAction
+        );
+
+        if (selection === createAction) {
+            await vscode.workspace.fs.createDirectory(defaultStepsDir);
+            isNewFile = true;
+        } else {
+            return;
+        }
+    } else if (pyFiles.length === 1) {
+        targetUri = pyFiles[0];
+    } else {
+        const items = pyFiles.map(uri => ({
+            label: vscode.workspace.asRelativePath(uri),
+            uri: uri
+        }));
+        
+        const selection = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select a Python file to append the step definitions to'
+        });
+
+        if (selection) {
+            targetUri = selection.uri;
+        } else {
+            return;
+        }
+    }
+
+    if (targetUri) {
+        let fileContent = '';
+        if (!isNewFile) {
+            try {
+                const data = await vscode.workspace.fs.readFile(targetUri);
+                fileContent = Buffer.from(data).toString('utf8');
+            } catch(e) {}
+        }
+
+        let snippet = '';
+        if (isNewFile) {
+            snippet = `from behave import given, when, then, step\n\n`;
+        } else {
+            snippet = fileContent.length === 0 || fileContent.endsWith('\n') ? '\n' : '\n\n';
+        }
+
+        const generatedPatterns = new Set<string>();
+        let addedCount = 0;
+
+        for (const step of steps) {
+            const { pattern, funcArgs } = extractStepParameters(step.text);
+            
+            // Avoid generating duplicate patterns in the same batch or if they already exist
+            if (generatedPatterns.has(pattern)) continue;
+            
+            // Check if it already exists in the file (basic check)
+            const safeString = serializeToPythonString(pattern);
+            if (fileContent.includes(safeString)) {
+                continue;
+            }
+
+            generatedPatterns.add(pattern);
+            addedCount++;
+
+            let pyKeyword = step.keyword.toLowerCase().trim();
+            if (!['given', 'when', 'then', 'step'].includes(pyKeyword)) {
+                pyKeyword = 'step';
+            }
+
+            const baseFuncName = generateStepFunctionName(step.text);
+            let funcName = baseFuncName;
+            let suffix = 1;
+            while (new RegExp(`^def\\s+${funcName}\\s*\\(`, 'm').test(fileContent) || snippet.includes(`def ${funcName}(`)) {
+                funcName = `${baseFuncName}_${suffix}`;
+                suffix++;
+            }
+
+            const argsString = ['context', ...funcArgs].join(', ');
+            snippet += `@${pyKeyword}(${safeString})\ndef ${funcName}(${argsString}):\n    raise NotImplementedError(${safeString})\n\n`;
+        }
+
+        if (addedCount === 0) {
+            vscode.window.showInformationMessage("No new step definitions to generate.");
+            return undefined;
+        }
+
+        const edit = new vscode.WorkspaceEdit();
+        if (isNewFile) {
+            edit.createFile(targetUri, { ignoreIfExists: true });
+            edit.insert(targetUri, new vscode.Position(0, 0), snippet.trimEnd() + '\n');
+        } else {
+            let lineCount = 0;
+            let lastLineLength = 0;
+            try {
+                const openDoc = await vscode.workspace.openTextDocument(targetUri);
+                lineCount = openDoc.lineCount;
+                lastLineLength = lineCount > 0 ? openDoc.lineAt(lineCount - 1).text.length : 0;
+            } catch(e) {
+                const lines = fileContent.split('\n');
+                lineCount = lines.length;
+                lastLineLength = lines[lines.length - 1].length;
+            }
+            const lastLine = lineCount > 0 ? lineCount - 1 : 0;
+            const endPos = new vscode.Position(lastLine, lastLineLength);
+            edit.insert(targetUri, endPos, snippet.trimEnd() + '\n');
+        }
+
+        await vscode.workspace.applyEdit(edit);
+
+        const document = await vscode.workspace.openTextDocument(targetUri);
+        const editor = await vscode.window.showTextDocument(document);
+        
+        const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
+        editor.selection = new vscode.Selection(newEndPos, newEndPos);
+        editor.revealRange(new vscode.Range(newEndPos, newEndPos));
+
+        vscode.window.showInformationMessage(`Generated ${addedCount} step definition(s)!`);
+        return targetUri;
+    }
+    return undefined;
+}
+
