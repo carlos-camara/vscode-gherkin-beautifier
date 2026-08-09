@@ -23,7 +23,7 @@ export const GherkinPowerToolsCommands = {
     },
     commandCenter: {
         id: 'gherkinPowerTools.commandCenter',
-        title: 'Gherkin PowerTools: Command Center',
+        title: 'Command Center',
         category: CommandCategory
     },
     demoQuickFix: {

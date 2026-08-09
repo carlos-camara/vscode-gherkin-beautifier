@@ -4,7 +4,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
-## Gherkin PowerTools: Command Center
+## Command Center
 - **Identifier**: `gherkinPowerTools.commandCenter`
 - **Where it appears**: Command Palette.
 - **Required context**: None.
