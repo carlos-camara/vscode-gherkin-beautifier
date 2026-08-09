@@ -98,6 +98,22 @@ const expectedSettings = [
     type: 'string',
     schemaType: 'string',
     default: 'behave'
+  },
+  {
+    key: 'gherkinPowerTools.behave.execution',
+    section: 'behave',
+    prop: 'execution',
+    type: 'object',
+    schemaType: 'object',
+    default: { executable: 'behave', arguments: [] }
+  },
+  {
+    key: 'gherkinPowerTools.behave.localExecutable',
+    section: 'behave',
+    prop: 'localExecutable', // Not in schema, handled specially
+    type: 'string',
+    schemaType: null,
+    default: undefined
   }
 ];
 
@@ -110,13 +126,15 @@ for (const s of expectedSettings) {
   if (p.type !== s.type) {
     fail(`Type mismatch in package.json for "${s.key}": expected ${s.type}, got ${p.type}`);
   }
-  if (JSON.stringify(p.default) !== JSON.stringify(s.default)) {
+  if (s.default !== undefined && JSON.stringify(p.default) !== JSON.stringify(s.default)) {
     fail(`Default mismatch in package.json for "${s.key}": expected ${JSON.stringify(s.default)}, got ${JSON.stringify(p.default)}`);
   }
 }
 
 // Check JSON schema (gherkin-powertools.schema.json)
 for (const s of expectedSettings) {
+  if (s.schemaType === null) continue; // Skip settings not intended for project schema
+
   const sectionObj = jsonSchema.properties?.[s.section];
   if (!sectionObj || !sectionObj.properties) {
     fail(`Section "${s.section}" missing in gherkin-powertools.schema.json`);
@@ -143,4 +161,4 @@ for (const s of expectedSettings) {
   }
 }
 
-console.log('✅ Configuration synchronization check PASSED! All 9 settings match across package.json, JSON schema, TypeScript contract, and docs/configuration.md.');
+console.log('✅ Configuration synchronization check PASSED!');

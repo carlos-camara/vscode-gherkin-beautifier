@@ -170,4 +170,12 @@ suite('Architecture Validation Test Suite', () => {
             );
         }
     });
+
+    test('Extension manifest does not pollute global VS Code settings', () => {
+        assert.ok(
+            !packageJson.configurationDefaults,
+            `package.json should not contain a 'configurationDefaults' object. ` +
+            `Global overrides like 'testing.showCoverageInExplorer' affect all extensions in the workspace and should not be enforced by this extension.`
+        );
+    });
 });

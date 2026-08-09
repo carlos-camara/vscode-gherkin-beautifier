@@ -198,7 +198,7 @@ suite('E2E UI Test Suite', () => {
         // Since we cannot assert the DOM of the Webview, we just assert the command runs without throwing
         let errorThrown = false;
         try {
-            await vscode.commands.executeCommand('gherkinPowerTools.showStatistics');
+            await vscode.commands.executeCommand('gherkinPowerTools.showGherkinHealth');
         } catch (e) {
             errorThrown = true;
         }

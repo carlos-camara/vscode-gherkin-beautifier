@@ -106,7 +106,7 @@ suite('Onboarding Engine Test Suite', () => {
     test('mergeProjectConfigFile safely merges behave.stepGlobs into existing project config', () => {
         const existing = JSON.stringify({
             behave: {
-                command: 'behave --tags=@wip'
+                execution: { executable: 'behave', arguments: ['--tags=@wip'] }
             },
             linter: {
                 enabled: true
@@ -117,7 +117,7 @@ suite('Onboarding Engine Test Suite', () => {
         const merged = mergeProjectConfigFile(existing, newGlobs);
 
         const parsed = JSON.parse(merged);
-        assert.strictEqual(parsed.behave.command, 'behave --tags=@wip');
+        assert.strictEqual(parsed.behave.execution.executable, 'behave');
         assert.strictEqual(parsed.linter.enabled, true);
         assert.deepStrictEqual(parsed.behave.stepGlobs, newGlobs);
     });
