@@ -643,7 +643,7 @@
   "dependencies": {
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.0",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "fast-glob": "^3.3.3"
   }
 }
