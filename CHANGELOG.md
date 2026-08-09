@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scoped CLI Package**: The Standalone CLI is now distributed as a secure, dedicated scoped npm package (`@carlos-camara/gherkin-pt`). This eliminates supply chain squatting risks and ensures the executable name does not conflict with global namespace packages.
 
 ### ✨ Improved
+- **Command Architecture Standardization**: All commands have been unified under the `gherkinPowerTools` namespace and the `Gherkin PowerTools` category for consistency in the Command Palette. The legacy `gherkin-powertools.showImpactDetails` command has been deprecated and aliased to `gherkinPowerTools.showImpactDetails` to prevent breaking existing keybindings.
 - **CLI Documentation**: Fully updated documentation across README, CLI guides, and Getting Started pages to reflect the new `npx @carlos-camara/gherkin-pt` execution model.
 
 ### 🐛 Fixed

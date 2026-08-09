@@ -144,6 +144,26 @@ suite('Architecture Validation Test Suite', () => {
         }
     });
 
+    test('Every public command registered at runtime is declared in package.json', async () => {
+        await activate(mockContext);
+
+        const declaredCommands = packageJson.contributes.commands.map((c: any) => c.command);
+        
+        for (const registeredCommand of registeredCommands) {
+            // Ignore aliases, internal commands, and test commands
+            if (registeredCommand === 'gherkin-powertools.showImpactDetails' ||
+                registeredCommand.includes('.internal.') ||
+                registeredCommand === 'gherkinPowerTools.createStepDefinition') {
+                continue;
+            }
+
+            assert.ok(
+                declaredCommands.includes(registeredCommand), 
+                `Command '${registeredCommand}' is registered at runtime but not declared in package.json.`
+            );
+        }
+    });
+
     test('No duplicate command registrations exist', async () => {
         await activate(mockContext);
 

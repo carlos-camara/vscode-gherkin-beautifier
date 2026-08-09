@@ -308,7 +308,7 @@
     },
     "commands": [
       {
-        "command": "gherkin-powertools.showImpactDetails",
+        "command": "gherkinPowerTools.showImpactDetails",
         "title": "Show Impact Details",
         "category": "Gherkin PowerTools"
       },
@@ -391,12 +391,12 @@
       {
         "command": "gherkinPowerTools.refactor.extractStep",
         "title": "Extract Step",
-        "category": "Refactoring"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.refactor.renameStep",
         "title": "Rename Step",
-        "category": "Refactoring"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.analytics.exportHistory",
