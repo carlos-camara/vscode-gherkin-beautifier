@@ -46,7 +46,7 @@ suite('Project Health Dashboard Test Suite', () => {
             largestFeatures: [{ uri: 'file:///test.feature', name: 'Test Feature', size: 10 }],
             largestScenarios: [{ uri: 'file:///test.feature', line: 5, name: 'Very long scenario with <script>', size: 5 }],
             undefinedSteps: [],
-            tagFrequencies: [{ name: '@smoke', count: 3 }],
+            tagFrequencies: [{ name: '@smoke', count: 3, files: [] }],
             stepAnalysis: { totalStepDefs: 1, unusedSteps: [], duplicatedSteps: [], ambiguousSteps: [] },
             scores: {
                 complexity: 20,
@@ -99,6 +99,7 @@ suite('Project Health Dashboard Test Suite', () => {
                 set html(value: string) { webviewHtml = value; },
                 onDidReceiveMessage: () => {}
             },
+            onDidDispose: () => {},
             dispose: () => {}
         } as any);
 

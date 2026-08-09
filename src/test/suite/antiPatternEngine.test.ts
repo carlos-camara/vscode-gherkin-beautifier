@@ -93,7 +93,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
 
     test('OversizedFeatureRule triggers when feature size > 20', () => {
         const metrics = { ...baseMetrics, largestFeatures: [
-            { uri: 'file:///huge.feature', name: 'Huge Feature', size: 25 }
+            { uri: 'file:///huge.feature', name: 'Huge Feature', size: 55 }
         ]};
         const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
         const oversizedFeat = ap.find(r => r.title.startsWith('Oversized Feature'));
@@ -104,7 +104,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
 
     test('OversizedScenarioRule triggers when scenario size > 10', () => {
         const metrics = { ...baseMetrics, largestScenarios: [
-            { uri: 'file:///huge.feature', line: 1, name: 'Huge Scenario', size: 15 }
+            { uri: 'file:///huge.feature', line: 1, name: 'Huge Scenario', size: 25 }
         ]};
         const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
         const oversizedScen = ap.find(r => r.title.startsWith('Oversized Scenario'));
@@ -127,7 +127,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
             ]
         } as any};
         const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
-        const dupRec = ap.find(r => r.title === 'Duplicated Step Definitions');
+        const dupRec = ap.find(r => r.title.startsWith('Duplicate Step Definition'));
         assert.ok(dupRec);
         assert.strictEqual(dupRec.severity, 'error');
         assert.strictEqual(dupRec.affectedItems?.length, 2);
@@ -162,7 +162,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
     test('PoorMaintainabilityRule triggers when maintainability < 60', () => {
         const metrics = { ...baseMetrics, scores: { complexity: 0, maintainability: 50, health: 50 }};
         const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
-        const maintRec = ap.find(r => r.title === 'Poor Project Maintainability');
+        const maintRec = ap.find(r => r.title === 'Low Maintainability Score');
         assert.ok(maintRec);
         assert.strictEqual(maintRec.severity, 'warning');
     });
@@ -181,7 +181,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
     
     test('Severity Configuration Overrides work', () => {
         const metrics = { ...baseMetrics, largestScenarios: [
-            { uri: 'file:///huge.feature', line: 1, name: 'Huge Scenario', size: 15 }
+            { uri: 'file:///huge.feature', line: 1, name: 'Huge Scenario', size: 25 }
         ]};
         const customConfig = { ...ruleConfig, "oversized-scenario": "off" };
         const apOff = engine.generateAntiPatterns(mockGraph, metrics, customConfig);

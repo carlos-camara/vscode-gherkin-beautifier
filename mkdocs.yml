@@ -5,6 +5,8 @@ site_description: >
   A configurable formatter, structural linter, quick fixes,
   and Python/Behave navigation tool for Gherkin inside VS Code.
 site_author: Carlos Camara
+repo_name: carlos-camara/vscode-gherkin-powertools
+repo_url: https://github.com/carlos-camara/vscode-gherkin-powertools
 use_directory_urls: false
 
 theme:

@@ -52,6 +52,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
+### `gherkinPowerTools.docStrings.alignToKeyword`
+- **Purpose:** When `true`, DocStrings are dynamically padded to align with the text start of the preceding step keyword. Set to `false` for a simpler fixed-column alignment.
+- **Type:** `boolean`
+- **Default:** `true`
+
 ### `gherkinPowerTools.emptyLines.betweenScenarios`
 - **Purpose:** Enforced blank lines between Scenario/Rule blocks.
 - **Type:** `number` (0–3)
@@ -134,11 +139,18 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `array` of strings
 - **Default:** `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]`
 
-### `gherkinPowerTools.behave.command`
-- **Purpose:** Base command used to invoke Behave from the Test Explorer.
+### `gherkinPowerTools.behave.execution`
+- **Purpose:** Portable, shareable framework execution strategy for Behave. This setting specifies the base runner and arguments.
+- **Type:** `object` (with `executable` string and `arguments` array)
+- **Default:** `{"executable": "behave", "arguments": []}`
+- **Example:** `{"executable": "poetry", "arguments": ["run", "behave"]}`
+
+### `gherkinPowerTools.behave.localExecutable`
+- **Purpose:** Absolute path to a local Behave executable or Python interpreter. Overrides the `executable` specified in `behave.execution`. **Machine-specific override**, do not put in `.gherkin-powertoolsrc.json`.
 - **Type:** `string`
-- **Default:** `"behave"`
-- **Example:** `"poetry run behave"`
+- **Default:** *None*
+- **Example:** `"/home/user/.venv/bin/behave"`
+
 
 ### `gherkinPowerTools.behave.additionalArguments`
 - **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer.
@@ -169,14 +181,16 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 ## Shared Team Configuration (`.gherkin-powertoolsrc.json`)
 
-You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root to standardize formatting and discovery for the whole team, regardless of their individual VS Code settings. The Standalone CLI (`gherkin-pt`) also automatically detects and respects this file.
+You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root to standardize formatting and discovery for the whole team, regardless of their individual VS Code settings. The Standalone CLI (`@carlos-camara/gherkin-pt`) also automatically detects and respects this file.
 
 ### Precedence Hierarchy
 Configuration settings are resolved in the following order of precedence (highest to lowest):
-1. **Project-level `.gherkin-powertoolsrc.json`**: Used to override settings for the entire team and CI/CD.
-2. **VS Code Workspace/User Settings**: Settings configured in `.vscode/settings.json` or globally.
-3. **Profile Defaults**: The base profile specified (e.g. `team` or `strict`).
-4. **Extension Defaults**: Standard baseline if nothing is configured.
+1. **Machine-Specific Overrides**: User Settings (`behave.localExecutable`).
+2. **Project-level `.gherkin-powertoolsrc.json`**: Used to override settings for the entire team and CI/CD.
+3. **VS Code Workspace Settings**: Settings configured in `.vscode/settings.json`.
+4. **VS Code User Settings**: Global settings.
+5. **Profile Defaults**: The base profile specified (e.g. `team` or `strict`).
+6. **Extension Defaults**: Standard baseline if nothing is configured.
 
 Example:
 ```json
@@ -192,7 +206,10 @@ Example:
         "stepGlobs": [
             "**/features/steps/**/*.py"
         ],
-        "command": "behave"
+        "execution": {
+            "executable": "behave",
+            "arguments": []
+        }
     }
 }
 ```
