@@ -91,14 +91,7 @@ const expectedSettings = [
     schemaType: 'array',
     default: []
   },
-  {
-    key: 'gherkinPowerTools.behave.command',
-    section: 'behave',
-    prop: 'command',
-    type: 'string',
-    schemaType: 'string',
-    default: 'behave'
-  },
+
   {
     key: 'gherkinPowerTools.behave.execution',
     section: 'behave',
