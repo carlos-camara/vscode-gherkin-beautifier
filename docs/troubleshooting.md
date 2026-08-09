@@ -121,8 +121,8 @@ If you need to point to a specific local Python virtual environment via an absol
 **Likely Causes:** Your `gherkinPowerTools.behave.stepGlobs` configuration does not cover the locations of all your steps.
 **Resolution:** Ensure your Python step paths are correctly set in settings (`gherkinPowerTools.behave.stepGlobs`). The proactive indexer will automatically scan them upon running the command.
 
-## Rename Step (<kbd>F2</kbd> or <kbd>Cmd+Shift+R</kbd> on macOS) does not find all usages
-**Symptom:** You press <kbd>F2</kbd> (or <kbd>Cmd+Shift+R</kbd> on macOS) on a Gherkin step, rename it, but some `.feature` files still use the old step name.
+## Rename Step does not find all usages
+**Symptom:** You invoke the native VS Code `Rename Symbol` command (e.g., <kbd>F2</kbd>) on a Gherkin step, rename it, but some `.feature` files still use the old step name.
 **Likely Causes:** The affected `.feature` files were not yet indexed in the `WorkspaceGraph`.
 **Diagnostic Steps:**
 1. Ensure the Python step file containing the definition is within your configured `stepGlobs`.

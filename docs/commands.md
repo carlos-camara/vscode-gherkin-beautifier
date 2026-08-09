@@ -10,7 +10,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: None.
 - **Input**: None.
 - **Result**: Opens a unified QuickPick menu giving access to formatting, statistics, running tests, debugging, and workspace diagnostics.
-- **Default shortcut**: <kbd>Ctrl+Shift+G</kbd> (<kbd>Cmd+Shift+G</kbd> on macOS).
+- **Default shortcut**: <kbd>Ctrl+K</kbd> <kbd>Ctrl+G</kbd> (<kbd>Cmd+K</kbd> <kbd>Cmd+G</kbd> on macOS).
 
 ---
 
@@ -31,7 +31,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: An active `.feature` file or workspace.
 - **Input**: None.
 - **Result**: Analyzes environment versions, workspace layout, discovered feature/step files, indexed definitions, Python extension status, and `.gherkin-powertoolsrc.json` validity. Generates an Output Channel report with a 1-click `Copy Sanitized Report` action.
-- **Default shortcut**: <kbd>Ctrl+Alt+H</kbd> (<kbd>Cmd+Option+H</kbd> on macOS).
+- **Default shortcut**: <kbd>Ctrl+K</kbd> <kbd>Ctrl+D</kbd> (<kbd>Cmd+K</kbd> <kbd>Cmd+D</kbd> on macOS).
 
 ---
 
@@ -41,7 +41,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: An active `.feature` file.
 - **Input**: None.
 - **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing project health, maintainability, tag impact, and complexity distribution.
-- **Default shortcut**: <kbd>Ctrl+Alt+S</kbd> (<kbd>Cmd+Option+S</kbd> on macOS).
+- **Default shortcut**: <kbd>Ctrl+K</kbd> <kbd>Ctrl+H</kbd> (<kbd>Cmd+K</kbd> <kbd>Cmd+H</kbd> on macOS).
 
 ---
 
@@ -144,7 +144,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Required context**: A Gherkin step in a `.feature` file or a Python step decorator string.
 - **Input**: Prompts for the new step name.
 - **Result**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
-- **Default shortcut**: <kbd>F2</kbd> (<kbd>Cmd+Shift+R</kbd> on macOS).
+- **Default shortcut**: VS Code Native Rename (<kbd>F2</kbd> by default).
 
 
 

@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scoped CLI Package**: The Standalone CLI is now distributed as a secure, dedicated scoped npm package (`@carlos-camara/gherkin-pt`). This eliminates supply chain squatting risks and ensures the executable name does not conflict with global namespace packages.
 
 ### ✨ Improved
+- **Native Step Rename Alignment**: Removed custom keybindings for renaming steps. The native VS Code `F2` rename provider is now fully responsible for Gherkin step renaming, enabling native previews, robust `WorkspaceEdit` undo history, and seamless UI integration without hijacking standard editor keys.
+- **Safe Shortcut Chords**: Command Center, Gherkin Health, and Workspace Diagnostics have been reassigned to non-conflicting chord shortcuts (`Ctrl+K Ctrl+G`, `Ctrl+K Ctrl+H`, `Ctrl+K Ctrl+D`) so they no longer interfere with native VS Code panels like Source Control.
 - **Command Architecture Standardization**: All commands have been unified under the `gherkinPowerTools` namespace and the `Gherkin PowerTools` category for consistency in the Command Palette. The legacy `gherkin-powertools.showImpactDetails` command has been deprecated and aliased to `gherkinPowerTools.showImpactDetails` to prevent breaking existing keybindings.
 - **CLI Documentation**: Fully updated documentation across README, CLI guides, and Getting Started pages to reflect the new `npx @carlos-camara/gherkin-pt` execution model.
 
