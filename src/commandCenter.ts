@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GherkinPowerToolsCommands } from './commands';
 
 interface CommandCenterItem extends vscode.QuickPickItem {
     commandId?: string;
@@ -14,7 +15,7 @@ export async function showCommandCenter() {
         {
             label: '$(paintcan) Format Gherkin Document',
             description: 'Formats the current Gherkin file',
-            commandId: 'gherkinPowerTools.format'
+            commandId: GherkinPowerToolsCommands.format.id
         },
 
         // Execution & Debugging
@@ -25,32 +26,32 @@ export async function showCommandCenter() {
         {
             label: '$(play) Run Feature',
             description: 'Executes the entire feature file',
-            commandId: 'gherkinPowerTools.runFeature'
+            commandId: GherkinPowerToolsCommands.runFeature.id
         },
         {
             label: '$(play) Run Scenario',
             description: 'Executes the scenario at the cursor position',
-            commandId: 'gherkinPowerTools.runScenario'
+            commandId: GherkinPowerToolsCommands.runScenario.id
         },
         {
             label: '$(gear) Edit Feature...',
             description: 'Executes the feature with custom interactive arguments',
-            commandId: 'gherkinPowerTools.runFeatureWithArgs'
+            commandId: GherkinPowerToolsCommands.runFeatureWithArgs.id
         },
         {
             label: '$(gear) Edit Scenario...',
             description: 'Executes the scenario with custom interactive arguments',
-            commandId: 'gherkinPowerTools.runScenarioWithArgs'
+            commandId: GherkinPowerToolsCommands.runScenarioWithArgs.id
         },
         {
             label: '$(debug-alt) Debug Feature',
             description: 'Starts a debug session for the feature file',
-            commandId: 'gherkinPowerTools.debugFeature'
+            commandId: GherkinPowerToolsCommands.debugFeature.id
         },
         {
             label: '$(debug-alt) Debug Scenario',
             description: 'Starts a debug session for the scenario at the cursor position',
-            commandId: 'gherkinPowerTools.debugScenario'
+            commandId: GherkinPowerToolsCommands.debugScenario.id
         },
 
         // Step Definitions
@@ -61,7 +62,7 @@ export async function showCommandCenter() {
         {
             label: '$(add) Create Step Definition',
             description: 'Generates Python code for an undefined step',
-            commandId: 'gherkinPowerTools.createStepDefinition'
+            commandId: GherkinPowerToolsCommands.createStepDefinition.id
         },
 
         // Analysis & Diagnostics
@@ -72,12 +73,12 @@ export async function showCommandCenter() {
         {
             label: '$(graph) Show Gherkin Health',
             description: 'Generates a visual dashboard of project metrics and actionable anti-patterns',
-            commandId: 'gherkinPowerTools.showStatistics'
+            commandId: GherkinPowerToolsCommands.showGherkinHealth.id
         },
         {
             label: '$(stethoscope) Diagnose Workspace',
             description: 'Generates a troubleshooting report for the workspace',
-            commandId: 'gherkinPowerTools.diagnoseWorkspace'
+            commandId: GherkinPowerToolsCommands.diagnoseWorkspace.id
         }
     ];
 

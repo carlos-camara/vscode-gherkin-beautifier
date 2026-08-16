@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.3] - Unreleased
+
+### 🚀 Added
+- **Secure Execution Model**: Redesigned Behave test execution (`gherkinPowerTools.behave.execution`) to use structured arguments and `spawn({ shell: false })` instead of raw shell commands, mitigating command injection risks.
+- **Workspace Trust**: Integrated VS Code's Workspace Trust API to explicitly block automated Behave execution in untrusted environments.
+- **Machine-Specific Configuration Isolation**: Added `gherkinPowerTools.behave.localExecutable` as a strict, machine-specific configuration override for execution, ensuring absolute paths are not committed to shared project configuration files.
+- **Scoped CLI Package**: The Standalone CLI is now distributed as a secure, dedicated scoped npm package (`@carlos-camara/gherkin-pt`). This eliminates supply chain squatting risks and ensures the executable name does not conflict with global namespace packages.
+
+### ✨ Improved
+- **Command Architecture Standardization**: All commands have been unified under the `gherkinPowerTools` namespace and the `Gherkin PowerTools` category for consistency in the Command Palette. The legacy `gherkin-powertools.showImpactDetails` command has been deprecated and aliased to `gherkinPowerTools.showImpactDetails` to prevent breaking existing keybindings.
+- **CLI Documentation**: Fully updated documentation across README, CLI guides, and Getting Started pages to reflect the new `npx @carlos-camara/gherkin-pt` execution model.
+
+### 🐛 Fixed
+- **Zero-Config Python Environment Detection**: Completely removed the deprecated `behave.command` setting to enforce a zero-config paradigm. Behave execution now automatically discovers virtual environments by directly leveraging the official Microsoft Python extension API. This eliminates the need to hardcode absolute environment paths and automatically migrates legacy configurations on startup.
+- **CLI Dependency Resolution**: Fixed an issue where the standalone CLI could fail to resolve peer dependencies like `@cucumber/gherkin` when executed via `npx`. The build script now natively injects root workspace dependencies into the CLI's `package.json`.
+- **Test Explorer Integration**: Removed an invalid global `testing.showCoverageInExplorer` configuration override from the extension manifest. This prevents Gherkin PowerTools from inadvertently hiding the coverage buttons of other third-party extensions (like Python Pytest or Jest) in the VS Code Test Explorer.
+- **Linter Edge Case**: Fixed a semantic validation bug where misspelled step keywords were not highlighted if they were incorrectly parsed as part of a Feature or Rule description due to missing colons (e.g., a missing colon on a `Scenario`).
+
 ## [1.8.2] - 2026-08-05
 
 ### 🚀 Added
@@ -43,10 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Automated First-Run Experience**: Added an intelligent, non-intrusive onboarding experience. When you open a Python Behave project for the first time, Gherkin PowerTools automatically detects it, counts your features, and presents a welcome notification with quick actions to launch the Walkthrough or the Health Dashboard.
 - **Contextual Feature Discovery**: A lightweight, non-intrusive recommendation engine that analyzes your workflow in real-time. It seamlessly surfaces advanced features (like generating missing steps, auto-formatting tables, opening the command center, or checking project health) at the exact moment you need them, without disrupting your flow. Includes "Don't show again" functionality.
 - **Historical Trend Analysis**: Gherkin Health Dashboard now automatically tracks and persists lightweight historical snapshots of your project metrics in the workspace state. It visualizes project evolution (complexity, maintainability, technical debt) over time using interactive charts without sending any data off your machine. Configure retention policies or disable it entirely in settings.
-- **Command Line Interface (CLI)**: Gherkin PowerTools now includes a powerful, standalone CLI (`gherkin-pt`) that brings the Workspace Intelligence Engine to your terminal and CI/CD pipelines.
-  - Run `npx gherkin-pt analyze` to enforce Gherkin structural validity and block missing Python steps in Pull Requests.
-  - Run `npx gherkin-pt format --check` to enforce team formatting rules in CI.
-  - Run `npx gherkin-pt stats --json` to export high-level project metrics.
+- **Command Line Interface (CLI)**: Gherkin PowerTools now includes a powerful, standalone CLI (`@carlos-camara/gherkin-pt`) that brings the Workspace Intelligence Engine to your terminal and CI/CD pipelines.
+  - Run `npx @carlos-camara/gherkin-pt analyze` to enforce Gherkin structural validity and block missing Python steps in Pull Requests.
+  - Run `npx @carlos-camara/gherkin-pt format --check` to enforce team formatting rules in CI.
+  - Run `npx @carlos-camara/gherkin-pt stats --json` to export high-level project metrics.
 
 ### 🐛 Fixed
 - Fixed an issue where the new Gherkin Health Dashboard failed to load the charting library in some VS Code environments due to `acquireVsCodeApi` strictness.

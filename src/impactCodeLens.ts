@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { WorkspaceGraph } from './graph';
+import { GherkinPowerToolsCommands } from './commands';
 import { ImpactAnalyzer } from './impactAnalysis';
 import { parsePythonDecorators } from './tokenizer';
 
@@ -80,7 +81,7 @@ export class ImpactCodeLensProvider implements vscode.CodeLensProvider {
 
         lens.command = {
             title,
-            command: 'gherkin-powertools.showImpactDetails',
+            command: GherkinPowerToolsCommands.showImpactDetails.id,
             arguments: [report]
         };
 

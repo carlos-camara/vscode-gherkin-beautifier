@@ -92,13 +92,24 @@ The extension will launch Behave attached to `debugpy`. Execution will halt at y
 
 ## Customizing the Execution Environment
 
-By default, the extension invokes the `behave` command.
+By default, the extension uses **Zero-Config Environment Discovery**. It securely communicates with the official Microsoft Python extension to detect your active virtual environment (whether it's Poetry, Pipenv, venv, or Conda) and executes Behave within it automatically. You do not need to configure anything if your Python environment is correctly selected in VS Code.
 
-If you are using Poetry, Pipenv, or a direct virtual environment, you can configure the base command in your settings:
+If you need to override the execution engine entirely (e.g. wrapping Behave inside a docker command or a custom runner script), you can configure the base executable securely using the structured `behave.execution` object in your portable `.gherkin-powertoolsrc.json` or `.vscode/settings.json`:
 
 ```json
-"gherkinPowerTools.behave.command": "poetry run behave"
+"gherkinPowerTools.behave.execution": {
+    "executable": "docker-compose",
+    "arguments": ["run", "--rm", "test-runner", "behave"]
+}
 ```
+
+### Machine-Specific Overrides
+If you need to use an absolute path (e.g. to a local Python interpreter or a `.venv/bin/behave` executable), you should **not** commit this to your shared settings. Instead, use the machine-overridable setting in your global User Settings:
+
+```json
+"gherkinPowerTools.behave.localExecutable": "/home/user/.venv/bin/behave"
+```
+This strictly overrides the `executable` specified in `behave.execution`, keeping your project configuration portable and secure.
 
 You can also pass persistent arguments (like passing userdata to the environment):
 
@@ -114,8 +125,17 @@ If you need to change arguments on the fly (e.g., adding `--tags=@wip` for a sin
 
 ---
 
+## Remote Workspaces (Dev Containers, WSL, SSH)
+
+Gherkin PowerTools fully supports remote development environments. Because the extension executes the configured command directly in the workspace, Behave tests will seamlessly run inside your Docker container, WSL instance, or remote SSH machine exactly as they do locally.
+No additional configuration is required, just ensure Behave is installed in the remote environment's Python path.
+
+---
+
 ## Troubleshooting Execution
 
-- **"Behave command not found":** Ensure the virtual environment containing Behave is active, or update `gherkinPowerTools.behave.command` to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
+- **"Behave executable not found":** Ensure your Python environment is correctly selected in the VS Code status bar and that `behave` is installed in it. If you need to manually specify a path for a non-standard setup, you can use the `gherkinPowerTools.behave.localExecutable` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
+- **"Tests are not discovered or do not run":** Ensure your workspace is Trusted. For security reasons, the extension blocks Behave execution in Untrusted (Restricted) workspaces.
+
 - **Tests run but show no output:** Ensure you aren't passing arguments that suppress output, or add `--no-capture` to `additionalArguments` if you need to see `print()` statements.
 - **Breakpoints not hitting:** Ensure you are clicking the "Debug" icon (bug), not the "Run" icon (play). Confirm your Python extension is active.

@@ -98,7 +98,7 @@ suite('ImpactCodeLensProvider Test Suite', () => {
             assert.ok(lens1);
             const resolvedLens1 = provider.resolveCodeLens(lens1, new vscode.CancellationTokenSource().token);
             assert.strictEqual(resolvedLens1?.command?.title, 'Impact: Low (1 Scenario)');
-            assert.strictEqual(resolvedLens1?.command?.command, 'gherkin-powertools.showImpactDetails');
+            assert.strictEqual(resolvedLens1?.command?.command, 'gherkinPowerTools.showImpactDetails');
             assert.ok(resolvedLens1?.command?.arguments && resolvedLens1.command.arguments.length > 0);
 
             // test2 should be Unused
