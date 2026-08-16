@@ -1,27 +1,26 @@
-# 📊 Project Statistics Dashboard
+# 📊 Gherkin Health Dashboard
 
-Get a data-driven view of your BDD test suite health at a glance.
+Get a data-driven view of your BDD test suite health, architecture, and maintainability.
 
 **How to open:**
 
-- Open the **Command Palette** (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run `Gherkin PowerTools: Show Statistics`
-- Or select **Statistics** from the **Command Center**
+- Open the **Command Palette** (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run `Gherkin PowerTools: Show Gherkin Health`
+- Or select **Gherkin Health** from the **Command Center**
 
 **What the dashboard shows:**
 
 | Metric | Description |
 |--------|-------------|
-| **Total Features** | Number of `.feature` files in the workspace |
-| **Total Scenarios** | All `Scenario` and `Scenario Outline` blocks |
-| **Total Examples Rows** | Expanded parameterized rows from all `Scenario Outline` blocks |
-| **Effective Test Cases** | Actual number of test executions (scenarios + expanded rows) |
-| **Step Definitions** | Number of Python step implementations indexed from your step globs |
-| **Coverage** | Ratio of Gherkin steps that have a matching Python implementation |
-| **Tag Distribution** | Bar chart of the most used tags across your workspace |
-| **Most Complex Scenarios** | Scenarios with the highest step count — candidates for refactoring |
+| **Overall Health** | A unified metric indicating the general state of your test suite. |
+| **Maintainability** | Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps. |
+| **Complexity Score** | An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files). |
+| **Technical Debt** | Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine. |
+| **Actionable Anti-patterns** | Prioritized rules to fix technical debt (configurable as Error, Warning, Info, Hint). |
+| **Architecture Insights** | Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags. |
+| **Historical Trends** | Evolution charts visualizing how your Technical Debt and Complexity change over time, isolated by Git branch. |
 
 **Why it matters:**
 
-The Statistics Dashboard gives QA leads and project managers a living snapshot of test coverage without running a single test. Use it to spot gaps, track growth over sprints, and identify bloated scenarios that should be split.
+The Gherkin Health Dashboard gives QA leads and project managers a living snapshot of test quality and technical debt without running a single test. The Anti-pattern Engine intelligently analyzes your workspace to find oversized scenarios, duplicate regex patterns, and unused Python step definitions.
 
-> **Tip:** The dashboard is generated from the Cucumber AST — it is always consistent with what Behave would actually execute, including expanded `Scenario Outline` rows.
+> **Interactive Navigation:** Every metric and anti-pattern in the dashboard is clickable and will instantly open the file and scroll to the exact line in your VS Code editor.

@@ -304,23 +304,25 @@ export class GherkinLinter {
         // If parsed successfully, check for undefined steps and semantic issues
         if (gherkinDocument && gherkinDocument.feature) {
             const dialect = dialectService.getDialect(document);
-            const featureExpectedKeywords = [...dialect.background, ...dialect.rule, ...dialect.scenario, ...dialect.scenarioOutline].map(k => k.trim());
-            const ruleExpectedKeywords = [...dialect.background, ...dialect.scenario, ...dialect.scenarioOutline].map(k => k.trim());
-            const scenarioExpectedKeywords = [...dialect.given, ...dialect.when, ...dialect.then, ...dialect.and, ...dialect.but, ...dialect.examples, ...dialect.scenario, ...dialect.scenarioOutline].map(k => k.trim());
+            const allExpectedKeywords = Array.from(new Set([
+                ...dialect.feature, ...dialect.background, ...dialect.rule, ...dialect.scenario, ...dialect.scenarioOutline,
+                ...dialect.given, ...dialect.when, ...dialect.then, ...dialect.and, ...dialect.but, ...dialect.examples
+            ].map(k => k.trim())));
+            
             const blockKeywords = dialectService.getBlockKeywords(dialect);
 
-            this.checkDescription(gherkinDocument.feature, diagnostics, document, featureExpectedKeywords, blockKeywords);
+            this.checkDescription(gherkinDocument.feature, diagnostics, document, allExpectedKeywords, blockKeywords);
             if (gherkinDocument.feature.children) {
                 for (const child of gherkinDocument.feature.children) {
                     if (child.rule) {
-                        this.checkDescription(child.rule, diagnostics, document, ruleExpectedKeywords, blockKeywords);
+                        this.checkDescription(child.rule, diagnostics, document, allExpectedKeywords, blockKeywords);
                         if (child.rule.children) {
                             for (const ruleChild of child.rule.children) {
                                 const ruleScenario = ruleChild.scenario || ruleChild.background;
                                 if (ruleScenario) {
                                     await this.checkSteps(ruleScenario.steps || [], diagnostics, document);
                                     this.checkScenarioExamples(ruleChild.scenario, diagnostics, document);
-                                    this.checkDescription(ruleScenario, diagnostics, document, scenarioExpectedKeywords, blockKeywords);
+                                    this.checkDescription(ruleScenario, diagnostics, document, allExpectedKeywords, blockKeywords);
                                 }
                             }
                         }
@@ -329,7 +331,7 @@ export class GherkinLinter {
                         if (scenario) {
                             await this.checkSteps(scenario.steps || [], diagnostics, document);
                             this.checkScenarioExamples(child.scenario, diagnostics, document);
-                            this.checkDescription(scenario, diagnostics, document, scenarioExpectedKeywords, blockKeywords);
+                            this.checkDescription(scenario, diagnostics, document, allExpectedKeywords, blockKeywords);
                         }
                     }
                 }

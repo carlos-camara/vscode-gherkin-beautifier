@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -41,12 +41,6 @@
     "onLanguage:feature"
   ],
   "main": "./dist/extension.js",
-  "bin": {
-    "gherkin-pt": "./dist/cli.js"
-  },
-  "configurationDefaults": {
-    "testing.showCoverageInExplorer": false
-  },
   "contributes": {
     "languages": [
       {
@@ -220,12 +214,36 @@
           ],
           "markdownDescription": "Glob patterns **excluded** from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches and performance degradation.\n\nChanges take effect **immediately** — no restart required."
         },
-        "gherkinPowerTools.behave.command": {
-          "type": "string",
+        "gherkinPowerTools.behave.execution": {
+          "type": "object",
           "order": 32,
           "scope": "resource",
-          "default": "behave",
-          "markdownDescription": "The base command used to invoke Behave from the Test Explorer. Override this when using a virtual environment manager.\n\n**Examples:** `\"poetry run behave\"` · `\"pipenv run behave\"` · `\".venv/bin/behave\"` · `\"python -m behave\"`"
+          "properties": {
+            "executable": {
+              "type": "string",
+              "default": "behave",
+              "description": "The executable or runner to invoke (e.g., 'behave', 'poetry', 'python')."
+            },
+            "arguments": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "Base arguments passed to the executable (e.g., ['run', 'behave'] or ['-m', 'behave'])."
+            }
+          },
+          "default": {
+            "executable": "behave",
+            "arguments": []
+          },
+          "markdownDescription": "Portable, shareable framework execution strategy for Behave. This setting specifies the base runner and arguments.\n\n**Examples:**\n- `{\"executable\": \"python\", \"arguments\": [\"-m\", \"behave\"]}`\n- `{\"executable\": \"poetry\", \"arguments\": [\"run\", \"behave\"]}`"
+        },
+        "gherkinPowerTools.behave.localExecutable": {
+          "type": "string",
+          "order": 33,
+          "scope": "machine-overridable",
+          "markdownDescription": "Absolute path to a local Behave executable or Python interpreter. If provided, this strictly overrides the `executable` specified in `gherkinPowerTools.behave.execution`.\n\nThis is a **machine-specific** setting and should preferably be set in User Settings to prevent absolute paths from being committed or synchronized across machines.\n\n**Examples:** `\"C:\\\\Python39\\\\python.exe\"` · `\"/home/user/.venv/bin/behave\"`"
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",
@@ -290,7 +308,7 @@
     },
     "commands": [
       {
-        "command": "gherkin-powertools.showImpactDetails",
+        "command": "gherkinPowerTools.showImpactDetails",
         "title": "Show Impact Details",
         "category": "Gherkin PowerTools"
       },
@@ -301,7 +319,7 @@
       },
       {
         "command": "gherkinPowerTools.commandCenter",
-        "title": "Gherkin PowerTools: Command Center",
+        "title": "Command Center",
         "category": "Gherkin PowerTools"
       },
       {
@@ -320,7 +338,7 @@
         "category": "Gherkin PowerTools"
       },
       {
-        "command": "gherkinPowerTools.showStatistics",
+        "command": "gherkinPowerTools.showGherkinHealth",
         "title": "Show Gherkin Health",
         "category": "Gherkin PowerTools"
       },
@@ -373,12 +391,12 @@
       {
         "command": "gherkinPowerTools.refactor.extractStep",
         "title": "Extract Step",
-        "category": "Refactoring"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.refactor.renameStep",
         "title": "Rename Step",
-        "category": "Refactoring"
+        "category": "Gherkin PowerTools"
       },
       {
         "command": "gherkinPowerTools.analytics.exportHistory",
@@ -410,7 +428,7 @@
         },
         {
           "when": "editorLangId == feature",
-          "command": "gherkinPowerTools.showStatistics",
+          "command": "gherkinPowerTools.showGherkinHealth",
           "group": "navigation@4"
         }
       ],
@@ -447,7 +465,7 @@
         "when": "editorLangId == feature"
       },
       {
-        "command": "gherkinPowerTools.showStatistics",
+        "command": "gherkinPowerTools.showGherkinHealth",
         "key": "ctrl+alt+s",
         "mac": "cmd+alt+s",
         "when": "editorLangId == feature"
@@ -520,12 +538,12 @@
           {
             "id": "projectStatistics",
             "title": "View Gherkin Health",
-            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showStatistics)",
+            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showGherkinHealth)",
             "media": {
               "markdown": "assets/walkthrough/6_statistics.md"
             },
             "completionEvents": [
-              "onCommand:gherkinPowerTools.showStatistics"
+              "onCommand:gherkinPowerTools.showGherkinHealth"
             ]
           },
           {
@@ -588,6 +606,7 @@
     ]
   },
   "scripts": {
+    "build:cli": "node scripts/build-npm-cli.js",
     "vscode:prepublish": "npm run esbuild -- --production",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
@@ -602,15 +621,15 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "@types/sinon": "^22.0.0",
     "@types/vscode": "^1.93.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.9.2",
     "c8": "^12.0.0",
-    "esbuild": "^0.28.1",
-    "mocha": "^11.7.6",
+    "esbuild": "^0.28.2",
+    "mocha": "^11.8.0",
     "mocha-junit-reporter": "^2.2.1",
     "mocha-multi-reporters": "^1.5.1",
     "sinon": "^22.1.0",
@@ -619,12 +638,12 @@
   "overrides": {
     "serialize-javascript": "^7.0.5",
     "brace-expansion": "^2.1.3",
-    "js-yaml": "^4.3.0"
+    "js-yaml": "^4.3.1"
   },
   "dependencies": {
-    "@cucumber/gherkin": "^42.0.0",
+    "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.1",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "fast-glob": "^3.3.3"
   }
 }

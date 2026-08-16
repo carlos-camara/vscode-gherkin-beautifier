@@ -144,6 +144,26 @@ suite('Architecture Validation Test Suite', () => {
         }
     });
 
+    test('Every public command registered at runtime is declared in package.json', async () => {
+        await activate(mockContext);
+
+        const declaredCommands = packageJson.contributes.commands.map((c: any) => c.command);
+        
+        for (const registeredCommand of registeredCommands) {
+            // Ignore aliases, internal commands, and test commands
+            if (registeredCommand === 'gherkin-powertools.showImpactDetails' ||
+                registeredCommand.includes('.internal.') ||
+                registeredCommand === 'gherkinPowerTools.createStepDefinition') {
+                continue;
+            }
+
+            assert.ok(
+                declaredCommands.includes(registeredCommand), 
+                `Command '${registeredCommand}' is registered at runtime but not declared in package.json.`
+            );
+        }
+    });
+
     test('No duplicate command registrations exist', async () => {
         await activate(mockContext);
 
@@ -169,5 +189,13 @@ suite('Architecture Validation Test Suite', () => {
                 `Item at index ${i} in context.subscriptions is missing a dispose() method or is null.`
             );
         }
+    });
+
+    test('Extension manifest does not pollute global VS Code settings', () => {
+        assert.ok(
+            !packageJson.configurationDefaults,
+            `package.json should not contain a 'configurationDefaults' object. ` +
+            `Global overrides like 'testing.showCoverageInExplorer' affect all extensions in the workspace and should not be enforced by this extension.`
+        );
     });
 });
