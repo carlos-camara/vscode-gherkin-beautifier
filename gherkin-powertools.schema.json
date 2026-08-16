@@ -122,10 +122,14 @@
           "default": ["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"],
           "description": "Glob patterns excluded from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches. Changes take effect immediately."
         },
-        "command": {
-          "type": "string",
-          "default": "behave",
-          "description": "The base command used to invoke Behave from the Test Explorer. Override when using a virtual environment manager: 'poetry run behave', 'pipenv run behave', '.venv/bin/behave', 'python -m behave'."
+        "execution": {
+          "type": "object",
+          "properties": {
+            "executable": { "type": "string", "default": "behave" },
+            "arguments": { "type": "array", "items": { "type": "string" }, "default": [] }
+          },
+          "default": { "executable": "behave", "arguments": [] },
+          "description": "Portable, shareable framework execution strategy for Behave. Specifies the base runner and arguments."
         },
         "additionalArguments": {
           "type": "array",
