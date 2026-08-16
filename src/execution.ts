@@ -53,16 +53,12 @@ export async function resolveBehaveExecutionDetails(
     let executable: string;
     let baseArgs: string[] = [];
     
-    const configuredCommand = config.behave.command || 'behave';
+    const configuredExecution = config.behave.execution;
     
-    if (configuredCommand.trim() !== 'behave') {
-        const parts = parseArgsStringToVector(configuredCommand);
-        if (parts.length === 0) {
-            vscode.window.showErrorMessage('Configured Behave command is empty.');
-            return undefined;
-        }
-        executable = parts[0];
-        baseArgs = parts.slice(1);
+    if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
+        // Use the new structured config
+        executable = configuredExecution.executable;
+        baseArgs = [...configuredExecution.arguments];
     } else {
         const pythonExt = vscode.extensions.getExtension('ms-python.python');
         let pythonExecParts: string[] | undefined;
@@ -92,6 +88,10 @@ export async function resolveBehaveExecutionDetails(
             executable = 'behave';
             baseArgs = [];
         }
+    }
+
+    if (config.behave.localExecutable && config.behave.localExecutable.trim().length > 0) {
+        executable = config.behave.localExecutable.trim();
     }
 
     let additionalArgs: string[];
@@ -397,7 +397,7 @@ export async function runBehaveForTestRun(
 
         const child = cp.spawn(details.executable, details.args, {
             cwd,
-            shell: false,
+            shell: false, // Security constraint: Never use shell execution
             env
         });
 

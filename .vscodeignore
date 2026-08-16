@@ -31,3 +31,5 @@ esbuild.js
 .venv/**
 venv/**
 vsix-validation-report.md
+dist-cli/**
+scripts/**
