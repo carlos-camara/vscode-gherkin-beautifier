@@ -36,6 +36,7 @@ Try out the AST-powered formatter. Mess up the alignment of an `Examples:` table
 - **macOS:** <kbd>Shift+Option+F</kbd>
 - **Windows / Linux:** <kbd>Shift+Alt+F</kbd>
 - Or open the Command Palette and type **Format Document**.
+- Or right-click in the editor and select **Gherkin PowerTools > Format Document**.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif" alt="Formatter - full document alignment" width="600" height="340" />
@@ -81,11 +82,13 @@ To run your tests, simply open the **Testing** panel in the VS Code sidebar. The
 
 ---
 
-## 6. Command Center
+## 6. Command Center & Context Menus
 
 If you ever forget a command or shortcut, press <kbd>Ctrl+Shift+P</kbd> (<kbd>Cmd+Shift+P</kbd> on macOS) and search for **Gherkin PowerTools: Command Center**.
 
-This opens an interactive quick-pick menu that groups all the extension's capabilities (formatting, running tests, diagnosing workspace, viewing statistics) into one unified searchable list.
+This opens an interactive quick-pick menu that groups all the extension's capabilities (formatting, running tests, diagnosing workspace, viewing statistics) into one unified searchable list. 
+
+**Editor Context Menus:** You can also access many of these features quickly by right-clicking anywhere in a `.feature` file to open the **Gherkin PowerTools** submenu (which includes Format, Diagnose Workspace, and Show Gherkin Health). Additionally, if you right-click directly on a valid Gherkin step, a dynamic **Rename Step** option will appear, allowing you to instantly rename the step across your entire workspace.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif" alt="Command Center" width="600" height="340" />

@@ -64,6 +64,7 @@ suite('Contextual Feature Discovery Test Suite', () => {
     });
 
     teardown(() => {
+        service.dispose();
         const originals = (service as any)._originals;
         if (originals) {
             (vscode.languages as any).getDiagnostics = originals.getDiagnostics;
@@ -169,5 +170,54 @@ suite('Contextual Feature Discovery Test Suite', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         assert.strictEqual(informationMessagesShown.length, 0);
+    });
+
+    test('Reset clears all session and global state keys', async () => {
+        // Setup state indicating dismissed
+        mockGlobalState.state['discovery.formatterRule.dismissed'] = true;
+        (service as any).sessionDismissed.add('formatterRule');
+        
+        await service.reset();
+
+        assert.strictEqual(mockGlobalState.state['discovery.formatterRule.dismissed'], undefined);
+        assert.strictEqual((service as any).sessionDismissed.has('formatterRule'), false);
+    });
+
+    test('Cancellation during dispose aborts asynchronous actions', async () => {
+        let resolveMessage: (value: any) => void;
+        const promiseMessage = new Promise(resolve => { resolveMessage = resolve; });
+        
+        (vscode.window as any).showInformationMessage = async (message: string, ...items: string[]) => {
+            informationMessagesShown.push({ message, items });
+            await promiseMessage; // Blocks the async operation
+            return items[0]; // Resolves to 'Try it'
+        };
+
+        mockDiagnostics = [
+            { message: 'Trailing spaces not allowed' } as vscode.Diagnostic,
+            { message: 'Wrong indentation' } as vscode.Diagnostic,
+            { message: 'Multiple empty lines' } as vscode.Diagnostic,
+        ];
+        const mockDocument = { languageId: 'feature', uri: vscode.Uri.file('test.feature') } as vscode.TextDocument;
+        
+        // Trigger it (does not await)
+        (service as any).onDidSaveTextDocument(mockDocument);
+
+        // Wait a tick to let it reach showInformationMessage
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        assert.strictEqual(informationMessagesShown.length, 1);
+        
+        // Dispose the service (which cancels the token)
+        service.dispose();
+
+        // Now resolve the message prompt
+        resolveMessage!('Try it');
+        
+        // Let promises flush
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // It should NOT have executed the command because it was cancelled
+        assert.strictEqual(commandsExecuted.length, 0);
     });
 });

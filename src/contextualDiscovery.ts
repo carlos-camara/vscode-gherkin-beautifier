@@ -1,9 +1,13 @@
 import * as vscode from 'vscode';
 import { WorkspaceGraph } from './graph';
 
-export class ContextualFeatureDiscoveryService {
+export class ContextualFeatureDiscoveryService implements vscode.Disposable {
     private context: vscode.ExtensionContext;
     private graph: WorkspaceGraph;
+    
+    // Lifecycle management
+    private disposables: vscode.Disposable[] = [];
+    private disposeCts = new vscode.CancellationTokenSource();
     
     // In-memory set to prevent spamming within the same session if they don't click "Don't show again"
     private sessionDismissed = new Set<string>();
@@ -12,10 +16,25 @@ export class ContextualFeatureDiscoveryService {
         this.context = context;
         this.graph = graph;
 
-        context.subscriptions.push(
+        this.disposables.push(
             vscode.workspace.onDidSaveTextDocument(this.onDidSaveTextDocument.bind(this)),
             vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor.bind(this))
         );
+    }
+
+    public dispose() {
+        this.disposeCts.cancel();
+        this.disposeCts.dispose();
+        this.disposables.forEach(d => d.dispose());
+        this.disposables = [];
+    }
+
+    public async reset() {
+        this.sessionDismissed.clear();
+        const ruleIds = ['formatterRule', 'generateStepRule', 'dashboardRule', 'commandCenterRule'];
+        for (const ruleId of ruleIds) {
+            await this.context.globalState.update(`discovery.${ruleId}.dismissed`, undefined);
+        }
     }
 
     private isGherkinDocument(document: vscode.TextDocument): boolean {
@@ -42,6 +61,10 @@ export class ContextualFeatureDiscoveryService {
 
         const selection = await vscode.window.showInformationMessage(message, tryIt, dontShowAgain);
         
+        if (this.disposeCts.token.isCancellationRequested) {
+            return;
+        }
+
         if (selection === tryIt) {
             if (args) {
                 vscode.commands.executeCommand(commandId, ...args);

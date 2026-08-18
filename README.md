@@ -83,15 +83,15 @@ A Blast Radius CodeLens appears above every Python step definition. View exactly
 Gherkin PowerTools acts in two tiers depending on your project:
 
 ### Generic BDD Frameworks (Cucumber, SpecFlow, Playwright)
-- **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd>).
+- **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd> or Editor Context Menu).
 - **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
 - **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
 
 ### Exclusive to Python Behave
 - **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
-- **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (e.g., <kbd>F2</kbd>).
+- **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
 - **Test Explorer Integration:** Run and debug features with line-by-line execution tracking.
-- **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension.
+- **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension. *(Note: In Remote Development environments like WSL or SSH, run the CLI from the VS Code Integrated Terminal, not your local OS terminal).*
 
 ---
 

@@ -198,4 +198,37 @@ suite('Architecture Validation Test Suite', () => {
             `Global overrides like 'testing.showCoverageInExplorer' affect all extensions in the workspace and should not be enforced by this extension.`
         );
     });
+
+    test('Extension manifest correctly configures the editor context menu and submenus', () => {
+        // Validate submenus
+        const submenus = packageJson.contributes.submenus;
+        assert.ok(submenus, 'package.json should define submenus');
+        assert.ok(submenus.find((s: any) => s.id === 'gherkinPowerTools.submenu'), 'Should have a submenu with id gherkinPowerTools.submenu');
+
+        // Validate editor/context
+        const editorContext = packageJson.contributes.menus['editor/context'];
+        assert.ok(editorContext, 'package.json should define editor/context menus');
+        
+        const renameCommand = editorContext.find((m: any) => m.command === 'gherkinPowerTools.refactor.renameStep');
+        assert.ok(renameCommand, 'Rename Step should be in editor/context');
+        assert.ok(renameCommand.when.includes('gherkinPowerTools.isCursorOnStep'), 'Rename Step should only be visible when cursor is on a step');
+
+        const gptSubmenu = editorContext.find((m: any) => m.submenu === 'gherkinPowerTools.submenu');
+        assert.ok(gptSubmenu, 'Gherkin PowerTools submenu should be linked in editor/context');
+
+        // Validate submenu contents
+        const submenuContents = packageJson.contributes.menus['gherkinPowerTools.submenu'];
+        assert.ok(submenuContents, 'package.json should define contents for gherkinPowerTools.submenu');
+        assert.ok(submenuContents.find((m: any) => m.command === 'gherkinPowerTools.format'), 'Format Document should be in the submenu');
+        assert.ok(submenuContents.find((m: any) => m.command === 'gherkinPowerTools.diagnoseWorkspace'), 'Diagnose Workspace should be in the submenu');
+        assert.ok(submenuContents.find((m: any) => m.command === 'gherkinPowerTools.showGherkinHealth'), 'Show Gherkin Health should be in the submenu');
+    });
+
+    test('Extension declares the correct Remote Development execution model', () => {
+        assert.ok(packageJson.extensionKind, 'package.json should define extensionKind');
+        assert.ok(
+            Array.isArray(packageJson.extensionKind) && packageJson.extensionKind[0] === 'workspace',
+            'extensionKind must be set to ["workspace"] to ensure Behave/Python execution happens on the remote machine.'
+        );
+    });
 });

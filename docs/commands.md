@@ -16,7 +16,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Format Gherkin Document
 - **Identifier**: `gherkinPowerTools.format`
-- **Where it appears**: Command Palette, Editor Context Menu (Right-click in `.feature` file).
+- **Where it appears**: Command Palette, Editor Context Menu (Gherkin PowerTools submenu).
 - **Required context**: An active `.feature` file.
 - **Input**: None.
 - **Result**: Formats the active Gherkin document or the current selection according to your configuration profile.
@@ -27,7 +27,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Diagnose Workspace
 - **Identifier**: `gherkinPowerTools.diagnoseWorkspace`
-- **Where it appears**: Command Palette, Editor Context Menu.
+- **Where it appears**: Command Palette, Editor Context Menu (Gherkin PowerTools submenu).
 - **Required context**: An active `.feature` file or workspace.
 - **Input**: None.
 - **Result**: Analyzes environment versions, workspace layout, discovered feature/step files, indexed definitions, Python extension status, and `.gherkin-powertoolsrc.json` validity. Generates an Output Channel report with a 1-click `Copy Sanitized Report` action.
@@ -37,7 +37,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Show Gherkin Health
 - **Identifier**: `gherkinPowerTools.showGherkinHealth`
-- **Where it appears**: Command Palette, Editor Context Menu.
+- **Where it appears**: Command Palette, Editor Context Menu (Gherkin PowerTools submenu).
 - **Required context**: An active `.feature` file.
 - **Input**: None.
 - **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing project health, maintainability, tag impact, and complexity distribution.
@@ -96,6 +96,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Reset Contextual Recommendations
+- **Identifier**: `gherkinPowerTools.resetContextualRecommendations`
+- **Where it appears**: Command Palette.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Resets dismissed state for contextual discovery features (e.g. project setup hints), allowing them to prompt you again in this workspace.
+- **Default shortcut**: None.
+
+---
+
 ## Demo Quick Fix (Internal)
 - **Identifier**: `gherkinPowerTools.demoQuickFix`
 - **Where it appears**: VS Code Walkthrough.
@@ -140,7 +150,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Rename Step
 - **Identifier**: `gherkinPowerTools.refactor.renameStep`
-- **Where it appears**: Editor Context Menu (Right-click in `.feature` file).
+- **Where it appears**: Editor Context Menu (Dynamic, only when cursor is on a valid Gherkin step).
 - **Required context**: A Gherkin step in a `.feature` file or a Python step decorator string.
 - **Input**: Prompts for the new step name.
 - **Result**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
