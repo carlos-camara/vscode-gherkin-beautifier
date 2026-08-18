@@ -64,7 +64,7 @@ Every service that calls `eventBus.onEvent()` tracks its subscription with an `e
 To provide a zero-configuration setup experience, Gherkin PowerTools includes a dedicated `FirstRunExperience` module.
 
 ### How Onboarding Works
-1. **Lazy Loading:** The onboarding check is deferred using a `setTimeout` inside the extension's activation lifecycle. This ensures that the heavy work of scanning the workspace for Python Behave indicators does not block VS Code's critical startup path, adhering to strict performance best practices.
+1. **Lazy Loading:** The onboarding check is deferred using the `DeferredBootstrap` orchestration layer inside the extension's activation lifecycle. This ensures that the heavy work of scanning the workspace for Python Behave indicators does not block VS Code's critical startup path, adhering to strict performance best practices.
 2. **State Tracking:** The extension queries `context.globalState` to determine if the user has previously completed or dismissed the onboarding.
 3. **Workspace Discovery:** If it's a first run, the `BehaveDetector` lightly scans the workspace. If it finds `.feature` files and indications of a Behave project, it triggers a welcome notification. If no Behave indicators are found, the extension remains completely silent to avoid annoying non-Behave users.
 4. **Actionable Outcomes:** The notification routes users immediately to the Walkthrough or the Gherkin Health Dashboard, driving immediate time-to-value.
@@ -87,6 +87,48 @@ To ensure long-term stability and prevent regressions in these core architectura
 - All file watchers and the Event Bus are correctly disposed during deactivation.
 - All core modules and services initialize successfully without exceptions during bootstrap.
 - No duplicate command registrations exist.
+
+## Deferred Activation Lifecycle
+
+To optimize VS Code startup time and ensure extension stability, Gherkin PowerTools delays the initialization of heavy components (such as caches, indexes, and workspace graph traversal) and the registration of file watchers.
+
+This process is strictly orchestrated by the `DeferredBootstrap` component, which replaces simple and unsafe timeouts with a deterministic, cancellable state machine.
+
+### Lifecycle Diagram
+
+```mermaid
+sequenceDiagram
+    participant VSCode
+    participant Extension
+    participant DeferredBootstrap
+    participant CancellationToken
+    participant Caches
+    participant Watchers
+    
+    VSCode->>Extension: activate()
+    Extension->>DeferredBootstrap: new()
+    Extension->>DeferredBootstrap: start(2000)
+    Extension-->>VSCode: Promise<void> resolved
+    
+    alt Normal Execution
+        Note over DeferredBootstrap: 2 seconds pass
+        DeferredBootstrap->>Caches: Promise.all([ensureInitialized...])
+        Caches-->>DeferredBootstrap: Resolved
+        DeferredBootstrap->>CancellationToken: isCancellationRequested?
+        DeferredBootstrap->>Watchers: createFileSystemWatcher()
+        Note over DeferredBootstrap: Watchers stored in Bootstrap array
+    else Cancelled (VSCode deactivates)
+        VSCode->>DeferredBootstrap: dispose()
+        DeferredBootstrap->>CancellationToken: cancel()
+        DeferredBootstrap->>DeferredBootstrap: clearTimeout()
+        DeferredBootstrap->>Watchers: dispose()
+    end
+```
+
+### Safety & Idempotency
+- **Cancellable Contexts**: If the extension is deactivated before the timeout fires or while caches are initializing, the internal `CancellationToken` aborts the operation safely, preventing orphan `FileSystemWatcher` instances.
+- **Fail-Safe Cleanup**: If any component fails to initialize (e.g., throwing an error during parsing), the Bootstrap sequence safely halts and cleans up any partially created resources, avoiding memory leaks.
+- **Single Ownership**: All deferred subscriptions are centrally tracked and disposed of by the `DeferredBootstrap` instance.
 
 ## Workspace Relationship Graph
 
@@ -121,6 +163,15 @@ To help users naturally discover advanced capabilities (like formatting, step ge
 2. **Rules Engine:** Features are modeled as individual "Rules" (e.g., `FormatterRule`, `GenerateStepRule`). Each rule defines an `evaluate()` condition. For instance, the formatter rule fires if the user saves a `.feature` file that contains unaligned tables, while the generate step rule fires when the user pauses on an undefined step.
 3. **State Tracking (Dismissals):** To ensure a non-intrusive experience, the service persists the state of recommendations in VS Code's `ExtensionContext.globalState`. If a user dismisses a recommendation or clicks "Don't show again", that specific rule is permanently silenced.
 4. **Notification Debouncing:** The service queues recommendations and prevents rapid consecutive popups, ensuring users are not overwhelmed during fast editing sessions.
+
+## Dynamic UI Contexts
+
+To reduce UI clutter and ensure contextual relevance, Gherkin PowerTools dynamically manages VS Code context keys (e.g., `gherkinPowerTools.isCursorOnStep`) to control the visibility of context menu commands.
+
+### How Dynamic Context Works
+1. **Selection Listening:** The extension subscribes to `vscode.window.onDidChangeTextEditorSelection`.
+2. **Debounced Evaluation:** When the cursor moves, a lightweight evaluation checks if the active line matches a valid Gherkin step pattern.
+3. **Context Injection:** The result is injected into VS Code's context using `executeCommand('setContext', ...)`. This drives the `when` clauses in `package.json` to dynamically show or hide commands like **Rename Step** only when applicable, maintaining a clean editor context menu.
 
 ## Command Line Interface (CLI) Build Architecture
 

@@ -41,6 +41,9 @@
     "onLanguage:feature"
   ],
   "main": "./dist/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
   "contributes": {
     "languages": [
       {
@@ -320,6 +323,12 @@
       {
         "command": "gherkinPowerTools.commandCenter",
         "title": "Command Center",
+        "category": "Gherkin PowerTools",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "gherkinPowerTools.resetContextualRecommendations",
+        "title": "Reset Feature Recommendations",
         "category": "Gherkin PowerTools"
       },
       {
@@ -409,27 +418,37 @@
         "category": "Gherkin PowerTools"
       }
     ],
+    "submenus": [
+      {
+        "id": "gherkinPowerTools.submenu",
+        "label": "Gherkin PowerTools"
+      }
+    ],
     "menus": {
       "editor/context": [
         {
+          "submenu": "gherkinPowerTools.submenu",
           "when": "editorLangId == feature",
-          "command": "gherkinPowerTools.format",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
-          "when": "editorLangId == feature",
           "command": "gherkinPowerTools.refactor.renameStep",
-          "group": "navigation@2.1"
+          "when": "editorLangId == feature && gherkinPowerTools.isCursorOnStep",
+          "group": "navigation@2"
+        }
+      ],
+      "gherkinPowerTools.submenu": [
+        {
+          "command": "gherkinPowerTools.format",
+          "group": "1_modification@1"
         },
         {
-          "when": "editorLangId == feature",
           "command": "gherkinPowerTools.diagnoseWorkspace",
-          "group": "navigation@3"
+          "group": "2_workspace@1"
         },
         {
-          "when": "editorLangId == feature",
           "command": "gherkinPowerTools.showGherkinHealth",
-          "group": "navigation@4"
+          "group": "2_workspace@2"
         }
       ],
       "view/title": [
@@ -480,7 +499,7 @@
     "walkthroughs": [
       {
         "id": "gherkinPowerTools.walkthrough",
-        "title": "Get Started with Gherkin PowerTools",
+        "title": "Gherkin PowerTools: Essential BDD",
         "description": "Learn how to format, lint, and navigate your BDD features.",
         "steps": [
           {
@@ -514,61 +533,6 @@
             ]
           },
           {
-            "id": "configureGlobs",
-            "title": "Configure Behave Step Discovery",
-            "description": "If your Python steps are not in the default `features/steps` folder, update the Step Globs setting. [Configure Step Globs](command:workbench.action.openSettings?%22gherkinPowerTools.behave.stepGlobs%22)",
-            "media": {
-              "markdown": "assets/walkthrough/4_discovery.md"
-            },
-            "completionEvents": [
-              "onSettingChanged:gherkinPowerTools.behave.stepGlobs"
-            ]
-          },
-          {
-            "id": "goToDefinition",
-            "title": "Navigate to Python Steps",
-            "description": "Right-click a step and select **Go to Definition** (F12) to jump straight to the Python implementation. [Go to Definition](command:gherkinPowerTools.demoGoToDefinition)",
-            "media": {
-              "markdown": "assets/walkthrough/5_navigation.md"
-            },
-            "completionEvents": [
-              "onCommand:gherkinPowerTools.demoGoToDefinition"
-            ]
-          },
-          {
-            "id": "projectStatistics",
-            "title": "View Gherkin Health",
-            "description": "Generate an interactive HTML dashboard with your BDD project metrics and static analysis. [Show Gherkin Health](command:gherkinPowerTools.showGherkinHealth)",
-            "media": {
-              "markdown": "assets/walkthrough/6_statistics.md"
-            },
-            "completionEvents": [
-              "onCommand:gherkinPowerTools.showGherkinHealth"
-            ]
-          },
-          {
-            "id": "execution",
-            "title": "Execute Behave Tests",
-            "description": "Run and Edit your features directly from the Test Explorer. [Run Feature](command:gherkinPowerTools.runFeature)",
-            "media": {
-              "markdown": "assets/walkthrough/8_execution.md"
-            },
-            "completionEvents": [
-              "onCommand:gherkinPowerTools.runFeature"
-            ]
-          },
-          {
-            "id": "codeActions",
-            "title": "Intelligent Quick Fixes",
-            "description": "Press `Cmd + .` or `Ctrl + .` to generate missing steps, insert colons, or fix block structure. [Quick Fix](command:gherkinPowerTools.demoQuickFix)",
-            "media": {
-              "markdown": "assets/walkthrough/9_codeactions.md"
-            },
-            "completionEvents": [
-              "onCommand:gherkinPowerTools.demoQuickFix"
-            ]
-          },
-          {
             "id": "commandCenter",
             "title": "Gherkin Command Center",
             "description": "Discover all extension capabilities from a single interactive menu. [Open Command Center](command:gherkinPowerTools.commandCenter)",
@@ -588,6 +552,110 @@
             },
             "completionEvents": [
               "onLink:https://github.com/carlos-camara/vscode-gherkin-powertools"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "gherkinPowerTools.walkthrough.behave",
+        "title": "Gherkin PowerTools: Python Behave",
+        "description": "Advanced intelligent tooling for Python Behave workspaces.",
+        "steps": [
+          {
+            "id": "configureGlobs",
+            "title": "Configure Behave Step Discovery",
+            "description": "If your Python steps are not in the default `features/steps` folder, update the Step Globs setting. [Configure Step Globs](command:workbench.action.openSettings?%22gherkinPowerTools.behave.stepGlobs%22)",
+            "media": {
+              "markdown": "assets/walkthrough/4_discovery.md"
+            },
+            "when": "gherkinPowerTools.uncoveredSteps == true",
+            "completionEvents": [
+              "onSettingChanged:gherkinPowerTools.behave.stepGlobs"
+            ]
+          },
+          {
+            "id": "goToDefinition",
+            "title": "Navigate to Python Steps",
+            "description": "Right-click a step and select **Go to Definition** (F12) to jump straight to the Python implementation. [Go to Definition](command:gherkinPowerTools.demoGoToDefinition)",
+            "media": {
+              "markdown": "assets/walkthrough/5_navigation.md"
+            },
+            "completionEvents": [
+              "onCommand:gherkinPowerTools.demoGoToDefinition"
+            ]
+          },
+          {
+            "id": "execution",
+            "title": "Execute Behave Tests",
+            "description": "Run and Edit your features directly from the Test Explorer. [Open Test Explorer](command:workbench.view.testing.focus)",
+            "media": {
+              "markdown": "assets/walkthrough/8_execution.md"
+            },
+            "completionEvents": [
+              "onCommand:workbench.view.testing.focus",
+              "onCommand:gherkinPowerTools.runFeature"
+            ]
+          },
+          {
+            "id": "codeActions",
+            "title": "Intelligent Quick Fixes",
+            "description": "Press `Cmd + .` or `Ctrl + .` to generate missing steps, insert colons, or fix block structure. [Quick Fix](command:gherkinPowerTools.demoQuickFix)",
+            "media": {
+              "markdown": "assets/walkthrough/9_codeactions.md"
+            },
+            "completionEvents": [
+              "onCommand:gherkinPowerTools.demoQuickFix"
+            ]
+          },
+          {
+            "id": "refactoring",
+            "title": "Safe Step Refactoring",
+            "description": "Rename steps across your entire workspace fearlessly. [Rename Step](command:gherkinPowerTools.refactor.renameStep)",
+            "media": {
+              "markdown": "assets/walkthrough/11_refactoring.md"
+            },
+            "completionEvents": [
+              "onCommand:gherkinPowerTools.refactor.renameStep"
+            ]
+          },
+          {
+            "id": "impactAnalysis",
+            "title": "Real-Time Impact Analysis",
+            "description": "See the usage blast radius before modifying a Python step, and view project health. [Show Gherkin Health](command:gherkinPowerTools.showGherkinHealth)",
+            "media": {
+              "markdown": "assets/walkthrough/12_impact.md"
+            },
+            "completionEvents": [
+              "onCommand:gherkinPowerTools.showGherkinHealth"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "gherkinPowerTools.walkthrough.cli",
+        "title": "Gherkin PowerTools: CLI & CI Integration",
+        "description": "Run Gherkin structural validation in your automated pipelines.",
+        "steps": [
+          {
+            "id": "installCli",
+            "title": "Install Standalone CLI",
+            "description": "Install the CLI globally via npm to parse Gherkin locally without VS Code. [View npm package](https://www.npmjs.com/package/@carlos-camara/gherkin-pt)",
+            "media": {
+              "markdown": "assets/walkthrough/13_cli_install.md"
+            },
+            "completionEvents": [
+              "onLink:https://www.npmjs.com/package/@carlos-camara/gherkin-pt"
+            ]
+          },
+          {
+            "id": "ciSetup",
+            "title": "Configure CI Pipeline",
+            "description": "Integrate the checks in GitHub Actions, GitLab CI, or Jenkins. [Open Command Center](command:gherkinPowerTools.commandCenter)",
+            "media": {
+              "markdown": "assets/walkthrough/14_cli_ci.md"
+            },
+            "completionEvents": [
+              "onCommand:gherkinPowerTools.commandCenter"
             ]
           }
         ]

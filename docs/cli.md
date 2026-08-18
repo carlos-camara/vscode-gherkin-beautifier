@@ -2,6 +2,9 @@
 
 Gherkin PowerTools includes a powerful, standalone CLI (`@carlos-camara/gherkin-pt`) that brings the **Workspace Intelligence Engine** to your terminal and CI/CD pipelines. It allows you to run the exact same formatter, diagnostics, and metrics that run in VS Code, directly from the command line.
 
+> [!NOTE]
+> The standalone NPM package `@carlos-camara/gherkin-pt` is currently in preview and may not be published to the public NPM registry yet. During local development, you can build it yourself by running `node scripts/build-npm-cli.js`.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli.gif" alt="Command Line Interface execution" width="600" height="340" />
 </p>
