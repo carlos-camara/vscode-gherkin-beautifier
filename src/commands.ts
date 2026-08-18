@@ -122,7 +122,3 @@ export const GherkinPowerToolsCommands = {
         category: CommandCategory
     }
 } as const;
-
-export function getAllCommands(): CommandRegistration[] {
-    return Object.values(GherkinPowerToolsCommands);
-}
