@@ -62,15 +62,26 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 Wait a few seconds for the lazy-initialization to complete. If it still doesn't appear, ensure your `.feature` files contain valid Gherkin syntax (at least a `Feature:` keyword).
 **Resolution:** Fix any critical syntax errors in your Gherkin.
 
+## Test Execution is Blocked
+**Symptom:** You attempt to run a test from the Test Explorer, but VS Code blocks the execution.
+**Likely Causes:** The extension uses VS Code's Workspace Trust API to prevent arbitrary command execution. If your workspace is marked as "Untrusted" (Restricted Mode), test execution is disabled.
+**Resolution:** Click the "Restricted Mode" banner in the bottom status bar and select "Trust Workspace & Install" to enable test execution.
+
 ## Run fails (Behave executable is not found)
 **Symptom:** You click "Play" in the Test Explorer, but the test immediately fails with a "Command not found" or "behave is not recognized" error in the output.
 **Likely Causes:** `behave` is not installed, or your virtual environment is not active in the shell that VS Code spawns.
 **Resolution:**
-If using a virtual environment manager like Poetry or Pipenv, update your configuration:
+If using a virtual environment manager like Poetry or Pipenv, update your configuration in `.gherkin-powertoolsrc.json` or `.vscode/settings.json`:
 ```json
-"gherkinPowerTools.behave.command": "poetry run behave"
+"gherkinPowerTools.behave.execution": {
+    "executable": "poetry",
+    "arguments": ["run", "behave"]
+}
 ```
-Or use the absolute path to your virtual environment's executable: `".venv/bin/behave"`.
+If you need to point to a specific local Python virtual environment via an absolute path, configure the machine-specific override in your global User Settings to prevent committing absolute paths to your repository:
+```json
+"gherkinPowerTools.behave.localExecutable": "/absolute/path/to/.venv/bin/behave"
+```
 
 ## Debugging does not stop at breakpoints
 **Symptom:** You click the "Debug" icon, the test runs, but it ignores your red breakpoints.
@@ -88,6 +99,21 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 **Symptom:** You missed a colon on a `Scenario`, and suddenly all steps below it have red underlines.
 **Likely Causes:** This was a known limitation of the AST parser in older versions.
 **Resolution:** Upgrade to version 1.7.9+. The linter now gracefully falls back to a text-based scanner to isolate severe structural errors from your valid steps.
+
+## Statistics history data is lost or corrupted
+**Symptom:** The historical trend charts are missing data points or show errors.
+**Likely Causes:** State corruption or an extreme refactoring drastically altering the codebase.
+**Resolution:**
+1. Run the **Clear History** command to purge corrupted records safely.
+2. The dashboard will start generating a fresh baseline on the next run.
+
+## Remote Development (WSL, SSH, Dev Containers, Codespaces)
+**Symptom:** The extension cannot find Python, Behave, or local workspace paths when running inside a remote environment.
+**Likely Causes:** Gherkin PowerTools correctly executes on the remote machine where the workspace is hosted (as a `workspace` extension). Absolute paths configured for a local OS (e.g., Windows `C:\...`) will fail when the extension evaluates them on the Linux remote host.
+**Resolution:**
+1. Ensure your `gherkinPowerTools.behave.localExecutable` or `python.defaultInterpreterPath` uses the path inside the remote environment.
+2. Ensure you have installed the Behave dependencies on the remote host/container.
+3. If using the CLI (`npx @carlos-camara/gherkin-pt`), ensure you run it from the **Integrated Terminal** in VS Code, which is connected to your remote environment, rather than your local OS terminal.
 
 ## Statistics are empty or incomplete
 **Symptom:** The Project Statistics dashboard shows 0 features.
@@ -118,6 +144,11 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 2. Run **Gherkin PowerTools: Diagnose Workspace** and check the "Discovered Steps" and "Workspace Graph" sections.
 **Resolution:** Verify `stepGlobs` covers all relevant step files, then retry the rename. The graph is rebuilt automatically when files are saved.
 
+## Rename Step is not visible in the Context Menu
+**Symptom:** You right-click in the editor, but "Rename Step" does not appear in the context menu.
+**Likely Causes:** To reduce clutter, the "Rename Step" command dynamically appears only when your cursor is positioned directly on a valid step line.
+**Resolution:** Ensure your text cursor is placed on a line starting with `Given`, `When`, `Then`, `And`, or `But`, then right-click again.
+
 ## Extract Step does not produce a Python stub
 **Symptom:** You select multiple steps and invoke the Code Action, but no stub appears in the target file.
 **Likely Causes:** The selection may not span multiple step lines, or no Python step files were found in the workspace.
@@ -135,6 +166,11 @@ Or use the absolute path to your virtual environment's executable: `".venv/bin/b
 **Symptom:** You clicked "Don't show again" on a helpful popup (like the Formatting or Dashboard recommendation) and want it back.
 **Likely Causes:** The extension saved your dismissal in the VS Code Global State.
 **Resolution:** Currently, VS Code does not expose a UI to edit global state directly. You can reset all internal extension state (including dismissals) by running the **Developer: Reset Extension State** command from the VS Code Command Palette (note that this resets state for *all* extensions).
+
+## Standalone CLI fails to resolve dependencies
+**Symptom:** Running `npx @carlos-camara/gherkin-pt analyze` fails with a "Cannot find module '@cucumber/gherkin'" error.
+**Likely Causes:** The CLI was installed globally or npm cached an outdated, non-scoped version of the CLI package.
+**Resolution:** Ensure you are using the explicitly scoped package (`@carlos-camara/gherkin-pt`) and force a cache clear by running `npx --yes --clear-cache @carlos-camara/gherkin-pt`.
 
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).

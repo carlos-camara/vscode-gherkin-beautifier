@@ -62,6 +62,18 @@ export enum DiagnosticSeverity {
     Hint = 3
 }
 
+export enum CodeActionKind {
+    Empty = '',
+    QuickFix = 'quickfix',
+    Refactor = 'refactor',
+    RefactorExtract = 'refactor.extract',
+    RefactorInline = 'refactor.inline',
+    RefactorRewrite = 'refactor.rewrite',
+    Source = 'source',
+    SourceOrganizeImports = 'source.organizeImports',
+    SourceFixAll = 'source.fixAll'
+}
+
 export class Diagnostic {
     constructor(public range: Range, public message: string, public severity?: DiagnosticSeverity) {}
     source?: string;

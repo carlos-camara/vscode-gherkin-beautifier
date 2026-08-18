@@ -61,10 +61,21 @@ Click **✏️** to open the **Edit Args** dialog before running:
 
 ---
 
-**Custom Behave command:**
+**Zero-Config Environment Discovery:**
 
-If you use `pipenv`, `poetry`, or a virtual environment, configure the base command:
+By default, the extension integrates securely with the **Microsoft Python extension** to detect your active virtual environment (whether it's Poetry, Pipenv, venv, or Conda) and executes Behave within it automatically. You do not need to configure anything if your Python environment is correctly selected in VS Code.
+
+If you need to override the execution engine entirely (e.g., wrapping Behave inside a docker command), you can configure the base executable securely for your project:
 
 ```json
-"gherkinPowerTools.behave.command": "pipenv run behave"
+"gherkinPowerTools.behave.execution": {
+    "executable": "docker-compose",
+    "arguments": ["run", "--rm", "test-runner", "behave"]
+}
+```
+
+If you need a strictly local machine-specific override (e.g., an absolute path to a Python interpreter or virtual environment), configure `localExecutable` in your **User Settings**:
+
+```json
+"gherkinPowerTools.behave.localExecutable": "/home/user/.venv/bin/behave"
 ```

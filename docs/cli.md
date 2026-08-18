@@ -1,6 +1,9 @@
 # Command Line Interface (CLI)
 
-Gherkin PowerTools includes a powerful, standalone CLI (`gherkin-pt`) that brings the **Workspace Intelligence Engine** to your terminal and CI/CD pipelines. It allows you to run the exact same formatter, diagnostics, and metrics that run in VS Code, directly from the command line.
+Gherkin PowerTools includes a powerful, standalone CLI (`@carlos-camara/gherkin-pt`) that brings the **Workspace Intelligence Engine** to your terminal and CI/CD pipelines. It allows you to run the exact same formatter, diagnostics, and metrics that run in VS Code, directly from the command line.
+
+> [!NOTE]
+> The standalone NPM package `@carlos-camara/gherkin-pt` is currently in preview and may not be published to the public NPM registry yet. During local development, you can build it yourself by running `node scripts/build-npm-cli.js`.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli.gif" alt="Command Line Interface execution" width="600" height="340" />
@@ -11,13 +14,13 @@ Gherkin PowerTools includes a powerful, standalone CLI (`gherkin-pt`) that bring
 When you install Gherkin PowerTools locally in your project, the CLI is automatically added to your environment:
 
 ```bash
-npm install --save-dev vscode-gherkin-powertools
+npm install --save-dev @carlos-camara/gherkin-pt
 ```
 
 You can then run the CLI using `npx`:
 
 ```bash
-npx gherkin-pt --help
+npx @carlos-camara/gherkin-pt --help
 ```
 
 ## Available Commands
@@ -32,7 +35,7 @@ Scans your entire workspace (both `.feature` files and Python Behave steps) usin
 
 **Usage:**
 ```bash
-npx gherkin-pt analyze
+npx @carlos-camara/gherkin-pt analyze
 ```
 
 **CI/CD Integration:**
@@ -41,7 +44,7 @@ If the command detects any problems, it will return an exit code of `1`, allowin
 **JSON Output:**
 You can export the results for custom scripts by using the `--json` flag:
 ```bash
-npx gherkin-pt analyze --json
+npx @carlos-camara/gherkin-pt analyze --json
 ```
 
 ### 2. `format`
@@ -50,16 +53,16 @@ Formats all `.feature` files in your workspace according to your `.gherkin-power
 **Usage:**
 ```bash
 # Formats all files in place
-npx gherkin-pt format
+npx @carlos-camara/gherkin-pt format
 
 # Format specific files or directories
-npx gherkin-pt format tests/features/**/*.feature
+npx @carlos-camara/gherkin-pt format tests/features/**/*.feature
 ```
 
 **Check Mode for CI:**
 In a CI/CD pipeline, you don't want to modify files, you want to enforce that developers formatted them correctly before committing. Use the `--check` flag:
 ```bash
-npx gherkin-pt format --check
+npx @carlos-camara/gherkin-pt format --check
 ```
 If any file does not match the configured formatting standard, the CLI exits with code `1`.
 
@@ -68,13 +71,13 @@ Generates high-level project metrics, including the total number of features, sc
 
 **Usage:**
 ```bash
-npx gherkin-pt stats
+npx @carlos-camara/gherkin-pt stats
 ```
 
 **JSON Output:**
 Use the `--json` flag to export metrics and feed them into internal reporting dashboards:
 ```bash
-npx gherkin-pt stats --json > bdd_metrics.json
+npx @carlos-camara/gherkin-pt stats --json > bdd_metrics.json
 ```
 
 ## CI/CD Example: GitHub Actions
@@ -102,13 +105,13 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install -D vscode-gherkin-powertools
+        run: npm install -D @carlos-camara/gherkin-pt
 
       - name: Enforce Formatting
-        run: npx gherkin-pt format --check
+        run: npx @carlos-camara/gherkin-pt format --check
 
       - name: Validate BDD Health
-        run: npx gherkin-pt analyze
+        run: npx @carlos-camara/gherkin-pt analyze
 ```
 
 ## Configuration
