@@ -54,8 +54,8 @@ See the [Configuration Reference](configuration.md#anti-pattern-detection-engine
 ## How to View the Dashboard
 
 To generate the dashboard:
-1. Open the Command Palette (<kbd>Ctrl+Shift+P</kbd> or <kbd>Cmd+Shift+P</kbd>).
-2. Type and select **Gherkin PowerTools: Show Gherkin Health**.
+- Open the Command Palette (<kbd>Ctrl+Shift+P</kbd> or <kbd>Cmd+Shift+P</kbd>), type and select **Gherkin PowerTools: Show Gherkin Health**.
+- Or, right-click anywhere in a `.feature` file and select **Gherkin PowerTools > Show Gherkin Health**.
 
 A Webview panel will open in VS Code displaying the generated HTML report.
 

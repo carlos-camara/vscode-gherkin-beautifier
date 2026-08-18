@@ -90,7 +90,7 @@ Gherkin PowerTools acts in two tiers depending on your project:
 ### Exclusive to Python Behave
 - **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
 - **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
-- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking.
+- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking, powered by **Zero-Config Virtual Environment Discovery**.
 - **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension. *(Note: In Remote Development environments like WSL or SSH, run the CLI from the VS Code Integrated Terminal, not your local OS terminal).*
 
 ---

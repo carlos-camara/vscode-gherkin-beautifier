@@ -40,6 +40,7 @@ To mitigate command injection vulnerabilities and protect users from malicious w
 2. **Structured Execution Model**: Instead of parsing free-form shell commands, the extension enforces a structured `behave.execution` object (separating the `executable` and its `arguments`).
 3. **Safe Process Spawning**: The underlying child process is spawned securely using `cp.spawn` with `shell: false`, ensuring arguments are passed directly to the executable without shell evaluation, thereby neutralizing injection vectors.
 4. **Machine-Specific Configuration Isolation**: To prevent absolute executable paths (e.g., local Python interpreters) from being inadvertently committed to version control in shared `.gherkin-powertoolsrc.json` or `.vscode/settings.json` files, the execution model introduces a strict `behave.localExecutable` override scoped exclusively to the user's machine settings.
+5. **Zero-Config Virtual Environment Discovery**: To eliminate manual setup, the extension leverages the official Microsoft Python API to detect the active virtual environment. If a global interpreter is active, Gherkin PowerTools automatically scans the workspace and prioritizes local virtual environments (like `.venv`, `venv`, `env`) implicitly.
 
 ### Performance Characteristics
 - **Debounced Updates**: Groups rapid file system events (e.g. typing or git checkouts) into 300ms windows to prevent thrashing.
