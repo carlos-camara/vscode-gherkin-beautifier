@@ -574,7 +574,7 @@ export function deactivate() {
  * to the new structured `behave.execution` object setting. 
  * This ensures users don't face execution errors without manual action.
  */
-async function migrateLegacyExecutionSettings() {
+export async function migrateLegacyExecutionSettings() {
     const config = vscode.workspace.getConfiguration('gherkinPowerTools.behave');
     const inspection = config.inspect<string>('command');
 

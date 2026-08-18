@@ -90,14 +90,81 @@ suite('Extension Test Suite', () => {
 
     test('gherkinPowerTools.refactor.renameStep delegates to editor.action.rename', async () => {
         const executeStub = sinon.stub(vscode.commands, 'executeCommand').resolves();
-        // Since we are mocking executeCommand globally, we must call the inner callback directly or mock the specific command
-        // But the easiest way is to call the callback from the registry if we can, or just trust VSCode API.
-        // Actually executeCommand('gherkinPowerTools.refactor.renameStep') would trigger the real one, which then calls editor.action.rename
-        // Wait, if we mock executeCommand, the outer command might not run. Let's call the callback directly if possible, or use a workaround.
         executeStub.withArgs('editor.action.rename').resolves();
         executeStub.callThrough(); // allow other commands to pass
         
         await vscode.commands.executeCommand('gherkinPowerTools.refactor.renameStep');
         assert.ok(executeStub.calledWith('editor.action.rename'));
+    });
+});
+
+suite('migrateLegacyExecutionSettings Test Suite', () => {
+    let getConfigurationStub: sinon.SinonStub;
+
+    setup(() => {
+        getConfigurationStub = sinon.stub(vscode.workspace, 'getConfiguration');
+    });
+
+    teardown(() => {
+        sinon.restore();
+    });
+
+    test('Migrates global and workspace legacy behave.command', async () => {
+        const { migrateLegacyExecutionSettings } = require('../../extension');
+        const updateStub = sinon.stub().resolves();
+        
+        getConfigurationStub.withArgs('gherkinPowerTools.behave').returns({
+            inspect: sinon.stub().withArgs('command').returns({
+                globalValue: 'python -m behave',
+                workspaceValue: 'poetry run behave',
+                workspaceFolderValue: 'pipenv run behave'
+            }),
+            update: updateStub
+        });
+
+        await migrateLegacyExecutionSettings();
+
+        // Should update global execution
+        assert.ok(updateStub.calledWith('execution', { executable: 'python', arguments: ['-m', 'behave'] }, vscode.ConfigurationTarget.Global));
+        // Should clear global command
+        assert.ok(updateStub.calledWith('command', undefined, vscode.ConfigurationTarget.Global));
+
+        // Should update workspace execution
+        assert.ok(updateStub.calledWith('execution', { executable: 'poetry', arguments: ['run', 'behave'] }, vscode.ConfigurationTarget.Workspace));
+        // Should clear workspace command
+        assert.ok(updateStub.calledWith('command', undefined, vscode.ConfigurationTarget.Workspace));
+    });
+
+    test('Does not migrate if command is just "behave"', async () => {
+        const { migrateLegacyExecutionSettings } = require('../../extension');
+        const updateStub = sinon.stub().resolves();
+        
+        getConfigurationStub.withArgs('gherkinPowerTools.behave').returns({
+            inspect: sinon.stub().withArgs('command').returns({
+                globalValue: 'behave',
+            }),
+            update: updateStub
+        });
+
+        await migrateLegacyExecutionSettings();
+
+        // Should NOT update execution
+        assert.strictEqual(updateStub.calledWith('execution', sinon.match.any, sinon.match.any), false);
+        // Should still clear command
+        assert.ok(updateStub.calledWith('command', undefined, vscode.ConfigurationTarget.Global));
+    });
+
+    test('Does nothing if inspection returns undefined', async () => {
+        const { migrateLegacyExecutionSettings } = require('../../extension');
+        const updateStub = sinon.stub().resolves();
+        
+        getConfigurationStub.withArgs('gherkinPowerTools.behave').returns({
+            inspect: sinon.stub().withArgs('command').returns(undefined),
+            update: updateStub
+        });
+
+        await migrateLegacyExecutionSettings();
+
+        assert.strictEqual(updateStub.called, false);
     });
 });
