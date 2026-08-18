@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
-## [1.8.3] - Unreleased
+## [1.8.3] - 2026-08-18
 
 ### 🚀 Added
 - **Secure Execution Model**: Redesigned Behave test execution (`gherkinPowerTools.behave.execution`) to use structured arguments and `spawn({ shell: false })` instead of raw shell commands, mitigating command injection risks.
