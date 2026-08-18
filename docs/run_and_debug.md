@@ -92,7 +92,8 @@ The extension will launch Behave attached to `debugpy`. Execution will halt at y
 
 ## Customizing the Execution Environment
 
-By default, the extension uses **Zero-Config Environment Discovery**. It securely communicates with the official Microsoft Python extension to detect your active virtual environment. If the Microsoft Python extension defaults to a global interpreter, Gherkin PowerTools will automatically search your workspace for local virtual environments (e.g. `.venv`, `venv`, `env`) and prioritize them without any manual configuration.
+By default, the extension uses **Zero-Config Environment Discovery**. It securely communicates with the official Microsoft Python extension to detect your active virtual environment.
+If the Microsoft Python extension defaults to a global interpreter, Gherkin PowerTools will automatically search your workspace for local virtual environments (e.g. `.venv`, `venv`, `env`) and prioritize them without any manual configuration.
 
 If you need to override the execution engine entirely (e.g. wrapping Behave inside a docker command or a custom runner script), you can configure the base executable securely using the structured `behave.execution` object in your portable `.gherkin-powertoolsrc.json` or `.vscode/settings.json`:
 
@@ -134,7 +135,9 @@ No additional configuration is required, just ensure Behave is installed in the 
 
 ## Troubleshooting Execution
 
-- **"Behave executable not found":** By default, Gherkin PowerTools automatically detects local virtual environments (like `.venv`, `venv`, `env`). If your environment is elsewhere, ensure it is selected in the VS Code status bar and that `behave` is installed in it. If you need to manually specify a path for a non-standard setup, you can use the `gherkinPowerTools.behave.localExecutable` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
+- **"Behave executable not found":** By default, Gherkin PowerTools automatically detects local virtual environments (like `.venv`, `venv`, `env`).
+  If your environment is elsewhere, ensure it is selected in the VS Code status bar and that `behave` is installed in it.
+  If you need to manually specify a path for a non-standard setup, you can use the `gherkinPowerTools.behave.localExecutable` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
 - **"Tests are not discovered or do not run":** Ensure your workspace is Trusted. For security reasons, the extension blocks Behave execution in Untrusted (Restricted) workspaces.
 
 - **Tests run but show no output:** Ensure you aren't passing arguments that suppress output, or add `--no-capture` to `additionalArguments` if you need to see `print()` statements.
