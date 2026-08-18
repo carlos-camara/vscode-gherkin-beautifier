@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 import { ConfigurationService } from './configuration';
 
 let memoryAdditionalArgs: string | undefined = undefined;
@@ -78,6 +79,25 @@ export async function resolveBehaveExecutionDetails(
                 }
             } catch (e) {
                 // Ignore python ext API errors
+            }
+        }
+        
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+        if (workspaceFolder) {
+            const execPath = pythonExecParts && pythonExecParts.length > 0 ? pythonExecParts[0] : '';
+            if (!execPath || !path.isAbsolute(execPath) || !execPath.startsWith(workspaceFolder.uri.fsPath)) {
+                const commonVenvs = ['.venv', 'venv', 'env'];
+                for (const venv of commonVenvs) {
+                    const binPath = path.join(workspaceFolder.uri.fsPath, venv, 'bin', 'python');
+                    const scriptsPath = path.join(workspaceFolder.uri.fsPath, venv, 'Scripts', 'python.exe');
+                    if (fs.existsSync(binPath)) {
+                        pythonExecParts = [binPath];
+                        break;
+                    } else if (fs.existsSync(scriptsPath)) {
+                        pythonExecParts = [scriptsPath];
+                        break;
+                    }
+                }
             }
         }
         
