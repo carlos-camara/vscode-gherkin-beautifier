@@ -17,6 +17,10 @@ module.exports = defineConfig([
           mochaFile: path.join(__dirname, 'test-results', 'unit-test-results.xml')
         }
       }
+    },
+    coverage: {
+      exclude: ['dist/**', 'scripts/**', 'out/**', 'src/test/**', '**/*.js'],
+      include: ['src/**/*.ts']
     }
   },
   {

@@ -4,11 +4,15 @@
     "src/**/*.ts"
   ],
   "exclude": [
+    "src/test",
     "src/test/**",
     "**/*.d.ts",
     "**/*.js",
+    "out",
     "out/**",
+    "dist",
     "dist/**",
+    "scripts",
     "scripts/**",
     "esbuild.js"
   ],
