@@ -644,20 +644,20 @@
     "keybindings": [
       {
         "command": "gherkinPowerTools.commandCenter",
-        "key": "ctrl+k ctrl+g",
-        "mac": "cmd+k cmd+g",
+        "key": "alt+shift+g",
+        "mac": "alt+shift+g",
         "when": "editorLangId == feature"
       },
       {
         "command": "gherkinPowerTools.showGherkinHealth",
-        "key": "ctrl+k ctrl+h",
-        "mac": "cmd+k cmd+h",
+        "key": "alt+shift+h",
+        "mac": "alt+shift+h",
         "when": "editorLangId == feature"
       },
       {
         "command": "gherkinPowerTools.diagnoseWorkspace",
-        "key": "ctrl+k ctrl+d",
-        "mac": "cmd+k cmd+d",
+        "key": "alt+shift+d",
+        "mac": "alt+shift+d",
         "when": "editorLangId == feature"
       }
     ]
