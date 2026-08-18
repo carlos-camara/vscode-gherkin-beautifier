@@ -2,7 +2,7 @@
 
 Rename steps across your entire workspace fearlessly. Gherkin PowerTools understands the link between `.feature` files and Python `@step` decorators.
 
-## Try it out:
+## Try it out
 1. Place your cursor on any Gherkin step in a feature file.
 2. Press <kbd>F2</kbd> (or <kbd>Cmd+Shift+R</kbd> on macOS).
 3. Type the new step text and press **Enter**.

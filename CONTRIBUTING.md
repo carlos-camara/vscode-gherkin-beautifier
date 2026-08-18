@@ -32,7 +32,7 @@ Here is a breakdown of the core modules located in the `src/` directory:
 
 To maintain compatibility and prevent side effects in users' workspaces, developers must adhere to the following strict boundaries:
 - **No Global Configuration Overrides**: The extension must *never* specify overrides for native VS Code settings (e.g., `testing.*`, `editor.*`) inside the `configurationDefaults` block in `package.json`. Doing so silently breaks other extensions installed by the user. If an integration problem exists, it must be solved inside our own controllers, not by altering the global user workspace.
-- **Test Controller Coexistence**: The extension must safely coexist with other extensions that provide their own Test Controllers and Profiles (like Python `pytest` or `Coverage`). Our Test Controller should not assume it is the only one in the workspace. Any E2E UI test must instantiate Mock controllers with unique IDs (e.g., `gherkin-tests-mock-e2e`) to avoid ID collisions with the real extension background processes.
+- **Test Controller Coexistence**: The extension must safely coexist with other extensions that provide their own Test Controllers and Profiles (like Python `pytest` or `Coverage`). Our Test Controller should not assume it is the only one in the workspace. Any E2E UI test must instantiate Mock controllers with unique IDs to avoid ID collisions with the real extension background processes.
 
 ---
 
