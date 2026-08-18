@@ -79,6 +79,7 @@ suite('Project Health Dashboard Test Suite', () => {
 
     test('showProjectHealthDashboard: creates webview and calculates stats', async () => {
         let webviewHtml = '';
+        let webviewOptions: any;
 
         let store: any = {};
         const mockContext = {
@@ -94,14 +95,17 @@ suite('Project Health Dashboard Test Suite', () => {
         const originalCreateWebviewPanel = vscode.window.createWebviewPanel;
         const originalWithProgress = vscode.window.withProgress;
 
-        vscode.window.createWebviewPanel = () => ({
-            webview: {
-                set html(value: string) { webviewHtml = value; },
-                onDidReceiveMessage: () => {}
-            },
-            onDidDispose: () => {},
-            dispose: () => {}
-        } as any);
+        vscode.window.createWebviewPanel = (_viewType, _title, _showOptions, options) => {
+            webviewOptions = options;
+            return {
+                webview: {
+                    set html(value: string) { webviewHtml = value; },
+                    onDidReceiveMessage: () => {}
+                },
+                onDidDispose: () => {},
+                dispose: () => {}
+            } as any;
+        };
 
         vscode.window.withProgress = async (_options: any, task: any) => {
             return task({ report: () => {} } as any, { isCancellationRequested: false } as any);
@@ -110,6 +114,8 @@ suite('Project Health Dashboard Test Suite', () => {
         await showProjectHealthDashboard(mockContext, graph, symbolCache);
 
         assert.ok(webviewHtml.includes('Gherkin Health'), 'Dashboard HTML should be set');
+        assert.ok(webviewOptions, 'Webview options should be passed');
+        assert.deepStrictEqual(webviewOptions.localResourceRoots, [], 'localResourceRoots should be empty for strict sandboxing');
 
         vscode.window.createWebviewPanel = originalCreateWebviewPanel;
         vscode.window.withProgress = originalWithProgress;

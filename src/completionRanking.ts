@@ -11,7 +11,7 @@ export interface RankingContext {
     currentFeatureStepTexts: string[];
 }
 
-export class UsageIndexer {
+class UsageIndexer {
     private stepFrequencies = new Map<string, number>();
     private stepTagAffinities = new Map<string, Set<string>>();
     private isIndexed = false;

@@ -275,9 +275,13 @@ export async function showOnboardingNotificationIfNeeded(
             config.behave.ignoreGlobs
         );
 
-        if (analysis.isBehaveProject && analysis.uncoveredStepFiles.length > 0) {
-            notificationShown = true;
-            const stepCount = analysis.uncoveredStepFiles.length;
+        if (analysis.isBehaveProject) {
+            const hasUncovered = analysis.uncoveredStepFiles.length > 0;
+            vscode.commands.executeCommand('setContext', 'gherkinPowerTools.uncoveredSteps', hasUncovered);
+
+            if (hasUncovered) {
+                notificationShown = true;
+                const stepCount = analysis.uncoveredStepFiles.length;
 
             vscode.window.showInformationMessage(
                 `Discovered ${stepCount} Python step file(s) outside stepGlobs. Update configuration?`,
@@ -310,6 +314,7 @@ export async function showOnboardingNotificationIfNeeded(
                     vscode.commands.executeCommand('gherkinPowerTools.diagnoseWorkspace');
                 }
             });
+            }
             break;
         }
     }
@@ -356,7 +361,7 @@ export class FirstRunExperience {
                 );
 
                 if (choice === 'Start Walkthrough') {
-                    vscode.commands.executeCommand('workbench.action.openWalkthrough', 'carloscamara.vscode-gherkin-powertools#gherkinPowerTools.walkthrough');
+                    vscode.commands.executeCommand('workbench.action.openWalkthrough', 'carloscamara.vscode-gherkin-powertools#gherkinPowerTools.walkthrough.behave');
                 } else if (choice === 'Show Project Health') {
                     vscode.commands.executeCommand('gherkinPowerTools.showGherkinHealth');
                 }

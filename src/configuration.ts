@@ -39,7 +39,7 @@ const PROFILES: Record<string, Partial<Configuration>> = {
         docStrings: { alignToKeyword: true }
     }
 };
-export interface ConfigError {
+interface ConfigError {
     key: string;
     message: string;
 }

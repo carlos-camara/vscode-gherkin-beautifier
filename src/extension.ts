@@ -33,6 +33,7 @@ import { ContextualFeatureDiscoveryService } from './contextualDiscovery';
 import { ImpactCodeLensProvider } from './impactCodeLens';
 import { ImpactReport } from './impactAnalysis';
 import { AntiPatternDiagnosticsManager } from './antiPatternDiagnostics';
+import { DeferredBootstrap } from './bootstrap';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
 
@@ -44,6 +45,10 @@ const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
  */
 export async function activate(context: vscode.ExtensionContext) {
     logger.info('Extension "vscode-gherkin-powertools" is now active.');
+    
+    // Clear out any legacy state from the old recommendation prompt
+    const stateKey = 'gherkinPowerTools.promptedPeekView';
+    await context.globalState.update(stateKey, undefined);
     
     // Migrate legacy command configurations automatically on start
     await migrateLegacyExecutionSettings();
@@ -96,7 +101,8 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(antiPatternDiagnostics);
 
     // Initialize Contextual Feature Discovery
-    new ContextualFeatureDiscoveryService(context, workspaceGraph);
+    const contextualDiscoveryService = new ContextualFeatureDiscoveryService(context, workspaceGraph);
+    context.subscriptions.push(contextualDiscoveryService);
 
     // Initialize Refactoring Service
     const refactoringService = new StepRefactoringService(workspaceGraph, symbolCache);
@@ -129,28 +135,17 @@ export async function activate(context: vscode.ExtensionContext) {
     configWatcher.onDidDelete(() => eventBus.publish({ type: 'configurationChanged' }));
 
     // Defer heavy I/O scanning and watcher setup to allow VS Code to start up quickly
-    setTimeout(() => {
-        symbolCache.ensureInitialized().catch(err => logger.error(`Error during lazy symbol cache load: ${err}`));
-        featureCache.ensureInitialized().catch(err => logger.error(`Error during lazy feature cache load: ${err}`));
-        rankingService.usageIndexer.indexWorkspace().catch(err => logger.error(`Error during lazy usage indexer load: ${err}`));
-        workspaceGraph.initialize().then(() => {
-            impactCodeLensProvider.refresh();
-        }).catch(err => logger.error(`Error during lazy workspace graph load: ${err}`));
-
-        eventBus.onEvent(e => {
-            if (['featureFileCreated', 'featureFileChanged', 'featureFileDeleted', 'stepFileCreated', 'stepDefinitionsUpdated', 'stepFileDeleted'].includes(e.type)) {
-                impactCodeLensProvider.refresh();
-            }
-        });
-
-        discoveryService.setupWatchers().forEach(w => context.subscriptions.push(w));
-
-        const featureWatcher = vscode.workspace.createFileSystemWatcher('**/*.feature');
-        featureWatcher.onDidCreate(uri => eventBus.publish({ type: 'featureFileCreated', uri }));
-        featureWatcher.onDidChange(uri => eventBus.publish({ type: 'featureFileChanged', uri }));
-        featureWatcher.onDidDelete(uri => eventBus.publish({ type: 'featureFileDeleted', uri }));
-        context.subscriptions.push(featureWatcher);
-    }, 2000);
+    const bootstrap = new DeferredBootstrap({
+        symbolCache,
+        featureCache,
+        usageIndexer: rankingService.usageIndexer,
+        workspaceGraph,
+        impactCodeLensProvider,
+        eventBus,
+        discoveryService
+    });
+    context.subscriptions.push(bootstrap);
+    bootstrap.start();
 
     // Asynchronously trigger onboarding recommendation check
     showOnboardingNotificationIfNeeded(context, configService).catch(err => {
@@ -162,9 +157,9 @@ export async function activate(context: vscode.ExtensionContext) {
         logger.error(`Error checking first run experience: ${err}`);
     });
 
-    // Asynchronously trigger peek view recommendation check
-    checkPeekViewRecommendation(context).catch(err => {
-        logger.error(`Error checking peek view recommendation: ${err}`);
+    // Clean up obsolete global state from previous versions
+    context.globalState.update('gherkinPowerTools.promptedPeekView', undefined).then(undefined, (err) => {
+        logger.error(`Error cleaning up obsolete peek view state: ${err}`);
     });
     // Register the context menu command to format the document
     context.subscriptions.push(
@@ -216,6 +211,10 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('gherkinPowerTools.replayOnboarding', () => {
             FirstRunExperience.replayOnboarding(context);
+        }),
+        vscode.commands.registerCommand('gherkinPowerTools.resetContextualRecommendations', async () => {
+            await contextualDiscoveryService.reset();
+            vscode.window.showInformationMessage("Gherkin PowerTools: Feature recommendations have been reset.");
         })
     );
 
@@ -463,10 +462,32 @@ export async function activate(context: vscode.ExtensionContext) {
         highlighter.highlight(vscode.window.activeTextEditor);
     }
 
+    // Update context keys for the editor context menu
+    const updateCursorContext = (editor: vscode.TextEditor | undefined) => {
+        try {
+            if (!editor || editor.document.languageId !== 'feature') {
+                vscode.commands.executeCommand('setContext', 'gherkinPowerTools.isCursorOnStep', false);
+                return;
+            }
+            if (!editor.selection || !editor.selection.active) return;
+            const lineText = editor.document.lineAt(editor.selection.active.line).text.trimStart();
+            // A simple regex to detect a Gherkin step keyword. It does not need full dialect 
+            // awareness just to show/hide the menu, but covering English is a good baseline.
+            const isStep = /^(?:Given|When|Then|And|But|\*)\s/.test(lineText);
+            vscode.commands.executeCommand('setContext', 'gherkinPowerTools.isCursorOnStep', isStep);
+        } catch (e) {
+            logger.debug(`Error updating cursor context: ${e}`);
+        }
+    };
+
     // Event Bus publish for workspace events
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(editor => {
             eventBus.publish({ type: 'activeEditorChanged', editor });
+            updateCursorContext(editor);
+        }),
+        vscode.window.onDidChangeTextEditorSelection(e => {
+            updateCursorContext(e.textEditor);
         }),
         vscode.workspace.onDidOpenTextDocument(document => {
             eventBus.publish({ type: 'textDocumentOpened', document });
@@ -482,6 +503,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (vscode.window.activeTextEditor) {
         eventBus.publish({ type: 'activeEditorChanged', editor: vscode.window.activeTextEditor });
+        updateCursorContext(vscode.window.activeTextEditor);
     }
 
     // Register the formatter for both full documents and selections/ranges
@@ -545,33 +567,7 @@ export function deactivate() {
     discoveryService.dispose();
 }
 
-export async function checkPeekViewRecommendation(context: vscode.ExtensionContext) {
-    const stateKey = 'gherkinPowerTools.promptedPeekView';
-    const prompted = context.globalState.get<boolean>(stateKey, false);
 
-    if (prompted) {
-        return;
-    }
-
-    const testingConfig = vscode.workspace.getConfiguration('testing');
-    const currentValue = testingConfig.get<string>('automaticallyOpenPeekView');
-
-    if (currentValue !== 'never') {
-        const choice = await vscode.window.showInformationMessage(
-            "For the best BDD experience with Gherkin PowerTools, we recommend disabling the automatic Test Peek View.",
-            "Disable Peek View", "Keep Current"
-        );
-
-        if (choice === "Disable Peek View") {
-            // Set it in the user's global settings to affect their standard VS Code experience
-            await testingConfig.update('automaticallyOpenPeekView', 'never', vscode.ConfigurationTarget.Global);
-            logger.info("testing.automaticallyOpenPeekView has been set to 'never'");
-        }
-    }
-
-    // Mark as prompted so we don't bother the user again
-    await context.globalState.update(stateKey, true);
-}
 
 /**
  * Automates the migration from the deprecated string-based `behave.command` 

@@ -51,7 +51,7 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
             'gherkinHealthDashboard',
             'Gherkin Health',
             vscode.ViewColumn.One,
-            { enableScripts: true, retainContextWhenHidden: true }
+            { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] }
         );
         currentPanel.onDidDispose(() => {
             currentPanel = undefined;
