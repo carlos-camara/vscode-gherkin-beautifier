@@ -13,11 +13,22 @@ let cucumberModulesPromise: Promise<any> | null = null;
 async function getCucumberModules() {
     if (!cucumberModulesPromise) {
         cucumberModulesPromise = (async () => {
-            // Bypass TypeScript transpiling `import()` to `require()` in commonjs
-            const dynamicImport = new Function('specifier', 'return import(specifier)');
-            const gherkin = await dynamicImport('@cucumber/gherkin');
-            const messages = await dynamicImport('@cucumber/messages');
-            return { gherkin, messages };
+            try {
+                // When bundled for production, esbuild correctly resolves require() and converts ESM to CJS
+                const gherkin = require('@cucumber/gherkin');
+                const messages = require('@cucumber/messages');
+                return { gherkin, messages };
+            } catch (e: any) {
+                // During local tests (tsc output), require() throws ERR_REQUIRE_ESM for these packages.
+                // Fallback to native Node.js dynamic import.
+                if (e.code === 'ERR_REQUIRE_ESM') {
+                    const dynamicImport = new Function('specifier', 'return import(specifier)');
+                    const gherkin = await dynamicImport('@cucumber/gherkin');
+                    const messages = await dynamicImport('@cucumber/messages');
+                    return { gherkin, messages };
+                }
+                throw e;
+            }
         })();
     }
     return cucumberModulesPromise;

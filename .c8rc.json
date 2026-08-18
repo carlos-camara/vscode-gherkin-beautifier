@@ -4,10 +4,16 @@
     "src/**/*.ts"
   ],
   "exclude": [
+    "src/test",
     "src/test/**",
     "**/*.d.ts",
+    "**/*.js",
+    "out",
     "out/**",
+    "dist",
     "dist/**",
+    "scripts",
+    "scripts/**",
     "esbuild.js"
   ],
   "reporter": [
@@ -17,8 +23,8 @@
     "json-summary"
   ],
   "check-coverage": true,
-  "lines": 90,
-  "statements": 90,
-  "functions": 90,
-  "branches": 85
+  "lines": 99,
+  "statements": 99,
+  "functions": 99,
+  "branches": 90
 }

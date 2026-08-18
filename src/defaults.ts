@@ -10,7 +10,10 @@ export const DEFAULT_CONFIG = {
         stepGlobs: ["**/steps/**/*.py", "**/features/steps/**/*.py"],
         ignoreGlobs: ["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"],
         additionalArguments: [],
-        command: "behave"
+        execution: {
+            executable: "behave",
+            arguments: []
+        }
     }
 };
 

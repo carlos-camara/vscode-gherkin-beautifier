@@ -313,6 +313,18 @@ suite('createStepDefinition Test Suite', () => {
         assert.strictEqual(editApplied, false);
     });
 
+    test('Cancels step creation if user cancels creation prompt', async () => {
+        let editApplied = false;
+        discoveryService.getStepFiles = async () => []; // No files
+        (vscode.window as any).showInformationMessage = async () => undefined; // Cancel prompt
+        (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
+        discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
+
+        await createStepDefinition('I test cancel prompt', 'Given');
+
+        assert.strictEqual(editApplied, false);
+    });
+
     test('Uses fileContent fallback if openTextDocument throws', async () => {
         let editApplied = false;
         discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
@@ -352,3 +364,165 @@ suite('createStepDefinition Test Suite', () => {
     });
 });
 
+suite('batchCreateStepDefinitions Test Suite', () => {
+    let originalShowInformationMessage: any;
+    let originalShowQuickPick: any;
+    let originalShowErrorMessage: any;
+    let originalWorkspaceFolders: any;
+    let originalFs: any;
+    let originalApplyEdit: any;
+    let originalShowTextDocument: any;
+    let originalOpenTextDocument: any;
+
+    let originalGetStepFiles: any;
+    let originalGetBestWorkspaceFolder: any;
+
+    setup(() => {
+        originalGetStepFiles = discoveryService.getStepFiles.bind(discoveryService);
+        originalGetBestWorkspaceFolder = discoveryService.getBestWorkspaceFolder.bind(discoveryService);
+        originalShowInformationMessage = vscode.window.showInformationMessage;
+        originalShowQuickPick = vscode.window.showQuickPick;
+        originalShowErrorMessage = vscode.window.showErrorMessage;
+        originalWorkspaceFolders = vscode.workspace.workspaceFolders;
+        originalFs = vscode.workspace.fs;
+        originalApplyEdit = vscode.workspace.applyEdit;
+        originalShowTextDocument = vscode.window.showTextDocument;
+        originalOpenTextDocument = vscode.workspace.openTextDocument;
+    });
+
+    teardown(() => {
+        discoveryService.getStepFiles = originalGetStepFiles;
+        discoveryService.getBestWorkspaceFolder = originalGetBestWorkspaceFolder;
+        (vscode.window as any).showInformationMessage = originalShowInformationMessage;
+        (vscode.window as any).showQuickPick = originalShowQuickPick;
+        (vscode.window as any).showErrorMessage = originalShowErrorMessage;
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => originalWorkspaceFolders });
+        Object.defineProperty(vscode.workspace, 'fs', { get: () => originalFs });
+        (vscode.workspace as any).applyEdit = originalApplyEdit;
+        (vscode.window as any).showTextDocument = originalShowTextDocument;
+        (vscode.workspace as any).openTextDocument = originalOpenTextDocument;
+    });
+
+    test('Returns undefined if steps array is empty', async () => {
+        const { batchCreateStepDefinitions } = require('../../codeAction');
+        const res = await batchCreateStepDefinitions([]);
+        assert.strictEqual(res, undefined);
+    });
+
+    test('Shows error if no workspace is opened (batch)', async () => {
+        const { batchCreateStepDefinitions } = require('../../codeAction');
+        let errorMessage = '';
+        discoveryService.getStepFiles = async () => [];
+        (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
+        discoveryService.getBestWorkspaceFolder = () => undefined;
+
+        await batchCreateStepDefinitions([{text: 'step', keyword: 'Given'}]);
+        assert.strictEqual(errorMessage, 'Please open a workspace to create step definitions.');
+    });
+
+    test('Cancels batch creation if user cancels new file prompt', async () => {
+        const { batchCreateStepDefinitions } = require('../../codeAction');
+        let editApplied = false;
+        discoveryService.getStepFiles = async () => [];
+        (vscode.window as any).showInformationMessage = async () => undefined;
+        discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
+        (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
+
+        await batchCreateStepDefinitions([{text: 'step', keyword: 'Given'}]);
+        assert.strictEqual(editApplied, false);
+    });
+
+    test('Cancels batch creation if user cancels quick pick', async () => {
+        const { batchCreateStepDefinitions } = require('../../codeAction');
+        let editApplied = false;
+        discoveryService.getStepFiles = async () => [
+            vscode.Uri.file('/tmp/file1.py'),
+            vscode.Uri.file('/tmp/file2.py')
+        ];
+        (vscode.window as any).showQuickPick = async () => undefined;
+        (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
+
+        await batchCreateStepDefinitions([{text: 'step', keyword: 'Given'}]);
+        assert.strictEqual(editApplied, false);
+    });
+
+    test('Appends multiple unique steps to selected file', async () => {
+        const { batchCreateStepDefinitions } = require('../../codeAction');
+        let editApplied = false;
+        discoveryService.getStepFiles = async () => [
+            vscode.Uri.file('/tmp/file1.py'),
+            vscode.Uri.file('/tmp/file2.py')
+        ];
+        (vscode.window as any).showQuickPick = async (items: any[]) => items[0]; // Select first file
+        
+        Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
+            readFile: async () => Buffer.from("def dummy():\n    pass\n")
+        })});
+
+        let insertedText = '';
+        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => { 
+            editApplied = true; 
+            insertedText = edit.entries()[0][1][0].newText;
+            return true; 
+        };
+
+        (vscode.workspace as any).openTextDocument = async () => createMockDocument('', 'file:///tmp/file1.py');
+        (vscode.window as any).showTextDocument = async () => ({ 
+            document: { lineCount: 1, lineAt: () => ({text: ''}) },
+            revealRange: () => {} 
+        } as any);
+        (vscode.window as any).showInformationMessage = async () => {};
+
+        await batchCreateStepDefinitions([
+            {text: 'first step', keyword: 'Given'},
+            {text: 'second step', keyword: 'When'},
+            {text: 'first step', keyword: 'Given'} // Duplicate should be ignored
+        ]);
+
+        assert.ok(editApplied);
+        assert.ok(insertedText.includes('def first_step(context):'));
+        assert.ok(insertedText.includes('def second_step(context):'));
+        // Count how many times @given(u'first step') appears
+        const occurrences = (insertedText.match(/@given\(u'first step'\)/g) || []).length;
+        assert.strictEqual(occurrences, 1, "Duplicate steps should not generate duplicate definitions");
+    });
+
+    test('Batch creation with new file', async () => {
+        const { batchCreateStepDefinitions } = require('../../codeAction');
+        let directoryCreated = false;
+        let editApplied = false;
+        let insertedText = '';
+
+        discoveryService.getStepFiles = async () => [];
+        (vscode.window as any).showInformationMessage = async (_msg: string, action: string) => { 
+            if (action) return action; // Return the create action
+            return undefined;
+        };
+        discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
+        
+        Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
+            createDirectory: async () => { directoryCreated = true; },
+            readFile: async () => { throw new Error('Not found'); }
+        })});
+
+        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => { 
+            editApplied = true; 
+            insertedText = edit.entries()[0][1][0].newText;
+            return true; 
+        };
+        (vscode.workspace as any).openTextDocument = async () => createMockDocument('', 'file:///tmp/features/steps/step_definitions.py');
+        (vscode.window as any).showTextDocument = async () => ({ 
+            document: { lineCount: 1, lineAt: () => ({text: ''}) },
+            revealRange: () => {} 
+        } as any);
+
+        await batchCreateStepDefinitions([
+            {text: 'some step', keyword: 'Then'}
+        ]);
+
+        assert.ok(directoryCreated);
+        assert.ok(editApplied);
+        assert.ok(insertedText.includes('from behave import given, when, then, step'));
+        assert.ok(insertedText.includes("@then(u'some step')"));
+    });
+});

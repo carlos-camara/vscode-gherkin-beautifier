@@ -83,15 +83,15 @@ A Blast Radius CodeLens appears above every Python step definition. View exactly
 Gherkin PowerTools acts in two tiers depending on your project:
 
 ### Generic BDD Frameworks (Cucumber, SpecFlow, Playwright)
-- **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd>).
+- **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd> or Editor Context Menu).
 - **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
 - **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
 
 ### Exclusive to Python Behave
 - **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
-- **Step Refactoring:** Safely rename or extract steps across your entire workspace (<kbd>F2</kbd>).
-- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking.
-- **Standalone CLI (`gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension.
+- **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
+- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking, powered by **Zero-Config Virtual Environment Discovery**.
+- **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension. *(Note: In Remote Development environments like WSL or SSH, run the CLI from the VS Code Integrated Terminal, not your local OS terminal).*
 
 ---
 
@@ -103,7 +103,8 @@ Share team formatting rules by committing a `.gherkin-powertoolsrc.json` to your
 | --- | --- | --- |
 | `gherkinPowerTools.profile` | `"custom"` | Formatting baseline: `strict`, `team`, `minimal`, `legacy`, or `custom`. |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", ...]` | Paths to Python step definitions. |
-| `gherkinPowerTools.behave.command` | `"behave"` | Test Explorer execution command (e.g., `"poetry run behave"`). |
+| `gherkinPowerTools.behave.execution` | `{"executable": "behave", "arguments": []}` | Secure Test Explorer execution command (e.g., `{"executable": "poetry", "arguments": ["run", "behave"]}`). |
+| `gherkinPowerTools.behave.localExecutable` | *None* | Machine-specific override for the Behave executable absolute path. |
 
 *Visit the **[Configuration Reference](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/)** for all available settings.*
 

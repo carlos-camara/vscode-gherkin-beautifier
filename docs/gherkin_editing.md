@@ -18,7 +18,7 @@ You can format the entire document or just a selection:
 
 - **Idempotence:** The formatter is 100% idempotent. Running it multiple times yields the exact same result.
 - **Tables:** Data Tables and Examples are dynamically aligned to the preceding step text (by default) to keep everything visually clean.
-- **Doc Strings:** Content inside `"""` doc strings is preserved exactly as written.
+- **Doc Strings:** Content inside `"""` doc strings is dynamically padded to align with the step keyword (or preserved exactly, based on configuration).
 - **Tags:** Long lines of tags are intelligently wrapped or can be kept on a single line depending on your settings.
 - **Comments:** Comments are preserved and aligned properly.
 - **Blank Lines:** Standardizes blank lines between Scenarios, Rules, and Backgrounds.

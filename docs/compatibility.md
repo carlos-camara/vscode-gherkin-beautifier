@@ -42,6 +42,11 @@ The advanced integrations (Go to Definition, Hover, Autocomplete, Step Generatio
 - **Python Extension:** Required **only** for Debugging features in the Test Explorer (`ms-python.python`).
 - **Behave Executable:** Required **only** for test execution from the Test Explorer (`pip install behave`). The extension can execute Behave via system PATH, Poetry, Pipenv, or explicit virtual environment paths.
 
+## Standalone CLI Requirements
+
+- **Node.js Engine:** The `@carlos-camara/gherkin-pt` CLI executable requires **Node.js >= 18.0.0**.
+- **Supported OS:** Windows, macOS, and Linux. No native dependencies are required.
+
 ## Workspace Constraints
 
 - **Multi-Root Workspaces:** Supported. Configuration settings in `.vscode/settings.json` apply to their specific workspace folders.

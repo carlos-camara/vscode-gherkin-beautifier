@@ -10,7 +10,7 @@ export interface Configuration {
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
-    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; command: string; };
+    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
 }
 
 import { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG } from './defaults';
@@ -39,7 +39,7 @@ const PROFILES: Record<string, Partial<Configuration>> = {
         docStrings: { alignToKeyword: true }
     }
 };
-export interface ConfigError {
+interface ConfigError {
     key: string;
     message: string;
 }
@@ -187,12 +187,25 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                         if (subKey === 'ignoreGlobs') { config.behave.ignoreGlobs = section[subKey]; }
                         if (subKey === 'additionalArguments') { config.behave.additionalArguments = section[subKey]; }
                     }
-                } else if (subKey === 'command') {
-                    if (typeof section[subKey] !== 'string') {
-                        errors.push({ key: subKey, message: `"behave.command" must be a string.` });
+                } else if (subKey === 'execution') {
+                    const execObj = section[subKey];
+                    if (typeof execObj !== 'object' || execObj === null || Array.isArray(execObj)) {
+                        errors.push({ key: subKey, message: `"behave.execution" must be an object.` });
                     } else {
-                        config.behave.command = section[subKey];
+                        if (typeof execObj.executable === 'string') {
+                            config.behave.execution.executable = execObj.executable;
+                        } else if (execObj.executable !== undefined) {
+                            errors.push({ key: 'execution.executable', message: `"behave.execution.executable" must be a string.` });
+                        }
+                        
+                        if (Array.isArray(execObj.arguments) && execObj.arguments.every((i: any) => typeof i === 'string')) {
+                            config.behave.execution.arguments = execObj.arguments;
+                        } else if (execObj.arguments !== undefined) {
+                            errors.push({ key: 'execution.arguments', message: `"behave.execution.arguments" must be an array of strings.` });
+                        }
                     }
+                } else if (subKey === 'localExecutable') {
+                    errors.push({ key: subKey, message: `"behave.localExecutable" is a machine-specific override and cannot be defined in the portable project configuration.` });
                 } else {
                     errors.push({ key: subKey, message: `Unknown property in behave: "${subKey}".` });
                 }
@@ -368,9 +381,19 @@ export class ConfigurationService {
             config.behave.additionalArguments = additionalArguments;
         }
 
-        const command = getOverride<string>('behave.command');
-        if (command !== undefined && typeof command === 'string') {
-            config.behave.command = command;
+        const execution = getOverride<{ executable: string; arguments: string[] }>('behave.execution');
+        if (execution !== undefined && typeof execution === 'object' && execution !== null) {
+            if (typeof execution.executable === 'string') {
+                config.behave.execution.executable = execution.executable;
+            }
+            if (Array.isArray(execution.arguments) && execution.arguments.every(i => typeof i === 'string')) {
+                config.behave.execution.arguments = execution.arguments;
+            }
+        }
+
+        const localExecutable = getOverride<string>('behave.localExecutable');
+        if (localExecutable !== undefined && typeof localExecutable === 'string') {
+            config.behave.localExecutable = localExecutable;
         }
 
         return config;

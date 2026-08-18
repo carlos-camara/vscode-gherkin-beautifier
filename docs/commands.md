@@ -4,19 +4,19 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
-## Gherkin PowerTools: Command Center
+## Command Center
 - **Identifier**: `gherkinPowerTools.commandCenter`
 - **Where it appears**: Command Palette.
 - **Required context**: None.
 - **Input**: None.
 - **Result**: Opens a unified QuickPick menu giving access to formatting, statistics, running tests, debugging, and workspace diagnostics.
-- **Default shortcut**: <kbd>Ctrl+Shift+G</kbd> (<kbd>Cmd+Shift+G</kbd> on macOS).
+- **Default shortcut**: <kbd>Alt+Shift+G</kbd> (<kbd>Option+Shift+G</kbd> on macOS).
 
 ---
 
 ## Format Gherkin Document
 - **Identifier**: `gherkinPowerTools.format`
-- **Where it appears**: Command Palette, Editor Context Menu (Right-click in `.feature` file).
+- **Where it appears**: Command Palette, Editor Context Menu (Gherkin PowerTools submenu).
 - **Required context**: An active `.feature` file.
 - **Input**: None.
 - **Result**: Formats the active Gherkin document or the current selection according to your configuration profile.
@@ -27,26 +27,26 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Diagnose Workspace
 - **Identifier**: `gherkinPowerTools.diagnoseWorkspace`
-- **Where it appears**: Command Palette, Editor Context Menu.
+- **Where it appears**: Command Palette, Editor Context Menu (Gherkin PowerTools submenu).
 - **Required context**: An active `.feature` file or workspace.
 - **Input**: None.
 - **Result**: Analyzes environment versions, workspace layout, discovered feature/step files, indexed definitions, Python extension status, and `.gherkin-powertoolsrc.json` validity. Generates an Output Channel report with a 1-click `Copy Sanitized Report` action.
-- **Default shortcut**: <kbd>Ctrl+Alt+H</kbd> (<kbd>Cmd+Option+H</kbd> on macOS).
+- **Default shortcut**: <kbd>Alt+Shift+D</kbd> (<kbd>Option+Shift+D</kbd> on macOS).
 
 ---
 
 ## Show Gherkin Health
-- **Identifier**: `gherkinPowerTools.showStatistics`
-- **Where it appears**: Command Palette, Editor Context Menu.
+- **Identifier**: `gherkinPowerTools.showGherkinHealth`
+- **Where it appears**: Command Palette, Editor Context Menu (Gherkin PowerTools submenu).
 - **Required context**: An active `.feature` file.
 - **Input**: None.
 - **Result**: Parses all discovered feature files in the workspace and displays an interactive HTML dashboard containing project health, maintainability, tag impact, and complexity distribution.
-- **Default shortcut**: <kbd>Ctrl+Alt+S</kbd> (<kbd>Cmd+Option+S</kbd> on macOS).
+- **Default shortcut**: <kbd>Alt+Shift+H</kbd> (<kbd>Option+Shift+H</kbd> on macOS).
 
 ---
 
 ## Show Impact Details
-- **Identifier**: `gherkin-powertools.showImpactDetails`
+- **Identifier**: `gherkinPowerTools.showImpactDetails`
 - **Where it appears**: CodeLens directly above Python step definitions.
 - **Required context**: A configured Python Behave workspace and `gherkinPowerTools.impactAnalysis.enabled` must be true.
 - **Input**: Clicking the CodeLens above a step definition.
@@ -96,6 +96,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Reset Contextual Recommendations
+- **Identifier**: `gherkinPowerTools.resetContextualRecommendations`
+- **Where it appears**: Command Palette.
+- **Required context**: None.
+- **Input**: None.
+- **Result**: Resets dismissed state for contextual discovery features (e.g. project setup hints), allowing them to prompt you again in this workspace.
+- **Default shortcut**: None.
+
+---
+
 ## Demo Quick Fix (Internal)
 - **Identifier**: `gherkinPowerTools.demoQuickFix`
 - **Where it appears**: VS Code Walkthrough.
@@ -140,11 +150,11 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Rename Step
 - **Identifier**: `gherkinPowerTools.refactor.renameStep`
-- **Where it appears**: Editor Context Menu (Right-click in `.feature` file).
+- **Where it appears**: Editor Context Menu (Dynamic, only when cursor is on a valid Gherkin step).
 - **Required context**: A Gherkin step in a `.feature` file or a Python step decorator string.
 - **Input**: Prompts for the new step name.
 - **Result**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
-- **Default shortcut**: <kbd>F2</kbd> (<kbd>Cmd+Shift+R</kbd> on macOS).
+- **Default shortcut**: VS Code Native Rename (<kbd>F2</kbd> by default).
 
 
 

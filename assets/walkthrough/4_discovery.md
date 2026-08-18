@@ -1,5 +1,7 @@
 # 🔍 Behave Step Discovery
 
+*(Note: You are seeing this step because Gherkin PowerTools could not automatically locate all your Python step definitions in the default folders).*
+
 Gherkin PowerTools automatically indexes your Python step definitions and makes them available for **hover documentation**, **Go to Definition**, **IntelliSense completions**, and **undefined step detection**.
 
 **How it works:**
