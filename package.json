@@ -459,37 +459,6 @@
         }
       ]
     },
-    "keybindings": [
-      {
-        "command": "gherkinPowerTools.format",
-        "key": "shift+alt+f",
-        "mac": "shift+alt+f",
-        "when": "editorLangId == feature"
-      },
-      {
-        "command": "gherkinPowerTools.refactor.renameStep",
-        "key": "f2",
-        "mac": "cmd+shift+r",
-        "when": "editorLangId == feature"
-      },
-      {
-        "command": "gherkinPowerTools.commandCenter",
-        "key": "ctrl+shift+g",
-        "mac": "cmd+shift+g"
-      },
-      {
-        "command": "gherkinPowerTools.diagnoseWorkspace",
-        "key": "ctrl+alt+h",
-        "mac": "cmd+alt+h",
-        "when": "editorLangId == feature"
-      },
-      {
-        "command": "gherkinPowerTools.showGherkinHealth",
-        "key": "ctrl+alt+s",
-        "mac": "cmd+alt+s",
-        "when": "editorLangId == feature"
-      }
-    ],
     "snippets": [
       {
         "language": "feature",
@@ -670,6 +639,26 @@
           "**/.gherkin"
         ],
         "url": "./gherkin-powertools.schema.json"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "gherkinPowerTools.commandCenter",
+        "key": "alt+shift+g",
+        "mac": "alt+shift+g",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.showGherkinHealth",
+        "key": "alt+shift+h",
+        "mac": "alt+shift+h",
+        "when": "editorLangId == feature"
+      },
+      {
+        "command": "gherkinPowerTools.diagnoseWorkspace",
+        "key": "alt+shift+d",
+        "mac": "alt+shift+d",
+        "when": "editorLangId == feature"
       }
     ]
   },
