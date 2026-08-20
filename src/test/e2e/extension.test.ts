@@ -68,15 +68,11 @@ suite('E2E UI Test Suite', () => {
     });
 
     test('Simulate Linter diagnostics on bad Gherkin', async () => {
-        const document = await vscode.workspace.openTextDocument({ language: 'feature' });
-        const editor = await vscode.window.showTextDocument(document);
-
-        await editor.edit(editBuilder => {
-            editBuilder.insert(
-                new vscode.Position(0, 0),
-                'Given a step without a feature\n'
-            );
+        const document = await vscode.workspace.openTextDocument({ 
+            language: 'feature',
+            content: 'Given a step without a feature\n'
         });
+        const editor = await vscode.window.showTextDocument(document);
 
         let diagnostics: vscode.Diagnostic[] = [];
         for (let i = 0; i < 20; i++) {
@@ -407,12 +403,11 @@ Feature: Tags
             await ext.activate();
         }
 
-        const document = await vscode.workspace.openTextDocument({ language: 'feature' });
-        const editor = await vscode.window.showTextDocument(document);
-
-        await editor.edit(editBuilder => {
-            editBuilder.insert(new vscode.Position(0, 0), 'Feature My Feature'); // Missing colon
+        const document = await vscode.workspace.openTextDocument({ 
+            language: 'feature',
+            content: 'Feature My Feature' // Missing colon
         });
+        const editor = await vscode.window.showTextDocument(document);
 
         let diagnostics: vscode.Diagnostic[] = [];
         for (let i = 0; i < 20; i++) {
@@ -702,13 +697,11 @@ def step_impl(context):
     });
 
     test('Simulate Diagnostic to QuickFix Pipeline (End to End)', async () => {
-        const document = await vscode.workspace.openTextDocument({ language: 'feature' });
-        const editor = await vscode.window.showTextDocument(document);
-
-        // Typo in keyword
-        await editor.edit(editBuilder => {
-            editBuilder.insert(new vscode.Position(0, 0), 'Gven a misspelled keyword');
+        const document = await vscode.workspace.openTextDocument({ 
+            language: 'feature',
+            content: 'Gven a misspelled keyword'
         });
+        const editor = await vscode.window.showTextDocument(document);
 
         let diags: vscode.Diagnostic[] = [];
         for (let i = 0; i < 20; i++) {
