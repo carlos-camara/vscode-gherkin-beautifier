@@ -141,7 +141,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `["**/steps/**/*.py", "**/features/steps/**/*.py"]`
 
 ### `gherkinPowerTools.behave.ignoreGlobs`
-- **Purpose:** Patterns excluded from step discovery. Always exclude virtual environments to prevent false matches.
+- **Purpose:** Patterns excluded from step discovery. The extension implements **Zero-Config Virtual Environment Discovery**, which automatically excludes standard virtual environments. Use this setting to exclude additional custom directories to prevent false matches.
 - **Type:** `array` of strings
 - **Default:** `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]`
 

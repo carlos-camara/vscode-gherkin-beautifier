@@ -80,14 +80,27 @@ function normalizeGherkinError(e: any): GherkinParseError[] {
     else if (name === 'NoSuchLanguageException') code = 'NO_SUCH_LANGUAGE';
     else if (name === 'AstBuilderException') code = 'AST_BUILDER_ERROR';
 
+    const message = e.message || 'Unknown parsing error';
+    let line = e.location?.line || e.line;
+    let column = e.location?.column || e.column;
+
+    // Fallback: extract line/column from the message if missing
+    if (typeof line !== 'number' && typeof message === 'string') {
+        const match = message.match(/\((\d+):(\d+)\):/);
+        if (match) {
+            line = parseInt(match[1], 10);
+            column = parseInt(match[2], 10);
+        }
+    }
+
     return [{
         code,
-        message: e.message || 'Unknown parsing error',
+        message,
         source,
         severity: 'error',
         recoverable: false, // will be updated by caller if partial AST exists
-        line: e.location?.line || e.line,
-        column: e.location?.column || e.column
+        line,
+        column
     }];
 }
 

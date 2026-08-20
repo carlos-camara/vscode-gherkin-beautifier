@@ -31,7 +31,7 @@ Update your settings to include your custom path:
     "**/my_custom_folder/steps/**/*.py"
 ]
 ```
-Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser from scanning thousands of irrelevant files.
+Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically excluded by default via **Zero-Config Virtual Environment Discovery** to prevent performance timeouts. If you use a non-standard virtual environment name, ensure it is added to `ignoreGlobs`.
 
 ## Ambiguous steps are reported unexpectedly
 **Symptom:** The linter flags a step as "Ambiguous" even though Behave runs it fine.

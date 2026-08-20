@@ -69,7 +69,7 @@ On your first run in a Python workspace, the **First-Run Onboarding Experience**
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/onboarding.gif" alt="First-Run Onboarding Experience" width="600" height="340" />
 </div>
 
-To generate your first Python step, write an undefined step in your `.feature` file, press <kbd>Ctrl+.</kbd>, and select **Generate Python Step Definition**.
+To generate your first Python step, write an undefined step in your `.feature` file, press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS), and select **Generate Python Step Definition**.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" height="340" />

@@ -58,7 +58,7 @@ To generate the dashboard:
 - Open the Command Palette (<kbd>Ctrl+Shift+P</kbd> or <kbd>Cmd+Shift+P</kbd>), type and select **Gherkin PowerTools: Show Gherkin Health**.
 - Or, right-click anywhere in a `.feature` file and select **Gherkin PowerTools > Show Gherkin Health**.
 
-A Webview panel will open in VS Code displaying the generated HTML report.
+A Webview panel will open in VS Code displaying the generated HTML report. The dashboard is designed with a strict Apple Human Interface Guidelines (HIG) aesthetic, ensuring a premium, responsive, and minimalist native feel.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" height="340" />
