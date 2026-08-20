@@ -213,7 +213,7 @@ export async function calculateHealthMetrics(graph: WorkspaceGraph, symbolCache:
 }
 
 export function getLoadingHtml() {
-    return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Gherkin Health...</h2><p>Scanning graph...</p></body></html>`;
+    return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Project Health...</h2><p>Scanning project...</p></body></html>`;
 }
 
 export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: AntiPattern[], version: string, snapshots: VersionedSnapshot[] = []): string {

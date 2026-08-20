@@ -97,7 +97,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         const { document: gherkinDocument, errors } = await astRepository.getAST(document);
         if (!gherkinDocument || errors.length > 0) {
             // Fallback to full document format or return empty if we can't parse safely
-            vscode.window.showWarningMessage("Gherkin PowerTools: Cannot range-format document due to syntax errors.");
+            vscode.window.showWarningMessage("Cannot range-format document with syntax errors.");
             return [];
         }
 
@@ -154,7 +154,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         const { document: gherkinDocument, errors } = await astRepository.getAST(document);
 
         if (!gherkinDocument || errors.length > 0) {
-            vscode.window.showWarningMessage("Gherkin PowerTools: Cannot format document due to syntax errors.");
+            vscode.window.showWarningMessage("Cannot format document with syntax errors.");
             return null;
         }
 

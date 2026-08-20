@@ -201,7 +201,7 @@ suite('createStepDefinition Test Suite', () => {
 
         await createStepDefinition('step', 'Given');
 
-        assert.strictEqual(errorMessage, 'Please open a workspace to create step definitions.');
+        assert.strictEqual(errorMessage, 'Open a workspace to create step definitions.');
     });
 
 
@@ -461,7 +461,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => undefined });
 
         await batchCreateStepDefinitions([{text: 'step', keyword: 'Given'}]);
-        assert.strictEqual(errorMessage, 'Please open a workspace to create step definitions.');
+        assert.strictEqual(errorMessage, 'Open a workspace to create step definitions.');
     });
 
     test('Cancels batch creation if user cancels new file prompt', async () => {

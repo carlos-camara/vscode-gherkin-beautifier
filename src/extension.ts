@@ -125,7 +125,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('gherkinPowerTools.replayOnboarding', () => { FirstRunExperience.replayOnboarding(context); }),
         vscode.commands.registerCommand('gherkinPowerTools.resetContextualRecommendations', async () => {
             await contextualDiscoveryService.reset();
-            vscode.window.showInformationMessage("Gherkin PowerTools: Feature recommendations have been reset.");
+            vscode.window.showInformationMessage("Feature recommendations reset.");
         }),
         vscode.commands.registerCommand('gherkinPowerTools.internal.recordCompletion', (pattern: string) => { rankingService.recordCompletion(pattern); }),
         vscode.commands.registerCommand('gherkinPowerTools.showGherkinHealth', () => { showProjectHealthDashboard(context, workspaceGraph, symbolCache); }),
@@ -138,7 +138,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('gherkinPowerTools.analytics.clearHistory', () => {
             const history = new MetricsHistory(context);
             history.clearHistory();
-            vscode.window.showInformationMessage("Gherkin PowerTools: Historical trends cleared.");
+            vscode.window.showInformationMessage("Historical trends cleared.");
         }),
         vscode.commands.registerCommand('gherkinPowerTools.commandCenter', showCommandCenter),
         vscode.commands.registerCommand('gherkinPowerTools.diagnoseWorkspace', () => {

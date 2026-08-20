@@ -72,7 +72,7 @@ suite('E2E UI Test Suite', () => {
             language: 'feature',
             content: 'Given a step without a feature\n'
         });
-        const editor = await vscode.window.showTextDocument(document);
+        await vscode.window.showTextDocument(document);
 
         let diagnostics: vscode.Diagnostic[] = [];
         for (let i = 0; i < 20; i++) {
@@ -407,7 +407,7 @@ Feature: Tags
             language: 'feature',
             content: 'Feature My Feature' // Missing colon
         });
-        const editor = await vscode.window.showTextDocument(document);
+        await vscode.window.showTextDocument(document);
 
         let diagnostics: vscode.Diagnostic[] = [];
         for (let i = 0; i < 20; i++) {
@@ -701,7 +701,7 @@ def step_impl(context):
             language: 'feature',
             content: 'Gven a misspelled keyword'
         });
-        const editor = await vscode.window.showTextDocument(document);
+        await vscode.window.showTextDocument(document);
 
         let diags: vscode.Diagnostic[] = [];
         for (let i = 0; i < 20; i++) {

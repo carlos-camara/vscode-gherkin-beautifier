@@ -301,7 +301,7 @@ export async function showOnboardingNotificationIfNeeded(
                     }
                     const merged = mergeSettingsJson(existing, analysis.suggestedStepGlobs);
                     fs.writeFileSync(settingsPath, merged, 'utf8');
-                    vscode.window.showInformationMessage('Workspace settings updated with suggested stepGlobs.');
+                    vscode.window.showInformationMessage('Workspace settings updated with suggested step definitions pattern.');
                 } else if (selection === '📄 Config') {
                     const configPath = path.join(folder.uri.fsPath, '.gherkin-powertoolsrc.json');
                     let existing = '';
@@ -310,7 +310,7 @@ export async function showOnboardingNotificationIfNeeded(
                     }
                     const merged = mergeProjectConfigFile(existing, analysis.suggestedStepGlobs);
                     fs.writeFileSync(configPath, merged, 'utf8');
-                    vscode.window.showInformationMessage('.gherkin-powertoolsrc.json updated with suggested stepGlobs.');
+                    vscode.window.showInformationMessage('.gherkin-powertoolsrc.json updated with suggested step definitions pattern.');
                 } else if (selection === '🩺 Diagnostics') {
                     vscode.commands.executeCommand('gherkinPowerTools.diagnoseWorkspace');
                 }

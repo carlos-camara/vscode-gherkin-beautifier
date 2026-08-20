@@ -30,7 +30,7 @@ suite('Project Health Dashboard Test Suite', () => {
 
     test('getLoadingHtml: Returns valid HTML', () => {
         const html = getLoadingHtml();
-        assert.ok(html.includes('Analyzing Gherkin Health'));
+        assert.ok(html.includes('Analyzing Project Health'));
     });
 
     test('getDashboardHtml: Renders metrics correctly', () => {

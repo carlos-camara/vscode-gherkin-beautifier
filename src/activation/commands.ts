@@ -20,7 +20,7 @@ export interface CommandServices {
  */
 function checkWorkspaceTrust(): boolean {
     if (!vscode.workspace.isTrusted) {
-        vscode.window.showWarningMessage("Gherkin PowerTools: Execution is disabled in untrusted workspaces for security reasons.");
+        vscode.window.showWarningMessage("Execution disabled in untrusted workspace.");
         return false;
     }
     return true;
@@ -82,7 +82,7 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
             if (finalUri && finalUri.fsPath.endsWith('.feature')) {
                 return runBehave(finalUri, undefined, configService);
             } else {
-                vscode.window.showInformationMessage("Gherkin PowerTools: Open a saved .feature file first to run it, or click the Play button in the Test Explorer.");
+                vscode.window.showInformationMessage("Open a .feature file to run it.");
             }
         }),
 
@@ -131,7 +131,7 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
                 if (folders && folders.length > 0) {
                     await runBehaveWithPrompt(folders[0].uri, undefined, configService);
                 } else {
-                    vscode.window.showWarningMessage('Open a .feature file to edit Behave arguments.');
+                    vscode.window.showWarningMessage('Open a .feature file to edit arguments.');
                 }
             }
         }),
@@ -150,7 +150,7 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
                 return;
             }
             const targetOptions = targetUris.map(uri => ({ label: vscode.workspace.asRelativePath(uri), uri }));
-            const selectedTarget = await vscode.window.showQuickPick(targetOptions, { placeHolder: 'Select target step definition file' });
+            const selectedTarget = await vscode.window.showQuickPick(targetOptions, { placeHolder: 'Select target file' });
             if (!selectedTarget) return;
 
             const edit = await refactoringService.extractStep(editor.document, editor.selection, newName, selectedTarget.uri);

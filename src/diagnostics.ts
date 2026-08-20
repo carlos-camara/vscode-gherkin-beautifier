@@ -291,7 +291,7 @@ export async function showDiagnosticsReport(
     ).then(selection => {
         if (selection === '📋 Copy Sanitized Report') {
             vscode.env.clipboard.writeText(sanitizedMarkdown);
-            vscode.window.showInformationMessage('Sanitized diagnostic report copied to clipboard.');
+            vscode.window.showInformationMessage('Sanitized report copied to clipboard.');
         }
     });
 

@@ -19,6 +19,7 @@ export class GherkinLinter {
     private eventBusDisposable?: vscode.Disposable;
 
     constructor(symbolCache: SymbolCache, private configService: ConfigurationService) {
+        console.log("======== LINTER CONSTRUCTOR CALLED ========");
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('gherkin');
         this.symbolCache = symbolCache;
     }
@@ -34,8 +35,10 @@ export class GherkinLinter {
             if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
                 const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
                 if (e.type === 'textDocumentOpened') {
+                    process.stdout.write(`\n--- LINTER EVENT: textDocumentOpened ${doc.uri.toString()} ---\n`);
                     this.immediateLint(doc);
                 } else {
+                    process.stdout.write(`\n--- LINTER EVENT: textDocumentChanged ${doc.uri.toString()} ---\n`);
                     this.scheduleLint(doc);
                 }
             } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
@@ -50,6 +53,10 @@ export class GherkinLinter {
      * Schedules a debounced linting request for a document.
      */
     public scheduleLint(document: vscode.TextDocument, delayMs: number = 250) {
+        const fs = require('fs');
+        const logPath = require('path').join(__dirname, '..', 'test_linter.log');
+        fs.appendFileSync(logPath, `[LINTER] SCHEDULE LINT CALLED: doc=${document.uri.toString()}\n`);
+        console.log(`======== LINTER SCHEDULE LINT CALLED: ${document.uri.toString()} ========`);
         const uriStr = document.uri.toString();
         const existing = this.pendingRequests.get(uriStr);
         if (existing?.timer) {
@@ -57,6 +64,7 @@ export class GherkinLinter {
         }
 
         const requestId = ++this.nextRequestId;
+        process.stdout.write(`\n--- SCHEDULE LINT: doc=${uriStr} req=${requestId} ---\n`);
         const timer = setTimeout(() => {
             this.lint(document, requestId, document.version);
         }, delayMs);
@@ -68,6 +76,10 @@ export class GherkinLinter {
      * Immediately lints a document, bypassing any active debounce.
      */
     public immediateLint(document: vscode.TextDocument) {
+        const fs = require('fs');
+        const logPath = require('path').join(__dirname, '..', 'test_linter.log');
+        fs.appendFileSync(logPath, `[LINTER] IMMEDIATE LINT CALLED: doc=${document.uri.toString()}\n`);
+        console.log(`======== LINTER IMMEDIATE LINT CALLED: ${document.uri.toString()} ========`);
         const uriStr = document.uri.toString();
         const existing = this.pendingRequests.get(uriStr);
         if (existing?.timer) {
@@ -86,13 +98,19 @@ export class GherkinLinter {
      * @param version The document version at the time of the request.
      */
     public async lint(document: vscode.TextDocument, requestId: number = ++this.nextRequestId, version: number = document.version) {
+        console.log(`======== LINTER LINT CALLED: doc=${document.uri.toString()} ========`);
+        const fs = require('fs');
+        const logPath = require('path').join(__dirname, '..', 'test_linter.log');
+        fs.appendFileSync(logPath, `[LINTER] LINT CALLED: doc=${document.uri.toString()} version=${version} lang=${document.languageId}\n`);
         if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
+            fs.appendFileSync(logPath, `[LINTER] Ignored due to languageId: ${document.languageId}\n`);
             return;
         }
 
         const config = this.configService.getConfiguration(document.uri);
         if (!config.linter.enabled) {
-            vscode.window.showInformationMessage("Linter is currently DISABLED by configuration.");
+            fs.appendFileSync(logPath, `[LINTER] Ignored due to config.linter.enabled=false\n`);
+            vscode.window.showInformationMessage("Linter is disabled in settings.");
             this.diagnosticCollection.delete(document.uri);
             return;
         }
@@ -204,8 +222,8 @@ export class GherkinLinter {
                                     message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
                                     suggestedEdit = bestMatch + ':';
                                 } else {
-                                    message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
-                                    suggestedEdit = bestMatch;
+                                    message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch.trim()}'?`;
+                                    suggestedEdit = bestMatch.trim();
                                 }
                                 endChar = startChar + firstWord.length;
                             } else {
@@ -296,6 +314,7 @@ export class GherkinLinter {
                     }
                     
                     diagnostics.push(diagnostic);
+                    fs.appendFileSync(logPath, `[LINTER] Pushed syntax diagnostic: ${code}\n`);
                     
                     if (code !== 'INCONSISTENT_CELL_COUNT') {
                         hasFatalSyntaxError = true;
@@ -350,12 +369,14 @@ export class GherkinLinter {
         // Before publishing, verify we are still the most recent request for this document,
         // and the document hasn't been modified or closed during our async parse.
         if (document.isClosed || document.version !== version) {
+            process.stdout.write(`\n--- LINTER ABORT: version mismatch or closed. doc=${document.uri.toString()} ---\n`);
             return;
         }
 
         const uriStr = document.uri.toString();
         const pending = this.pendingRequests.get(uriStr);
         if (pending && pending.requestId !== requestId) {
+            process.stdout.write(`\n--- LINTER ABORT: pending request mismatch. doc=${document.uri.toString()} ---\n`);
             return;
         }
         let finalDiagnostics = diagnostics;
@@ -363,6 +384,8 @@ export class GherkinLinter {
             finalDiagnostics = diagnostics.filter(d => typeof d.code === 'string' && config.linter.enabledRules.includes(d.code));
         }
 
+        process.stdout.write(`\n--- LINTER PUBLISHING: doc=${document.uri.toString()} count=${finalDiagnostics.length} diagnostics=${JSON.stringify(finalDiagnostics.map(d => d.code))} ---\n`);
+        fs.appendFileSync(logPath, `[LINTER] PUBLISHING diagnostics: ${finalDiagnostics.length} for ${document.uri.toString()} -> [${finalDiagnostics.map(d=>d.code).join(',')}]\n`);
         this.diagnosticCollection.set(document.uri, finalDiagnostics);
     }
 

@@ -205,7 +205,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
         }
 
         if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
+            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
             return undefined;
         }
 
@@ -344,7 +344,7 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
             }
         }
         if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
+            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
             return undefined;
         }
 
@@ -468,7 +468,7 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
         editor.selection = new vscode.Selection(newEndPos, newEndPos);
         editor.revealRange(new vscode.Range(newEndPos, newEndPos));
 
-        vscode.window.showInformationMessage(`Generated ${addedCount} step definition(s)!`);
+        vscode.window.showInformationMessage(`Generated ${addedCount} step definition(s).`);
         return targetUri;
     }
     return undefined;

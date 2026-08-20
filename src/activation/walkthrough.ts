@@ -29,14 +29,14 @@ export function registerWalkthroughCommands(
                     });
                     editor = await vscode.window.showTextDocument(document, { preview: false, viewColumn: vscode.ViewColumn.Beside });
                     
-                    vscode.window.showInformationMessage("Gherkin PowerTools: Watch the magic! Auto-formatting in 2 seconds...");
+                    vscode.window.showInformationMessage("Auto-formatting document...");
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
 
             const config = configService.getConfiguration(editor.document.uri);
             if (config.formatter?.enabled === false) {
-                vscode.window.showWarningMessage("Gherkin PowerTools: Formatter is disabled in settings ('gherkinPowerTools.formatter.enabled' is false).");
+                vscode.window.showWarningMessage("Formatting is disabled in settings.");
                 return;
             }
 
@@ -48,7 +48,7 @@ export function registerWalkthroughCommands(
                     }
                 });
             } else {
-                vscode.window.showInformationMessage("Gherkin PowerTools: Document is already formatted or could not be formatted.");
+                vscode.window.showInformationMessage("Document is already formatted.");
             }
         }),
 
@@ -68,7 +68,7 @@ export function registerWalkthroughCommands(
             // Move cursor to the undefined step
             const position = new vscode.Position(2, 10);
             editor.selection = new vscode.Selection(position, position);
-            vscode.window.showInformationMessage("Gherkin PowerTools: Press Cmd+. (or Ctrl+.) or click the lightbulb to see Quick Fixes!");
+            vscode.window.showInformationMessage("Press ⌘. or click the lightbulb to see Quick Fixes.");
             
             // Trigger quick fix menu automatically after a short delay
             setTimeout(() => {
@@ -82,7 +82,7 @@ export function registerWalkthroughCommands(
                 vscode.commands.executeCommand('editor.action.revealDefinition');
                 return;
             }
-            vscode.window.showInformationMessage("Gherkin PowerTools: To test Go to Definition, please open a saved .feature file from your workspace, right-click a step and select 'Go to Definition'.");
+            vscode.window.showInformationMessage("To test Go to Definition, open a saved .feature file and right-click a step.");
         })
     ];
 }

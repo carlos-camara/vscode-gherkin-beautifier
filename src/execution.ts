@@ -141,7 +141,7 @@ export async function resolveBehaveExecutionDetails(
 export async function runBehave(uri: vscode.Uri, line: number | undefined, configService: ConfigurationService) {
     const signature = getExecutionSignature(uri, line);
     if (activeExecutions.has(signature)) {
-        vscode.window.showWarningMessage('This Behave test is already running. Please wait for it to finish or cancel it.');
+        vscode.window.showWarningMessage('This test is already running.');
         return;
     }
 
@@ -150,7 +150,7 @@ export async function runBehave(uri: vscode.Uri, line: number | undefined, confi
 
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
     if (!workspaceFolder) {
-        vscode.window.showErrorMessage('A workspace folder must be open to execute Behave tests safely.');
+        vscode.window.showErrorMessage('Open a workspace to execute tests.');
         return;
     }
 
@@ -207,10 +207,10 @@ export async function runBehaveWithPrompt(uri: vscode.Uri, _line: number | undef
             const target = workspaceFolder ? vscode.ConfigurationTarget.WorkspaceFolder : vscode.ConfigurationTarget.Workspace;
             await vscode.workspace.getConfiguration('gherkinPowerTools.behave', uri).update('additionalArguments', argsArray, target);
             memoryAdditionalArgs = undefined;
-            vscode.window.showInformationMessage('Execution arguments saved. Click "Run" to execute.');
+            vscode.window.showInformationMessage('Execution arguments saved.');
         } else if (action === 'Just for this session') {
             memoryAdditionalArgs = newArgsStr;
-            vscode.window.showInformationMessage('Execution arguments updated for this session. Click "Run" to execute.');
+            vscode.window.showInformationMessage('Execution arguments updated for this session.');
         }
     }
 }
@@ -247,7 +247,7 @@ export function parseArgsStringToVector(argsString: string): string[] {
 export async function debugBehave(uri: vscode.Uri, line: number | undefined, configService: ConfigurationService) {
     const signature = getExecutionSignature(uri, line);
     if (activeExecutions.has(signature)) {
-        vscode.window.showWarningMessage('This Behave test is already running. Please wait for it to finish or cancel it.');
+        vscode.window.showWarningMessage('This test is already running.');
         return;
     }
 
@@ -297,7 +297,7 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
     };
     
     if (!workspaceFolder) {
-        vscode.window.showErrorMessage('A workspace folder must be open to start debugging.');
+        vscode.window.showErrorMessage('Open a workspace to start debugging.');
         return;
     }
     return new Promise<void>(async (resolve) => {
