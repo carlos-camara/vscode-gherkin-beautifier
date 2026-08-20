@@ -288,293 +288,287 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     <title>Gherkin Health</title>
     <style>
         :root {
-            --radius-xl: 24px;
+            --radius-xl: 20px;
             --radius-lg: 16px;
-            --radius-md: 12px;
+            --radius-md: 10px;
             --spacing: 32px;
             --glass-border: rgba(128, 128, 128, 0.15);
-            --glass-border-light: rgba(255, 255, 255, 0.08);
-            --shadow-sm: 0 8px 32px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.2);
-            --shadow-glow: 0 0 30px rgba(168, 85, 247, 0.15);
-            --apple-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --glass-border-light: rgba(255, 255, 255, 0.1);
+            --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
+            --apple-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --text-primary: var(--vscode-foreground);
+            --text-secondary: var(--vscode-descriptionForeground);
+            --bg-base: var(--vscode-editor-background);
+            --bg-surface: var(--vscode-editorWidget-background);
         }
 
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(24px); }
+            from { opacity: 0; transform: translateY(16px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         body {
             font-family: var(--apple-font);
-            padding: 60px 40px;
-            color: var(--vscode-foreground);
+            padding: 40px 32px;
+            color: var(--text-primary);
             margin: 0 auto;
-            line-height: 1.5;
-            max-width: 1100px;
-            background-color: var(--vscode-editor-background);
-            background-image: radial-gradient(circle at 50% -10%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
-            background-attachment: fixed;
+            line-height: 1.4;
+            max-width: 1000px;
+            background-color: var(--bg-base);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
         .header {
-            margin-bottom: 60px;
+            margin-bottom: 48px;
             display: flex; justify-content: space-between; align-items: baseline;
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
         .header h1 {
             margin: 0;
-            font-size: 3.8rem;
-            font-weight: 800;
-            letter-spacing: -0.04em;
-            background: linear-gradient(135deg, var(--vscode-textLink-foreground), #bf5af2, #ff375f);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
         }
         .header .badge {
-            font-size: 14px; padding: 6px 14px; background: rgba(128,128,128,0.15); border-radius: 20px; font-weight: 600; border: 1px solid var(--glass-border);
+            font-size: 13px; padding: 4px 12px; background: rgba(128,128,128,0.1); border-radius: 12px; font-weight: 500;
         }
         
         .refresh-btn {
             background: rgba(128,128,128,0.05);
             border: 1px solid var(--glass-border);
-            color: var(--vscode-foreground);
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
+            color: var(--text-primary);
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
         }
         
         .refresh-btn:hover {
-            background: rgba(128,128,128,0.15);
-            border-color: var(--glass-border-light);
-            transform: rotate(180deg);
+            background: rgba(128,128,128,0.12);
+            transform: scale(1.05);
         }
         
         .search-container {
             position: relative;
-            margin-bottom: 60px;
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.1s;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.05s;
         }
         
         .spotlight-search {
             width: 100%;
-            padding: 20px 28px;
-            font-size: 1.4rem;
+            padding: 16px 20px;
+            font-size: 1.2rem;
             font-family: var(--apple-font);
             border: 1px solid var(--glass-border);
-            border-top: 1px solid var(--glass-border-light);
-            border-radius: var(--radius-xl);
-            background: var(--vscode-editorWidget-background);
-            color: var(--vscode-foreground);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow-lg);
+            border-radius: var(--radius-lg);
+            background: rgba(128,128,128,0.03);
+            color: var(--text-primary);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow-sm);
             outline: none;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.2s ease;
             box-sizing: border-box;
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
         }
         
         .spotlight-search::placeholder {
-            color: var(--vscode-descriptionForeground);
-            opacity: 0.6;
+            color: var(--text-secondary);
+            opacity: 0.8;
         }
         
         .spotlight-search:focus {
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 4px rgba(168, 85, 247, 0.15), var(--shadow-lg), var(--shadow-glow);
-            border-color: rgba(168, 85, 247, 0.4);
+            background: var(--bg-surface);
+            border-color: var(--vscode-focusBorder, rgba(0,122,255,0.5));
+            box-shadow: 0 0 0 3px rgba(0,122,255,0.15), var(--shadow-lg);
         }
 
         /* Card Base Styles */
         .premium-card {
-            background: var(--vscode-editorWidget-background);
+            background: var(--bg-surface);
             border: 1px solid var(--glass-border);
-            border-top: 1px solid var(--glass-border-light);
             border-radius: var(--radius-lg);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), var(--shadow-sm);
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
         .premium-card:hover {
-            transform: translateY(-6px);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-lg), var(--shadow-glow);
-            border-color: rgba(128,128,128,0.25);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
 
         /* Scores Grid */
         .scores-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            margin-bottom: 60px;
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.1s;
+            gap: 20px;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.1s;
         }
 
         .score-card {
             border-radius: var(--radius-xl);
-            padding: 40px 32px;
+            padding: 32px 24px;
             text-align: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(128,128,128,0.03);
+            border: 1px solid var(--glass-border);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
         }
-
-        .score-card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%;
-            background: radial-gradient(circle at top, var(--glow-color) 0%, transparent 60%);
-            opacity: 0.12; pointer-events: none;
-        }
-        .score-card.health { --glow-color: ${healthBg}; }
-        .score-card.maintain { --glow-color: ${maintainBg}; }
-        .score-card.complex { --glow-color: ${complexityBg}; }
 
         .score-value {
-            font-size: 76px;
-            font-weight: 800;
-            margin: 8px 0 16px 0;
+            font-size: 64px;
+            font-weight: 700;
+            margin: 4px 0 8px 0;
             line-height: 1;
             letter-spacing: -0.04em;
         }
-        .score-card.health .score-value { color: ${healthBg}; }
-        .score-card.maintain .score-value { color: ${maintainBg}; }
-        .score-card.complex .score-value { color: ${complexityBg}; }
+        .score-card.health .score-value { color: var(--text-primary); }
+        .score-card.maintain .score-value { color: var(--text-primary); }
+        .score-card.complex .score-value { color: var(--text-primary); }
 
         .score-label {
-            font-size: 14px;
-            opacity: 0.7;
+            font-size: 13px;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: 700;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
 
         h2.section-title {
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            letter-spacing: -0.03em;
-            margin: 80px 0 24px 0;
+            letter-spacing: -0.02em;
+            margin: 64px 0 20px 0;
             border: none;
             padding: 0;
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.2s;
+            color: var(--text-primary);
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.15s;
         }
 
         /* Charts Grid */
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-            gap: 32px;
-            margin-bottom: 80px;
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.3s;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 64px;
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.2s;
         }
         .chart-card {
-            padding: 40px;
+            padding: 32px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--glass-border);
         }
         .chart-card h3 {
             margin-top: 0;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
             font-weight: 600;
             text-align: center;
-            font-size: 1.4rem;
-            letter-spacing: -0.02em;
+            font-size: 1.2rem;
+            letter-spacing: -0.01em;
         }
         .chart-container {
             position: relative;
             width: 100%;
-            min-height: 380px;
+            min-height: 320px;
         }
 
         /* Anti-Patterns Grid */
         .rec-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-            gap: 32px;
-            margin-bottom: 60px;
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.4s;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.25s;
         }
         
         .rec-card {
-            padding: 32px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
+            background: rgba(128,128,128,0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
         }
-        body.vscode-light .rec-card { background: rgba(0, 0, 0, 0.02); }
         .rec-header {
-            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;
         }
-        .rec-title { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+        .rec-title { margin: 0; font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; }
         .severity-badge {
-            padding: 4px 12px; border-radius: 12px; font-size: 0.75em; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+            padding: 2px 10px; border-radius: 10px; font-size: 0.75em; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase;
         }
-        .severity-error { background: rgba(255, 69, 58, 0.15); color: #ff453a; border: 1px solid rgba(255, 69, 58, 0.3); }
-        .severity-warning { background: rgba(255, 159, 10, 0.15); color: #ff9f0a; border: 1px solid rgba(255, 159, 10, 0.3); }
-        .severity-info { background: rgba(10, 132, 255, 0.15); color: #0a84ff; border: 1px solid rgba(10, 132, 255, 0.3); }
-        .rec-explanation { margin: 0 0 24px 0; color: var(--vscode-descriptionForeground); flex-grow: 1; font-size: 1.05rem; }
+        .severity-error { background: rgba(255, 59, 48, 0.1); color: #ff3b30; }
+        .severity-warning { background: rgba(255, 149, 0, 0.1); color: #ff9500; }
+        .severity-info { background: rgba(0, 122, 255, 0.1); color: #007aff; }
+        .rec-explanation { margin: 0 0 20px 0; color: var(--text-secondary); flex-grow: 1; font-size: 0.95rem; }
         .rec-fix {
-            background-color: rgba(128, 128, 128, 0.05);
-            border-left: 4px solid var(--vscode-textLink-foreground);
-            padding: 16px 20px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            font-size: 0.95em;
-            line-height: 1.5;
+            background-color: rgba(128, 128, 128, 0.04);
+            border-left: 3px solid var(--vscode-textLink-foreground);
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            line-height: 1.4;
         }
-        .rec-affected { font-size: 0.95em; }
+        .rec-affected { font-size: 0.9em; }
         .rec-affected ul { margin: 8px 0 0 0; padding-left: 20px; }
 
         /* Metrics Grid */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 24px;
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.5s;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.3s;
         }
 
         .metric-panel {
-            background: var(--vscode-editorWidget-background);
+            background: var(--bg-surface);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            box-shadow: var(--shadow-sm);
+            border-radius: var(--radius-lg);
             overflow: hidden;
             padding: 0;
-            transition: box-shadow 0.3s;
         }
-        .metric-panel:hover { box-shadow: var(--shadow-lg); }
         .metric-header {
-            padding: 20px 24px;
-            font-size: 1.1rem;
+            padding: 16px 20px;
+            font-size: 1.05rem;
             font-weight: 600;
             display: flex; justify-content: space-between; align-items: center;
             cursor: pointer; user-select: none;
             background: transparent;
             transition: background 0.2s ease;
         }
-        .metric-header:hover { background: rgba(128,128,128,0.04); }
-        .metric-header .icon-title { display: flex; align-items: center; gap: 14px; }
+        .metric-header:hover { background: rgba(128,128,128,0.03); }
+        .metric-header .icon-title { display: flex; align-items: center; gap: 12px; }
         .chevron-icon {
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform 0.2s ease;
             opacity: 0.4;
             display: flex;
         }
         .metric-panel.expanded .chevron-icon { transform: rotate(90deg); }
 
         .metric-body {
-            padding: 0 24px;
+            padding: 0 20px;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.4s ease, padding 0.4s ease, opacity 0.4s ease;
+            transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
             opacity: 0;
         }
         .metric-panel.expanded .metric-body {
             max-height: 500px;
-            padding: 16px 24px 24px 24px;
+            padding: 12px 20px 20px 20px;
             opacity: 1;
             overflow-y: auto;
         }
@@ -583,92 +577,77 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         .leaderboard-item {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 12px 0;
-            position: relative;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--glass-border);
         }
-        .leaderboard-item:not(:last-child)::after {
-            content: ''; position: absolute; bottom: 0; left: 44px; right: 0;
-            height: 1px; background: var(--glass-border);
-        }
+        .leaderboard-item:last-child { border-bottom: none; }
         .leaderboard-rank { 
-            font-size: 1rem; font-weight: 700; width: 28px; height: 28px; 
-            background: rgba(128,128,128,0.1); border-radius: 8px; 
+            font-size: 0.9rem; font-weight: 600; width: 24px; height: 24px; 
+            background: rgba(128,128,128,0.08); border-radius: 6px; 
             display: flex; align-items: center; justify-content: center; 
+            color: var(--text-secondary);
         }
         .leaderboard-content { flex-grow: 1; min-width: 0; }
         .leaderboard-bar {
-            height: 5px;
+            height: 4px;
             background: var(--vscode-textLink-foreground);
-            border-radius: 3px;
-            margin-top: 8px;
-            opacity: 0.85;
-            transition: width 1s ease-out;
+            border-radius: 2px;
+            margin-top: 6px;
+            opacity: 0.8;
+            transition: width 0.8s ease;
         }
         
-        .list-item { padding: 12px 16px; border-bottom: 1px solid rgba(128,128,128,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .list-item { padding: 10px 12px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
         .list-item:last-child { border-bottom: none; }
         
         /* Bento Box Grid */
         .bento-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
         }
         .bento-card {
-            background: var(--vscode-editorWidget-background);
+            background: rgba(128,128,128,0.03);
             border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 24px;
+            border-radius: var(--radius-lg);
+            padding: 20px;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
             position: relative;
             overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
             aspect-ratio: 1;
         }
         .bento-card:hover { 
-            transform: translateY(-4px); 
-            box-shadow: var(--shadow-lg); 
+            background: rgba(128,128,128,0.05);
         }
         .bento-value {
-            font-size: 3.2rem;
-            font-weight: 800;
-            letter-spacing: -0.04em;
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
             line-height: 1;
-            margin-bottom: 8px;
-            color: var(--vscode-foreground);
+            margin-bottom: 6px;
+            color: var(--text-primary);
             z-index: 1;
         }
         .bento-label {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--vscode-descriptionForeground);
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
             z-index: 1;
-            letter-spacing: 0.02em;
         }
         .bento-icon {
             position: absolute;
-            right: -15px;
-            bottom: -25px;
-            font-size: 7rem;
-            opacity: 0.06;
+            right: -10px;
+            bottom: -15px;
+            font-size: 5rem;
+            opacity: 0.04;
             z-index: 0;
             pointer-events: none;
             line-height: 1;
-        }
-
-        .badge {
-            background: rgba(128,128,128,0.15);
-            color: var(--vscode-foreground);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            border: 1px solid var(--glass-border);
         }
 
         .file-link {
@@ -677,67 +656,61 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             cursor: pointer;
             font-weight: 500;
             display: inline-block;
-            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s;
         }
-        .file-link:hover { text-decoration: underline; color: #a855f7; transform: translateX(4px); }
+        .file-link:hover { text-decoration: underline; }
 
         details {
-            background: rgba(128, 128, 128, 0.05);
+            background: rgba(128, 128, 128, 0.03);
             border: 1px solid var(--glass-border);
             border-radius: var(--radius-md);
-            padding: 12px 16px;
-            margin-top: 16px;
-            transition: background 0.2s ease;
+            padding: 10px 14px;
+            margin-top: 12px;
         }
-        details:hover { background: rgba(128, 128, 128, 0.08); }
         summary {
-            font-weight: 600; cursor: pointer; outline: none; user-select: none;
+            font-weight: 500; cursor: pointer; outline: none; user-select: none;
             color: var(--vscode-textLink-foreground);
         }
-        details > ul { margin-top: 16px; margin-bottom: 4px; padding-left: 20px; }
+        details > ul { margin-top: 12px; margin-bottom: 4px; padding-left: 20px; }
         
         .step-def {
-            margin-top: 6px;
-            font-size: 13px;
+            margin-top: 4px;
+            font-size: 12px;
             font-family: var(--vscode-editor-font-family);
-            background: rgba(128,128,128,0.1);
-            padding: 6px 10px;
+            background: rgba(128,128,128,0.06);
+            padding: 4px 8px;
             border-radius: 6px;
             display: inline-block;
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px 16px;
-            color: var(--vscode-descriptionForeground);
+            padding: 32px 16px;
+            color: var(--text-secondary);
         }
-        .empty-state .emoji { font-size: 48px; margin-bottom: 16px; display: block; }
+        .empty-state .emoji { font-size: 40px; margin-bottom: 12px; display: block; }
 
-        .overview-stats { margin-top: 16px; animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.6s; }
+        .overview-stats { margin-top: 12px; animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.35s; }
         .stat-pill {
-            background: var(--vscode-editorWidget-background);
+            background: rgba(128,128,128,0.03);
             border: 1px solid var(--glass-border);
-            border-top: 1px solid var(--glass-border-light);
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 14px;
-            display: inline-flex; gap: 8px; align-items: center;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), var(--shadow-sm);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            margin-right: 12px;
-            margin-bottom: 12px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            display: inline-flex; gap: 6px; align-items: center;
+            margin-right: 8px;
+            margin-bottom: 8px;
         }
-        .stat-pill:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), var(--shadow-lg), var(--shadow-glow); }
-        .stat-pill strong { color: var(--vscode-foreground); font-weight: 600; opacity: 0.8; }
+        .stat-pill strong { color: var(--text-primary); font-weight: 600; opacity: 0.9; }
         
         .load-more-btn {
             background: none; border: none;
             color: var(--vscode-textLink-foreground);
-            cursor: pointer; font-size: 13px; padding: 4px 0;
-            margin-top: 12px; margin-left: 20px; font-weight: 600;
+            cursor: pointer; font-size: 12px; padding: 4px 0;
+            margin-top: 8px; margin-left: 16px; font-weight: 500;
         }
-        .load-more-btn:hover { text-decoration: underline; color: #a855f7; }
-        .fix-btn { font-size: 1.25em; cursor: pointer; }
+        .load-more-btn:hover { text-decoration: underline; }
+        .fix-btn { font-size: 1.1em; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+        .fix-btn:hover { opacity: 1; }
     </style>
     <script>
         const vscode = acquireVsCodeApi();
