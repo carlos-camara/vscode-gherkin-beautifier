@@ -34,14 +34,16 @@ Here is a breakdown of the core modules located in the `src/` directory:
 To maintain compatibility and prevent side effects in users' workspaces, developers must adhere to the following strict boundaries:
 - **No Global Configuration Overrides**: The extension must *never* specify overrides for native VS Code settings (e.g., `testing.*`, `editor.*`) inside the `configurationDefaults` block in `package.json`. Doing so silently breaks other extensions installed by the user. If an integration problem exists, it must be solved inside our own controllers, not by altering the global user workspace.
 - **Test Controller Coexistence**: The extension must safely coexist with other extensions that provide their own Test Controllers and Profiles (like Python `pytest` or `Coverage`). Our Test Controller should not assume it is the only one in the workspace. Any E2E UI test must instantiate Mock controllers with unique IDs to avoid ID collisions with the real extension background processes.
-- **Transactional Graph State**: The `WorkspaceGraph` coordinates the semantic index. Any mutation of the graph state *must* occur inside the `graph.executeTransaction()` wrapper to guarantee atomic commits and failure isolation. Services requiring graph reads must query the immutable `graph.currentGeneration` object. Tests needing to inject state outside of the transaction queue should exclusively use the test-only helper `graph.setNodeForTest()`.
+- **Transactional Graph State**: The `WorkspaceGraph` coordinates the semantic index. Any mutation of the graph state *must* occur inside the `graph.executeTransaction()` wrapper to guarantee atomic commits and failure isolation.
+  Services requiring graph reads must query the immutable `graph.currentGeneration` object. Tests needing to inject state outside of the transaction queue should exclusively use the test-only helper `graph.setNodeForTest()`.
 
 ### Contributors Deep-Dive: Implementing a new LanguageService Provider
 
 When adding a new Language Service provider (e.g. `HoverProvider`, `CodeLensProvider`, or `CompletionItemProvider`), you must adhere to the following strict architectural constraints to ensure it performs efficiently and without cross-platform bugs:
 
-1. **Never perform synchronous disk I/O**: Language providers are called hundreds of times per second. Query the `WorkspaceGraph` or `SymbolCache` synchronously, as they represent the in-memory state. 
-2. **Always route through `ResourceIdentity.getCanonicalUriString()`**: VS Code URI representations vary by platform (`file:///Users/C...` vs `file:///users/C...`). When you extract a URI from a `vscode.TextDocument` or `vscode.Uri` provided by the extension host to look up a node in the graph, you **MUST** convert it using the `ResourceIdentity` canonifier before executing `.get(...)` or `.has(...)` on internal Maps. Failing to do so will result in providers breaking silently on macOS and Windows (case-insensitive filesystems).
+1. **Never perform synchronous disk I/O**: Language providers are called hundreds of times per second. Query the `WorkspaceGraph` or `SymbolCache` synchronously, as they represent the in-memory state.
+2. **Always route through `ResourceIdentity.getCanonicalUriString()`**: VS Code URI representations vary by platform (`file:///Users/C...` vs `file:///users/C...`). When you extract a URI from a `vscode.TextDocument` or `vscode.Uri` provided by the extension host to look up a node in the graph,
+   you **MUST** convert it using the `ResourceIdentity` canonifier before executing `.get(...)` or `.has(...)` on internal Maps. Failing to do so will result in providers breaking silently on macOS and Windows (case-insensitive filesystems).
 
 ---
 

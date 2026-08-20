@@ -39,13 +39,13 @@ jobs:
       - name: 📦 Package VSIX
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          npx vsce package --out gherkin-powertools-$VERSION.vsix
+          npx vsce package --out "gherkin-powertools-${VERSION}.vsix"
           npx vsce ls
 
       - name: 🛡️ Verify VSIX Internal Integrity
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          npm run verify:vsix -- gherkin-powertools-$VERSION.vsix
+          npm run verify:vsix -- "gherkin-powertools-${VERSION}.vsix"
 
       - name: 📝 Extract Changelog & Generate Provenance
         run: node scripts/verify-release-candidate.js

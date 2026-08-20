@@ -56,7 +56,8 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 
 ## Generated step location is wrong or prompts for a workspace folder
 **Symptom:** The Quick Fix generates a step, but places it in a file you didn't expect, or it asks you to select a workspace folder from a dropdown menu.
-**Likely Causes:** The extension tries to append the new step to the most recently modified `.py` file within your `stepGlobs` paths. If you have no step files, it will create one based on standard conventions. If you are in a **Multi-Root Workspace**, and the feature file being edited does not clearly belong to one of the roots, it will explicitly prompt you to select the correct target folder to prevent accidental cross-project modifications.
+**Likely Causes:** The extension tries to append the new step to the most recently modified `.py` file within your `stepGlobs` paths. If you have no step files, it will create one based on standard conventions.
+If you are in a **Multi-Root Workspace**, and the feature file being edited does not clearly belong to one of the roots, it will explicitly prompt you to select the correct target folder to prevent accidental cross-project modifications.
 **Resolution:** Open the specific `steps.py` file you want to use, save it, and try generating the step again. The extension will pick up that file as the active target. If prompted for a folder, explicitly choose the intended project root.
 
 ## Test Explorer is empty
