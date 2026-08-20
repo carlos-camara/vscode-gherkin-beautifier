@@ -39,13 +39,17 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
                 vscode.window.showInformationMessage("This step definition is not used in any scenario.");
                 return;
             }
-            const items = report.scenarios.map(sc => ({
-                label: `$(symbol-event) ${sc.name || 'Unnamed Scenario'}`,
-                description: vscode.workspace.asRelativePath(vscode.Uri.parse(sc.uri)),
-                node: sc
-            }));
+            const items = report.usages.map(usage => {
+                const parts = vscode.Uri.parse(usage.uri).path.split('/');
+                const description = parts.length >= 2 ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}` : parts[parts.length - 1];
+                return {
+                    label: `$(symbol-event) ${usage.keyword.trim()} ${usage.text}`,
+                    description,
+                    node: usage
+                };
+            });
             const selection = await vscode.window.showQuickPick(items, {
-                placeHolder: `Select a scenario to navigate to (Impact: ${report.severity})`
+                placeHolder: `Select a step to navigate to (Impact: ${report.severity})`
             });
             if (selection) {
                 const uri = vscode.Uri.parse(selection.node.uri);

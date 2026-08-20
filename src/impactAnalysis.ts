@@ -7,6 +7,7 @@ export interface ImpactReport {
     affectedScenarios: number;
     severity: ImpactSeverity;
     scenarios: ScenarioNode[];
+    usages: import('./graph').StepNode[];
 }
 
 export class ImpactAnalyzer {
@@ -80,7 +81,8 @@ export class ImpactAnalyzer {
             affectedFeatures: affectedFeatures.size,
             affectedScenarios: numScenarios,
             severity,
-            scenarios: scenarioNodes
+            scenarios: scenarioNodes,
+            usages
         };
 
         this.cache.set(stepDefId, { version: this.graph.currentGeneration.version, report });
