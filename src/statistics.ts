@@ -221,16 +221,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         return `<a href="javascript:void(0)" class="file-link" onclick="openFile('${escapeHtml(uri)}', ${line})">${escapeHtml(text)}</a>`;
     };
 
-    const getScoreGradient = (score: number, inverse = false) => {
-        const s = inverse ? 100 - score : score;
-        if (s >= 80) return 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-        if (s >= 50) return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-        return 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)';
-    };
 
-    const healthBg = getScoreGradient(metrics.scores.health);
-    const maintainBg = getScoreGradient(metrics.scores.maintainability);
-    const complexityBg = getScoreGradient(metrics.scores.complexity, true);
 
     const prevSnapshot = snapshots.length > 1 ? snapshots[snapshots.length - 2] : undefined;
 
