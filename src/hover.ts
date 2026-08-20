@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { SymbolCache, FeatureCache, StepDefinition } from './cache';
 import { dialectService } from './dialect';
 
+import * as path from 'path';
+
 export class GherkinHoverProvider implements vscode.HoverProvider {
     private symbolCache: SymbolCache;
     private featureCache: FeatureCache;
@@ -58,20 +60,21 @@ export class GherkinHoverProvider implements vscode.HoverProvider {
 
         // Construct Hover Markdown
         const hoverContent = new vscode.MarkdownString();
+        hoverContent.supportThemeIcons = true;
         
-        if (stepDefs.length > 1) {
-            hoverContent.appendMarkdown(`> ⚠️ **Ambiguous Step:** Matches ${stepDefs.length} definitions.\n\n`);
-        }
 
         for (let i = 0; i < stepDefs.length; i++) {
             const stepDef = stepDefs[i];
             
             if (i > 0) {
-                hoverContent.appendMarkdown(`\n---\n`);
+                hoverContent.appendMarkdown(`\n\n---\n\n`);
             }
 
-            // Show matcher type and pattern
-            hoverContent.appendMarkdown(`**Type:** \`${stepDef.matcherType}\`\n\n`);
+            const basename = path.basename(stepDef.uri.fsPath);
+            const line = stepDef.decoratorRange ? stepDef.decoratorRange.start.line + 1 : 1;
+            const link = `${stepDef.uri.toString()}#${line}`;
+            
+            hoverContent.appendMarkdown(`$(symbol-function) **${stepDef.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) [${basename}:${line}](${link}) &nbsp;•&nbsp; $(gear) \`${stepDef.matcherType}\`\n\n`);
             
             if (!stepDef.evaluable) {
                 hoverContent.appendMarkdown(`> ⚠️ **Unsupported Matcher:** ${stepDef.compilationError || 'Dynamic expression is not supported'}\n\n`);

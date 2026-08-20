@@ -2,59 +2,97 @@
 name: 📦 Create Release
 
 on:
-  push:
-    branches:
-      - main
-
-permissions:
-  contents: write
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry Run (Validate everything but do not publish)"
+        required: true
+        type: boolean
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build & Release VSIX
+  build-and-validate:
+    name: 🏗️ Build & Validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read # Strictly unprivileged
+
     steps:
       - name: 🔍 Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: ⚙️ Setup and Build
         uses: ./.github/actions/setup-build
 
-      - name: 🧪 Validate Tests
+      - name: 🧪 Run Tests
         run: |
           xvfb-run -a npm run test
           xvfb-run -a npm run test:e2e
 
-      - name: 🏷️ Determine Version and Tag
-        id: vars
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
-          VSIX="gherkin-powertools-$VERSION.vsix"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "vsix=$VSIX" >> "$GITHUB_OUTPUT"
-
       - name: 📦 Package VSIX
         run: |
-          npx vsce package --out ${{ steps.vars.outputs.vsix }}
+          VERSION=$(node -p "require('./package.json').version")
+          npx vsce package --out gherkin-powertools-$VERSION.vsix
           npx vsce ls
 
-      - name: 🛡️ Verify VSIX
+      - name: 🛡️ Verify VSIX Internal Integrity
         run: |
-          npm run verify:vsix -- ${{ steps.vars.outputs.vsix }}
+          VERSION=$(node -p "require('./package.json').version")
+          npm run verify:vsix -- gherkin-powertools-$VERSION.vsix
+
+      - name: 📝 Extract Changelog & Generate Provenance
+        run: node scripts/verify-release-candidate.js
+
+      - name: 📤 Upload Release Candidate Artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-candidate
+          path: |
+            *.vsix
+            provenance.json
+            release_notes.md
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: 🚀 Publish Release
+    needs: build-and-validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # environment: production # Uncomment to require manual approval in GitHub Environments
+    permissions:
+      contents: write # Privileged job (never runs npm install or build scripts)
+
+    steps:
+      - name: 🔍 Checkout Scripts Only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          sparse-checkout: |
+            scripts/verify-publish-artifact.js
+          sparse-checkout-cone-mode: false
+
+      - name: 📥 Download Release Candidate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-candidate
+          path: .
+
+      - name: 🛡️ Verify Artifact Provenance
+        run: node scripts/verify-publish-artifact.js
 
       - name: 🏷️ Ensure Git Tag
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.vars.outputs.tag }}"
+          TAG=$(node -p "require('./provenance.json').tag")
           if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "$TAG"; then
             echo "Tag $TAG already exists."
           else
@@ -66,30 +104,11 @@ jobs:
           fi
 
       - name: 🚀 Ensure GitHub Release
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.vars.outputs.tag }}"
-          
-          # Extract release notes for this specific version
-          node -e "
-          const fs = require('fs');
-          const version = require('./package.json').version;
-          const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
-          const lines = changelog.split('\n');
-          let capturing = false;
-          let notes = [];
-          for (const line of lines) {
-            if (line.startsWith('## [' + version + ']')) {
-              capturing = true;
-              continue;
-            }
-            if (capturing && line.startsWith('## [')) break;
-            if (capturing) notes.push(line);
-          }
-          fs.writeFileSync('release_notes.md', notes.join('\n').trim());
-          "
-
+          TAG=$(node -p "require('./provenance.json').tag")
           if gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG already exists."
           else
@@ -98,15 +117,15 @@ jobs:
           fi
 
       - name: 📎 Upload VSIX Asset
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.vars.outputs.tag }}"
-          VSIX="${{ steps.vars.outputs.vsix }}"
-          if gh release view "$TAG" \
-            --json assets -q ".assets[].name" | grep -qx "$VSIX"; then
-            echo "Asset $VSIX already uploaded to release $TAG."
-          else
-            echo "Uploading asset $VSIX to release $TAG..."
-            gh release upload "$TAG" "$VSIX" --clobber
+          if [ -f "skip_upload.marker" ]; then
+            echo "Skipping upload because cryptographically identical asset already exists."
+            exit 0
           fi
+          TAG=$(node -p "require('./provenance.json').tag")
+          VSIX=$(node -p "require('./provenance.json').vsixName")
+          echo "Uploading verified asset $VSIX to release $TAG..."
+          gh release upload "$TAG" "$VSIX"

@@ -27,19 +27,25 @@ export class AntiPatternDiagnosticsManager {
                 event.type === 'configurationChanged' ||
                 event.type === 'textDocumentOpened' // To show diagnostics when opening a file
             ) {
-                this.triggerAnalysis();
+                const immediate = (event.type === 'textDocumentOpened' || event.type === 'configurationChanged');
+                this.triggerAnalysis(immediate);
             }
         });
     }
 
-    private triggerAnalysis() {
+    private triggerAnalysis(immediate: boolean = false) {
         if (this.timeout) {
             clearTimeout(this.timeout);
         }
-        // Debounce the analysis by 1.5 seconds to avoid locking up on every keystroke/save
-        this.timeout = setTimeout(() => {
+        
+        if (immediate) {
             this.runAnalysis();
-        }, 1500);
+        } else {
+            // Debounce the analysis by 500ms to avoid locking up on every keystroke/save
+            this.timeout = setTimeout(() => {
+                this.runAnalysis();
+            }, 500);
+        }
     }
 
     private async runAnalysis() {

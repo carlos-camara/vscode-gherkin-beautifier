@@ -81,8 +81,8 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
         const mockDoc = { uri: vscode.Uri.parse('file:///test.feature') } as unknown as vscode.TextDocument;
         eventBus.publish({ type: 'textDocumentOpened', document: mockDoc });
         
-        // Wait for debounce (1500ms in implementation) + some buffer
-        await new Promise(resolve => setTimeout(resolve, 1600));
+        // Wait for debounce (500ms in implementation) + some buffer
+        await new Promise(resolve => setTimeout(resolve, 600));
 
         assert.ok(mockCollection);
     });
@@ -94,7 +94,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
         eventBus.publish({ type: 'textDocumentOpened', document: mockDoc });
         
         // Should not throw unhandled exception
-        await new Promise(resolve => setTimeout(resolve, 1600));
+        await new Promise(resolve => setTimeout(resolve, 600));
         assert.ok(true);
     });
 

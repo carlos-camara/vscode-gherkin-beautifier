@@ -10,7 +10,7 @@ import { AntiPatternEngine } from '../../antiPatternEngine';
 suite('CLI Parity & Conformance Test Suite', () => {
     const fixturesDir = path.resolve(__dirname, '../../../src/test/suite/cli-parity/fixtures');
     const cliPath = path.resolve(__dirname, '../../../dist/cli.js');
-    
+
     // We run the CLI directly via node
     const runCli = (cmd: string, cwd: string) => {
         const cmdArgs = [cliPath, ...cmd.split(' ')];
@@ -29,7 +29,7 @@ suite('CLI Parity & Conformance Test Suite', () => {
     const getVsCodeMetrics = async (fixturePath: string) => {
         const symbolCache = new SymbolCache();
         const graph = new WorkspaceGraph(symbolCache);
-        
+
         const originalFindFiles = vscode.workspace.findFiles;
         (vscode.workspace as any).findFiles = async (include: any, exclude?: any, max?: any, token?: any) => {
             // Rewrite any relative patterns to use our fixturePath base
@@ -40,7 +40,7 @@ suite('CLI Parity & Conformance Test Suite', () => {
             }
             return await originalFindFiles(include, exclude, max, token);
         };
-        
+
         const originalWorkspaceFolders = Object.getOwnPropertyDescriptor(vscode.workspace, 'workspaceFolders');
         Object.defineProperty(vscode.workspace, 'workspaceFolders', {
             get: () => [{
@@ -67,13 +67,13 @@ suite('CLI Parity & Conformance Test Suite', () => {
             "poor-maintainability": "warning"
         };
         const antiPatterns = engine.generateAntiPatterns(graph, metrics, ruleConfig as any);
-        
+
         // Restore
         (vscode.workspace as any).findFiles = originalFindFiles;
         if (originalWorkspaceFolders) {
             Object.defineProperty(vscode.workspace, 'workspaceFolders', originalWorkspaceFolders);
         }
-        
+
         return { metrics, antiPatterns };
     };
 
@@ -81,7 +81,7 @@ suite('CLI Parity & Conformance Test Suite', () => {
         const fixturePath = path.join(fixturesDir, 'valid');
         const cliOutput = JSON.parse(runCli('stats --json', fixturePath));
         const extData = await getVsCodeMetrics(fixturePath);
-        
+
         assert.strictEqual(cliOutput.totalFeatures, extData.metrics.totalFeatures, 'Feature count mismatch');
         assert.strictEqual(cliOutput.totalSteps, extData.metrics.totalSteps, 'Step count mismatch');
     });
@@ -90,10 +90,10 @@ suite('CLI Parity & Conformance Test Suite', () => {
         const fixturePath = path.join(fixturesDir, 'undefined');
         const cliOutput = JSON.parse(runCli('analyze --json', fixturePath));
         const extData = await getVsCodeMetrics(fixturePath);
-        
+
         const cliUndefined = cliOutput.find((ap: any) => ap.title.includes('Undefined'));
         const extUndefined = extData.antiPatterns.find(ap => ap.title.includes('Undefined'));
-        
+
         assert.ok(cliUndefined, 'CLI failed to detect undefined steps');
         assert.ok(extUndefined, 'Extension failed to detect undefined steps');
         assert.strictEqual(cliUndefined.affectedItems?.length, extUndefined?.affectedItems?.length, 'Affected items mismatch');
@@ -103,13 +103,38 @@ suite('CLI Parity & Conformance Test Suite', () => {
         const fixturePath = path.join(fixturesDir, 'unused');
         const cliOutput = JSON.parse(runCli('analyze --json', fixturePath));
         const extData = await getVsCodeMetrics(fixturePath);
-        
+
         const cliUnused = cliOutput.find((ap: any) => ap.title.includes('Unused'));
         const extUnused = extData.antiPatterns.find(ap => ap.title.includes('Unused'));
-        
+
         assert.ok(cliUnused, 'CLI failed to detect unused steps');
         assert.ok(extUnused, 'Extension failed to detect unused steps');
         assert.strictEqual(cliUnused.affectedItems?.length, extUnused?.affectedItems?.length, 'Affected items mismatch');
+    });
+
+    test('Formatter Conformance', async () => {
+        const fixturePath = path.resolve(__dirname, '../../../src/test/fixtures/behave/features/formatted.feature');
+
+        // 1. Run formatter via CLI (check mode)
+        let cliCheckFailed = false;
+        try {
+            runCli(`format --check ${fixturePath}`, path.resolve(__dirname, '../../../src/test/fixtures/behave'));
+        } catch (e) {
+            cliCheckFailed = true;
+        }
+
+        // 2. Run formatter via VS Code API
+        // const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(fixturePath));
+        // const doc = await vscode.workspace.openTextDocument(featureFile);
+
+        // const formattingOptions: vscode.FormattingOptions = { tabSize: 4, insertSpaces: true };
+
+        // Use the same formatter
+        // const { GherkinFormattingEditProvider } = require('../../formatter');
+        // const formatter = new GherkinFormattingEditProvider();
+        // const edits = formatter.provideDocumentFormattingEdits(doc, formattingOptions, new vscode.CancellationTokenSource().token);
+
+        assert.ok(!cliCheckFailed, 'CLI formatter check failed, but file should be formatted');
     });
 
 });

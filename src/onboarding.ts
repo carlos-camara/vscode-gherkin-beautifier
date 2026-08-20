@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigurationService } from './configuration';
 import { discoveryService } from './discovery';
+import { featureDiscoveryService } from './featureDiscovery';
 
 export interface OnboardingAnalysis {
     isBehaveProject: boolean;
@@ -341,11 +342,8 @@ export class FirstRunExperience {
             if (detection.isBehaveProject) {
                 let featureCount = 0;
                 try {
-                    const featureFiles = await vscode.workspace.findFiles(
-                        new vscode.RelativePattern(folder.uri, '**/*.feature'),
-                        '{**/node_modules/**,**/.venv/**,**/venv/**,**/env/**}',
-                        100
-                    );
+                    const allFeatureFiles = await featureDiscoveryService.getFeatureFiles();
+                    const featureFiles = allFeatureFiles.filter(f => f.fsPath.startsWith(folder.uri.fsPath));
                     featureCount = featureFiles.length;
                 } catch {
                     featureCount = 0;

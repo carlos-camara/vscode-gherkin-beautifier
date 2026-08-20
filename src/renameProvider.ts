@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { StepRefactoringService } from './refactoring';
 import { WorkspaceGraph } from './graph';
+import { ResourceIdentity } from './utils/resourceIdentity';
 
 export class GherkinRenameProvider implements vscode.RenameProvider {
     private refactoringService: StepRefactoringService;
@@ -13,7 +14,7 @@ export class GherkinRenameProvider implements vscode.RenameProvider {
 
     public async prepareRename(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.Range | { range: vscode.Range; placeholder: string } | undefined> {
         await this.graph.initialize();
-        const uriStr = document.uri.toString();
+        const uriStr = ResourceIdentity.getCanonicalUriString(document.uri);
         
         let isValid = false;
         let placeholder = '';
@@ -21,7 +22,7 @@ export class GherkinRenameProvider implements vscode.RenameProvider {
 
         if (uriStr.endsWith('.feature')) {
             const stepId = `${uriStr}:${position.line + 1}`;
-            const stepNode = this.graph.getAllStepNodes().find(n => n.id === stepId);
+            const stepNode = this.graph.currentGeneration.getAllStepNodes().find(n => n.id === stepId);
             if (stepNode && stepNode.definitionId) {
                 isValid = true;
                 const match = document.lineAt(position.line).text.match(/^(\s*(?:Given|When|Then|And|But|\*)\s+)(.*)$/i);
@@ -32,7 +33,7 @@ export class GherkinRenameProvider implements vscode.RenameProvider {
                 }
             }
         } else if (uriStr.endsWith('.py')) {
-            const defNode = this.graph.getAllStepDefNodes().find(n => n.uri === uriStr && (n.line === position.line || n.line === position.line - 1 || n.line === position.line + 1));
+            const defNode = this.graph.currentGeneration.getAllStepDefNodes().find(n => n.uri === uriStr && (n.line === position.line || n.line === position.line - 1 || n.line === position.line + 1));
             if (defNode) {
                 isValid = true;
                 placeholder = defNode.pattern;

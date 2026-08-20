@@ -11,6 +11,7 @@ export interface Configuration {
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
     behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
+    featureGlobs: string[];
 }
 
 import { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG } from './defaults';

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { astRepository } from './ast';
+import { featureDiscoveryService } from './featureDiscovery';
 import { logger } from './logger';
 import { ConfigurationService } from './configuration';
 import { runBehaveForTestRun } from './execution';
@@ -120,13 +121,9 @@ export class GherkinTestController {
 
 
     private async discoverAllFilesInWorkspace() {
-        if (!vscode.workspace.workspaceFolders) { return; }
-        for (const workspaceFolder of vscode.workspace.workspaceFolders) {
-            const pattern = new vscode.RelativePattern(workspaceFolder, '**/*.feature');
-            const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
-            for (const file of files) {
-                await this.parseTestsInFileContents(this.getOrCreateFile(file));
-            }
+        const files = await featureDiscoveryService.getFeatureFiles();
+        for (const file of files) {
+            await this.parseTestsInFileContents(this.getOrCreateFile(file));
         }
     }
 

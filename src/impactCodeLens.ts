@@ -3,6 +3,7 @@ import { WorkspaceGraph } from './graph';
 import { GherkinPowerToolsCommands } from './commands';
 import { ImpactAnalyzer } from './impactAnalysis';
 import { parsePythonDecorators } from './tokenizer';
+import { ResourceIdentity } from './utils/resourceIdentity';
 
 class ImpactCodeLens extends vscode.CodeLens {
     constructor(
@@ -39,9 +40,9 @@ export class ImpactCodeLensProvider implements vscode.CodeLensProvider {
         }
 
         const lenses: vscode.CodeLens[] = [];
-        const uriStr = document.uri.toString();
+        const uriStr = ResourceIdentity.getCanonicalUriString(document.uri);
 
-        const allDefs = this.graph.getAllStepDefNodes().filter(d => d.uri === uriStr);
+        const allDefs = this.graph.currentGeneration.getAllStepDefNodes().filter(d => d.uri === uriStr);
         if (allDefs.length === 0) return [];
 
         const decorators = parsePythonDecorators(document.getText());

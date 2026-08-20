@@ -44,16 +44,20 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 **Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps` and `ambiguous-steps` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the Quick Fixes).
 **Resolution:** This should be handled automatically by the extension. If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.antiPatterns.rules`.
 
+## Yellow line (diagnostics) doesn't appear immediately on file open
+**Symptom:** You open a feature file and the yellow squiggly lines for undefined or ambiguous steps do not appear until you type a character or switch files back and forth.
+**Resolution:** This behavior was fixed in v1.8.4. The real-time Linter now triggers `immediateLint` directly on file load, bypassing standard debounce delays. Ensure you are on the latest version of the extension.
+
 ## Impact Analysis CodeLenses are not appearing
 **Symptom:** You open a Python step definition file, but you do not see the CodeLenses displaying the number of affected scenarios.
 **Likely Causes:** The feature is disabled in settings, or the `WorkspaceGraph` is still indexing the feature files.
 **Diagnostic Steps:** Check if `"gherkinPowerTools.impactAnalysis.enabled": true` is set in your configuration. Wait for the workspace indexing to complete.
 **Resolution:** Enable the setting and ensure your `.feature` files and Python files are correctly mapped in your `stepGlobs`.
 
-## Generated step location is wrong
-**Symptom:** The Quick Fix generates a step, but places it in a file you didn't expect.
-**Likely Causes:** The extension tries to append the new step to the most recently modified `.py` file within your `stepGlobs` paths. If you have no step files, it will create one based on standard conventions.
-**Resolution:** Open the specific `steps.py` file you want to use, save it, and try generating the step again. The extension will pick up that file as the active target.
+## Generated step location is wrong or prompts for a workspace folder
+**Symptom:** The Quick Fix generates a step, but places it in a file you didn't expect, or it asks you to select a workspace folder from a dropdown menu.
+**Likely Causes:** The extension tries to append the new step to the most recently modified `.py` file within your `stepGlobs` paths. If you have no step files, it will create one based on standard conventions. If you are in a **Multi-Root Workspace**, and the feature file being edited does not clearly belong to one of the roots, it will explicitly prompt you to select the correct target folder to prevent accidental cross-project modifications.
+**Resolution:** Open the specific `steps.py` file you want to use, save it, and try generating the step again. The extension will pick up that file as the active target. If prompted for a folder, explicitly choose the intended project root.
 
 ## Test Explorer is empty
 **Symptom:** You open the Testing sidebar, but no feature files or scenarios appear.
@@ -62,10 +66,14 @@ Ensure virtual environments are excluded in `ignoreGlobs` to prevent the parser 
 Wait a few seconds for the lazy-initialization to complete. If it still doesn't appear, ensure your `.feature` files contain valid Gherkin syntax (at least a `Feature:` keyword).
 **Resolution:** Fix any critical syntax errors in your Gherkin.
 
-## Test Execution is Blocked
-**Symptom:** You attempt to run a test from the Test Explorer, but VS Code blocks the execution.
-**Likely Causes:** The extension uses VS Code's Workspace Trust API to prevent arbitrary command execution. If your workspace is marked as "Untrusted" (Restricted Mode), test execution is disabled.
-**Resolution:** Click the "Restricted Mode" banner in the bottom status bar and select "Trust Workspace & Install" to enable test execution.
+## Test Execution is Blocked (Untrusted Workspace or External File)
+**Symptom:** You attempt to run a test from the Test Explorer or CodeLens, but VS Code blocks the execution or throws a "Cannot run Behave against a file outside of a workspace folder" error.
+**Likely Causes:**
+1. The extension uses VS Code's Workspace Trust API. If your workspace is marked as "Untrusted" (Restricted Mode), test execution is disabled.
+2. The `.feature` file you are trying to run is located outside of your currently open workspace folders (e.g. opened loosely or as an Untitled file).
+**Resolution:**
+1. Click the "Restricted Mode" banner in the bottom status bar and select "Trust Workspace & Install" to enable test execution.
+2. Ensure you have explicitly opened the root folder containing the `.feature` file via **File > Open Folder...**. The extension strictly prevents execution on external files to protect your root disk from arbitrary runs.
 
 ## Run fails (Behave executable is not found)
 **Symptom:** You click "Play" in the Test Explorer, but the test immediately fails with a "Command not found" or "behave is not recognized" error in the output.
@@ -138,11 +146,17 @@ If you need to point to a specific local Python virtual environment via an absol
 
 ## Rename Step does not find all usages
 **Symptom:** You invoke the native VS Code `Rename Symbol` command (e.g., <kbd>F2</kbd>) on a Gherkin step, rename it, but some `.feature` files still use the old step name.
-**Likely Causes:** The affected `.feature` files were not yet indexed in the `WorkspaceGraph`.
+**Likely Causes:** The affected `.feature` files were not yet indexed in the `WorkspaceGraph`, or the Workspace Graph failed to initialize.
 **Diagnostic Steps:**
 1. Ensure the Python step file containing the definition is within your configured `stepGlobs`.
-2. Run **Gherkin PowerTools: Diagnose Workspace** and check the "Discovered Steps" and "Workspace Graph" sections.
-**Resolution:** Verify `stepGlobs` covers all relevant step files, then retry the rename. The graph is rebuilt automatically when files are saved.
+2. Run **Gherkin PowerTools: Diagnose Workspace** and check the **Bootstrap Capabilities** section. If the `Workspace Graph` shows a `failed` state, review the error message provided.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/bootstrap-diagnostics-view.gif" alt="User running Diagnose Workspace command to check extension startup capability statuses" width="600" height="340" />
+</div>
+
+3. Check the "Discovered Steps" section.
+**Resolution:** Verify `stepGlobs` covers all relevant step files. If a capability failed, you can restart the extension Host. The graph is rebuilt automatically when files are saved.
 
 ## Rename Step is not visible in the Context Menu
 **Symptom:** You right-click in the editor, but "Rename Step" does not appear in the context menu.
@@ -164,8 +178,8 @@ If you need to point to a specific local Python virtual environment via an absol
 
 ## I accidentally dismissed a Contextual Recommendation
 **Symptom:** You clicked "Don't show again" on a helpful popup (like the Formatting or Dashboard recommendation) and want it back.
-**Likely Causes:** The extension saved your dismissal in the VS Code Global State.
-**Resolution:** Currently, VS Code does not expose a UI to edit global state directly. You can reset all internal extension state (including dismissals) by running the **Developer: Reset Extension State** command from the VS Code Command Palette (note that this resets state for *all* extensions).
+**Likely Causes:** The extension saved your dismissal in the workspace state.
+**Resolution:** Run the **Gherkin PowerTools: Reset Contextual Recommendations** command from the Command Palette to clear dismissals and allow helpful prompts to appear again.
 
 ## Standalone CLI fails to resolve dependencies
 **Symptom:** Running `npx @carlos-camara/gherkin-pt analyze` fails with a "Cannot find module '@cucumber/gherkin'" error.

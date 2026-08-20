@@ -30,7 +30,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: 🔍 Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: ⚙️ Setup and Build
         uses: ./.github/actions/setup-build
@@ -45,17 +45,18 @@ jobs:
 
       - name: 📊 Report Coverage to PR
         if: runner.os == 'Linux' && github.event_name == 'pull_request'
-        uses: carlos-camara/qa-hub-actions/report-coverage@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pr-number: ${{ github.event.pull_request.number }}
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: ./.github/scripts/report-coverage.sh
 
       - name: 📝 Publish Unit Test Results (Linux)
         if: >
           always() &&
           runner.os == 'Linux' &&
           github.event_name == 'pull_request'
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@b3f8796819acf652cecbf27a64fa9ac8d7e137ee # v2
         with:
           files: "test-results/**/*.xml"
           check_name: "Unit Test Results (${{ matrix.os }})"
@@ -67,7 +68,7 @@ jobs:
           always() &&
           runner.os == 'Windows' &&
           github.event_name == 'pull_request'
-        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        uses: EnricoMi/publish-unit-test-result-action/windows@b3f8796819acf652cecbf27a64fa9ac8d7e137ee # v2
         with:
           files: 'test-results/**/*.xml'
           check_name: "Unit Test Results (${{ matrix.os }})"
@@ -79,7 +80,7 @@ jobs:
           always() &&
           runner.os == 'macOS' &&
           github.event_name == 'pull_request'
-        uses: EnricoMi/publish-unit-test-result-action/macos@v2
+        uses: EnricoMi/publish-unit-test-result-action/macos@b3f8796819acf652cecbf27a64fa9ac8d7e137ee # v2
         with:
           files: "test-results/**/*.xml"
           check_name: "Unit Test Results (${{ matrix.os }})"

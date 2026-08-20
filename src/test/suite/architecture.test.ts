@@ -231,4 +231,17 @@ suite('Architecture Validation Test Suite', () => {
             'extensionKind must be set to ["workspace"] to ensure Behave/Python execution happens on the remote machine.'
         );
     });
+
+    test('Activation composition root initializes modular capabilities rapidly', async () => {
+        const startTime = Date.now();
+        await activate(mockContext);
+        const duration = Date.now() - startTime;
+        
+        // Assert that a significant number of subscriptions were registered
+        // indicating that capability modules successfully bound their resources.
+        assert.ok(mockContext.subscriptions.length > 20, `Expected > 20 subscriptions, got ${mockContext.subscriptions.length}`);
+
+        // Activation should be very fast, generally under 300ms since heavy IO is deferred.
+        assert.ok(duration < 300, `Activation took too long: ${duration}ms`);
+    });
 });

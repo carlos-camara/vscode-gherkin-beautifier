@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as vscode from 'vscode';
 import { WorkspaceGraph } from '../../graph';
 import { SymbolCache } from '../../cache';
 import { WorkspaceEventBus } from '../../eventBus';
@@ -23,7 +24,7 @@ suite('WorkspaceGraph Test Suite', () => {
     });
 
     test('Graph should be empty initially', () => {
-        const dups = graph.getDuplicateImplementations();
+        const dups = graph.currentGeneration.getDuplicateImplementations();
         assert.strictEqual(dups.length, 0);
     });
 
@@ -42,10 +43,10 @@ suite('WorkspaceGraph Test Suite', () => {
             line: 1,
             steps: []
         };
-        (graph as any).nodes.set('Tag:@smoke', tagNode);
-        (graph as any).nodes.set('sc1', scenarioNode);
+        graph.setNodeForTest(tagNode as any);
+        graph.setNodeForTest(scenarioNode as any);
 
-        const scenarios = graph.getImpactedScenarios('@smoke');
+        const scenarios = graph.currentGeneration.getImpactedScenarios('@smoke');
         assert.strictEqual(scenarios.length, 1);
         assert.strictEqual(scenarios[0].name, 'Scenario 1');
     });
@@ -76,11 +77,11 @@ suite('WorkspaceGraph Test Suite', () => {
             line: 30
         };
 
-        (graph as any).nodes.set('def1', def1);
-        (graph as any).nodes.set('def2', def2);
-        (graph as any).nodes.set('def3', def3);
+        graph.setNodeForTest(def1 as any);
+        graph.setNodeForTest(def2 as any);
+        graph.setNodeForTest(def3 as any);
 
-        const duplicates = graph.getDuplicateImplementations();
+        const duplicates = graph.currentGeneration.getDuplicateImplementations();
         assert.strictEqual(duplicates.length, 1);
         assert.strictEqual(duplicates[0].length, 2);
         assert.strictEqual(duplicates[0][0].id, 'def1');
@@ -88,48 +89,48 @@ suite('WorkspaceGraph Test Suite', () => {
     });
 
     test('getImpactedScenarios returns empty for non-existent tag', () => {
-        const impacted = graph.getImpactedScenarios('Tag:@nonexistent');
+        const impacted = graph.currentGeneration.getImpactedScenarios('Tag:@nonexistent');
         assert.strictEqual(impacted.length, 0);
     });
 
     test('getUsages returns empty for non-existent step definition', () => {
-        const usages = graph.getUsages('nonexistent-id');
+        const usages = graph.currentGeneration.getUsages('nonexistent-id');
         assert.strictEqual(usages.length, 0);
     });
 
     test('getReferences returns undefined for non-existent step', () => {
-        const ref = graph.getReferences('nonexistent-id');
+        const ref = graph.currentGeneration.getReferences('nonexistent-id');
         assert.strictEqual(ref, undefined);
     });
 
-    test('Removes nodes correctly when a file is deleted', () => {
+    test('Removes nodes correctly when a file is deleted', async () => {
         const uri = 'file:///test.feature';
 
         // Manually inject some nodes to simulate parsing
-        (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
-        (graph as any).nodes.set(`${uri}:Scenario:1`, { id: `${uri}:Scenario:1`, type: 'Scenario', uri, parent: `${uri}:Feature:Test`, tags: [] });
+        graph.setNodeForTest({ id: `${uri}:Feature:Test`, type: 'Feature', uri } as any);
+        graph.setNodeForTest({ id: `${uri}:Scenario:1`, type: 'Scenario', uri, parent: `${uri}:Feature:Test`, tags: [] } as any);
 
-        assert.ok(graph.getAllNodes().length > 0, 'Graph should have nodes after update');
+        assert.ok(graph.currentGeneration.getAllNodes().length > 0, 'Graph should have nodes after update');
 
         // Simulate file removal
-        (graph as any).removeNodesByUri(uri);
-        const nodesAfter = graph.getAllNodes().filter(n => n.uri === uri);
+        await (graph as any).removeFileAsync(uri);
+        const nodesAfter = graph.currentGeneration.getAllNodes().filter(n => n.uri === uri);
         assert.strictEqual(nodesAfter.length, 0, 'Nodes should be removed for the URI');
     });
 
-    test('Removes nodes correctly when a file is deleted with different URI casing', () => {
+    test('Removes nodes correctly when a file is deleted with different URI casing', async () => {
         const uriUpper = 'file:///TEST_CASE.feature';
         const uriLower = 'file:///test_case.feature';
 
         // Manually inject using lowercase
-        (graph as any).nodes.set(`${uriLower}:Feature:Test`, { id: `${uriLower}:Feature:Test`, type: 'Feature', uri: uriLower });
-        (graph as any).nodes.set(`${uriLower}:Scenario:1`, { id: `${uriLower}:Scenario:1`, type: 'Scenario', uri: uriLower, parent: `${uriLower}:Feature:Test`, tags: [] });
+        graph.setNodeForTest({ id: `${uriLower}:Feature:Test`, type: 'Feature', uri: uriLower } as any);
+        graph.setNodeForTest({ id: `${uriLower}:Scenario:1`, type: 'Scenario', uri: uriLower, parent: `${uriLower}:Feature:Test`, tags: [] } as any);
 
-        assert.ok(graph.getAllNodes().length > 0, 'Graph should have nodes after update');
+        assert.ok(graph.currentGeneration.getAllNodes().length > 0, 'Graph should have nodes after update');
 
         // Simulate file removal using uppercase
-        (graph as any).removeNodesByUri(uriUpper);
-        const nodesAfter = graph.getAllNodes().filter(n => n.uri === uriLower);
+        await (graph as any).removeFileAsync(uriUpper);
+        const nodesAfter = graph.currentGeneration.getAllNodes().filter(n => n.uri === uriLower);
         assert.strictEqual(nodesAfter.length, 0, 'Nodes should be removed for the URI regardless of casing');
     });
 
@@ -137,12 +138,12 @@ suite('WorkspaceGraph Test Suite', () => {
         // Since we cannot mock AST safely here without complex setup,
         // we test that dispose and remove don't crash and leave state clean
         const uri = 'file:///test.feature';
-        (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
+        graph.setNodeForTest({ id: `${uri}:Feature:Test`, type: 'Feature', uri } as any);
 
-        const nodeCount1 = graph.getAllNodes().length;
-        (graph as any).removeNodesByUri(uri);
-        (graph as any).nodes.set(`${uri}:Feature:Test`, { id: `${uri}:Feature:Test`, type: 'Feature', uri });
-        const nodeCount2 = graph.getAllNodes().length;
+        const nodeCount1 = graph.currentGeneration.getAllNodes().length;
+        (graph as any).removeFileAsync(uri);
+        graph.setNodeForTest({ id: `${uri}:Feature:Test`, type: 'Feature', uri } as any);
+        const nodeCount2 = graph.currentGeneration.getAllNodes().length;
 
         assert.strictEqual(nodeCount1, nodeCount2, 'Node count should remain stable across replacement updates');
     });
@@ -192,7 +193,7 @@ suite('WorkspaceGraph Test Suite', () => {
         try {
             await (graph as any).indexFeatureFile(uri);
 
-            const nodes = graph.getAllNodes();
+            const nodes = graph.currentGeneration.getAllNodes();
             const ruleNode = nodes.find(n => n.type === 'Rule');
             assert.ok(ruleNode, 'Should create Rule node');
             assert.strictEqual((ruleNode as any).tags[0], '@rule');
@@ -242,7 +243,7 @@ suite('WorkspaceGraph Test Suite', () => {
         symbolCache.getAllStepDefinitions = async () => [];
         await (graph as any).indexPythonFile(uri);
 
-        const nodes = graph.getAllNodes();
+        const nodes = graph.currentGeneration.getAllNodes();
         const pyNodes = nodes.filter(n => n.uri === uri.toString());
         assert.strictEqual(pyNodes.length, 0, 'Should not create nodes for empty python file');
     });
@@ -281,7 +282,7 @@ suite('WorkspaceGraph Test Suite', () => {
         try {
             await (graph as any).indexFeatureFile(uri);
 
-            const nodes = graph.getAllNodes().filter(n => n.type === 'Step') as import('../../graph').StepNode[];
+            const nodes = graph.currentGeneration.getAllNodes().filter(n => n.type === 'Step') as import('../../graph').StepNode[];
             assert.strictEqual(nodes.length, 6);
 
             const step3 = nodes.find(n => n.line === 3);
@@ -301,6 +302,67 @@ suite('WorkspaceGraph Test Suite', () => {
 
             const step8 = nodes.find(n => n.line === 8);
             assert.strictEqual(step8?.semanticType, 'then'); // Inherits from Then
+        } finally {
+            astRepository.getAST = originalGetAST;
+            if (originalTextDocuments) {
+                Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+            }
+        }
+    });
+
+    test('Semantic context does not leak between Background and Scenario', async () => {
+        const uri = vscode.Uri.file('/semantic_leak.feature');
+
+        const mockAST = {
+            feature: {
+                location: { line: 1, column: 1 },
+                tags: [],
+                name: 'Feature with leak',
+                children: [
+                    {
+                        background: {
+                            location: { line: 2, column: 1 },
+                            steps: [
+                                { location: { line: 3, column: 1 }, keyword: 'Given ', text: 'background step' },
+                                { location: { line: 4, column: 1 }, keyword: 'Then ', text: 'background then' }
+                            ]
+                        }
+                    },
+                    {
+                        scenario: {
+                            location: { line: 6, column: 1 },
+                            steps: [
+                                { location: { line: 7, column: 1 }, keyword: 'And ', text: 'malformed step' }
+                            ]
+                        }
+                    }
+                ]
+            }
+        };
+
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', {
+            get: () => [{ uri, getText: () => 'Feature: Feature with leak\nBackground:\nGiven background step\nThen background then\nScenario:\nAnd malformed step\n' }]
+        });
+
+        const originalGetAST = astRepository.getAST;
+        astRepository.getAST = async () => ({ document: mockAST } as any);
+
+        try {
+            await (graph as any).indexFeatureFile(uri);
+
+            const nodes = graph.currentGeneration.getAllNodes().filter(n => n.type === 'Step') as import('../../graph').StepNode[];
+            assert.strictEqual(nodes.length, 3);
+
+            const bgGiven = nodes.find(n => n.line === 3);
+            assert.strictEqual(bgGiven?.semanticType, 'given');
+
+            const bgThen = nodes.find(n => n.line === 4);
+            assert.strictEqual(bgThen?.semanticType, 'then');
+
+            const scenarioAnd = nodes.find(n => n.line === 7);
+            // It should NOT inherit 'then' from the background!
+            assert.strictEqual(scenarioAnd?.semanticType, 'step');
         } finally {
             astRepository.getAST = originalGetAST;
             if (originalTextDocuments) {

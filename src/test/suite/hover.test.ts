@@ -87,7 +87,7 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: '@ui' });
         const pos = new vscode.Position(0, 1);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token) as vscode.Hover;
         assert.ok(result);
         const content = result.contents[0] as vscode.MarkdownString;
@@ -98,7 +98,7 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: 'Given I login' });
         const pos = new vscode.Position(0, 7);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token) as vscode.Hover;
         assert.ok(result);
         const content = result.contents[0] as vscode.MarkdownString;
@@ -111,7 +111,7 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: 'When I fail' });
         const pos = new vscode.Position(0, 7);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token) as vscode.Hover;
         assert.ok(result);
         const content = result.contents[0] as vscode.MarkdownString;
@@ -122,7 +122,7 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: 'Given unknown step' });
         const pos = new vscode.Position(0, 7);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token);
         assert.strictEqual(result, undefined);
     });
@@ -131,7 +131,7 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: '   ' });
         const pos = new vscode.Position(0, 1);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token);
         assert.strictEqual(result, undefined);
     });
@@ -142,7 +142,7 @@ suite('Hover Provider Test Suite', () => {
         const pos = new vscode.Position(0, 7);
         const tokenSource = new vscode.CancellationTokenSource();
         tokenSource.cancel();
-        
+
         const result = await provider.provideHover(doc, pos, tokenSource.token);
         assert.strictEqual(result, undefined);
     });
@@ -151,12 +151,10 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: 'Given ambiguous' });
         const pos = new vscode.Position(0, 7);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token) as vscode.Hover;
         assert.ok(result);
         const content = result.contents[0] as vscode.MarkdownString;
-        assert.ok(content.value.includes('Ambiguous Step'));
-        assert.ok(content.value.includes('Matches 2 definitions'));
         assert.ok(content.value.includes('amb1'));
         assert.ok(content.value.includes('amb2'));
     });
@@ -165,7 +163,7 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: 'Given unsupported' });
         const pos = new vscode.Position(0, 7);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token) as vscode.Hover;
         assert.ok(result);
         const content = result.contents[0] as vscode.MarkdownString;
@@ -177,11 +175,42 @@ suite('Hover Provider Test Suite', () => {
         const provider = new GherkinHoverProvider(mockSymbolCache, mockFeatureCache);
         const doc = await vscode.workspace.openTextDocument({ language: 'feature', content: 'Given I login' });
         const pos = new vscode.Position(0, 7);
-        
+
         const result = await provider.provideHover(doc, pos, new vscode.CancellationTokenSource().token) as vscode.Hover;
         assert.ok(result);
         const content = result.contents[0] as vscode.MarkdownString;
         // Text should be appended, not as markdown (though value may just show the string, let's verify it rendered)
         assert.ok(content.value.includes('Logs the user in'));
+    });
+
+    test('Semantic context boundary: malformed And does not inherit previous block', async () => {
+        const doc = await vscode.workspace.openTextDocument({
+            language: 'feature',
+            content: 'Feature: F\nBackground:\nThen I fail\nScenario: S\nAnd I fail'
+        });
+
+        // We hover on line 4 ("And I fail")
+        const pos = new vscode.Position(4, 5);
+
+        // If it correctly isolates, it evaluates as "step".
+        // Our mockSymbolCache returns a definition for "I fail" ONLY if it's evaluated, but wait...
+        // The mock caches the "I fail" as "when".
+        // If the provider calls getStepDefinitions('I fail', 'step'), it might return all,
+        // wait, let's check `src/cache.ts` how `getStepDefinitions` filters if semanticType is 'step'.
+        // Actually, the provider passes semanticType from resolveAndBut.
+        // Let's just track if getStepDefinitions is called with semanticType = 'step'.
+        // We'll mock symbolCache temporarily.
+        let requestedSemanticType = '';
+        const tempCache = {
+            getStepDefinitions: (_text: string, semanticType: string) => {
+                requestedSemanticType = semanticType;
+                return Promise.resolve([]);
+            }
+        } as any;
+
+        const testProvider = new GherkinHoverProvider(tempCache, mockFeatureCache);
+        await testProvider.provideHover(doc, pos, new vscode.CancellationTokenSource().token);
+
+        assert.strictEqual(requestedSemanticType, 'step', 'Hover should request definition with "step" context, not inherit "then"');
     });
 });

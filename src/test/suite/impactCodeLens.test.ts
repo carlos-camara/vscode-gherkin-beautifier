@@ -75,11 +75,11 @@ suite('ImpactCodeLensProvider Test Suite', () => {
         const step1: StepNode = { id: 'step1', type: 'Step', uri: 'file:///test.feature', line: 6, text: 'test1', parent: 's1', keyword: 'Given', definitionId: 'def1' };
 
         // Inject into graph
-        (graph as any).nodes.set(defNode1.id, defNode1);
-        (graph as any).nodes.set(defNode2.id, defNode2);
-        (graph as any).nodes.set(featureNode.id, featureNode);
-        (graph as any).nodes.set(scNode1.id, scNode1);
-        (graph as any).nodes.set(step1.id, step1);
+        graph.setNodeForTest(defNode1 as any);
+        graph.setNodeForTest(defNode2 as any);
+        graph.setNodeForTest(featureNode as any);
+        graph.setNodeForTest(scNode1 as any);
+        graph.setNodeForTest(step1 as any);
 
 
         // Force enable setting
@@ -119,14 +119,14 @@ suite('ImpactCodeLensProvider Test Suite', () => {
         const defNode: StepDefNode = { id: 'def3', type: 'StepDefinition', uri: uriStr, line: 0, pattern: 'test3', matcherType: 'given', pythonFile: uriStr, usages: ['step1', 'step2', 'step3', 'step4', 'step5'] };
         const featureNode: FeatureNode = { id: 'f1', type: 'Feature', uri: 'file:///test.feature', line: 1, children: ['s1', 's2', 's3', 's4', 's5'], tags: [], name: 'Feature 1' };
         
-        (graph as any).nodes.set(defNode.id, defNode);
-        (graph as any).nodes.set(featureNode.id, featureNode);
+        graph.setNodeForTest(defNode as any);
+        graph.setNodeForTest(featureNode as any);
 
         for (let i = 1; i <= 5; i++) {
             const scNode: ScenarioNode = { id: `s${i}`, type: 'Scenario', uri: 'file:///test.feature', line: i * 5, steps: [`step${i}`], examples: [], tags: [], parent: 'f1', name: `Scenario ${i}` };
             const stepNode: StepNode = { id: `step${i}`, type: 'Step', uri: 'file:///test.feature', line: i * 5 + 1, text: 'test3', parent: `s${i}`, keyword: 'Given', definitionId: 'def3' };
-            (graph as any).nodes.set(scNode.id, scNode);
-            (graph as any).nodes.set(stepNode.id, stepNode);
+            graph.setNodeForTest(scNode as any);
+            graph.setNodeForTest(stepNode as any);
         }
 
         const originalGetConfiguration = vscode.workspace.getConfiguration;

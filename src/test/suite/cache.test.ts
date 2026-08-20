@@ -7,6 +7,7 @@ import * as sinon from 'sinon';
 import { SymbolCache, FeatureCache } from '../../cache';
 import { discoveryService } from '../../discovery';
 import { astRepository } from '../../ast';
+import { ResourceIdentity } from '../../utils/resourceIdentity';
 
 suite('SymbolCache Test Suite', () => {
     let cache: SymbolCache;
@@ -102,7 +103,7 @@ def general(context): pass
         const uri = vscode.Uri.file(path.join(tempDir, 'non_existent.py'));
 
         // Pre-populate so we can see it gets removed
-        (cache as any).cache.set(uri.toString(), [{ patternText: 'A step' }]);
+        (cache as any).cache.set(ResourceIdentity.getCanonicalUriString(uri), [{ patternText: 'A step' }]);
 
         // This should trigger the catch block and call removeFile
         await cache.updateFile(uri);
@@ -238,7 +239,7 @@ def step_impl(
 def step_impl(context, count): pass
         `;
         const tempFile = path.join(tempDir, 'UPPER_case.py');
-        
+
         const textDocStub = sinon.stub(vscode.workspace, 'textDocuments').get(() => [{
             uri: vscode.Uri.file(tempFile.toLowerCase()),
             getText: () => mockPythonCode
@@ -259,7 +260,7 @@ def step_impl(context, count): pass
         // Cache should be empty because getCanonicalUri matches them
         const remainingDefs = await cache.getAllStepDefinitions();
         assert.strictEqual(remainingDefs.length, 0);
-        
+
         textDocStub.restore();
     });
 
@@ -502,6 +503,82 @@ Feature: Fallback Test
         // File is healthy ('current')
         assert.strictEqual(featureCache.getFileState(uri)?.status, 'current');
         assert.strictEqual(await featureCache.hasStaleOrPartialFilesForTag('@healthy'), false);
+    });
+
+    test('FeatureCache: case-sensitive filesystems (Linux) treat differing cases as separate files', async () => {
+        const featureCache = new FeatureCache();
+        const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+
+        let textDocumentsStub: sinon.SinonStub | undefined;
+
+        try {
+            // Mock platform to linux to enforce case sensitivity
+            Object.defineProperty(process, 'platform', { value: 'linux' });
+
+            const uriUpper = vscode.Uri.file(path.join(tempDir, 'COLLISION.feature'));
+            const uriLower = vscode.Uri.file(path.join(tempDir, 'collision.feature'));
+
+            textDocumentsStub = sinon.stub(vscode.workspace, 'textDocuments').get(() => [
+                {
+                    uri: uriUpper,
+                    getText: () => '@tagUpper\nFeature: Upper\n  Scenario: S1\n    Given step'
+                },
+                {
+                    uri: uriLower,
+                    getText: () => '@tagLower\nFeature: Lower\n  Scenario: S1\n    Given step'
+                }
+            ]);
+
+            await featureCache.updateFile(uriUpper);
+            await featureCache.updateFile(uriLower);
+
+            // Should be two separate files in cache
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tagUpper'), 1);
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tagLower'), 1);
+
+            await featureCache.removeFile(uriUpper);
+            // After deleting upper, lower should still exist
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tagUpper'), 0);
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tagLower'), 1);
+        } finally {
+            if (originalPlatform) {
+                Object.defineProperty(process, 'platform', originalPlatform);
+            }
+            if (textDocumentsStub) {
+                textDocumentsStub.restore();
+            }
+        }
+    });
+
+    test('FeatureCache: case-insensitive filesystems (Windows/Mac) treat differing cases as the same file', async () => {
+        const featureCache = new FeatureCache();
+        const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+
+        try {
+            // Mock platform to win32 to enforce case insensitivity
+            Object.defineProperty(process, 'platform', { value: 'win32' });
+
+            const uri1 = vscode.Uri.file(path.join(tempDir, 'CaseInsensitive.feature'));
+            const uri2 = vscode.Uri.file(path.join(tempDir, 'caseinsensitive.feature')); // same file on windows
+
+            fs.writeFileSync(uri1.fsPath, '@tag1\nFeature: one\n  Scenario: S1\n    Given step');
+            await featureCache.updateFile(uri1);
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tag1'), 1);
+
+            // Updating with the lower-case URI should overwrite the existing entry
+            fs.writeFileSync(uri1.fsPath, '@tag2\nFeature: two\n  Scenario: S1\n    Given step');
+            await featureCache.updateFile(uri2); // note using uri2
+
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tag1'), 0, 'Old tags should be cleared since it is the same file');
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tag2'), 1, 'New tags should be present');
+
+            await featureCache.removeFile(uri1);
+            assert.strictEqual(await featureCache.getTagBlastRadius('@tag2'), 0, 'Removing via any case variation should delete the cache entry');
+        } finally {
+            if (originalPlatform) {
+                Object.defineProperty(process, 'platform', originalPlatform);
+            }
+        }
     });
 });
 

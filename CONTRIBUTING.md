@@ -10,7 +10,8 @@ The extension is written in **TypeScript** and uses the native **VS Code Extensi
 
 Here is a breakdown of the core modules located in the `src/` directory:
 
-- **`extension.ts`**: The entry point. Bundled via Esbuild for fast activation. Registers all commands, providers, and diagnostics.
+- **`extension.ts`**: The entry point and minimal composition root. Bundled via Esbuild for fast activation. Delegates capability registration to specialized submodules in `src/activation/`.
+- **`src/activation/`**: Contains modular activation logic for `commands.ts`, `migration.ts`, `contextService.ts`, and `walkthrough.ts`.
 - **`eventBus.ts`**: The centralized publish/subscribe Workspace Event Bus. It handles file watchers and decouples feature modules from VS Code workspace events.
 - **`formatter.ts`**: The core AST-based formatter. It handles indentation, table alignment, auto-casing, and tag wrapping based on `@cucumber/gherkin` parses.
 - **`highlighter.ts`**: Implements custom semantic syntax highlighting via VS Code's `createTextEditorDecorationType` API.
@@ -33,6 +34,14 @@ Here is a breakdown of the core modules located in the `src/` directory:
 To maintain compatibility and prevent side effects in users' workspaces, developers must adhere to the following strict boundaries:
 - **No Global Configuration Overrides**: The extension must *never* specify overrides for native VS Code settings (e.g., `testing.*`, `editor.*`) inside the `configurationDefaults` block in `package.json`. Doing so silently breaks other extensions installed by the user. If an integration problem exists, it must be solved inside our own controllers, not by altering the global user workspace.
 - **Test Controller Coexistence**: The extension must safely coexist with other extensions that provide their own Test Controllers and Profiles (like Python `pytest` or `Coverage`). Our Test Controller should not assume it is the only one in the workspace. Any E2E UI test must instantiate Mock controllers with unique IDs to avoid ID collisions with the real extension background processes.
+- **Transactional Graph State**: The `WorkspaceGraph` coordinates the semantic index. Any mutation of the graph state *must* occur inside the `graph.executeTransaction()` wrapper to guarantee atomic commits and failure isolation. Services requiring graph reads must query the immutable `graph.currentGeneration` object. Tests needing to inject state outside of the transaction queue should exclusively use the test-only helper `graph.setNodeForTest()`.
+
+### Contributors Deep-Dive: Implementing a new LanguageService Provider
+
+When adding a new Language Service provider (e.g. `HoverProvider`, `CodeLensProvider`, or `CompletionItemProvider`), you must adhere to the following strict architectural constraints to ensure it performs efficiently and without cross-platform bugs:
+
+1. **Never perform synchronous disk I/O**: Language providers are called hundreds of times per second. Query the `WorkspaceGraph` or `SymbolCache` synchronously, as they represent the in-memory state. 
+2. **Always route through `ResourceIdentity.getCanonicalUriString()`**: VS Code URI representations vary by platform (`file:///Users/C...` vs `file:///users/C...`). When you extract a URI from a `vscode.TextDocument` or `vscode.Uri` provided by the extension host to look up a node in the graph, you **MUST** convert it using the `ResourceIdentity` canonifier before executing `.get(...)` or `.has(...)` on internal Maps. Failing to do so will result in providers breaking silently on macOS and Windows (case-insensitive filesystems).
 
 ---
 
@@ -106,7 +115,16 @@ npm run test:e2e
 
 ## 🤖 CI/CD Pipeline
 
-The CI/CD pipeline leverages reusable GitHub Actions from the [qa-hub-actions](https://github.com/carlos-camara/qa-hub-actions) repository. This ensures consistency across quality checks. Specifically, coverage reporting and other QA gates are handled externally by these actions.
+The CI/CD pipeline ensures that all code meets our quality and security standards.
+
+### Supply-Chain Immutability
+
+To prevent supply-chain attacks, **all third-party GitHub Actions must be pinned to a full 40-character commit SHA**, not a mutable tag or branch (e.g., `@v2` or `@main`).
+This guarantees that the exact execution logic cannot be silently altered by an upstream provider.
+- You must leave a readable comment next to the SHA indicating the intended version/tag (e.g., `# v2.1.0`).
+- If you add or modify a GitHub workflow, you must run `npm run check:config` locally. This executes our static workflow policy checker (`scripts/test-workflow-policy.js`) which will fail the build if any unpinned, mutable action references are found.
+
+Coverage reporting and other QA gates are handled by these rigorously pinned actions.
 
 ---
 
@@ -146,14 +164,24 @@ Code reviews will be conducted on all submissions.
 
 ## 🚀 Release Preparation Process
 
-To ensure high-quality release notes that focus on user value rather than raw commits, follow this workflow when preparing a new release:
+To ensure high-quality, secure releases, we use an explicit two-step release architecture that decouples unprivileged compilation from privileged publication.
 
-1. **Wait for Auto-Generation**: When a PR is merged into `main`, our `.github/workflows/release.yml` will automatically build the VSIX, create a Git Tag, and generate a GitHub Release.
-2. **Review Auto-Categorization**: The automated release uses `.github/release.yml` to automatically categorize all merged PRs into groups (e.g., 🚀 New Capabilities, 🐛 Bug Fixes) based on their labels.
-3. **Enhance with the Template**:
-   - Open `.github/RELEASE_TEMPLATE.md` and copy its contents.
-   - Go to the [GitHub Releases page](https://github.com/carlos-camara/vscode-gherkin-powertools/releases), find the auto-generated release, and click **Edit**.
-   - Paste the template at the top of the release notes.
-   - Fill in the narrative sections (Headline, Short Summary, Why this matters, Visual Demos, etc.) to explain the business and user value of the release.
-   - Retain the auto-generated categorized PR lists at the bottom under the "Contributors" or respective technical sections so users still get the detailed changelog.
-4. **Publish**: Save and publish the updated release notes.
+1. **Prepare the Release locally**:
+   - Update the version in `package.json` (e.g. from `1.8.4` to `1.8.5`).
+   - Run `npm install` to update `package-lock.json`.
+   - Add a new section in `CHANGELOG.md` with the exact header `## [1.8.5]`.
+   - Commit and push these changes to `main`. *(Note: pushing to main no longer triggers an automatic release).*
+
+2. **Trigger the Release Workflow**:
+   - Go to the **Actions** tab in the GitHub repository.
+   - Select the **📦 Create Release** workflow on the left.
+   - Click **Run workflow**.
+   - By default, **Dry Run** is checked. You can run this first to safely validate the build, tests, and signatures without publishing.
+   - To officially publish, **uncheck "Dry Run"** and run the workflow.
+
+3. **What happens automatically**:
+   - The unprivileged `build-and-validate` job compiles the extension, runs tests, creates the `.vsix`, extracts your changelog notes, and generates cryptographic provenance.
+   - The privileged `publish` job verifies the provenance and creates the Git Tag, GitHub Release, and uploads the verified asset.
+
+4. **Enhance Release Notes (Optional)**:
+   - Go to the [GitHub Releases page](https://github.com/carlos-camara/vscode-gherkin-powertools/releases) and edit the generated release to add any visual demos, screenshots, or additional narrative using `.github/RELEASE_TEMPLATE.md`.

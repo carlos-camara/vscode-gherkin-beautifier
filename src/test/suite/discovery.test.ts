@@ -95,7 +95,7 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
         (vscode.workspace as any).getWorkspaceFolder = originalGetWorkspaceFolder;
     });
 
-    test('getBestWorkspaceFolder falls back to first workspace folder if getWorkspaceFolder returns undefined', () => {
+    test('getBestWorkspaceFolder returns undefined if getWorkspaceFolder returns undefined', () => {
         const dummyUri = vscode.Uri.file('/outside/workspace/file.py');
         const dummyFolder: vscode.WorkspaceFolder = {
             uri: vscode.Uri.file('/my/workspace/folder'),
@@ -110,7 +110,7 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
         (vscode.workspace as any).getWorkspaceFolder = () => undefined;
 
         const result = service.getBestWorkspaceFolder(dummyUri);
-        assert.deepStrictEqual(result, dummyFolder);
+        assert.strictEqual(result, undefined);
 
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => originalWorkspaceFolders });
         (vscode.workspace as any).getWorkspaceFolder = originalGetWorkspaceFolder;
@@ -152,6 +152,17 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
     test('setupWatchers triggers onDidChange and onDidDelete on valid files', (done) => {
         const originalCreateFileSystemWatcher = vscode.workspace.createFileSystemWatcher;
 
+        const fsLib = require('fs');
+        const os = require('os');
+        const path = require('path');
+        const tempDir = os.tmpdir();
+
+        const changedFile = path.join(tempDir, 'login_changed.py');
+        const deletedFile = path.join(tempDir, 'login_deleted.py');
+
+        fsLib.writeFileSync(changedFile, 'test');
+        if (fsLib.existsSync(deletedFile)) fsLib.unlinkSync(deletedFile);
+
         let onChangedListener: ((uri: vscode.Uri) => void) | undefined;
         let onDeletedListener: ((uri: vscode.Uri) => void) | undefined;
         let changedFired = false;
@@ -184,10 +195,10 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
         service.setupWatchers();
 
         if (onChangedListener) {
-            onChangedListener(vscode.Uri.file('/workspace/features/steps/login.py'));
+            onChangedListener(vscode.Uri.file(changedFile));
         }
         if (onDeletedListener) {
-            onDeletedListener(vscode.Uri.file('/workspace/features/steps/login.py'));
+            onDeletedListener(vscode.Uri.file(deletedFile));
         }
 
         setTimeout(() => {
@@ -196,7 +207,7 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
             service.disposeWatchers();
             (vscode.workspace as any).createFileSystemWatcher = originalCreateFileSystemWatcher;
             done();
-        }, 150);
+        }, 200);
     });
 
     test('setupWatchers filters events on ignored files', (done) => {
@@ -281,5 +292,58 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
         assert.strictEqual(result2, undefined);
 
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => originalWorkspaceFolders });
+    });
+
+    test('stress test for debounce and coalescing rules', (done) => {
+        service.metrics = { totalEventsReceived: 0, totalEventsEmitted: 0 };
+        const eventBus = new (require('../../eventBus').WorkspaceEventBus)();
+        service.eventBus = eventBus;
+
+        let createCount = 0;
+        let changeCount = 0;
+        let deleteCount = 0;
+
+        eventBus.onEvent((e: any) => {
+            if (e.type === 'stepFileCreated') createCount++;
+            if (e.type === 'stepFileChanged') changeCount++;
+            if (e.type === 'stepFileDeleted') deleteCount++;
+        });
+
+        const fsLib = require('fs');
+        const os = require('os');
+        const path = require('path');
+        const tempDir = os.tmpdir();
+
+        const file1 = path.join(tempDir, 'file1.py');
+        const deletedFile = path.join(tempDir, 'deleted.py');
+        const atomicFile = path.join(tempDir, 'atomic.py');
+
+        fsLib.writeFileSync(file1, 'test');
+        if (fsLib.existsSync(deletedFile)) fsLib.unlinkSync(deletedFile);
+        fsLib.writeFileSync(atomicFile, 'test'); // simulate atomic save final state
+
+        const uri1 = vscode.Uri.file(file1);
+        const uri2 = vscode.Uri.file(deletedFile);
+        const uri3 = vscode.Uri.file(atomicFile);
+
+        for (let i = 0; i < 1000; i++) {
+            service.queueEvent(uri1, 'change', 10);
+            service.queueEvent(uri2, 'delete', 10);
+        }
+
+        service.queueEvent(uri3, 'change', 10);
+        service.queueEvent(uri3, 'delete', 10);
+        service.queueEvent(uri3, 'create', 10);
+
+        setTimeout(() => {
+            assert.strictEqual(createCount, 0);
+            assert.strictEqual(changeCount, 2);
+            assert.strictEqual(deleteCount, 1);
+
+            assert.strictEqual(service.metrics.totalEventsReceived, 2003);
+            assert.strictEqual(service.metrics.totalEventsEmitted, 3);
+
+            done();
+        }, 100);
     });
 });

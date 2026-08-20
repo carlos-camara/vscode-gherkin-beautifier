@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { WorkspaceGraph, StepDefNode } from './graph';
 import { SymbolCache } from './cache';
+import { ResourceIdentity } from './utils/resourceIdentity';
 
 export class StepRefactoringService {
     private graph: WorkspaceGraph;
@@ -22,17 +23,17 @@ export class StepRefactoringService {
         await this.graph.initialize(); // Ensure graph is ready
 
         const edit = new vscode.WorkspaceEdit();
-        const uriStr = document.uri.toString();
+        const uriStr = ResourceIdentity.getCanonicalUriString(document.uri);
         let targetDefNode: StepDefNode | undefined;
 
         if (uriStr.endsWith('.feature')) {
             const stepId = `${uriStr}:${position.line + 1}`;
-            const stepNode = this.graph.getAllStepNodes().find(n => n.id === stepId);
+            const stepNode = this.graph.currentGeneration.getAllStepNodes().find(n => n.id === stepId);
             if (stepNode && stepNode.definitionId) {
-                targetDefNode = this.graph.getAllStepDefNodes().find(n => n.id === stepNode.definitionId);
+                targetDefNode = this.graph.currentGeneration.getAllStepDefNodes().find(n => n.id === stepNode.definitionId);
             }
         } else if (uriStr.endsWith('.py')) {
-            const allDefs = this.graph.getAllStepDefNodes().filter(n => n.uri === uriStr);
+            const allDefs = this.graph.currentGeneration.getAllStepDefNodes().filter(n => n.uri === uriStr);
             targetDefNode = allDefs.find(n => position.line === n.line || position.line === n.line + 1); // rough check
             // For exact check, we should query SymbolCache
             if (!targetDefNode) {
@@ -41,7 +42,7 @@ export class StepRefactoringService {
                     (d.decoratorRange.contains(position) || (d.functionRange && d.functionRange.contains(position)))
                 );
                 if (matched) {
-                    targetDefNode = this.graph.getAllStepDefNodes().find(n => n.id === `${uriStr}:${matched.decoratorRange.start.line}`);
+                    targetDefNode = this.graph.currentGeneration.getAllStepDefNodes().find(n => n.id === `${uriStr}:${matched.decoratorRange.start.line}`);
                 }
             }
         }
@@ -71,7 +72,7 @@ export class StepRefactoringService {
         }
 
         // 2. Update Feature Usages
-        const usages = this.graph.getUsages(targetDefNode.id);
+        const usages = this.graph.currentGeneration.getUsages(targetDefNode.id);
         for (const usage of usages) {
             const usageUri = vscode.Uri.parse(usage.uri);
             const usageDoc = await vscode.workspace.openTextDocument(usageUri);

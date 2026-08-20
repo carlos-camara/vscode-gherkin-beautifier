@@ -17,6 +17,7 @@ It generates deep heuristics and scores, including:
   The engine uses semantic context tracking to accurately resolve `And` and `But` steps.
   It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then), ensuring that step definitions reused across different contexts are not falsely flagged as duplicated.
 - **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint, Off). The engine actively detects:
+  - **Syntax Errors** that cause parse failures
   - **Oversized Features** and **Oversized Scenarios**
   - **Duplicated**, **Unused**, **Ambiguous**, and **Undefined** Python step definitions
   - **Excessive Tags**
@@ -28,8 +29,8 @@ It generates deep heuristics and scores, including:
 
 **Real-Time Editor Diagnostics**: Beyond the dashboard, the Anti-pattern Engine integrates directly with VS Code's problems view.
 When enabled, it underlines rule violations (like Duplicated Steps or Oversized Scenarios) directly in your `.feature` and `.py` files.
-To keep your editor responsive, these diagnostics are debounced by 1.5 seconds after a file change.
-Note that Ambiguous and Undefined Steps are handled instantly by the real-time Linter, so they are filtered out from the debounced anti-pattern diagnostics to prevent duplicate squiggles.
+To keep your editor responsive, these diagnostics are debounced by 500ms after a file change.
+Note that Ambiguous and Undefined Steps are handled instantly by the real-time Linter (displaying an immediate `⚠️ Ambiguous step: matches multiple definitions` diagnostic). They are automatically filtered out from the hover tooltip and debounced anti-pattern engine to prevent duplicate squiggles.
 
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 

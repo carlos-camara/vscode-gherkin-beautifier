@@ -16,23 +16,23 @@ export class ImpactAnalyzer {
 
     public calculateImpact(stepDefId: string): ImpactReport {
         const cached = this.cache.get(stepDefId);
-        if (cached && cached.version === this.graph.graphVersion) {
+        if (cached && cached.version === this.graph.currentGeneration.version) {
             return cached.report;
         }
 
-        const usages = this.graph.getUsages(stepDefId);
+        const usages = this.graph.currentGeneration.getUsages(stepDefId);
         
         const affectedScenarios = new Set<string>();
         const affectedFeatures = new Set<string>();
         const scenarioNodes: ScenarioNode[] = [];
 
         const addScenariosUnder = (parentId: string) => {
-            const pNode = this.graph.getNode(parentId);
+            const pNode = this.graph.currentGeneration.getNode(parentId);
             if (!pNode) return;
             if (pNode.type === 'Feature' || pNode.type === 'Rule') {
                 const fr = pNode as any;
                 for (const childId of fr.children) {
-                    const childNode = this.graph.getNode(childId);
+                    const childNode = this.graph.currentGeneration.getNode(childId);
                     if (childNode) {
                         if (childNode.type === 'Scenario') {
                             if (!affectedScenarios.has(childNode.id)) {
@@ -50,7 +50,7 @@ export class ImpactAnalyzer {
         for (const usage of usages) {
             let currentId: string | undefined = usage.parent;
             while (currentId) {
-                const node = this.graph.getNode(currentId);
+                const node = this.graph.currentGeneration.getNode(currentId);
                 if (node) {
                     if (node.type === 'Scenario') {
                         if (!affectedScenarios.has(node.id)) {
@@ -83,7 +83,7 @@ export class ImpactAnalyzer {
             scenarios: scenarioNodes
         };
 
-        this.cache.set(stepDefId, { version: this.graph.graphVersion, report });
+        this.cache.set(stepDefId, { version: this.graph.currentGeneration.version, report });
         return report;
     }
 }

@@ -35,7 +35,7 @@ suite('GherkinRenameProvider Test Suite', () => {
             })
         } as vscode.TextDocument;
 
-        sinon.stub(graph, 'getAllStepNodes').returns([]);
+        sinon.stub(graph.currentGeneration, "getAllStepNodes").returns([]);
 
         try {
             await renameProvider.prepareRename(mockDoc, new vscode.Position(0, 0), {} as any);
@@ -55,7 +55,7 @@ suite('GherkinRenameProvider Test Suite', () => {
             })
         } as vscode.TextDocument;
 
-        sinon.stub(graph, 'getAllStepNodes').returns([{
+        sinon.stub(graph.currentGeneration, "getAllStepNodes").returns([{
             id: `${featureUri.toString()}:1`, // Line 0 -> position.line + 1 = 1
             uri: featureUri.toString(),
             line: 1,
@@ -80,7 +80,7 @@ suite('GherkinRenameProvider Test Suite', () => {
             })
         } as vscode.TextDocument;
 
-        sinon.stub(graph, 'getAllStepDefNodes').returns([{
+        sinon.stub(graph.currentGeneration, "getAllStepDefNodes").returns([{
             id: 'fake-def-id',
             uri: pythonUri.toString(),
             line: 0, // matching position.line

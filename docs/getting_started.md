@@ -1,6 +1,6 @@
 # Getting Started
 
-> Get up and running in under 60 seconds. Gherkin PowerTools requires **no configuration** to start formatting and linting your Gherkin files.
+> Gherkin PowerTools requires **no configuration** to start formatting and linting your Gherkin files.
 
 ---
 
@@ -59,6 +59,9 @@ Place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.
 ## 5. Python Behave Setup (Optional)
 
 If you are using Python Behave, Gherkin PowerTools provides advanced step generation, navigation, and Test Explorer integration.
+
+> [!IMPORTANT]
+> To use Python Behave execution and step generation features, you **MUST** have a valid Workspace Folder opened in VS Code. Attempting to run tests or generate steps for standalone `.feature` files outside of an active workspace is explicitly blocked for security and context-resolution reasons.
 
 On your first run in a Python workspace, the **First-Run Onboarding Experience** automatically detects if it is a Behave project. If detected, a welcome notification will appear, providing a quick summary of the features found and direct links to the Walkthrough and Project Health Dashboard.
 
@@ -132,3 +135,4 @@ Explore the full capabilities:
 - [Run and Debug](run_and_debug.md) (Test Explorer)
 - [Command Line Interface (CLI)](cli.md) (Headless Execution & CI/CD)
 - [Configuration Reference](configuration.md)
+- [Configuration Profiles](configuration_profiles.md) (Team Baselines)

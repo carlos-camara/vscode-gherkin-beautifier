@@ -185,8 +185,8 @@ export interface TokenizedExecuteStep {
     line: number;
 }
 
-export function parseExecuteSteps(content: string): TokenizedExecuteStep[] {
-    const steps: TokenizedExecuteStep[] = [];
+export function parseExecuteSteps(content: string): TokenizedExecuteStep[][] {
+    const blocks: TokenizedExecuteStep[][] = [];
     const regex = /execute_steps\s*\(\s*(?:u|f|r|b)?(?:'''|"""|'|")([\s\S]*?)(?:'''|"""|'|")\s*\)/g;
     let match;
 
@@ -203,17 +203,21 @@ export function parseExecuteSteps(content: string): TokenizedExecuteStep[] {
         currentLine += executeCallPart.split(/\r?\n/).length - 1;
 
         const stringLines = executeString.split(/\r?\n/);
+        const blockSteps: TokenizedExecuteStep[] = [];
         for (let i = 0; i < stringLines.length; i++) {
             const trimmed = stringLines[i].trim();
             const keywordMatch = trimmed.match(/^(Given|When|Then|And|But)\s+(.*)$/i);
             if (keywordMatch) {
-                steps.push({
+                blockSteps.push({
                     keyword: keywordMatch[1],
                     text: keywordMatch[2],
                     line: currentLine + i
                 });
             }
         }
+        if (blockSteps.length > 0) {
+            blocks.push(blockSteps);
+        }
     }
-    return steps;
+    return blocks;
 }

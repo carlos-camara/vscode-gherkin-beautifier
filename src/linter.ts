@@ -33,7 +33,11 @@ export class GherkinLinter {
         this.eventBusDisposable = this.eventBus.onEvent(e => {
             if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
                 const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
-                this.scheduleLint(doc);
+                if (e.type === 'textDocumentOpened') {
+                    this.immediateLint(doc);
+                } else {
+                    this.scheduleLint(doc);
+                }
             } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
                 vscode.workspace.textDocuments.forEach(doc => {
                     this.immediateLint(doc);
@@ -103,14 +107,13 @@ export class GherkinLinter {
         let hasFatalSyntaxError = false;
 
         for (const error of errors) {
-            const location = error.location;
-            if (location && typeof location.line === 'number') {
+            if (typeof error.line === 'number') {
                 // AST locations are 1-indexed, VS Code positions are 0-indexed
-                const lineIndex = Math.min(Math.max(0, location.line - 1), document.lineCount > 0 ? document.lineCount - 1 : 0);
+                const lineIndex = Math.min(Math.max(0, error.line - 1), document.lineCount > 0 ? document.lineCount - 1 : 0);
                 const lineText = document.lineCount > 0 ? document.lineAt(lineIndex).text : '';
                 
                 // Column from AST is 1-indexed. If not present or 0, default to first non-whitespace char.
-                let startChar = location.column ? Math.max(0, location.column - 1) : 0;
+                let startChar = error.column ? Math.max(0, error.column - 1) : 0;
                 if (startChar === 0) {
                     const firstWordMatch = lineText.match(/\S+/);
                     startChar = firstWordMatch ? lineText.indexOf(firstWordMatch[0]) : 0;
@@ -734,7 +737,7 @@ export class GherkinLinter {
                     const patterns = defs.map(d => `'${d.rawPattern}'`).join(', ');
                     const diagnostic = new vscode.Diagnostic(
                         range,
-                        `Ambiguous step: matches multiple definitions (${patterns})`,
+                        `⚠️ Ambiguous step: matches multiple definitions (${patterns})`,
                         vscode.DiagnosticSeverity.Warning
                     );
                     diagnostic.source = 'Gherkin Definition';

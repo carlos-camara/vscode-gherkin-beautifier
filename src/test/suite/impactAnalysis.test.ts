@@ -30,12 +30,12 @@ suite('Impact Analysis Test Suite', () => {
         const step2: StepNode = { id: 'step2', type: 'Step', uri: 'file:///test.feature', line: 11, text: 'test', parent: 's2', keyword: 'Given', definitionId: 'def1' };
 
         // Inject directly into private nodes map for testing
-        (graph as any).nodes.set(defNode.id, defNode);
-        (graph as any).nodes.set(featureNode.id, featureNode);
-        (graph as any).nodes.set(scNode1.id, scNode1);
-        (graph as any).nodes.set(scNode2.id, scNode2);
-        (graph as any).nodes.set(step1.id, step1);
-        (graph as any).nodes.set(step2.id, step2);
+        graph.setNodeForTest(defNode as any);
+        graph.setNodeForTest(featureNode as any);
+        graph.setNodeForTest(scNode1 as any);
+        graph.setNodeForTest(scNode2 as any);
+        graph.setNodeForTest(step1 as any);
+        graph.setNodeForTest(step2 as any);
 
         const report = analyzer.calculateImpact('def1');
         assert.strictEqual(report.affectedFeatures, 1);
@@ -47,8 +47,8 @@ suite('Impact Analysis Test Suite', () => {
         const defNode: StepDefNode = { id: 'def1', type: 'StepDefinition', uri: 'file:///steps.py', line: 10, pattern: 'test', matcherType: 'given', pythonFile: 'file:///steps.py', usages: ['step1'] };
         const step1: StepNode = { id: 'step1', type: 'Step', uri: 'file:///test.feature', line: 6, text: 'test', parent: 's1', keyword: 'Given', definitionId: 'def1' };
 
-        (graph as any).nodes.set(defNode.id, defNode);
-        (graph as any).nodes.set(step1.id, step1); // parent s1 does not exist in graph
+        graph.setNodeForTest(defNode as any);
+        graph.setNodeForTest(step1 as any); // parent s1 does not exist in graph
 
         const report = analyzer.calculateImpact('def1');
         assert.strictEqual(report.affectedFeatures, 0);
@@ -58,10 +58,10 @@ suite('Impact Analysis Test Suite', () => {
 
     test('Performance Benchmark: Impact Analyzer 1000 usages', () => {
         const defNode: StepDefNode = { id: 'def1', type: 'StepDefinition', uri: 'file:///steps.py', line: 10, pattern: 'test', matcherType: 'given', pythonFile: 'file:///steps.py', usages: [] };
-        (graph as any).nodes.set(defNode.id, defNode);
+        graph.setNodeForTest(defNode as any);
 
         const featureNode: FeatureNode = { id: 'f1', type: 'Feature', uri: 'file:///test.feature', line: 1, children: [], tags: [], name: 'Feature 1' };
-        (graph as any).nodes.set(featureNode.id, featureNode);
+        graph.setNodeForTest(featureNode as any);
 
         // Generate 1000 usages across 1000 scenarios
         for (let i = 0; i < 1000; i++) {
@@ -71,8 +71,8 @@ suite('Impact Analysis Test Suite', () => {
             const scNode: ScenarioNode = { id: scId, type: 'Scenario', uri: 'file:///test.feature', line: i * 5, steps: [stepId], examples: [], tags: [], parent: 'f1', name: `Scenario ${i}` };
             const stepNode: StepNode = { id: stepId, type: 'Step', uri: 'file:///test.feature', line: i * 5 + 1, text: 'test', parent: scId, keyword: 'Given', definitionId: 'def1' };
             
-            (graph as any).nodes.set(scNode.id, scNode);
-            (graph as any).nodes.set(stepNode.id, stepNode);
+            graph.setNodeForTest(scNode as any);
+            graph.setNodeForTest(stepNode as any);
             defNode.usages.push(stepId);
         }
 
@@ -97,12 +97,12 @@ suite('Impact Analysis Test Suite', () => {
         
         const bgStep1: StepNode = { id: 'bg_step1', type: 'Step', uri: 'file:///test.feature', line: 4, text: 'test', parent: 'bg1', keyword: 'Given', definitionId: 'def1' };
 
-        (graph as any).nodes.set(defNode.id, defNode);
-        (graph as any).nodes.set(featureNode.id, featureNode);
-        (graph as any).nodes.set(bgNode.id, bgNode);
-        (graph as any).nodes.set(scNode1.id, scNode1);
-        (graph as any).nodes.set(scNode2.id, scNode2);
-        (graph as any).nodes.set(bgStep1.id, bgStep1);
+        graph.setNodeForTest(defNode as any);
+        graph.setNodeForTest(featureNode as any);
+        graph.setNodeForTest(bgNode as any);
+        graph.setNodeForTest(scNode1 as any);
+        graph.setNodeForTest(scNode2 as any);
+        graph.setNodeForTest(bgStep1 as any);
 
         const report = analyzer.calculateImpact('def1');
         assert.strictEqual(report.affectedFeatures, 1);

@@ -167,7 +167,7 @@ class ExcessiveTagsRule implements AntiPatternRule {
     analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
-        const allNodes = graph.getAllNodes();
+        const allNodes = graph.currentGeneration.getAllNodes();
         const features = allNodes.filter(n => n.type === 'Feature') as FeatureNode[];
         const scenarios = allNodes.filter(n => n.type === 'Scenario') as ScenarioNode[];
         
@@ -231,7 +231,7 @@ class InconsistentFormattingRule implements AntiPatternRule {
     analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
-        const allNodes = graph.getAllNodes();
+        const allNodes = graph.currentGeneration.getAllNodes();
         const steps = allNodes.filter(n => n.type === 'Step') as StepNode[];
         
         const stepsWithTrailingSpaces = steps.filter(s => s.text.endsWith(' '));
@@ -250,6 +250,35 @@ class InconsistentFormattingRule implements AntiPatternRule {
     }
 }
 
+class SyntaxErrorsRule implements AntiPatternRule {
+    id = 'syntax-errors';
+    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
+        if (severity === 'off' || !metrics.parseErrors || metrics.parseErrors.length === 0) return [];
+        
+        const antiPatterns: AntiPattern[] = [];
+        
+        for (const fileErrors of metrics.parseErrors) {
+            if (fileErrors.errors.length > 0) {
+                antiPatterns.push({
+                    id: this.id,
+                    title: `Syntax Errors in ${fileErrors.uri.split('/').pop()}`,
+                    explanation: `Found ${fileErrors.errors.length} syntax error(s) during parsing. Files with syntax errors cannot be fully processed and might hide other issues.`,
+                    severity,
+                    affectedFiles: [fileErrors.uri],
+                    affectedItems: fileErrors.errors.map((e: any) => ({
+                        label: e.message || 'Syntax Error',
+                        uri: fileErrors.uri,
+                        line: e.line ? e.line - 1 : 0
+                    })),
+                    suggestedFix: 'Fix the Gherkin syntax errors highlighted in the file to allow proper parsing and validation.'
+                });
+            }
+        }
+        
+        return antiPatterns;
+    }
+}
+
 export class AntiPatternEngine {
     private rules: AntiPatternRule[] = [];
 
@@ -263,6 +292,7 @@ export class AntiPatternEngine {
         this.registerRule(new ExcessiveTagsRule());
         this.registerRule(new PoorMaintainabilityRule());
         this.registerRule(new InconsistentFormattingRule());
+        this.registerRule(new SyntaxErrorsRule());
     }
 
     registerRule(rule: AntiPatternRule) {

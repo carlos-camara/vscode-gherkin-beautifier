@@ -14,6 +14,7 @@ suite('Parser Architecture Test Suite', () => {
         assert.ok(result.document);
         assert.ok(result.document.feature);
         assert.strictEqual(result.errors.length, 0);
+        assert.strictEqual(result.isPartial, false);
     });
 
     test('should return partial document and errors when given invalid Gherkin syntax', async () => {
@@ -25,8 +26,16 @@ suite('Parser Architecture Test Suite', () => {
         const result = await parseGherkin(text);
         assert.ok(result.document, 'Document should still be returned (partial AST)');
         assert.ok(result.document.feature, 'Feature should be parsed');
+        assert.strictEqual(result.isPartial, true, 'isPartial should be true');
         assert.ok(result.errors.length > 0, 'Should contain syntax errors');
-        assert.match(result.errors[0].message, /got 'Garbage line/);
+        
+        const err = result.errors[0];
+        assert.match(err.message, /got 'Garbage line/);
+        assert.strictEqual(err.code, 'UNEXPECTED_TOKEN');
+        assert.strictEqual(err.source, 'parser');
+        assert.strictEqual(err.severity, 'error');
+        assert.strictEqual(err.recoverable, true);
+        assert.strictEqual(err.line, 4);
     });
 
     test('should not share parser state across concurrent operations', async () => {
@@ -62,6 +71,10 @@ suite('Parser Architecture Test Suite', () => {
         const result = await parseGherkin(text);
         // The AST might be null entirely if it can't parse anything meaningful
         assert.ok(result.errors.length > 0, 'Should contain syntax errors');
+        assert.strictEqual(result.errors[0].code, 'UNEXPECTED_TOKEN');
+        
+        // Assert that CompositeParserExceptions are flattened (multiple errors returned)
+        assert.ok(result.errors.length >= 2, 'Should flatten grouped parsing errors');
     });
 
     test('should parse documents with mixed line endings identically', async () => {

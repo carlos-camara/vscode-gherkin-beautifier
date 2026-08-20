@@ -102,6 +102,19 @@ export class DialectService {
         return 'step';
     }
 
+    /**
+     * Resolves the semantic context of a step during a top-to-bottom AST traversal.
+     * Non-continuation keywords (Given/When/Then) establish a new context.
+     * Continuation keywords (And/But/*) preserve the current context.
+     */
+    public resolveSemanticTypeDownwards(keyword: string, currentContext: 'given' | 'when' | 'then' | 'step', dialect: Dialect): 'given' | 'when' | 'then' | 'step' {
+        const kw = keyword.trim();
+        if (dialect.given.map(k => k.trim()).includes(kw)) return 'given';
+        if (dialect.when.map(k => k.trim()).includes(kw)) return 'when';
+        if (dialect.then.map(k => k.trim()).includes(kw)) return 'then';
+        return currentContext;
+    }
+
     public clearCache(uri: vscode.Uri) {
         this.cache.delete(uri.toString());
     }

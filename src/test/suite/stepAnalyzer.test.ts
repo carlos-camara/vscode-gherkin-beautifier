@@ -54,10 +54,8 @@ suite('StepAnalyzer Test Suite', () => {
             text: 'an ambiguous step resolved by semantics', keyword: 'Then', parent: 'scen1', semanticType: 'then'
         };
 
-        mockGraph = {
-            getAllStepDefNodes: () => [stepDef1, stepDef2, stepDef3, stepDef4, stepDef7, stepDef8],
-            getAllStepNodes: () => [step1, step2, step3, step4]
-        };
+        mockGraph = { currentGeneration: { getAllStepDefNodes: () => [stepDef1, stepDef2, stepDef3, stepDef4, stepDef7, stepDef8],
+            getAllStepNodes: () => [step1, step2, step3, step4] } as any } as any;
 
         mockSymbolCache = {
             getStepDefinitions: async (text: string) => {
@@ -125,8 +123,10 @@ suite('StepAnalyzer Test Suite', () => {
             pattern: 'the application is running', matcherType: 'parse', pythonFile: 'file:///tests/steps.py', usages: [], semanticType: 'then'
         };
         const customGraph = {
-            getAllStepDefNodes: () => [defGiven, defThen],
-            getAllStepNodes: () => []
+            currentGeneration: {
+                getAllStepDefNodes: () => [defGiven, defThen],
+                getAllStepNodes: () => []
+            }
         };
         const analyzer = new StepAnalyzer(customGraph as unknown as WorkspaceGraph, mockSymbolCache as SymbolCache);
         const result = await analyzer.analyze();
@@ -159,8 +159,10 @@ suite('StepAnalyzer Test Suite', () => {
         };
 
         const customMockGraph = {
-            getAllStepDefNodes: () => [defCase1, defCase2],
-            getAllStepNodes: () => [stepCase]
+            currentGeneration: {
+                getAllStepDefNodes: () => [defCase1, defCase2],
+                getAllStepNodes: () => [stepCase]
+            }
         };
 
         const customMockCache = {

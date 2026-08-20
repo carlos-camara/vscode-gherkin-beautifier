@@ -24,13 +24,13 @@ suite('Linter Test Suite', () => {
             return Promise.resolve([{ rawPattern: stepText, regex: new RegExp(stepText), decoratorRange: new vscode.Range(0,0,0,0) } as any]);
         };
         mockCache.state = 'ready';
-        
+
         const mockConfigService = {
             getConfiguration: () => ({
                 linter: { enabled: true, enabledRules: [] }
             })
         } as any;
-        
+
         linter = new GherkinLinter(mockCache, mockConfigService);
     });
 
@@ -44,7 +44,7 @@ Feature: Valid Feature
         `.trim();
         const doc = createMockDocument(text, 'file:///valid.feature');
         await linter.lint(doc);
-        
+
         // We can't easily access the private diagnosticCollection, but we can check vscode's global diagnostics
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 0);
@@ -58,7 +58,7 @@ Feature: Invalid Feature
         `.trim();
         const doc = createMockDocument(text, 'file:///misspelled.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 1);
         assert.strictEqual(diagnostics[0].code, 'MISSPELLED_KEYWORD');
@@ -73,7 +73,7 @@ Feature Invalid
         `.trim();
         const doc = createMockDocument(text, 'file:///missing-colon.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.ok(diagnostics.length >= 2);
         assert.ok(diagnostics.some(d => d.code === 'MISSING_COLON'));
@@ -86,7 +86,7 @@ Feature: Test
         `.trim();
         const doc = createMockDocument(text, 'file:///scenario-outline-missing-colon.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const diag = diagnostics.find(d => d.code === 'MISSING_COLON');
         assert.ok(diag, 'Should detect MISSING_COLON on Scenario Outline');
@@ -103,7 +103,7 @@ Feature: Test
         `.trim();
         const doc = createMockDocument(text, 'file:///undefined-step.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.ok(diagnostics.some(d => d.code === 'UNDEFINED_STEP'));
     });
@@ -126,7 +126,7 @@ Feature: Test
         `.trim();
         const doc = createMockDocument(text, 'file:///ambiguous-step.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const ambiguousDiag = diagnostics.find(d => d.code === 'AMBIGUOUS_STEP');
         assert.ok(ambiguousDiag, 'Should generate AMBIGUOUS_STEP diagnostic');
@@ -136,7 +136,7 @@ Feature: Test
 
     test('Scenario with Examples should generate SCENARIO_WITH_EXAMPLES', async () => {
 
-        
+
         const text = `
 Feature: Test
   Scenario: Invalid usage of examples
@@ -147,14 +147,14 @@ Feature: Test
         `.trim();
         const doc = createMockDocument(text, 'file:///scenario-examples.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.ok(diagnostics.some(d => d.code === 'SCENARIO_WITH_EXAMPLES'));
     });
 
     test('Inconsistent table cell count should generate a diagnostic', async () => {
 
-        
+
         const text = `
 Feature: Test
   Scenario: Table check
@@ -164,7 +164,7 @@ Feature: Test
         `.trim();
         const doc = createMockDocument(text, 'file:///inconsistent-table.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.ok(diagnostics.some(d => d.code === 'INCONSISTENT_CELL_COUNT'));
     });
@@ -178,7 +178,7 @@ Some stray text without docstrings
         `.trim();
         const doc = createMockDocument(text, 'file:///stray-text.feature');
         await linter.lint(doc);
-        
+
         // As long as it parses and does not throw, the linter shouldn't crash.
         // It might not generate a diagnostic if checkDescription ignores it or handles it silently.
         vscode.languages.getDiagnostics(doc.uri);
@@ -193,7 +193,7 @@ Feature: Valid feature
         `.trim();
         const doc = createMockDocument(text, 'file:///stray-block-typo.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const diag = diagnostics.find(d => d.code === 'MISSPELLED_KEYWORD');
         assert.ok(diag, 'Should generate MISSPELLED_KEYWORD');
@@ -207,7 +207,7 @@ Feature: Valid feature
         `.trim();
         const doc = createMockDocument(text, 'file:///exact-block.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const diag = diagnostics.find(d => d.code === 'MISSING_COLON');
         assert.ok(diag, 'Should generate MISSING_COLON for exact block keyword in description');
@@ -221,7 +221,7 @@ Feature: Valid feature
         `.trim();
         const doc = createMockDocument(text, 'file:///miscapitalized-step.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const diag = diagnostics.find(d => d.code === 'MISSPELLED_KEYWORD' && d.message.includes('Incorrect casing'));
         assert.ok(diag, 'Should generate MISSPELLED_KEYWORD for miscapitalized step');
@@ -235,7 +235,7 @@ Feature: Valid feature
         `.trim();
         const doc = createMockDocument(text, 'file:///correct-step-description.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const diag = diagnostics.find(d => d.message.includes('Incorrect casing'));
         assert.strictEqual(diag, undefined, 'Should not generate diagnostic for correctly cased step in description');
@@ -252,7 +252,7 @@ Featre: Bad
         `.trim();
         const doc = createMockDocument(text, 'file:///bad-syntax.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         // Fallback should still find SCENARIO_WITH_EXAMPLES
         assert.ok(diagnostics.some(d => d.code === 'SCENARIO_WITH_EXAMPLES'));
@@ -266,7 +266,7 @@ Scenario: Floating scenario
         const doc = createMockDocument(text, 'file:///missing_feature.feature');
         await linter.lint(doc);
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        
+
         // It flags 'Scenario:' as out of place or misspelled since it's expecting Feature
         assert.ok(diagnostics.length > 0, 'Should generate at least one diagnostic for a missing feature');
     });
@@ -281,7 +281,7 @@ Feature: Empty outline
         const doc = createMockDocument(text, 'file:///empty_examples.feature');
         await linter.lint(doc);
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        
+
         // The parser successfully parses this with tableBody: []
         // We ensure no exception is thrown and it passes linter checks
         // (Other semantic checks might flag undefined steps, but no syntax error).
@@ -291,7 +291,7 @@ Feature: Empty outline
 
     test('checkSteps returns early if cache is not ready', async () => {
         mockCache.state = 'initializing';
-        
+
         const text = `
 Feature: Test
   Scenario: Test
@@ -299,7 +299,7 @@ Feature: Test
         `.trim();
         const doc = createMockDocument(text, 'file:///not-ready.feature');
         await linter.lint(doc);
-        
+
         // Because the cache is not ready, checkSteps won't run, so we won't get UNDEFINED_STEP
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.ok(!diagnostics.some(d => d.code === 'UNDEFINED_STEP'), 'Should not flag undefined step if cache is not ready');
@@ -315,10 +315,10 @@ Feature: Test
         (doc2 as any).version = 2; // Simulated version bump
 
         // We bypass scheduleLint to directly test the async parsing race condition using lint()
-        
+
         // Start older request
         const promise1 = linter.lint(doc1, 1, 1);
-        
+
         // Start newer request before older finishes
         const promise2 = linter.lint(doc2, 2, 2);
 
@@ -335,7 +335,7 @@ Feature: Test
     test('Scheduler: scheduleLint debounces correctly', async () => {
         const text = 'Feature: Schedule\n  Scenario: Sched\n    Givn something';
         const doc = createMockDocument(text, 'file:///schedule.feature');
-        
+
         // Schedule it with 50ms delay
         linter.scheduleLint(doc, 50);
         let diagnostics = vscode.languages.getDiagnostics(doc.uri);
@@ -352,10 +352,10 @@ Feature: Test
     test('Dispose and clear cancel pending timers', async () => {
         const text = 'Feature: Timer\n  Scenario: Timer\n    Givn something';
         const doc = createMockDocument(text, 'file:///timer.feature');
-        
+
         linter.scheduleLint(doc, 500);
         linter.clear(doc);
-        
+
         await new Promise(resolve => setTimeout(resolve, 600));
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 0, 'Diagnostics should be empty because clear() cancelled the timer');
@@ -364,12 +364,12 @@ Feature: Test
     test('Concurrency: Document Closed before parsing finishes', async () => {
         const text = 'Feature: Closed\n  Scenario: Closed\n    Givn something';
         const doc = createMockDocument(text, 'file:///closed.feature');
-        
+
         // Emulate it being closed
         (doc as any).isClosed = true;
-        
+
         await linter.lint(doc, 1, 1);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 0, 'Should not publish diagnostics for a closed document');
     });
@@ -377,13 +377,13 @@ Feature: Test
     test('Concurrency: Monotonic ID tracking discards older requests', async () => {
         const text = 'Feature: IDTracking\n  Scenario: IDTracking\n    Givn something';
         const doc = createMockDocument(text, 'file:///id_tracking.feature');
-        
+
         const anyLinter = linter as any;
         anyLinter.pendingRequests.set(doc.uri.toString(), { requestId: 2 });
-        
+
         // Run with an older ID
         await linter.lint(doc, 1, 1);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         // It should have dropped the payload because ID 1 !== expected ID 2
         assert.strictEqual(diagnostics.length, 0, 'Older request ID should be discarded');
@@ -399,7 +399,7 @@ Característica: Test ES
         `.trim();
         const doc = createMockDocument(text, 'file:///spanish.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const scenarioWithExamples = diagnostics.find(d => d.code === 'SCENARIO_WITH_EXAMPLES');
         assert.ok(scenarioWithExamples, 'Should flag SCENARIO_WITH_EXAMPLES in Spanish');
@@ -418,7 +418,7 @@ Fonctionalité Test FR
         `.trim();
         const doc = createMockDocument(text, 'file:///french-typo.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const typoDiag = diagnostics.find(d => d.code === 'MISSPELLED_KEYWORD' || d.code === 'MISSING_COLON');
         assert.ok(typoDiag, 'Should generate a diagnostic for misspelled French keyword');
@@ -437,7 +437,7 @@ Funktionalitä Bad
         `.trim();
         const doc = createMockDocument(text, 'file:///german-bad.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.ok(diagnostics.some(d => d.code === 'SCENARIO_WITH_EXAMPLES'), 'Should flag SCENARIO_WITH_EXAMPLES in German via fallback scan');
     });
@@ -453,9 +453,34 @@ Funktionalitä Bad
         `.trim();
         const doc = createMockDocument(text, 'file:///arabic.feature');
         await linter.lint(doc);
-        
+
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const scenarioWithExamples = diagnostics.find(d => d.code === 'SCENARIO_WITH_EXAMPLES');
         assert.ok(scenarioWithExamples, 'Should flag SCENARIO_WITH_EXAMPLES in Arabic');
+    });
+
+    test('Semantic context boundary: malformed Scenario starting with And does not inherit Background Then', async () => {
+        const text = `
+Feature: Semantic Boundary
+  Background:
+    Given background
+    Then background then
+  Scenario: Malformed
+    And I am an orphaned continuation
+        `.trim();
+        const doc = createMockDocument(text, 'file:///semantic_boundary.feature');
+
+        // Mock getStepDefinitions to return 0 for everything,
+        // to ensure the UNDEFINED_STEP diagnostic is triggered if the semanticType is resolved as 'step'
+        (mockCache as any).getStepDefinitions = async () => [];
+
+        await linter.lint(doc);
+
+        const diagnostics = vscode.languages.getDiagnostics(doc.uri);
+        // We expect an UNDEFINED_STEP for "I am an orphaned continuation"
+        const undefinedStep = diagnostics.find(d =>
+            d.code === 'UNDEFINED_STEP' && d.message.includes('orphaned continuation')
+        );
+        assert.ok(undefinedStep, 'Should flag UNDEFINED_STEP for malformed And because it resolves to "step" context');
     });
 });

@@ -84,6 +84,12 @@ npx @carlos-camara/gherkin-pt stats --json > bdd_metrics.json
 
 You can integrate Gherkin PowerTools into your GitHub Actions workflow to block PRs that contain unformatted Gherkin or missing Python step definitions.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/cli_sarif_export.jpg" alt="GitHub Pull Request Code Scanning SARIF Output" width="600" />
+  <br/>
+  <em>Example: BDD Health export directly integrated into GitHub PR Code Scanning alerts.</em>
+</p>
+
 Create a file at `.github/workflows/gherkin-pt.yml`:
 
 ```yaml
@@ -112,11 +118,22 @@ jobs:
 
       - name: Validate BDD Health
         run: npx @carlos-camara/gherkin-pt analyze
+
+      # (Optional) Export diagnostics to GitHub Code Scanning (SARIF)
+      - name: Export BDD Health SARIF
+        run: npx @carlos-camara/gherkin-pt analyze --sarif > gherkin-pt-results.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gherkin-pt-results.sarif
+          category: gherkin-powertools
 ```
 
 ## Configuration
 
-The CLI features 100% configuration parity with the VS Code extension because it leverages a unified configuration layer.
+The CLI shares the exact same configuration engine as the VS Code extension because it leverages a unified configuration layer. [View the Capability Contract](capability_contract.md).
 To share formatting rules and glob patterns across your team and CI/CD pipelines natively, place a `.gherkin-powertoolsrc.json` file in the root of your workspace:
 
 ```json

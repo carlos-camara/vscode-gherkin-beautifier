@@ -33,6 +33,7 @@ export interface ProjectHealthMetrics {
     tagFrequencies: { name: string; count: number; files: string[] }[];
 
     stepAnalysis: StepAnalysisResult;
+    parseErrors: { uri: string; errors: any[] }[];
 
     scores: {
         complexity: number;
@@ -126,12 +127,17 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
 }
 
 export async function calculateHealthMetrics(graph: WorkspaceGraph, symbolCache: SymbolCache): Promise<ProjectHealthMetrics> {
-    const allNodes = graph.getAllNodes();
+    const allNodes = graph.currentGeneration.getAllNodes();
     const features = allNodes.filter(n => n.type === 'Feature') as FeatureNode[];
     const scenarios = allNodes.filter(n => n.type === 'Scenario') as ScenarioNode[];
     const backgrounds = allNodes.filter(n => n.type === 'Background') as BackgroundNode[];
     const steps = allNodes.filter(n => n.type === 'Step') as StepNode[];
     const tags = allNodes.filter(n => n.type === 'Tag') as TagNode[];
+
+    const parseErrors: { uri: string; errors: any[] }[] = [];
+    for (const [uri, errors] of graph.currentGeneration.parseErrors.entries()) {
+        parseErrors.push({ uri, errors: Array.from(errors) });
+    }
 
     const totalSteps = steps.length;
     const averageScenarioLength = scenarios.length > 0 ? scenarios.reduce((acc, s) => acc + s.steps.length, 0) / scenarios.length : 0;
@@ -197,6 +203,7 @@ export async function calculateHealthMetrics(graph: WorkspaceGraph, symbolCache:
         undefinedSteps,
         tagFrequencies,
         stepAnalysis,
+        parseErrors,
         scores: {
             complexity: finalComplexity,
             maintainability: finalMaintainability,

@@ -6,6 +6,7 @@ import * as path from 'path';
 // Our core engines
 import { SymbolCache } from '../cache';
 import { FeatureCache } from '../cache';
+import { featureDiscoveryService } from '../featureDiscovery';
 import { WorkspaceGraph } from '../graph';
 import { AntiPatternEngine } from '../antiPatternEngine';
 import { calculateHealthMetrics } from '../statistics';
@@ -113,7 +114,8 @@ program.command('format')
                 targetFiles = files.map(f => vscode.Uri.file(path.resolve(f)));
             } else {
                 console.log('[Info] Searching for feature files...');
-                targetFiles = await vscode.workspace.findFiles('**/*.feature');
+                featureDiscoveryService.configService = configService;
+                targetFiles = await featureDiscoveryService.getFeatureFiles();
             }
 
             console.log(`[Info] Formatting ${targetFiles.length} file(s)...`);

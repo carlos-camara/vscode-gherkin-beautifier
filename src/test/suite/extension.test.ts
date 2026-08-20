@@ -110,7 +110,7 @@ suite('migrateLegacyExecutionSettings Test Suite', () => {
     });
 
     test('Migrates global and workspace legacy behave.command', async () => {
-        const { migrateLegacyExecutionSettings } = require('../../extension');
+        const { migrateLegacyExecutionSettings } = require('../../activation/migration');
         const updateStub = sinon.stub().resolves();
         
         getConfigurationStub.withArgs('gherkinPowerTools.behave').returns({
@@ -136,7 +136,7 @@ suite('migrateLegacyExecutionSettings Test Suite', () => {
     });
 
     test('Does not migrate if command is just "behave"', async () => {
-        const { migrateLegacyExecutionSettings } = require('../../extension');
+        const { migrateLegacyExecutionSettings } = require('../../activation/migration');
         const updateStub = sinon.stub().resolves();
         
         getConfigurationStub.withArgs('gherkinPowerTools.behave').returns({
@@ -155,7 +155,7 @@ suite('migrateLegacyExecutionSettings Test Suite', () => {
     });
 
     test('Does nothing if inspection returns undefined', async () => {
-        const { migrateLegacyExecutionSettings } = require('../../extension');
+        const { migrateLegacyExecutionSettings } = require('../../activation/migration');
         const updateStub = sinon.stub().resolves();
         
         getConfigurationStub.withArgs('gherkinPowerTools.behave').returns({

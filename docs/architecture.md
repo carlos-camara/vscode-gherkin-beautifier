@@ -14,7 +14,7 @@ In earlier versions, each feature (like the Test Controller, Symbol Cache, and L
 
 ### How the Event Bus Works
 1. **Centralized Watchers (`extension.ts` and `discovery.ts`):**
-   The extension initializes exactly *one* set of VS Code file system watchers and text document listeners at the root of the extension.
+   The extension initializes exactly *one* set of VS Code file system watchers and text document listeners. These are orchestrated from the composition root (`extension.ts`) and specific services (`discovery.ts`).
 2. **Event Routing:**
    When a relevant VS Code event occurs (e.g., a `.feature` file is saved or a `step` file is modified), the root watchers convert it into a strongly typed `WorkspaceEvent` (e.g., `featureFileChanged` or `stepFileDeleted`).
 3. **Publishing:**
@@ -45,7 +45,7 @@ To mitigate command injection vulnerabilities and protect users from malicious w
 ### Performance Characteristics
 - **Debounced Updates**: Groups rapid file system events (e.g. typing or git checkouts) into 300ms windows to prevent thrashing.
 - **Incremental Indexing**: Uses a diffing algorithm (via `computeDiff()`) so that only new, modified, or deleted Python files trigger regex extraction. Unchanged files are skipped entirely.
-- **Case-Insensitive URI Normalization**: Enforces strict `toLowerCase()` transformation natively within `getCanonicalUri()` before indexing and retrieval. This cross-platform architectural design ensures resilient behaviour on macOS and Windows file systems, preventing duplicate keys or cache misses.
+- **Resource Identity Canonicalization**: Utilizes the `ResourceIdentity` abstraction to determine canonical URIs dynamically. It correctly enforces case-sensitivity on Linux, WSL, and remote filesystems, while safely applying case-insensitive lowercasing only on macOS and Windows. This prevents duplicate keys and collision bugs across different operating systems.
 - **Garbage Collection**: Deletes stale `StepDefinition` instances from memory when their parent file is deleted or when the workspace changes.
 
 ### Live Step Tracking
@@ -91,9 +91,16 @@ To ensure long-term stability and prevent regressions in these core architectura
 
 ## Deferred Activation Lifecycle
 
-To optimize VS Code startup time and ensure extension stability, Gherkin PowerTools delays the initialization of heavy components (such as caches, indexes, and workspace graph traversal) and the registration of file watchers.
+To optimize VS Code startup time and ensure extension stability, Gherkin PowerTools employs a minimal composition root pattern in `extension.ts` and delegates capability registration to specialized modules (`src/activation/*`). It delays the initialization of heavy components (such as caches, indexes, and workspace graph traversal) and the registration of file watchers.
 
 This process is strictly orchestrated by the `DeferredBootstrap` component, which replaces simple and unsafe timeouts with a deterministic, cancellable state machine.
+
+### Activation Submodules
+The extension bootstrap is broken down into clean submodules under `src/activation/`:
+1. **`migration.ts`**: Handles graceful upgrades of legacy settings (e.g. `behave.command`).
+2. **`contextService.ts`**: Configures internal VS Code "when" contexts for dynamic UI.
+3. **`commands.ts`**: Registers all user-facing Command Palette commands.
+4. **`walkthrough.ts`**: Manages the one-time first-run onboarding experience.
 
 ### Lifecycle Diagram
 
@@ -103,43 +110,70 @@ sequenceDiagram
     participant Extension
     participant DeferredBootstrap
     participant CancellationToken
-    participant Caches
     participant Watchers
-    
+    participant Caches
+
     VSCode->>Extension: activate()
     Extension->>DeferredBootstrap: new()
     Extension->>DeferredBootstrap: start(2000)
     Extension-->>VSCode: Promise<void> resolved
-    
+
     alt Normal Execution
         Note over DeferredBootstrap: 2 seconds pass
-        DeferredBootstrap->>Caches: Promise.all([ensureInitialized...])
-        Caches-->>DeferredBootstrap: Resolved
         DeferredBootstrap->>CancellationToken: isCancellationRequested?
-        DeferredBootstrap->>Watchers: createFileSystemWatcher()
-        Note over DeferredBootstrap: Watchers stored in Bootstrap array
+        DeferredBootstrap->>Watchers: createFileSystemWatcher() (Essential, Sync)
+        Note over DeferredBootstrap: Watchers run immediately
+
+        par Capability: Symbol Cache
+            DeferredBootstrap->>Caches: runWithRetry(symbolCache)
+        and Capability: Usage Indexer
+            DeferredBootstrap->>Caches: runWithRetry(usageIndexer)
+        and Capability: Feature Cache
+            DeferredBootstrap->>Caches: runWithRetry(featureCache)
+        end
+
+        Caches-->>DeferredBootstrap: Settled (Ready or Failed)
+        Note over DeferredBootstrap: Capability state updated
+
     else Cancelled (VSCode deactivates)
         VSCode->>DeferredBootstrap: dispose()
         DeferredBootstrap->>CancellationToken: cancel()
-        DeferredBootstrap->>DeferredBootstrap: clearTimeout()
-        DeferredBootstrap->>Watchers: dispose()
+        DeferredBootstrap->>DeferredBootstrap: cleanup()
     end
 ```
 
+### Capability-Based Fault Isolation
+To ensure high availability of critical services (like file watchers), the initialization process is broken down into isolated **Capabilities**.
+- **Essential Capabilities** (e.g., File Watchers, Event Bus): Run synchronously. If they fail, the error is logged, but they don't halt other services.
+- **Optional Capabilities** (e.g., Feature Cache, Usage Indexer): Initialized concurrently. A failure in an optional capability does not affect essential systems.
+- **Dependent Capabilities** (e.g., Workspace Graph): Only execute if their parent (Symbol Cache) initializes successfully.
+
 ### Safety & Idempotency
-- **Cancellable Contexts**: If the extension is deactivated before the timeout fires or while caches are initializing, the internal `CancellationToken` aborts the operation safely, preventing orphan `FileSystemWatcher` instances.
-- **Fail-Safe Cleanup**: If any component fails to initialize (e.g., throwing an error during parsing), the Bootstrap sequence safely halts and cleans up any partially created resources, avoiding memory leaks.
-- **Single Ownership**: All deferred subscriptions are centrally tracked and disposed of by the `DeferredBootstrap` instance.
+- **Bounded Exponential Retries**: I/O-bound caches utilize a `runWithRetry` helper. They automatically recover from transient read errors (up to 3 attempts with exponential backoff) without causing retry storms.
+- **Cancellable Contexts**: The internal `CancellationToken` is checked at every step—before tasks start, during retries, and before chaining dependent tasks—preventing orphan subscriptions if VS Code deactivates early.
+- **Fail-Safe Cleanup**: The state machine tracks every capability (`pending`, `running`, `ready`, `failed`, `cancelled`). Single-capability failures isolate their state, keeping the overall extension responsive.
 
 ## Workspace Relationship Graph
 
 To enable instantaneous, O(1) semantic queries across massive projects, the extension introduces the **Workspace Relationship Graph** (`WorkspaceGraph`).
 
+### VFS URI Canonicalization (Cross-Platform Matcher)
+VS Code URIs (`document.uri.toString()`) inherently preserve the filesystem casing (e.g. `/Users/carlos/...` vs `/users/carlos/...`), which poses a massive risk for dictionary/map lookups during graph traversal on case-insensitive operating systems (macOS, Windows).
+The `WorkspaceGraph` completely mitigates this by abstracting all VFS interactions through a strict `ResourceIdentity.getCanonicalUriString()` resolver, ensuring that nodes are strictly mapped and queries are seamlessly resolved despite underlying platform case idiosyncrasies.
+
+### Transactional & Immutable Generation Model
+To prevent race conditions during heavy background indexing and ensure dependent services query a stable state, the graph operates on a strictly **transactional model** utilizing an immutable generation container (`WorkspaceGraphGeneration`).
+
+1. **Immutable Reads (`currentGeneration`):** All access to graph data (nodes, steps, usages) is performed through `graph.currentGeneration`. This guarantees that readers—such as the Test Explorer, Language Server providers, or Impact Analyzer—observe a consistent snapshot of the graph that cannot mutate during a read cycle.
+2. **Atomic Writes (`executeTransaction`):** Any modification to the graph (adding files, updating step definitions) must happen inside an `executeTransaction` block. This block creates a mutable clone of the graph's internal state.
+3. **Concurrency Isolation:** The transaction mechanism uses a `commitMutex` to ensure writes are serialized. Crucially, if a newer file update supersedes a pending transaction (detected via `updateRequests`), the stale transaction is safely dropped, preventing out-of-order writes from corrupting the graph.
+4. **Failure Safety:** If an error occurs during parsing or inside a transaction block, the transaction is cleanly aborted, and the last known-good `currentGeneration` remains entirely unaffected.
+
 ### How the Graph Works
-1. **Incremental, Event-Driven Construction:** Subscribes to the `WorkspaceEventBus`. When a Gherkin document or Python step file is changed, the graph updates only the affected nodes.
+1. **Incremental, Event-Driven Construction:** Subscribes to the `WorkspaceEventBus`. When a Gherkin document or Python step file is changed, the graph updates only the affected nodes via `executeTransaction`.
 2. **Zero-Overhead Parsing:** Instead of re-parsing text, it natively consumes the memoized AST from the `AstRepository` and the pre-indexed symbols from the `SymbolCache`.
 3. **Semantic Mapping:** The graph establishes bi-directional edges between Gherkin steps and Python step definitions (`StepNode` <-> `StepDefNode`), and tracks Tag inheritance downwards to Scenarios. Crucially, it tracks `semanticType` (Given/When/Then) context for continuation keywords (`And`, `But`), preventing ambiguous step errors when distinct step definitions share the same regex.
-4. **O(1) Queries:** Powers ultra-fast operations like `getUsages`, `getReferences`, `getImpactedScenarios`, and `getDuplicateImplementations` without iterating over regex patterns on every hover or go-to-definition request.
+4. **O(1) Queries & Known Mutation Limits:** Powers ultra-fast operations like `getUsages`, `getReferences`, `getImpactedScenarios`, and `getDuplicateImplementations` without iterating over regex patterns on every hover or go-to-definition request. However, graph mutation during massive file changes (e.g. branch switches in 5,000+ step workspaces) currently scales at O(N²) due to full-workspace regex re-evaluations. Algorithmic optimizations to introduce Resource-to-Node IDs and Semantic Prefix indexing are planned to eliminate this bottleneck.
 5. **Dashboard Webviews:** The graph directly powers the Gherkin Health Dashboard. The backend queries the graph for complexity metrics, tag distributions, unused, duplicated, and ambiguous nodes, serializes them into a JSON payload, and injects them into an HTML Webview.
    Standard VS Code message passing (`acquireVsCodeApi().postMessage`) bridges the UI clicks back to the extension host to trigger `vscode.window.showTextDocument` for interactive file navigation.
    The extension also uses `MetricsHistory` to persist a lightweight snapshot of the metrics securely inside VS Code's `ExtensionContext.workspaceState`. This local storage enables the dashboard to render Historical Trend Analysis charts using Chart.js without sending any data off the machine.

@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { logger } from './logger';
 import { discoveryService } from './discovery';
+import { featureDiscoveryService } from './featureDiscovery';
 import { astRepository } from './ast';
 import { parsePythonDecorators } from './tokenizer';
 import type { Tag, Scenario } from '@cucumber/messages';
 import { WorkspaceEventBus } from './eventBus';
+import { ResourceIdentity } from './utils/resourceIdentity';
 export interface StepDefinition {
     type: 'given' | 'when' | 'then' | 'step';
     rawPattern: string;
@@ -17,6 +19,7 @@ export interface StepDefinition {
     functionName?: string;
     documentation?: string;
     uri: vscode.Uri;
+    staticPrefix?: string;
 }
 
 type CacheState = 'uninitialized' | 'initializing' | 'ready' | 'failed';
@@ -24,20 +27,17 @@ type CacheState = 'uninitialized' | 'initializing' | 'ready' | 'failed';
 export class SymbolCache {
     // Map of file URI string to a list of step definitions in that file
     private cache: Map<string, StepDefinition[]> = new Map();
+    // Global indexes for O(1)/fast lookups
+    private prefixBuckets: Map<string, StepDefinition[]> = new Map();
+    private semanticBuckets: Record<'given'|'when'|'then'|'step', StepDefinition[]> = { given: [], when: [], then: [], step: [] };
+    private wildcardBucket: StepDefinition[] = [];
     public state: CacheState = 'uninitialized';
     private initPromise: Promise<void> | null = null;
     private eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
 
     private getCanonicalUri(uri: vscode.Uri | string): string {
-        const uriStr = typeof uri === 'string' ? uri : uri.toString();
-        const lowerUriStr = uriStr.toLowerCase();
-        for (const existingKey of this.cache.keys()) {
-            if (existingKey.toLowerCase() === lowerUriStr) {
-                return existingKey;
-            }
-        }
-        return uriStr;
+        return ResourceIdentity.getCanonicalUriString(uri);
     }
 
     /**
@@ -68,6 +68,9 @@ export class SymbolCache {
 
     public clear(): void {
         this.cache.clear();
+        this.prefixBuckets.clear();
+        this.semanticBuckets = { given: [], when: [], then: [], step: [] };
+        this.wildcardBucket = [];
         this.state = 'uninitialized';
         this.initPromise = null;
     }
@@ -81,7 +84,7 @@ export class SymbolCache {
         if (this.state === 'initializing' || this.state === 'ready') {
             return this.initPromise!;
         }
-        
+
         this.state = 'initializing';
         this.initPromise = (async () => {
             try {
@@ -95,7 +98,7 @@ export class SymbolCache {
                 logger.error('Error initializing symbol cache:', err);
             }
         })();
-        
+
         return this.initPromise;
     }
 
@@ -103,14 +106,14 @@ export class SymbolCache {
 
     public async updateFile(uri: vscode.Uri): Promise<void> {
         const uriString = this.getCanonicalUri(uri);
-        
+
         return new Promise<void>((resolve) => {
             const existing = this.updateDebounce.get(uriString);
             if (existing) {
                 clearTimeout(existing.timeout);
                 existing.resolves.push(resolve);
             }
-            
+
             const resolves = existing ? existing.resolves : [resolve];
 
             const timeout = setTimeout(async () => {
@@ -175,7 +178,7 @@ export class SymbolCache {
                                 functionName = defMatch[1];
                                 const defStartLine = j;
                                 const defStartCol = lines[j].indexOf('def ');
-                                
+
                                 let currentLineIdx = j;
                                 let functionSignature = aheadLine;
                                 while (!functionSignature.endsWith(':') && currentLineIdx + 1 < lines.length) {
@@ -183,12 +186,12 @@ export class SymbolCache {
                                     const nextLine = lines[currentLineIdx].trim();
                                     functionSignature += ' ' + nextLine;
                                 }
-                                
+
                                 functionRange = new vscode.Range(
                                     defStartLine, Math.max(0, defStartCol),
                                     currentLineIdx, lines[currentLineIdx].length
                                 );
-                                
+
                                 for (let k = currentLineIdx + 1; k < Math.min(currentLineIdx + 10, lines.length); k++) {
                                     const docLine = lines[k].trim();
                                     if (docLine.startsWith('"""') || docLine.startsWith("'''")) {
@@ -238,6 +241,12 @@ export class SymbolCache {
                         }
                     }
 
+                    let staticPrefix: string | undefined;
+                    const firstWordMatch = rawPattern.match(/^([a-zA-Z0-9_\-]+)/);
+                    if (firstWordMatch && firstWordMatch[1].length > 0) {
+                        staticPrefix = firstWordMatch[1].toLowerCase();
+                    }
+
                     definitions.push({
                         type: stepType,
                         rawPattern,
@@ -249,11 +258,13 @@ export class SymbolCache {
                         functionRange,
                         functionName,
                         documentation,
-                        uri
+                        uri,
+                        staticPrefix
                     });
             }
 
             this.cache.set(this.getCanonicalUri(uri), definitions);
+            this.rebuildIndexes();
             this.eventBus?.publish({ type: 'stepDefinitionsUpdated', uri });
         } catch (err) {
             logger.error(`Error updating cache for file ${uri.fsPath}:`, err);
@@ -270,19 +281,59 @@ export class SymbolCache {
             this.updateDebounce.delete(uriString);
         }
         this.cache.delete(uriString);
+        this.rebuildIndexes();
+    }
+
+    private rebuildIndexes(): void {
+        this.prefixBuckets.clear();
+        this.semanticBuckets = { given: [], when: [], then: [], step: [] };
+        this.wildcardBucket = [];
+
+        for (const [_, definitions] of this.cache) {
+            for (const def of definitions) {
+                // Add to semantic buckets
+                if (def.type === 'given' || def.type === 'when' || def.type === 'then' || def.type === 'step') {
+                    this.semanticBuckets[def.type].push(def);
+                }
+
+                // Add to prefix bucket
+                if (def.staticPrefix) {
+                    let bucket = this.prefixBuckets.get(def.staticPrefix);
+                    if (!bucket) {
+                        bucket = [];
+                        this.prefixBuckets.set(def.staticPrefix, bucket);
+                    }
+                    bucket.push(def);
+                } else {
+                    this.wildcardBucket.push(def);
+                }
+            }
+        }
     }
 
     public async getStepDefinitions(stepText: string, semanticType?: 'given' | 'when' | 'then' | 'step'): Promise<StepDefinition[]> {
         await this.ensureInitialized();
         const matches: StepDefinition[] = [];
-        for (const [_, definitions] of this.cache) {
-            for (const def of definitions) {
-                if (semanticType && semanticType !== 'step' && def.type !== 'step' && def.type !== semanticType) {
-                    continue;
-                }
-                if (def.evaluable && def.regex && def.regex.test(stepText)) {
-                    matches.push(def);
-                }
+
+        let candidates: StepDefinition[] = [];
+
+        const firstWordMatch = stepText.match(/^([a-zA-Z0-9_\-]+)/);
+        const prefix = firstWordMatch && firstWordMatch[1].length > 0 ? firstWordMatch[1].toLowerCase() : undefined;
+
+        if (prefix) {
+            const bucket = this.prefixBuckets.get(prefix);
+            if (bucket) {
+                candidates = candidates.concat(bucket);
+            }
+        }
+        candidates = candidates.concat(this.wildcardBucket);
+
+        for (const def of candidates) {
+            if (semanticType && semanticType !== 'step' && def.type !== 'step' && def.type !== semanticType) {
+                continue;
+            }
+            if (def.evaluable && def.regex && def.regex.test(stepText)) {
+                matches.push(def);
             }
         }
         return matches;
@@ -290,16 +341,16 @@ export class SymbolCache {
 
     public async getAllStepDefinitions(semanticType?: 'given' | 'when' | 'then' | 'step'): Promise<StepDefinition[]> {
         await this.ensureInitialized();
-        const definitions: StepDefinition[] = [];
-        for (const [_, defs] of this.cache) {
-            for (const def of defs) {
-                if (semanticType && semanticType !== 'step' && def.type !== 'step' && def.type !== semanticType) {
-                    continue;
-                }
-                definitions.push(def);
-            }
+        if (semanticType && semanticType !== 'step') {
+            return [...this.semanticBuckets[semanticType], ...this.semanticBuckets.step];
         }
-        return definitions;
+
+        return [
+            ...this.semanticBuckets.given,
+            ...this.semanticBuckets.when,
+            ...this.semanticBuckets.then,
+            ...this.semanticBuckets.step
+        ];
     }
 }
 
@@ -320,14 +371,7 @@ export class FeatureCache {
     private eventBusDisposable?: vscode.Disposable;
 
     private getCanonicalUri(uri: vscode.Uri | string): string {
-        const uriStr = typeof uri === 'string' ? uri : uri.toString();
-        const lowerUriStr = uriStr.toLowerCase();
-        for (const existingKey of this.fileTagCounts.keys()) {
-            if (existingKey.toLowerCase() === lowerUriStr) {
-                return existingKey;
-            }
-        }
-        return uriStr;
+        return ResourceIdentity.getCanonicalUriString(uri);
     }
 
     /**
@@ -354,7 +398,7 @@ export class FeatureCache {
         this.state = 'initializing';
         this.initPromise = (async () => {
             try {
-                const featureFiles = await vscode.workspace.findFiles('**/*.feature', '**/node_modules/**');
+                const featureFiles = await featureDiscoveryService.getFeatureFiles();
                 for (const file of featureFiles) {
                     await this.updateFile(file);
                 }
@@ -365,20 +409,20 @@ export class FeatureCache {
                 logger.error('Error initializing feature cache:', err);
             }
         })();
-        
+
         return this.initPromise;
     }
 
     public async updateFile(uri: vscode.Uri): Promise<void> {
         const uriString = this.getCanonicalUri(uri);
-        
+
         return new Promise<void>((resolve) => {
             const existing = this.updateDebounce.get(uriString);
             if (existing) {
                 clearTimeout(existing.timeout);
                 existing.resolves.push(resolve);
             }
-            
+
             const resolves = existing ? existing.resolves : [resolve];
 
             const timeout = setTimeout(async () => {
@@ -486,13 +530,13 @@ export class FeatureCache {
 
         let featureTags: string[] = [];
         let ruleTags: string[] = [];
-        let currentTags: string[] = []; 
+        let currentTags: string[] = [];
         let currentScenarioTags: string[] = [];
-        
+
         let isInsideExamples = false;
         let exampleHeaderSeen = false;
         let isFirstExamplesBlock = false;
-        
+
         const addTags = (tags: string[], count: number) => {
             for (const tag of tags) {
                 tagCounts.set(tag, (tagCounts.get(tag) || 0) + count);
@@ -542,7 +586,7 @@ export class FeatureCache {
                 currentTags = [];
             }
         }
-        
+
         for (const [tag, count] of tagCounts.entries()) {
             if (count <= 0) tagCounts.delete(tag);
         }

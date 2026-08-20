@@ -193,6 +193,7 @@ suite('createStepDefinition Test Suite', () => {
     });
 
     test('Shows error message if no workspace is opened', async () => {
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => undefined });
         let errorMessage = '';
         discoveryService.getStepFiles = async () => [];
         (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
@@ -203,18 +204,60 @@ suite('createStepDefinition Test Suite', () => {
         assert.strictEqual(errorMessage, 'Please open a workspace to create step definitions.');
     });
 
+
+    test('Shows QuickPick for ambiguous URI in multi-root workspace and aborts if cancelled', async () => {
+        let quickPickShown = false;
+        discoveryService.getStepFiles = async () => [];
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => [{ uri: vscode.Uri.file('/folder1'), name: 'folder1', index: 0 }, { uri: vscode.Uri.file('/folder2'), name: 'folder2', index: 1 }] });
+        discoveryService.getBestWorkspaceFolder = () => undefined;
+
+        (vscode.window as any).showQuickPick = async (_items: any[]) => {
+            quickPickShown = true;
+            return undefined; // simulate cancel
+        };
+
+        const result = await createStepDefinition('step', 'Given');
+        assert.strictEqual(quickPickShown, true);
+        assert.strictEqual(result, undefined);
+    });
+
+    test('Shows QuickPick for ambiguous URI in multi-root workspace and uses selected folder', async () => {
+        let quickPickShown = false;
+        let infoMessage = '';
+        discoveryService.getStepFiles = async () => [];
+
+        const folder1 = { uri: vscode.Uri.file('/folder1'), name: 'folder1', index: 0 };
+        const folder2 = { uri: vscode.Uri.file('/folder2'), name: 'folder2', index: 1 };
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => [folder1, folder2] });
+        discoveryService.getBestWorkspaceFolder = () => undefined;
+
+        (vscode.window as any).showQuickPick = async (items: any[]) => {
+            quickPickShown = true;
+            return items[1]; // select folder2
+        };
+
+        (vscode.window as any).showInformationMessage = async (msg: string, _action: string) => {
+            infoMessage = msg;
+            return undefined; // simulate cancel on 'Would you like to create one?'
+        };
+
+        await createStepDefinition('step', 'Given');
+        assert.strictEqual(quickPickShown, true);
+        assert.strictEqual(infoMessage.includes('Would you like to create one?'), true);
+    });
+
     test('Creates a new file if none exists and user confirms', async () => {
         let infoMessage = '';
         let directoryCreated = false;
         let editApplied = false;
 
         discoveryService.getStepFiles = async () => [];
-        (vscode.window as any).showInformationMessage = async (msg: string, action: string) => { 
+        (vscode.window as any).showInformationMessage = async (msg: string, action: string) => {
             infoMessage = msg;
             return action;
         };
         discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
-        
+
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             createDirectory: async () => { directoryCreated = true; },
             readFile: async () => { throw new Error('Not found'); }
@@ -222,9 +265,9 @@ suite('createStepDefinition Test Suite', () => {
 
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
         (vscode.workspace as any).openTextDocument = async () => createMockDocument('', 'file:///tmp/features/steps/step_definitions.py');
-        (vscode.window as any).showTextDocument = async () => ({ 
+        (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
-            revealRange: () => {} 
+            revealRange: () => {}
         } as any);
 
         await createStepDefinition('I test new file', 'Given');
@@ -238,21 +281,21 @@ suite('createStepDefinition Test Suite', () => {
         let editApplied = false;
 
         discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
-        
+
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             readFile: async () => Buffer.from("def i_test_collision(context):\n    pass\n")
         })});
 
         let insertedText = '';
-        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => { 
-            editApplied = true; 
+        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {
+            editApplied = true;
             insertedText = edit.entries()[0][1][0].newText;
-            return true; 
+            return true;
         };
         (vscode.workspace as any).openTextDocument = async () => createMockDocument('', 'file:///tmp/file1.py');
-        (vscode.window as any).showTextDocument = async () => ({ 
+        (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
-            revealRange: () => {} 
+            revealRange: () => {}
         } as any);
 
         await createStepDefinition('I test collision', 'Given');
@@ -268,7 +311,7 @@ suite('createStepDefinition Test Suite', () => {
             vscode.Uri.file('/tmp/file1.py'),
             vscode.Uri.file('/tmp/file2.py')
         ];
-        
+
         let quickPickItems: any[] = [];
         (vscode.window as any).showQuickPick = async (items: any[]) => {
             quickPickItems = items;
@@ -280,15 +323,15 @@ suite('createStepDefinition Test Suite', () => {
         })});
 
         let targetFileStr = '';
-        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => { 
+        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {
             editApplied = true;
             targetFileStr = edit.entries()[0][0].toString();
-            return true; 
+            return true;
         };
         (vscode.workspace as any).openTextDocument = async () => createMockDocument('', 'file:///tmp/file2.py');
-        (vscode.window as any).showTextDocument = async () => ({ 
+        (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
-            revealRange: () => {} 
+            revealRange: () => {}
         } as any);
 
         await createStepDefinition('I test multiple files', 'Given');
@@ -304,7 +347,7 @@ suite('createStepDefinition Test Suite', () => {
             vscode.Uri.file('/tmp/file1.py'),
             vscode.Uri.file('/tmp/file2.py')
         ];
-        
+
         (vscode.window as any).showQuickPick = async () => undefined; // Cancel
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
 
@@ -328,16 +371,16 @@ suite('createStepDefinition Test Suite', () => {
     test('Uses fileContent fallback if openTextDocument throws', async () => {
         let editApplied = false;
         discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
-        
+
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             readFile: async () => Buffer.from("def dummy():\n    pass\n")
         })});
 
         let insertedText = '';
-        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => { 
-            editApplied = true; 
+        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {
+            editApplied = true;
             insertedText = edit.entries()[0][1][0].newText;
-            return true; 
+            return true;
         };
 
         let openCallCount = 0;
@@ -351,10 +394,10 @@ suite('createStepDefinition Test Suite', () => {
                 return createMockDocument('', 'file:///tmp/file1.py');
             }
         };
-        
-        (vscode.window as any).showTextDocument = async () => ({ 
+
+        (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
-            revealRange: () => {} 
+            revealRange: () => {}
         } as any);
 
         await createStepDefinition('I test fallback doc', 'Given');
@@ -415,6 +458,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         discoveryService.getStepFiles = async () => [];
         (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
         discoveryService.getBestWorkspaceFolder = () => undefined;
+        Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => undefined });
 
         await batchCreateStepDefinitions([{text: 'step', keyword: 'Given'}]);
         assert.strictEqual(errorMessage, 'Please open a workspace to create step definitions.');
@@ -454,22 +498,22 @@ suite('batchCreateStepDefinitions Test Suite', () => {
             vscode.Uri.file('/tmp/file2.py')
         ];
         (vscode.window as any).showQuickPick = async (items: any[]) => items[0]; // Select first file
-        
+
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             readFile: async () => Buffer.from("def dummy():\n    pass\n")
         })});
 
         let insertedText = '';
-        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => { 
-            editApplied = true; 
+        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {
+            editApplied = true;
             insertedText = edit.entries()[0][1][0].newText;
-            return true; 
+            return true;
         };
 
         (vscode.workspace as any).openTextDocument = async () => createMockDocument('', 'file:///tmp/file1.py');
-        (vscode.window as any).showTextDocument = async () => ({ 
+        (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
-            revealRange: () => {} 
+            revealRange: () => {}
         } as any);
         (vscode.window as any).showInformationMessage = async () => {};
 
@@ -494,26 +538,26 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         let insertedText = '';
 
         discoveryService.getStepFiles = async () => [];
-        (vscode.window as any).showInformationMessage = async (_msg: string, action: string) => { 
+        (vscode.window as any).showInformationMessage = async (_msg: string, action: string) => {
             if (action) return action; // Return the create action
             return undefined;
         };
         discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
-        
+
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             createDirectory: async () => { directoryCreated = true; },
             readFile: async () => { throw new Error('Not found'); }
         })});
 
-        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => { 
-            editApplied = true; 
+        (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {
+            editApplied = true;
             insertedText = edit.entries()[0][1][0].newText;
-            return true; 
+            return true;
         };
         (vscode.workspace as any).openTextDocument = async () => createMockDocument('', 'file:///tmp/features/steps/step_definitions.py');
-        (vscode.window as any).showTextDocument = async () => ({ 
+        (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
-            revealRange: () => {} 
+            revealRange: () => {}
         } as any);
 
         await batchCreateStepDefinitions([

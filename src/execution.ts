@@ -377,13 +377,18 @@ export async function runBehaveForTestRun(
     token: vscode.CancellationToken,
     onEvent?: (event: any) => void
 ): Promise<number | null> {
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!workspaceFolder) {
+        onOutput('\r\n\x1b[31mError: Cannot run Behave against a file outside of a workspace folder.\x1b[0m\r\n');
+        return null;
+    }
+
     const details = await resolveBehaveExecutionDetails(uri, line, configService);
     if (!details) {
         return null;
     }
 
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-    const cwd = workspaceFolder ? workspaceFolder.uri.fsPath : path.dirname(uri.fsPath);
+    const cwd = workspaceFolder.uri.fsPath;
 
     // Inject custom formatter for real-time updates
     const assetsPath = path.join(__dirname, '..', 'assets');

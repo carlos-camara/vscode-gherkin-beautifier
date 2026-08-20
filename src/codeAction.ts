@@ -52,19 +52,19 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 }
             } else if (diagnostic.code === 'UNDEFINED_STEP') {
                 const action = new vscode.CodeAction('Create empty step definition', vscode.CodeActionKind.QuickFix);
-                
+
                 // Retrieve the keyword from relatedInformation
                 const keyword = diagnostic.relatedInformation && diagnostic.relatedInformation.length > 0
                     ? diagnostic.relatedInformation[0].message
                     : 'step';
-                
+
                 let pyKeyword = keyword.toLowerCase().trim();
                 const dialect = dialectService.getDialect(document);
-                
+
                 const andKeywords = dialect.and.map(k => k.trim().toLowerCase());
                 const butKeywords = dialect.but.map(k => k.trim().toLowerCase());
                 const isContinuation = andKeywords.includes(pyKeyword) || butKeywords.includes(pyKeyword) || pyKeyword === '*';
-                
+
                 // Resolve semantic keyword if it's a continuation
                 if (isContinuation) {
                     pyKeyword = dialectService.resolveAndBut(document, diagnostic.range.start.line);
@@ -182,8 +182,28 @@ export async function createStepDefinition(stepText: string, keyword: string, do
 
     if (pyFiles.length === 0) {
         // Find workspace folder
-        const workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : discoveryService.getBestWorkspaceFolder(vscode.Uri.file('/'));
-            
+        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
+
+        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            if (vscode.workspace.workspaceFolders.length === 1) {
+                workspaceFolder = vscode.workspace.workspaceFolders[0];
+            } else {
+                const items = vscode.workspace.workspaceFolders.map(folder => ({
+                    label: folder.name,
+                    description: folder.uri.fsPath,
+                    folder: folder
+                }));
+                const selection = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select a workspace folder to create step definitions in'
+                });
+                if (selection) {
+                    workspaceFolder = selection.folder;
+                } else {
+                    return undefined;
+                }
+            }
+        }
+
         if (!workspaceFolder) {
             vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
             return undefined;
@@ -212,7 +232,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
             label: vscode.workspace.asRelativePath(uri),
             uri: uri
         }));
-        
+
         const selection = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select a Python file to append the step definition to'
         });
@@ -236,7 +256,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
         const { pattern, funcArgs } = extractStepParameters(stepText);
         const safeString = serializeToPythonString(pattern);
         const baseFuncName = generateStepFunctionName(stepText);
-        
+
         let funcName = baseFuncName;
         let suffix = 1;
         while (new RegExp(`^def\\s+${funcName}\\s*\\(`, 'm').test(fileContent)) {
@@ -282,7 +302,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
         // Let the user review the unsaved file.
         const document = await vscode.workspace.openTextDocument(targetUri);
         const editor = await vscode.window.showTextDocument(document);
-        
+
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
         editor.selection = new vscode.Selection(newEndPos, newEndPos);
         editor.revealRange(new vscode.Range(newEndPos, newEndPos));
@@ -303,7 +323,26 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
     let isNewFile = false;
 
     if (pyFiles.length === 0) {
-        const workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : discoveryService.getBestWorkspaceFolder(vscode.Uri.file('/'));
+        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
+        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            if (vscode.workspace.workspaceFolders.length === 1) {
+                workspaceFolder = vscode.workspace.workspaceFolders[0];
+            } else {
+                const items = vscode.workspace.workspaceFolders.map(folder => ({
+                    label: folder.name,
+                    description: folder.uri.fsPath,
+                    folder: folder
+                }));
+                const selection = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select a workspace folder to create step definitions in'
+                });
+                if (selection) {
+                    workspaceFolder = selection.folder;
+                } else {
+                    return undefined;
+                }
+            }
+        }
         if (!workspaceFolder) {
             vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
             return undefined;
@@ -331,7 +370,7 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
             label: vscode.workspace.asRelativePath(uri),
             uri: uri
         }));
-        
+
         const selection = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select a Python file to append the step definitions to'
         });
@@ -364,10 +403,10 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
 
         for (const step of steps) {
             const { pattern, funcArgs } = extractStepParameters(step.text);
-            
+
             // Avoid generating duplicate patterns in the same batch or if they already exist
             if (generatedPatterns.has(pattern)) continue;
-            
+
             // Check if it already exists in the file (basic check)
             const safeString = serializeToPythonString(pattern);
             if (fileContent.includes(safeString)) {
@@ -424,7 +463,7 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
 
         const document = await vscode.workspace.openTextDocument(targetUri);
         const editor = await vscode.window.showTextDocument(document);
-        
+
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
         editor.selection = new vscode.Selection(newEndPos, newEndPos);
         editor.revealRange(new vscode.Range(newEndPos, newEndPos));

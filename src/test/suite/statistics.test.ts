@@ -48,6 +48,7 @@ suite('Project Health Dashboard Test Suite', () => {
             undefinedSteps: [],
             tagFrequencies: [{ name: '@smoke', count: 3, files: [] }],
             stepAnalysis: { totalStepDefs: 1, unusedSteps: [], duplicatedSteps: [], ambiguousSteps: [] },
+            parseErrors: [],
             scores: {
                 complexity: 20,
                 maintainability: 95,
@@ -144,13 +145,16 @@ suite('Project Health Dashboard Test Suite', () => {
         ];
 
         const mockGraph: any = {
-            getAllNodes: () => allNodes,
-            getAllStepDefNodes: () => [
-                { id: 'def1', pattern: 'step 1', usages: ['s1', 's5'] },
-                { id: 'def2', pattern: 'step 2', usages: ['s3', 's4'] },
-                { id: 'def3', pattern: 'unused step', usages: [] } // unused
-            ],
-            getAllStepNodes: () => f1Steps
+            currentGeneration: {
+                getAllNodes: () => allNodes,
+                getAllStepDefNodes: () => [
+                    { id: 'def1', pattern: 'step 1', usages: ['s1', 's5'] },
+                    { id: 'def2', pattern: 'step 2', usages: ['s3', 's4'] },
+                    { id: 'def3', pattern: 'unused step', usages: [] } // unused
+                ],
+                getAllStepNodes: () => f1Steps,
+                parseErrors: new Map()
+            }
         };
 
         const mockSymbolCache: any = {

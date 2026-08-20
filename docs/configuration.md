@@ -112,6 +112,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:**
   ```json
   {
+      "syntax-errors": "error",
       "oversized-scenario": "warning",
       "oversized-feature": "info",
       "duplicated-steps": "error",
@@ -128,6 +129,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 ---
 
 ## Behave Discovery & Execution Settings
+
+### `gherkinPowerTools.featureGlobs`
+- **Purpose:** Glob patterns used to discover Gherkin feature files. These patterns drive diagnostics, health statistics, and the test explorer.
+- **Type:** `array` of strings
+- **Default:** `["**/*.feature"]`
 
 ### `gherkinPowerTools.behave.stepGlobs`
 - **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, and Linting.

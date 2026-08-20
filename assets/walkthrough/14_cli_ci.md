@@ -4,9 +4,14 @@ Once installed, you can integrate the CLI into any CI provider (GitHub Actions, 
 
 ## Usage
 
-Check your entire project:
+Check your entire project for anti-patterns and health metrics:
 ```bash
-gherkin-pt check .
+npx @carlos-camara/gherkin-pt analyze
+```
+
+Check your project for formatting violations:
+```bash
+npx @carlos-camara/gherkin-pt format --check
 ```
 
 The CLI automatically reads your `.gherkin-powertoolsrc.json` (or `.vscode/settings.json`) to apply the exact same formatting rules and allowed linters you use locally.
@@ -27,5 +32,7 @@ jobs:
         with:
           node-version: 18
       - name: Gherkin PowerTools Check
-        run: npx @carlos-camara/gherkin-pt check features/
+        run: |
+          npx @carlos-camara/gherkin-pt format --check
+          npx @carlos-camara/gherkin-pt analyze
 ```

@@ -3,8 +3,14 @@ import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
 
 export class BehaveFileDiscoveryService {
+    private pendingEvents = new Map<string, { type: 'create' | 'change' | 'delete', timer: NodeJS.Timeout }>();
+    private activeGlobs = new Map<string, { stepGlobs: string[], ignoreGlobs: string[] }>();
+    private isRebuildingWatchers = false;
+    private fileSystemWatchers = new Map<string, vscode.FileSystemWatcher[]>();
+    public metrics = { totalEventsReceived: 0, totalEventsEmitted: 0 };
+
+    // Kept for backward compatibility if other classes access it
     private stepWatchers: vscode.FileSystemWatcher[] = [];
-    private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
     public configService?: ConfigurationService;
     private _eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
@@ -19,8 +25,7 @@ export class BehaveFileDiscoveryService {
         if (this._eventBus) {
             this.eventBusDisposable = this._eventBus.onEvent(e => {
                 if (e.type === 'configurationChanged') {
-                    this.disposeWatchers();
-                    this.setupWatchers();
+                    this.handleConfigurationChange();
                 }
             });
         }
@@ -70,7 +75,7 @@ export class BehaveFileDiscoveryService {
         if (pattern.startsWith('**/')) {
             pattern = pattern.substring(3);
         }
-        
+
         let regexStr = '';
         for (let i = 0; i < pattern.length; i++) {
             if (pattern.substring(i, i + 3) === '/**' && (i + 3 === pattern.length || pattern[i + 3] === '/')) {
@@ -140,7 +145,7 @@ export class BehaveFileDiscoveryService {
 
     public async getStepFiles(): Promise<vscode.Uri[]> {
         const fileMap = new Map<string, vscode.Uri>();
-        
+
         if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
             // No workspace folders, fallback to global
             const stepGlobs = this.getStepGlobs(undefined);
@@ -171,66 +176,139 @@ export class BehaveFileDiscoveryService {
                 }
             }
         }
-        
+
         return Array.from(fileMap.values());
     }
 
-    public debounceEvent(key: string, fn: () => void, delayMs = 100): void {
-        if (this.debounceTimers.has(key)) {
-            clearTimeout(this.debounceTimers.get(key)!);
+    public async flushEvent(uriString: string) {
+        const pending = this.pendingEvents.get(uriString);
+        if (!pending) return;
+        this.pendingEvents.delete(uriString);
+
+        const uri = vscode.Uri.parse(uriString);
+
+        try {
+            await vscode.workspace.fs.stat(uri);
+            // File exists
+            if (pending.type === 'create') {
+                this.metrics.totalEventsEmitted++;
+                this.eventBus?.publish({ type: 'stepFileCreated', uri });
+            } else if (pending.type === 'change') {
+                this.metrics.totalEventsEmitted++;
+                this.eventBus?.publish({ type: 'stepFileChanged', uri });
+            } else if (pending.type === 'delete') {
+                // Was deleted but exists? Likely an atomic save (change/delete/create). Convert to change.
+                this.metrics.totalEventsEmitted++;
+                this.eventBus?.publish({ type: 'stepFileChanged', uri });
+            }
+        } catch (e) {
+            // File does not exist
+            if (pending.type === 'delete') {
+                this.metrics.totalEventsEmitted++;
+                this.eventBus?.publish({ type: 'stepFileDeleted', uri });
+            }
+            // If create or change but it doesn't exist, ignore (transient file).
         }
+    }
+
+    public queueEvent(uri: vscode.Uri, type: 'create' | 'change' | 'delete', delayMs = 150): void {
+        this.metrics.totalEventsReceived++;
+        const uriString = uri.toString();
+        const existing = this.pendingEvents.get(uriString);
+
+        let nextType = type;
+        if (existing) {
+            clearTimeout(existing.timer);
+            // State machine reduction rules
+            if (existing.type === 'create' && type === 'change') {
+                nextType = 'create';
+            } else if (existing.type === 'create' && type === 'delete') {
+                this.pendingEvents.delete(uriString);
+                return; // cancel
+            } else if (existing.type === 'change' && type === 'change') {
+                nextType = 'change';
+            } else if (existing.type === 'change' && type === 'delete') {
+                nextType = 'delete';
+            } else if (existing.type === 'delete' && type === 'create') {
+                nextType = 'change';
+            }
+        }
+
         const timer = setTimeout(() => {
-            this.debounceTimers.delete(key);
-            fn();
+            this.flushEvent(uriString);
         }, delayMs);
-        this.debounceTimers.set(key, timer);
+
+        this.pendingEvents.set(uriString, { type: nextType, timer });
+    }
+
+    public async handleConfigurationChange() {
+        if (this.isRebuildingWatchers) return;
+        this.isRebuildingWatchers = true;
+
+        try {
+            if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+                const currentStepGlobs = this.getStepGlobs(undefined).sort().join('|');
+                const currentIgnoreGlobs = this.getIgnoreGlobs(undefined).sort().join('|');
+                const active = this.activeGlobs.get('global');
+                if (!active || active.stepGlobs.sort().join('|') !== currentStepGlobs || active.ignoreGlobs.sort().join('|') !== currentIgnoreGlobs) {
+                    this.disposeWatchersFor('global');
+                    this.setupWatchersFor(undefined, 'global');
+                }
+            } else {
+                for (const folder of vscode.workspace.workspaceFolders) {
+                    const id = folder.uri.toString();
+                    const currentStepGlobs = this.getStepGlobs(folder.uri).sort().join('|');
+                    const currentIgnoreGlobs = this.getIgnoreGlobs(folder.uri).sort().join('|');
+                    const active = this.activeGlobs.get(id);
+                    if (!active || active.stepGlobs.sort().join('|') !== currentStepGlobs || active.ignoreGlobs.sort().join('|') !== currentIgnoreGlobs) {
+                        this.disposeWatchersFor(id);
+                        this.setupWatchersFor(folder, id);
+                    }
+                }
+            }
+        } finally {
+            this.isRebuildingWatchers = false;
+        }
+    }
+
+    private disposeWatchersFor(id: string) {
+        const watchers = this.fileSystemWatchers.get(id);
+        if (watchers) {
+            watchers.forEach(w => w.dispose());
+        }
+        this.fileSystemWatchers.delete(id);
+        this.activeGlobs.delete(id);
+    }
+
+    private setupWatchersFor(folder: vscode.WorkspaceFolder | undefined, id: string) {
+        const uri = folder ? folder.uri : undefined;
+        const stepGlobs = this.getStepGlobs(uri);
+        const ignoreGlobs = this.getIgnoreGlobs(uri);
+
+        this.activeGlobs.set(id, { stepGlobs: [...stepGlobs], ignoreGlobs: [...ignoreGlobs] });
+        const watchers: vscode.FileSystemWatcher[] = [];
+
+        const wrap = (fileUri: vscode.Uri, type: 'create' | 'change' | 'delete') => {
+            if (this.isIgnored(fileUri, ignoreGlobs)) return;
+            this.queueEvent(fileUri, type);
+        };
+
+        const uniqueGlobs = Array.from(new Set(stepGlobs));
+        for (const pattern of uniqueGlobs) {
+            const watchPattern = folder ? new vscode.RelativePattern(folder, pattern) : pattern;
+            const watcher = vscode.workspace.createFileSystemWatcher(watchPattern);
+            watcher.onDidCreate(u => wrap(u, 'create'));
+            watcher.onDidChange(u => wrap(u, 'change'));
+            watcher.onDidDelete(u => wrap(u, 'delete'));
+            watchers.push(watcher);
+            this.stepWatchers.push(watcher); // keep in global list for backward compatibility if needed
+        }
+        this.fileSystemWatchers.set(id, watchers);
     }
 
     public setupWatchers(): vscode.FileSystemWatcher[] {
         this.disposeWatchers();
-
-        const wrapCreated = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
-            const ignoreGlobs = this.getIgnoreGlobs(folderUri);
-            if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`create:${uri.toString()}`, () => this.eventBus?.publish({ type: 'stepFileCreated', uri }));
-        };
-
-        const wrapChanged = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
-            const ignoreGlobs = this.getIgnoreGlobs(folderUri);
-            if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`change:${uri.toString()}`, () => this.eventBus?.publish({ type: 'stepFileChanged', uri }));
-        };
-
-        const wrapDeleted = (uri: vscode.Uri, folderUri?: vscode.Uri) => {
-            const ignoreGlobs = this.getIgnoreGlobs(folderUri);
-            if (this.isIgnored(uri, ignoreGlobs)) return;
-            this.debounceEvent(`delete:${uri.toString()}`, () => this._eventBus?.publish({ type: 'stepFileDeleted', uri }));
-        };
-        
-        if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-            const uniqueGlobs = Array.from(new Set(this.getStepGlobs(undefined)));
-            for (const pattern of uniqueGlobs) {
-                const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-                watcher.onDidCreate(uri => wrapCreated(uri));
-                watcher.onDidChange(uri => wrapChanged(uri));
-                watcher.onDidDelete(uri => wrapDeleted(uri));
-                this.stepWatchers.push(watcher);
-            }
-            return this.stepWatchers;
-        }
-
-        for (const folder of vscode.workspace.workspaceFolders) {
-            const uniqueGlobs = Array.from(new Set(this.getStepGlobs(folder.uri)));
-            for (const pattern of uniqueGlobs) {
-                const relativePattern = new vscode.RelativePattern(folder, pattern);
-                const watcher = vscode.workspace.createFileSystemWatcher(relativePattern);
-                watcher.onDidCreate(uri => wrapCreated(uri, folder.uri));
-                watcher.onDidChange(uri => wrapChanged(uri, folder.uri));
-                watcher.onDidDelete(uri => wrapDeleted(uri, folder.uri));
-                this.stepWatchers.push(watcher);
-            }
-        }
-        
+        this.handleConfigurationChange();
         return this.stepWatchers;
     }
 
@@ -240,10 +318,16 @@ export class BehaveFileDiscoveryService {
     }
 
     public disposeWatchers(): void {
-        for (const timer of this.debounceTimers.values()) {
-            clearTimeout(timer);
+        for (const pending of this.pendingEvents.values()) {
+            clearTimeout(pending.timer);
         }
-        this.debounceTimers.clear();
+        this.pendingEvents.clear();
+
+        for (const watchers of this.fileSystemWatchers.values()) {
+            watchers.forEach(w => w.dispose());
+        }
+        this.fileSystemWatchers.clear();
+        this.activeGlobs.clear();
 
         this.stepWatchers.forEach(watcher => watcher.dispose());
         this.stepWatchers = [];
@@ -259,8 +343,7 @@ export class BehaveFileDiscoveryService {
             return folder;
         }
 
-        // Fallback to the first workspace folder
-        return vscode.workspace.workspaceFolders[0];
+        return undefined;
     }
 }
 

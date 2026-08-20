@@ -28,6 +28,16 @@ You can also configure it manually in your `.vscode/settings.json` or centrally 
 ]
 ```
 
+**Feature file discovery:**
+
+Gherkin PowerTools centrally resolves all `*.feature` files using a debounced engine. If your project has thousands of feature files and you only want to parse specific folders, configure `featureGlobs`:
+
+```json
+"gherkinPowerTools.featureGlobs": [
+    "**/e2e/features/**/*.feature"
+]
+```
+
 **Exclusions:**
 
 Exclude noise (e.g. virtual environments) to keep the cache fast:
