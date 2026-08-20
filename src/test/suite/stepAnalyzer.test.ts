@@ -144,6 +144,9 @@ suite('StepAnalyzer Test Suite', () => {
         assert.strictEqual(result.ambiguousSteps[0].matchingDefs.length, 2);
     });
     test('Should handle case-insensitive URIs when identifying ambiguous steps', async () => {
+        const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+        try {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
         // Create an ambiguous step where the SymbolCache returns an uppercase URI
         const stepCase: StepNode = {
             id: 'step_case', type: 'Step', uri: 'file:///tests/test.feature', line: 10,
@@ -184,9 +187,10 @@ suite('StepAnalyzer Test Suite', () => {
         assert.strictEqual(result.ambiguousSteps.length, 1);
         assert.strictEqual(result.ambiguousSteps[0].step.text, 'a case ambiguous step');
         assert.strictEqual(result.ambiguousSteps[0].matchingDefs.length, 2);
+        } finally {
+            if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
+        }
     });
-
-
 
 
     test('Should disambiguate ambiguous steps using semantic type', async () => {

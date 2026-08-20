@@ -119,6 +119,9 @@ suite('WorkspaceGraph Test Suite', () => {
     });
 
     test('Removes nodes correctly when a file is deleted with different URI casing', async () => {
+        const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+        try {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
         const uriUpper = 'file:///TEST_CASE.feature';
         const uriLower = 'file:///test_case.feature';
 
@@ -132,6 +135,9 @@ suite('WorkspaceGraph Test Suite', () => {
         await (graph as any).removeFileAsync(uriUpper);
         const nodesAfter = graph.currentGeneration.getAllNodes().filter(n => n.uri === uriLower);
         assert.strictEqual(nodesAfter.length, 0, 'Nodes should be removed for the URI regardless of casing');
+        } finally {
+            if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
+        }
     });
 
     test('Handles cyclic or repeated updates gracefully', async () => {

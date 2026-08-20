@@ -234,6 +234,9 @@ def step_impl(
     });
 
     test('Handles URI case insensitivity for step definitions', async () => {
+        const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+        try {
+            Object.defineProperty(process, 'platform', { value: 'win32' });
         const mockPythonCode = `
 @given('I have {count} cases')
 def step_impl(context, count): pass
@@ -262,6 +265,9 @@ def step_impl(context, count): pass
         assert.strictEqual(remainingDefs.length, 0);
 
         textDocStub.restore();
+        } finally {
+            if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
+        }
     });
 
     test('Tag Blast Radius: Handles inherited tags from Feature and multiplies by Examples', async () => {
@@ -561,6 +567,12 @@ Feature: Fallback Test
             const uri1 = vscode.Uri.file(path.join(tempDir, 'CaseInsensitive.feature'));
             const uri2 = vscode.Uri.file(path.join(tempDir, 'caseinsensitive.feature')); // same file on windows
 
+            // Stub textDocuments so when updateFile(uri2) is called, it reads the content we wrote for uri1,
+            // bypassing the real filesystem read which would fail on Linux (case-sensitive) because uri2 doesn't exist.
+            const textDocStub = sinon.stub(vscode.workspace, 'textDocuments').get(() => [
+                { uri: uri2, getText: () => fs.readFileSync(uri1.fsPath, 'utf8') }
+            ]);
+
             fs.writeFileSync(uri1.fsPath, '@tag1\nFeature: one\n  Scenario: S1\n    Given step');
             await featureCache.updateFile(uri1);
             assert.strictEqual(await featureCache.getTagBlastRadius('@tag1'), 1);
@@ -574,6 +586,7 @@ Feature: Fallback Test
 
             await featureCache.removeFile(uri1);
             assert.strictEqual(await featureCache.getTagBlastRadius('@tag2'), 0, 'Removing via any case variation should delete the cache entry');
+            textDocStub.restore();
         } finally {
             if (originalPlatform) {
                 Object.defineProperty(process, 'platform', originalPlatform);
