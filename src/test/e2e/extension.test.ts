@@ -88,7 +88,7 @@ suite('E2E UI Test Suite', () => {
             setTimeout(() => {
                 disposable.dispose();
                 resolve(vscode.languages.getDiagnostics(document.uri));
-            }, 3000);
+            }, 8000);
         });
 
         await editor.edit(editBuilder => {
@@ -99,8 +99,7 @@ suite('E2E UI Test Suite', () => {
         });
 
         const diagnostics = await diagnosticsPromise;
-        
-        
+        console.log("DIAGNOSTICS ON BAD GHERKIN:", diagnostics.length, JSON.stringify(diagnostics.map(d => ({ code: d.code, msg: d.message }))));
         assert.ok(diagnostics.length > 0, 'Linter failed to generate diagnostics for bad syntax');
         const hasSyntaxError = diagnostics.some(d => d.message.includes('Expected') || d.message.includes('EOF') || d.message.includes('Misspelled') || d.message.includes('Invalid'));
         assert.ok(hasSyntaxError, 'Linter did not detect the syntax error');
@@ -417,23 +416,48 @@ Feature: Tags
     });
 
     test('Simulate Code Action execution (Auto-correct missing colon)', async () => {
+        const ext = vscode.extensions.getExtension('carlos-camara.vscode-gherkin-powertools');
+        if (ext && !ext.isActive) {
+            await ext.activate();
+        }
+
         const uri = vscode.Uri.parse('untitled:missing_colon.feature');
         const document = await vscode.workspace.openTextDocument(uri);
         const editor = await vscode.window.showTextDocument(document);
         await vscode.languages.setTextDocumentLanguage(document, 'feature');
 
+        const diagnosticsPromise = new Promise<vscode.Diagnostic[]>(resolve => {
+            const disposable = vscode.languages.onDidChangeDiagnostics(e => {
+                if (e.uris.some(u => u.toString() === document.uri.toString())) {
+                    const diags = vscode.languages.getDiagnostics(document.uri);
+                    if (diags.length > 0) {
+                        disposable.dispose();
+                        resolve(diags);
+                    }
+                }
+            });
+            setTimeout(() => {
+                disposable.dispose();
+                resolve(vscode.languages.getDiagnostics(document.uri));
+            }, 8000);
+        });
+
         await editor.edit(editBuilder => {
             editBuilder.insert(new vscode.Position(0, 0), 'Feature My Feature'); // Missing colon
         });
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const diagnostics = await diagnosticsPromise;
+        console.log("DIAGNOSTICS:", diagnostics);
 
+        assert.ok(diagnostics.length > 0, 'No diagnostics appeared before checking code actions');
         const range = new vscode.Range(0, 0, 0, 18);
         const codeActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
             'vscode.executeCodeActionProvider',
             document.uri,
             range
         );
+        console.log("DIAGNOSTICS:", JSON.stringify(vscode.languages.getDiagnostics(document.uri), null, 2));
+        console.log("CODE ACTIONS:", JSON.stringify(codeActions, null, 2));
 
         assert.ok(codeActions && codeActions.length > 0, 'No code actions provided for missing colon');
         const fixAction = codeActions.find(a => a.title.includes("Insert missing ':'"));
@@ -709,16 +733,29 @@ def step_impl(context):
         const editor = await vscode.window.showTextDocument(document);
         await vscode.languages.setTextDocumentLanguage(document, 'feature');
 
+        const diagnosticsPromise = new Promise<vscode.Diagnostic[]>(resolve => {
+            const disposable = vscode.languages.onDidChangeDiagnostics(e => {
+                if (e.uris.some(u => u.toString() === document.uri.toString())) {
+                    const diags = vscode.languages.getDiagnostics(document.uri);
+                    if (diags.length > 0) {
+                        disposable.dispose();
+                        resolve(diags);
+                    }
+                }
+            });
+            setTimeout(() => {
+                disposable.dispose();
+                resolve(vscode.languages.getDiagnostics(document.uri));
+            }, 8000);
+        });
+
         // Typo in keyword
         await editor.edit(editBuilder => {
             editBuilder.insert(new vscode.Position(0, 0), 'Gven a misspelled keyword');
         });
 
-        // Wait for linter (debounce is ~100ms, wait 1000ms just in case)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Get diagnostics
-        const diags = vscode.languages.getDiagnostics(document.uri);
+        // Wait for linter
+        const diags = await diagnosticsPromise;
         assert.ok(diags.length > 0, 'No diagnostics appeared for misspelled keyword');
 
         // Get code actions
@@ -737,12 +774,13 @@ def step_impl(context):
 
         // Apply fix (WorkspaceEdit)
         if (fixAction.edit) {
-            await vscode.workspace.applyEdit(fixAction.edit);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const editApplied = await vscode.workspace.applyEdit(fixAction.edit);
+            assert.ok(editApplied, 'Workspace edit could not be applied');
+            await new Promise(resolve => setTimeout(resolve, 2500));
             const newText = document.getText();
-            // The diagnostic replacement is "Given " and the range replaces "Gven", 
-            // leaving the original space, resulting in "Given  a misspelled keyword"
-            assert.strictEqual(newText.trim(), 'Given  a misspelled keyword', 'Quick fix failed to modify document');
+            // The diagnostic replacement is "Given" and the range replaces "Gven", 
+            // resulting in "Given a misspelled keyword"
+            assert.strictEqual(newText.trim(), 'Given a misspelled keyword', 'Quick fix failed to modify document');
         } else {
             assert.fail('Quick fix action had no edit');
         }
