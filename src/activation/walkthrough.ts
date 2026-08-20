@@ -68,7 +68,7 @@ export function registerWalkthroughCommands(
             // Move cursor to the undefined step
             const position = new vscode.Position(2, 10);
             editor.selection = new vscode.Selection(position, position);
-            vscode.window.showInformationMessage("Press ⌘. or click the lightbulb to see Quick Fixes.");
+            vscode.window.showInformationMessage("Press ⌘. (macOS) / Ctrl+. (Windows) or click the lightbulb to see Quick Fixes.");
             
             // Trigger quick fix menu automatically after a short delay
             setTimeout(() => {
