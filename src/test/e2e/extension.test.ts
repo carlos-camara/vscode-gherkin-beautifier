@@ -68,28 +68,8 @@ suite('E2E UI Test Suite', () => {
     });
 
     test('Simulate Linter diagnostics on bad Gherkin', async () => {
-        const uri = vscode.Uri.parse('untitled:linter_test.feature');
-        const document = await vscode.workspace.openTextDocument(uri);
+        const document = await vscode.workspace.openTextDocument({ language: 'feature' });
         const editor = await vscode.window.showTextDocument(document);
-
-        await vscode.languages.setTextDocumentLanguage(document, 'feature');
-
-        const diagnosticsPromise = new Promise<vscode.Diagnostic[]>(resolve => {
-            const disposable = vscode.languages.onDidChangeDiagnostics(e => {
-                if (e.uris.some(u => u.toString() === document.uri.toString())) {
-                    const diags = vscode.languages.getDiagnostics(document.uri);
-                    if (diags.length > 0) {
-                        disposable.dispose();
-                        resolve(diags);
-                    }
-                }
-            });
-            // timeout fallback
-            setTimeout(() => {
-                disposable.dispose();
-                resolve(vscode.languages.getDiagnostics(document.uri));
-            }, 8000);
-        });
 
         await editor.edit(editBuilder => {
             editBuilder.insert(
@@ -98,7 +78,13 @@ suite('E2E UI Test Suite', () => {
             );
         });
 
-        const diagnostics = await diagnosticsPromise;
+        let diagnostics: vscode.Diagnostic[] = [];
+        for (let i = 0; i < 20; i++) {
+            diagnostics = vscode.languages.getDiagnostics(document.uri);
+            if (diagnostics.length > 0) break;
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
         console.log("DIAGNOSTICS ON BAD GHERKIN:", diagnostics.length, JSON.stringify(diagnostics.map(d => ({ code: d.code, msg: d.message }))));
         assert.ok(diagnostics.length > 0, 'Linter failed to generate diagnostics for bad syntax');
         const hasSyntaxError = diagnostics.some(d => d.message.includes('Expected') || d.message.includes('EOF') || d.message.includes('Misspelled') || d.message.includes('Invalid'));
@@ -421,32 +407,20 @@ Feature: Tags
             await ext.activate();
         }
 
-        const uri = vscode.Uri.parse('untitled:missing_colon.feature');
-        const document = await vscode.workspace.openTextDocument(uri);
+        const document = await vscode.workspace.openTextDocument({ language: 'feature' });
         const editor = await vscode.window.showTextDocument(document);
-        await vscode.languages.setTextDocumentLanguage(document, 'feature');
-
-        const diagnosticsPromise = new Promise<vscode.Diagnostic[]>(resolve => {
-            const disposable = vscode.languages.onDidChangeDiagnostics(e => {
-                if (e.uris.some(u => u.toString() === document.uri.toString())) {
-                    const diags = vscode.languages.getDiagnostics(document.uri);
-                    if (diags.length > 0) {
-                        disposable.dispose();
-                        resolve(diags);
-                    }
-                }
-            });
-            setTimeout(() => {
-                disposable.dispose();
-                resolve(vscode.languages.getDiagnostics(document.uri));
-            }, 8000);
-        });
 
         await editor.edit(editBuilder => {
             editBuilder.insert(new vscode.Position(0, 0), 'Feature My Feature'); // Missing colon
         });
 
-        const diagnostics = await diagnosticsPromise;
+        let diagnostics: vscode.Diagnostic[] = [];
+        for (let i = 0; i < 20; i++) {
+            diagnostics = vscode.languages.getDiagnostics(document.uri);
+            if (diagnostics.length > 0) break;
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
         console.log("DIAGNOSTICS:", diagnostics);
 
         assert.ok(diagnostics.length > 0, 'No diagnostics appeared before checking code actions');
@@ -728,34 +702,20 @@ def step_impl(context):
     });
 
     test('Simulate Diagnostic to QuickFix Pipeline (End to End)', async () => {
-        const uri = vscode.Uri.parse('untitled:quickfix_pipeline.feature');
-        const document = await vscode.workspace.openTextDocument(uri);
+        const document = await vscode.workspace.openTextDocument({ language: 'feature' });
         const editor = await vscode.window.showTextDocument(document);
-        await vscode.languages.setTextDocumentLanguage(document, 'feature');
-
-        const diagnosticsPromise = new Promise<vscode.Diagnostic[]>(resolve => {
-            const disposable = vscode.languages.onDidChangeDiagnostics(e => {
-                if (e.uris.some(u => u.toString() === document.uri.toString())) {
-                    const diags = vscode.languages.getDiagnostics(document.uri);
-                    if (diags.length > 0) {
-                        disposable.dispose();
-                        resolve(diags);
-                    }
-                }
-            });
-            setTimeout(() => {
-                disposable.dispose();
-                resolve(vscode.languages.getDiagnostics(document.uri));
-            }, 8000);
-        });
 
         // Typo in keyword
         await editor.edit(editBuilder => {
             editBuilder.insert(new vscode.Position(0, 0), 'Gven a misspelled keyword');
         });
 
-        // Wait for linter
-        const diags = await diagnosticsPromise;
+        let diags: vscode.Diagnostic[] = [];
+        for (let i = 0; i < 20; i++) {
+            diags = vscode.languages.getDiagnostics(document.uri);
+            if (diags.length > 0) break;
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
         assert.ok(diags.length > 0, 'No diagnostics appeared for misspelled keyword');
 
         // Get code actions
