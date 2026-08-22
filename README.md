@@ -106,7 +106,6 @@ Share team formatting rules by committing a `.gherkin-powertoolsrc.json` to your
 | Setting | Default | Description |
 | --- | --- | --- |
 | `gherkinPowerTools.profile` | `"custom"` | Formatting baseline: `strict`, `team`, `minimal`, `legacy`, or `custom`. |
-| `gherkinPowerTools.featureGlobs` | `["**/*.feature"]` | Paths to feature files to include in discovery and analysis. |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", ...]` | Paths to Python step definitions. |
 | `gherkinPowerTools.behave.execution` | `{"executable": "behave", "arguments": []}` | Secure Test Explorer execution command (e.g., `{"executable": "poetry", "arguments": ["run", "behave"]}`). |
 | `gherkinPowerTools.behave.localExecutable` | *None* | Machine-specific override for the Behave executable absolute path. |
