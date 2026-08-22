@@ -75,7 +75,10 @@ To provide a zero-configuration setup experience, Gherkin PowerTools includes a 
 To optimize performance and eliminate redundant parsing of the same document across multiple providers (formatter, linter, hover, definitions), Gherkin PowerTools centralizes Gherkin parsing through the **AST Repository** (`AstRepository`).
 
 ### Safe-Unit Formatting Model
-The formatter leverages the AST Repository to implement a **Safe-Unit Expansion Model** for range formatting. Instead of resolving selections to purely hierarchical AST nodes (which often over-expanded to entire Scenarios), the AST is mapped into a flat array of contiguous multi-line groups (`groupIds`) for atomic units (DataTables, DocStrings, Tag Blocks). The range formatter performs O(1) bounds-checking on this array to securely contain formatting edits to the absolute minimum safe lines, radically reducing structural blast radius.
+The formatter leverages the AST Repository to implement a **Safe-Unit Expansion Model** for range formatting.
+Instead of resolving selections to purely hierarchical AST nodes (which often over-expanded to entire Scenarios),
+the AST is mapped into a flat array of contiguous multi-line groups (`groupIds`) for atomic units (DataTables, DocStrings, Tag Blocks).
+The range formatter performs O(1) bounds-checking on this array to securely contain formatting edits to the absolute minimum safe lines, radically reducing structural blast radius.
 
 ### How the Repository Works
 1. **Memoization:** When a provider requests the AST for a document, the repository checks its cache. If a cached `ParseResult` exists for the current document version, it is returned immediately.
