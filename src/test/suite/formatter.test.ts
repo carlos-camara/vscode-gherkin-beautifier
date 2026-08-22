@@ -419,7 +419,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         ].join('\n'));
     });
 
-    test('Range formatting: selection across multiple steps expands to Scenario', async () => {
+    test('Range formatting: selection across multiple steps preserves blast radius', async () => {
         const formatter = new GherkinFormattingEditProvider(mockConfigService);
         const unformatted = [
             'Feature: F',
@@ -429,15 +429,14 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'And   3'
         ].join('\n');
         
-        // line 2 to 3 expands to the smallest node encompassing both (Scenario)
+        // line 2 to 3 formats ONLY those steps
         const result = await runRangeFormat(formatter, unformatted, 2, 3);
         assert.strictEqual(result, [
             'Feature: F',
-            '',
-            '  Scenario: S',
+            'Scenario: S',
             '      Given     1',
             '      Then     2',
-            '      And   3'
+            'And   3'
         ].join('\n'));
     });
 
@@ -514,7 +513,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         // Formatter should insert a blank line before Scenario: S2
         // If we select just Scenario: S2 (line 4)
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
-        // It expands to Scenario 2 and its steps
+        // It formats the Scenario keyword and its empty lines, but NOT the steps
         assert.strictEqual(result, [
             'Feature: F',
             'Rule: R',
@@ -522,7 +521,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Given 1',
             '',
             '    Scenario: S2',
-            '        Given 2'
+            'Given 2'
         ].join('\n'));
     });
 
@@ -559,7 +558,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         ].join('\n'));
     });
 
-    test('Range formatting: selection inside Examples block expands to full Examples', async () => {
+    test('Range formatting: selection inside Examples block expands to Table, not keyword', async () => {
         const formatter = new GherkinFormattingEditProvider(mockConfigService);
         const unformatted = [
             'Feature: F',
@@ -573,20 +572,19 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // select line 5 ('|u1|')
         const result = await runRangeFormat(formatter, unformatted, 5, 5);
-        // Should expand to encompass Examples block: lines 3, 4, 5, 6
+        // Should expand to encompass the Table block (lines 4, 5, 6), not Examples keyword
         assert.strictEqual(result, [
             'Feature: F',
             'Scenario Outline: S',
             'Given <user>',
-            '',
-            '      Examples:',
+            'Examples:',
             '        | user |',
             '        | u1   |',
             '        | u2   |'
         ].join('\n'));
     });
 
-    test('Range formatting: Background selection', async () => {
+    test('Range formatting: Background selection preserves step', async () => {
         const formatter = new GherkinFormattingEditProvider(mockConfigService);
         const unformatted = [
             'Feature: F',
@@ -598,12 +596,11 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // select line 1 ('Background:')
         const result = await runRangeFormat(formatter, unformatted, 1, 1);
-        // Expands to Background and its steps (lines 1 to 2)
         assert.strictEqual(result, [
             'Feature: F',
             '',
             '  Background:',
-            '      Given bg',
+            'Given bg',
             'Scenario: S',
             'Given s'
         ].join('\n'));

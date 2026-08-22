@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.5] - Unreleased
 
 ### 🚀 Added
+- **Range Formatting Safe-Unit Model**: Redesigned range formatting expansion to significantly reduce unintended formatting blast radius. The algorithm now groups non-splittable elements (Data Tables, DocStrings, and Tag Blocks) into isolated safe units, ensuring a selection of two independent steps no longer formats the entire encompassing Scenario.
 - **Range Formatting Integrity**: Strengthened the VS Code range formatting API by enforcing strict idempotency guarantees and AST boundary reparsing to prevent syntax corruption during partial formatting.
 - **AST Caching Redesign**: Replaced the rigid count-based AST cache with a dynamic **Weighted LRU Cache** enforcing a 50MB soft memory budget.
   This allows the extension to safely scale across massive enterprise workspaces (>10,000 files) by estimating AST byte sizes and shedding oldest documents only when real memory pressure demands it, drastically improving hit ratios without exhausting the VS Code Extension Host.
