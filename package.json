@@ -175,6 +175,7 @@
           "type": "array",
           "order": 21,
           "scope": "resource",
+          "deprecationMessage": "Deprecated in favor of 'gherkinPowerTools.rules'.",
           "items": {
             "type": "string",
             "enum": [
@@ -294,6 +295,7 @@
           "type": "object",
           "order": 43,
           "scope": "resource",
+          "deprecationMessage": "Deprecated in favor of 'gherkinPowerTools.rules'.",
           "default": {
             "syntax-errors": "error",
             "oversized-scenario": "warning",
@@ -307,6 +309,27 @@
             "poor-maintainability": "warning"
           },
           "markdownDescription": "Configure severity overrides for specific anti-pattern rules. Values can be `error`, `warning`, `info`, `hint`, or `off`."
+        },
+        "gherkinPowerTools.rules": {
+          "type": "object",
+          "order": 44,
+          "scope": "resource",
+          "default": {
+            "missing-colon": "error",
+            "invalid-keyword": "error",
+            "scenario-with-examples": "warning",
+            "table-inconsistency": "error",
+            "undefined-step": "error",
+            "ambiguous-step": "error",
+            "oversized-scenario": "warning",
+            "oversized-feature": "info",
+            "duplicated-steps": "error",
+            "unused-steps": "info",
+            "excessive-tags": "info",
+            "inconsistent-formatting": "info",
+            "poor-maintainability": "warning"
+          },
+          "markdownDescription": "Configure severities for specific rules across the AST Linter and Anti-Pattern engine. Values can be `error`, `warning`, `info`, `hint`, or `off`.\n\nNote: `syntax-error` cannot be disabled."
         }
       }
     },

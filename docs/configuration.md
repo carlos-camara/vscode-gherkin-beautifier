@@ -92,10 +92,9 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.linter.enabledRules`
-- **Purpose:** Whitelist of linting rule IDs to enforce. An empty array enables ALL rules.
+- **Purpose:** *(Deprecated)* Whitelist of linting rule IDs to enforce. Please use `gherkinPowerTools.rules` instead.
 - **Type:** `array` of strings
 - **Default:** `[]`
-- **Allowed Values:** `"MISSING_COLON"`, `"INVALID_KEYWORD"`, `"SEMANTIC_ERROR"`, `"TABLE_INCONSISTENCY"`, `"UNDEFINED_STEP"`, `"AMBIGUOUS_STEP"`
 
 ---
 
@@ -107,18 +106,30 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.antiPatterns.rules`
-- **Purpose:** Configure severity levels for individual anti-pattern rules.
+- **Purpose:** *(Deprecated)* Configure severity levels for individual anti-pattern rules. Please use `gherkinPowerTools.rules` instead.
+- **Type:** `object` (Key-value pairs of rule ID to severity level)
+
+---
+
+## Unified Diagnostics Rules
+
+### `gherkinPowerTools.rules`
+- **Purpose:** The central, authoritative configuration for diagnostic severities across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to severity levels.
 - **Type:** `object` (Key-value pairs of rule ID to severity level)
 - **Default:**
   ```json
   {
-      "syntax-errors": "error",
+      "syntax-error": "error",
+      "missing-colon": "error",
+      "invalid-keyword": "error",
+      "table-inconsistency": "error",
+      "scenario-with-examples": "warning",
+      "undefined-step": "error",
+      "ambiguous-step": "error",
       "oversized-scenario": "warning",
       "oversized-feature": "info",
       "duplicated-steps": "error",
       "unused-steps": "info",
-      "ambiguous-steps": "error",
-      "undefined-steps": "error",
       "excessive-tags": "info",
       "inconsistent-formatting": "info",
       "poor-maintainability": "warning"
@@ -199,8 +210,9 @@ Example:
     "formatter": {
         "enabled": true
     },
-    "linter": {
-        "enabledRules": ["MISSING_COLON", "INVALID_KEYWORD"]
+    "rules": {
+        "missing-colon": "error",
+        "invalid-keyword": "warning"
     },
     "behave": {
         "stepGlobs": [

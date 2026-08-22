@@ -8,11 +8,13 @@ export interface Configuration {
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
+    rules: Record<string, string>;
     behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
     featureGlobs: string[];
 }
 
 import { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG } from './defaults';
+import { RULES_REGISTRY } from './rules';
 
 export { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG };
 
@@ -57,7 +59,7 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
         return { errors, config };
     }
 
-    const validSections = ['profile', 'indentation', 'tables', 'docStrings', 'tags', 'emptyLines', 'formatter', 'linter', 'behave'];
+    const validSections = ['profile', 'indentation', 'tables', 'docStrings', 'tags', 'emptyLines', 'formatter', 'linter', 'rules', 'behave'];
 
     for (const key of Object.keys(parsed)) {
         if (!validSections.includes(key)) {
@@ -176,6 +178,19 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                     errors.push({ key: subKey, message: `Unknown property in linter: "${subKey}".` });
                 }
             }
+        } else if (key === 'rules') {
+            for (const subKey of Object.keys(section)) {
+                if (RULES_REGISTRY[subKey]) {
+                    const val = section[subKey];
+                    if (typeof val === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(val)) {
+                        config.rules[subKey] = val;
+                    } else {
+                        errors.push({ key: subKey, message: `"rules.${subKey}" must be one of: error, warning, info, hint, off.` });
+                    }
+                } else {
+                    errors.push({ key: subKey, message: `Unknown rule ID in rules: "${subKey}".` });
+                }
+            }
         } else if (key === 'behave') {
             for (const subKey of Object.keys(section)) {
                 if (subKey === 'stepGlobs' || subKey === 'ignoreGlobs' || subKey === 'additionalArguments') {
@@ -196,7 +211,7 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                         } else if (execObj.executable !== undefined) {
                             errors.push({ key: 'execution.executable', message: `"behave.execution.executable" must be a string.` });
                         }
-                        
+
                         if (Array.isArray(execObj.arguments) && execObj.arguments.every((i: any) => typeof i === 'string')) {
                             config.behave.execution.arguments = execObj.arguments;
                         } else if (execObj.arguments !== undefined) {
@@ -249,7 +264,7 @@ export class ConfigurationService {
     public async loadConfiguration(uri?: vscode.Uri): Promise<void> {
         const workspaceFolder = uri ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
         const folderUri = workspaceFolder ? workspaceFolder.uri.toString() : 'global';
-        
+
         try {
             const projectConfig = await this.loader.load(workspaceFolder);
             if (projectConfig) {
@@ -260,7 +275,7 @@ export class ConfigurationService {
         } catch (e) {
             this.projectConfigs.delete(folderUri);
         }
-        
+
         // Invalidate and re-resolve
         this.cache.set(folderUri, this.resolveConfiguration(workspaceFolder, uri));
     }
@@ -325,7 +340,7 @@ export class ConfigurationService {
         }
 
         const { errors, config } = validateAndMergeConfig(parsedProjectConfig, vsCodeConfig);
-        
+
         if (errors.length > 0 && projectConfig && projectConfig.uri) {
             const diagnostics = errors.map(err => {
                 let line = 0;
@@ -339,7 +354,7 @@ export class ConfigurationService {
         } else if (projectConfig && projectConfig.uri) {
             this.diagnosticCollection.delete(projectConfig.uri);
         }
-        
+
         return config;
     }
 
@@ -403,6 +418,43 @@ export class ConfigurationService {
         const validRules = ['MISSING_COLON', 'INVALID_KEYWORD', 'SEMANTIC_ERROR', 'TABLE_INCONSISTENCY', 'UNDEFINED_STEP', 'AMBIGUOUS_STEP'];
         if (linterEnabledRules !== undefined && Array.isArray(linterEnabledRules) && linterEnabledRules.every(r => validRules.includes(r))) {
             config.linter.enabledRules = linterEnabledRules;
+            // Migration: legacy array implies 'error' severity for those enabled
+            // We disable all linter rules first if enabledRules is present but empty, but wait, the default was "empty = all".
+            // In the new model, rules are configured individually.
+            // If they provided a list, we disable the old AST ones not in the list.
+            if (linterEnabledRules.length > 0) {
+                const oldASTRules = ["missing-colon", "invalid-keyword", "semantic-error", "table-inconsistency", "undefined-step", "ambiguous-step"];
+                for (const oldRule of oldASTRules) {
+                    config.rules[oldRule] = 'off';
+                }
+                for (const rule of linterEnabledRules) {
+                    const kebabRule = rule.toLowerCase().replace(/_/g, '-');
+                    if (RULES_REGISTRY[kebabRule]) {
+                        config.rules[kebabRule] = RULES_REGISTRY[kebabRule].defaultSeverity;
+                    }
+                }
+            }
+        }
+
+        // Migrate anti-patterns
+        const antiPatternsConfig = vscode.workspace.getConfiguration('gherkinPowerTools.antiPatterns', uri);
+        const oldAntiPatternRules = antiPatternsConfig.get<Record<string, string>>('rules');
+        if (oldAntiPatternRules && typeof oldAntiPatternRules === 'object') {
+            for (const [key, value] of Object.entries(oldAntiPatternRules)) {
+                if (RULES_REGISTRY[key] && typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
+                    config.rules[key] = value;
+                }
+            }
+        }
+
+        // Apply new unified rules
+        const vscodeRules = getOverride<Record<string, string>>('rules');
+        if (vscodeRules !== undefined && typeof vscodeRules === 'object' && vscodeRules !== null) {
+            for (const [key, value] of Object.entries(vscodeRules)) {
+                if (RULES_REGISTRY[key] && typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
+                    config.rules[key] = value;
+                }
+            }
         }
 
         const stepGlobs = getOverride<string[]>('behave.stepGlobs');
