@@ -130,11 +130,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 ## Behave Discovery & Execution Settings
 
-### `gherkinPowerTools.featureGlobs`
-- **Purpose:** Glob patterns used to discover Gherkin feature files. These patterns drive diagnostics, health statistics, and the test explorer.
-- **Type:** `array` of strings
-- **Default:** `["**/*.feature"]`
-
 ### `gherkinPowerTools.behave.stepGlobs`
 - **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, and Linting.
 - **Type:** `array` of strings

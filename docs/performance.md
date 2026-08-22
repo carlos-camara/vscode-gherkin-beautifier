@@ -54,7 +54,7 @@ These metrics are collected independently of any provider (formatter, linter) an
 
 If you experience high CPU usage or delayed IntelliSense in massive monorepos, check the following:
 
-1. **Verify your Ignored Globs**: Ensure your `gherkinPowerTools.behave.ignoreGlobs` correctly exclude virtual environments, `node_modules`, and compiled assets. If the extension attempts to parse thousands of third-party Python files inside a virtual environment, performance will degrade. You should also ensure your feature file locations are appropriately scoped via `gherkinPowerTools.featureGlobs`.
+1. **Verify your Ignored Globs**: Ensure your `gherkinPowerTools.behave.ignoreGlobs` correctly exclude virtual environments, `node_modules`, and compiled assets. If the extension attempts to parse thousands of third-party Python files inside a virtual environment, performance will degrade.
    ```json
    "gherkinPowerTools.behave.ignoreGlobs": [
        "**/node_modules/**",

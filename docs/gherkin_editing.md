@@ -16,7 +16,7 @@ You can format the entire document or just a selection:
 
 ### Formatter Behavior
 
-- **Idempotence:** The formatter is 100% idempotent. Running it multiple times yields the exact same result.
+- **Idempotence & Range Formatting:** The formatter is 100% idempotent. Running it multiple times yields the exact same result. When formatting a specific selection (Range Formatting), the extension applies strict integrity guarantees: it reparses the expanded range against the AST to ensure no syntax corruption occurs across boundaries (e.g., partial tags, wrapped docstrings) before applying edits.
 - **Tables:** Data Tables and Examples are dynamically aligned to the preceding step text (by default) to keep everything visually clean.
 - **Doc Strings:** Content inside `"""` doc strings is dynamically padded to align with the step keyword (or preserved exactly, based on configuration).
 - **Tags:** Long lines of tags are intelligently wrapped or can be kept on a single line depending on your settings.

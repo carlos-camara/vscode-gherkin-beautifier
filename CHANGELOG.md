@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.5] - Unreleased
 
 ### 🚀 Added
+- **Range Formatting Integrity**: Strengthened the VS Code range formatting API by enforcing strict idempotency guarantees and AST boundary reparsing to prevent syntax corruption during partial formatting.
 - **AST Caching Redesign**: Replaced the rigid count-based AST cache with a dynamic **Weighted LRU Cache** enforcing a 50MB soft memory budget. This allows the extension to safely scale across massive enterprise workspaces (>10,000 files) by estimating AST byte sizes and shedding oldest documents only when real memory pressure demands it, drastically improving hit ratios without exhausting the VS Code Extension Host.
 - **Robust Parser Loader**: Audited and redesigned the dynamic loader for `@cucumber/gherkin` and `@cucumber/messages` to include a bounded retry strategy. This improves extension resilience during transient filesystem errors or Extension Host initialization failures.
 - **Concurrent Loader Deduplication**: Prevented multiple concurrent parser triggers from creating duplicate loader instances.

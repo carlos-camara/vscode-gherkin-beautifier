@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { GherkinFormattingEditProvider, FormatterOptions } from '../../formatter';
 import { ConfigurationService } from '../../configuration';
+import { parseGherkin } from '../../parser';
 
 const defaultOptions: FormatterOptions = {
     stepIndentation: 2,
@@ -18,16 +19,18 @@ async function runFormat(formatter: GherkinFormattingEditProvider, unformatted: 
     return formattedLines ? formattedLines.map(l => l.text).join('\n') : '';
 }
 
-async function runRangeFormat(formatter: GherkinFormattingEditProvider, unformatted: string, startLine: number, endLine: number): Promise<string> {
-    const lines = unformatted.split('\n');
+async function runRangeFormat(formatter: GherkinFormattingEditProvider, unformatted: string, startLine: number, endLine: number, expectSyntaxErrors = false): Promise<string> {
+    const isCRLF = unformatted.includes('\r\n');
+    const eolStr = isCRLF ? '\r\n' : '\n';
+    const lines = unformatted.split(eolStr);
     const doc = {
         getText: (range?: vscode.Range) => {
             if (!range) return unformatted;
-            return lines.slice(range.start.line, range.end.line + 1).join('\n');
+            return lines.slice(range.start.line, range.end.line + 1).join(eolStr);
         },
         uri: vscode.Uri.file('test.feature'),
         version: docVersion++,
-        eol: vscode.EndOfLine.LF,
+        eol: isCRLF ? vscode.EndOfLine.CRLF : vscode.EndOfLine.LF,
         lineAt: (line: number) => ({ text: lines[line] || '' }),
         lineCount: lines.length
     } as any as vscode.TextDocument;
@@ -35,12 +38,48 @@ async function runRangeFormat(formatter: GherkinFormattingEditProvider, unformat
     const range = new vscode.Range(startLine, 0, endLine, doc.lineAt(endLine).text.length);
     const edits = await formatter.provideDocumentRangeFormattingEdits(doc, range, {} as vscode.FormattingOptions, { isCancellationRequested: false } as vscode.CancellationToken);
     
+    let result = unformatted;
     if (edits && edits.length > 0) {
-        return edits[0].newText;
+        result = applyTextEdits(unformatted, edits);
     }
-    return doc.getText(range); // Idempotent or no-op
+    
+    // 3. Reparse the final result
+    const parseResult = await parseGherkin(result);
+    // 4. Verify no syntax errors
+    if (!expectSyntaxErrors && parseResult.errors.length > 0) {
+        assert.fail(`Range formatting introduced syntax errors: ${parseResult.errors.map(e => e.message).join(', ')}`);
+    }
+    
+    return result;
 }
 
+export function applyTextEdits(source: string, edits: vscode.TextEdit[]): string {
+    const sortedEdits = [...edits].sort((a, b) => {
+        if (a.range.start.line !== b.range.start.line) {
+            return b.range.start.line - a.range.start.line;
+        }
+        return b.range.start.character - a.range.start.character;
+    });
+
+    let currentSource = source;
+    for (const edit of sortedEdits) {
+        const lines = currentSource.split('\n');
+        let startOffset = 0;
+        for (let i = 0; i < edit.range.start.line; i++) {
+            startOffset += lines[i].length + 1;
+        }
+        startOffset += edit.range.start.character;
+
+        let endOffset = 0;
+        for (let i = 0; i < edit.range.end.line; i++) {
+            endOffset += lines[i].length + 1;
+        }
+        endOffset += edit.range.end.character;
+
+        currentSource = currentSource.substring(0, startOffset) + edit.newText + currentSource.substring(endOffset);
+    }
+    return currentSource;
+}
 
 const mockConfigService = new ConfigurationService({
     name: 'mock',
@@ -372,7 +411,12 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         // line 2: 'Given     unformatted step'
         const result = await runRangeFormat(formatter, unformatted, 2, 2);
         // VS Code defaults stepIndentation to 4. Scenario is 2, Step is 6.
-        assert.strictEqual(result, '      Given     unformatted step');
+        assert.strictEqual(result, [
+            'Feature: F',
+            'Scenario: S',
+            '      Given     unformatted step',
+            'Then end'
+        ].join('\n'));
     });
 
     test('Range formatting: selection across multiple steps expands to Scenario', async () => {
@@ -387,7 +431,14 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // line 2 to 3 expands to the smallest node encompassing both (Scenario)
         const result = await runRangeFormat(formatter, unformatted, 2, 3);
-        assert.strictEqual(result, '\n  Scenario: S\n      Given     1\n      Then     2\n      And   3');
+        assert.strictEqual(result, [
+            'Feature: F',
+            '',
+            '  Scenario: S',
+            '      Given     1',
+            '      Then     2',
+            '      And   3'
+        ].join('\n'));
     });
 
     test('Range formatting: table selection expands to full table', async () => {
@@ -402,7 +453,13 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // line 4 (the second row) -> expands to the entire DataTable node
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
-        assert.strictEqual(result, '            | username | pass |\n            | u1       | p1   |');
+        assert.strictEqual(result, [
+            'Feature: F',
+            'Scenario: S',
+            'Given users:',
+            '            | username | pass |',
+            '            | u1       | p1   |'
+        ].join('\n'));
     });
 
     test('Range formatting: DocString selection', async () => {
@@ -418,7 +475,14 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // line 4 ('  hello')
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
-        assert.strictEqual(result, '            """\n              hello\n            """');
+        assert.strictEqual(result, [
+            'Feature: F',
+            'Scenario: S',
+            'Given doc:',
+            '            """',
+            '              hello',
+            '            """'
+        ].join('\n'));
     });
 
     test('Range formatting: tags', async () => {
@@ -430,7 +494,10 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // line 0
         const result = await runRangeFormat(formatter, unformatted, 0, 0);
-        assert.strictEqual(result, '@t1 @t2 @t3');
+        assert.strictEqual(result, [
+            '@t1 @t2 @t3',
+            'Feature: F'
+        ].join('\n'));
     });
 
     test('Range formatting: Rule and formatting that inserts blank lines', async () => {
@@ -448,7 +515,15 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         // If we select just Scenario: S2 (line 4)
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
         // It expands to Scenario 2 and its steps
-        assert.strictEqual(result, '\n    Scenario: S2\n        Given 2');
+        assert.strictEqual(result, [
+            'Feature: F',
+            'Rule: R',
+            'Scenario: S1',
+            'Given 1',
+            '',
+            '    Scenario: S2',
+            '        Given 2'
+        ].join('\n'));
     });
 
     test('Range formatting: syntax errors fallback gracefully', async () => {
@@ -459,8 +534,8 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         ].join('\n');
         
         // Since formatting fails on invalid syntax, it should return original unformatted slice
-        const result = await runRangeFormat(formatter, unformatted, 1, 1);
-        assert.strictEqual(result, 'Given 1');
+        const result = await runRangeFormat(formatter, unformatted, 1, 1, true);
+        assert.strictEqual(result, unformatted);
     });
 
     test('Range formatting: selection partially inside a Table', async () => {
@@ -475,7 +550,13 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         
         // select lines 3 and 4 (header and first row only)
         const result = await runRangeFormat(formatter, unformatted, 3, 4);
-        assert.strictEqual(result, '            | u1 | p1 |\n            | u2 | p2 |');
+        assert.strictEqual(result, [
+            'Feature: F',
+            'Scenario: S',
+            'Given users:',
+            '            | u1 | p1 |',
+            '            | u2 | p2 |'
+        ].join('\n'));
     });
 
     test('Range formatting: selection inside Examples block expands to full Examples', async () => {
@@ -493,7 +574,16 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         // select line 5 ('|u1|')
         const result = await runRangeFormat(formatter, unformatted, 5, 5);
         // Should expand to encompass Examples block: lines 3, 4, 5, 6
-        assert.strictEqual(result, '\n      Examples:\n        | user |\n        | u1   |\n        | u2   |');
+        assert.strictEqual(result, [
+            'Feature: F',
+            'Scenario Outline: S',
+            'Given <user>',
+            '',
+            '      Examples:',
+            '        | user |',
+            '        | u1   |',
+            '        | u2   |'
+        ].join('\n'));
     });
 
     test('Range formatting: Background selection', async () => {
@@ -509,6 +599,124 @@ suite('Formatter VS Code API Wrapper Tests', () => {
         // select line 1 ('Background:')
         const result = await runRangeFormat(formatter, unformatted, 1, 1);
         // Expands to Background and its steps (lines 1 to 2)
-        assert.strictEqual(result, '\n  Background:\n      Given bg');
+        assert.strictEqual(result, [
+            'Feature: F',
+            '',
+            '  Background:',
+            '      Given bg',
+            'Scenario: S',
+            'Given s'
+        ].join('\n'));
+    });
+
+    test('Range formatting: comments immediately before/after range', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = [
+            'Feature: F',
+            '# comment before',
+            'Scenario: S',
+            'Given s',
+            '# comment after'
+        ].join('\n');
+        
+        // select line 2 to 3 ('Scenario: S', 'Given s')
+        const result = await runRangeFormat(formatter, unformatted, 2, 3);
+        assert.strictEqual(result, [
+            'Feature: F',
+            '# comment before',
+            '',
+            '  Scenario: S',
+            '      Given s',
+            '# comment after'
+        ].join('\n'));
+    });
+
+    test('Range formatting: CRLF', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = [
+            'Feature: F',
+            'Scenario: S',
+            'Given s'
+        ].join('\r\n');
+        
+        // select line 2 ('Given s')
+        const result = await runRangeFormat(formatter, unformatted, 2, 2);
+        assert.strictEqual(result, [
+            'Feature: F',
+            'Scenario: S',
+            '      Given s'
+        ].join('\r\n'));
+    });
+
+    test('Range formatting: no final newline', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = 'Feature: F\nScenario: S\nGiven s';
+        
+        // select line 2 ('Given s')
+        const result = await runRangeFormat(formatter, unformatted, 2, 2);
+        assert.strictEqual(result, 'Feature: F\nScenario: S\n      Given s');
+    });
+
+    test('Range formatting: Unicode characters', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = [
+            'Feature: 🌍 F',
+            'Scenario: 🚀 S',
+            'Given 👨‍👩‍👧‍👦 s'
+        ].join('\n');
+        
+        // select line 2 ('Given 👨‍👩‍👧‍👦 s')
+        const result = await runRangeFormat(formatter, unformatted, 2, 2);
+        assert.strictEqual(result, [
+            'Feature: 🌍 F',
+            'Scenario: 🚀 S',
+            '      Given 👨‍👩‍👧‍👦 s'
+        ].join('\n'));
+    });
+
+    test('Range formatting: wrapped tags', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const tags = Array.from({ length: 15 }, (_, i) => `@tag${i}`).join(' ');
+        const unformatted = [
+            tags,
+            'Feature: Tag wrap'
+        ].join('\n');
+        
+        // select line 0 (tags)
+        const result = await runRangeFormat(formatter, unformatted, 0, 0);
+        const formattedLines = result.split('\n');
+        assert.ok(formattedLines.length > 2, 'Tags should have been wrapped to multiple lines');
+        assert.ok(formattedLines[0].length <= 80);
+    });
+});
+
+suite('Range Formatting Idempotence Test Suite', () => {
+    test('Range formatting the full document twice yields the same output', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = [
+            'Feature: F',
+            'Background:',
+            'Given bg',
+            'Rule: R',
+            'Scenario: S1',
+            'Given 1',
+            'Scenario: S2',
+            'Given 2',
+            'Scenario Outline: S3',
+            'Given <user>',
+            'Examples:',
+            '|user|',
+            '|u1|'
+        ].join('\n');
+        
+        const lines = unformatted.split('\n');
+        // First format
+        const result1 = await runRangeFormat(formatter, unformatted, 0, lines.length - 1);
+        
+        const lines2 = result1.split('\n');
+        // Second format
+        const result2 = await runRangeFormat(formatter, result1, 0, lines2.length - 1);
+        
+        assert.strictEqual(result2, result1, 'Full document range formatting is not idempotent!');
     });
 });
