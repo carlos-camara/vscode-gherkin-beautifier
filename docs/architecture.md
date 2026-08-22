@@ -77,9 +77,10 @@ To optimize performance and eliminate redundant parsing of the same document acr
 ### How the Repository Works
 1. **Memoization:** When a provider requests the AST for a document, the repository checks its cache. If a cached `ParseResult` exists for the current document version, it is returned immediately.
 2. **Thundering Herd Protection:** The repository caches the *Promise* of the parse operation. If multiple providers request the AST simultaneously before the first parse completes, they all await the exact same Promise, guaranteeing the document is only parsed once per version.
-3. **Event-Driven Invalidation:** The repository listens to the `WorkspaceEventBus`. When a `featureFileChanged` or `featureFileDeleted` event fires, the repository automatically purges the stale AST from its internal LRU cache.
-4. **Memory Management:** The repository maintains a bounded Least-Recently-Used (LRU) cache (e.g., maximum 100 parsed documents) to prevent unbounded memory growth in large workspaces.
-5. **Diagnostics & Telemetry:** If metrics are enabled, the repository integrates with the `MetricsLogger` to track parse durations, cache hit ratios, and parser failures without overhead.
+3. **Resilient Module Loader:** The extension dynamically loads the official `@cucumber/gherkin` ESM libraries via a robust retry strategy. If module resolution fails intermittently (e.g., during Extension Host initialization), the cached rejection is safely evicted and retried (up to 3 times) to ensure the parser recovers automatically without a window reload.
+4. **Event-Driven Invalidation:** The repository listens to the `WorkspaceEventBus`. When a `featureFileChanged` or `featureFileDeleted` event fires, the repository automatically purges the stale AST from its internal LRU cache.
+5. **Memory Management:** The repository maintains a bounded Least-Recently-Used (LRU) cache (e.g., maximum 100 parsed documents) to prevent unbounded memory growth in large workspaces.
+6. **Diagnostics & Telemetry:** If metrics are enabled, the repository integrates with the `MetricsLogger` to track parse durations, cache hit ratios, and parser failures without overhead.
 
 ### Architecture Validation
 To ensure long-term stability and prevent regressions in these core architectural patterns, Gherkin PowerTools employs an **Architecture Validation Test Suite**. This suite runs in CI and automatically validates that:

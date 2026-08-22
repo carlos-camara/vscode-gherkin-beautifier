@@ -191,5 +191,10 @@ If you need to point to a specific local Python virtual environment via an absol
 **Likely Causes:** The CLI was installed globally or npm cached an outdated, non-scoped version of the CLI package.
 **Resolution:** Ensure you are using the explicitly scoped package (`@carlos-camara/gherkin-pt`) and force a cache clear by running `npx --yes --clear-cache @carlos-camara/gherkin-pt`.
 
+## Formatter or Parser fails to load entirely
+**Symptom:** Formatting, diagnostics, and step generation suddenly stop working, and the VS Code Output Channel (Gherkin PowerTools) displays "Failed to load Cucumber modules after 3 retries".
+**Likely Causes:** Extremely slow Extension Host initialization or temporary filesystem locks preventing the loading of `@cucumber/gherkin` and `@cucumber/messages` modules.
+**Resolution:** The parser attempts to heal itself by retrying up to 3 times. If all retries are exhausted, you can manually force a reload of the VS Code window (`Developer: Reload Window`). This is exceedingly rare in production builds (VSIX) but can happen during local development.
+
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).
