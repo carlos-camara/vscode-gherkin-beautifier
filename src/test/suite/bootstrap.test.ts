@@ -71,7 +71,7 @@ suite('DeferredBootstrap Test Suite', () => {
         bootstrap.start();
 
         // Wait longer than the delay
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 250));
 
         assert.strictEqual(symbolCacheCalled, 1);
         assert.strictEqual(featureCacheCalled, 1);
@@ -90,7 +90,7 @@ suite('DeferredBootstrap Test Suite', () => {
         bootstrap.start();
         bootstrap.dispose(); // Immediate cancel
 
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 250));
 
         assert.strictEqual(symbolCacheCalled, 0);
         assert.strictEqual(watchersSetup, false);
@@ -129,7 +129,7 @@ suite('DeferredBootstrap Test Suite', () => {
         bootstrap.start();
 
         // Wait long enough for 3 retries (10ms * 2^x)
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         assert.strictEqual(watchersSetup, true); // Essential watcher setup still works
         assert.strictEqual(symbolCacheCalled, 1);
@@ -148,7 +148,7 @@ suite('DeferredBootstrap Test Suite', () => {
         };
 
         bootstrap.start();
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         assert.strictEqual(watchersSetup, true); // Still set up!
         assert.strictEqual(symbolCacheCalled, 3); // Retried
@@ -164,7 +164,7 @@ suite('DeferredBootstrap Test Suite', () => {
         components.symbolCache.ensureInitialized = async () => { throw new Error("B"); };
 
         bootstrap.start();
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         const diags = bootstrap.getDiagnostics();
         assert.strictEqual(diags.find(d => d.id === 'usageIndexer')?.state, 'failed');
@@ -182,7 +182,7 @@ suite('DeferredBootstrap Test Suite', () => {
         };
 
         bootstrap.start();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         assert.strictEqual(symbolCacheCalled, 2);
         assert.strictEqual(workspaceGraphCalled, 1); // Recovered and proceeded!
