@@ -150,7 +150,6 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         const { document: gherkinDocument, errors } = await astRepository.getAST(document);
 
         if (!gherkinDocument || errors.length > 0) {
-            vscode.window.showWarningMessage("Cannot format document with syntax errors.");
             return null;
         }
 
