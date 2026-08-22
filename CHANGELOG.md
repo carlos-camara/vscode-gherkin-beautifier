@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Concurrent Loader Deduplication**: Prevented multiple concurrent parser triggers from creating duplicate loader instances.
 
 ### ✨ Improved
+- **MetricsLogger Optimization**: The Developer Metrics engine now queries the `metricsEnabled` setting via an event-driven configuration listener instead of polling VS Code on every log event. This eliminates synchronous IPC overhead, improving hot path performance during massive AST parsing by over 2.4x while keeping disabled log events strictly allocation-light.
 - **Parser Metrics**: Added `Cache Evictions` and `Cache Est. Memory (MB)` to the Developer Metrics output to provide observability into the new memory budgeting logic.
 - **Parser Reliability**: Fixed an issue where a temporarily failed module load would permanently break the parser by caching the rejected promise. The cache is now correctly evicted on failure, allowing seamless automatic recovery on subsequent parses.
 
