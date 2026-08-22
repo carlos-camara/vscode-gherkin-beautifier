@@ -154,14 +154,13 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 
 ### `gherkinPowerTools.behave.additionalArguments`
-- **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer.
+- **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer (e.g., `["--no-capture"]`).
 - **Type:** `array` of strings
 - **Default:** `[]`
-- **Example:** `["--no-capture"]`
 
 ---
 
-## Analytics Settings
+## Analytics
 
 ### `gherkinPowerTools.analytics.historicalTrends.enabled`
 - **Purpose:** Enable or disable historical trend analysis for Gherkin Health. When enabled, dashboard metrics are persisted locally to visualize project evolution over time.
@@ -169,8 +168,8 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.analytics.historicalTrends.retentionSnapshots`
-- **Purpose:** Maximum number of historical snapshots to retain for trend analysis.
-- **Type:** `number` (1–365)
+- **Purpose:** Maximum number of historical snapshots to retain for trend analysis per branch.
+- **Type:** `number`
 - **Default:** `30`
 
 ### `gherkinPowerTools.analytics.historicalTrends.maxStorageBytes`

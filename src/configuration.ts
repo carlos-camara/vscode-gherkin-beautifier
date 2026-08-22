@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export interface Configuration {
     indentation: { steps: number; };
@@ -217,12 +215,54 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
     return { errors, config };
 }
 
+export interface ProjectConfiguration {
+    content: string;
+    parsed: any | null;
+    uri?: vscode.Uri;
+}
+
+export interface ConfigurationLoader {
+    load(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<ProjectConfiguration | null>;
+}
+
 export class ConfigurationService {
     private cache = new Map<string, Configuration>();
+    private projectConfigs = new Map<string, ProjectConfiguration>();
     private diagnosticCollection: vscode.DiagnosticCollection;
+    private loader: ConfigurationLoader;
 
-    constructor(diagnosticCollection: vscode.DiagnosticCollection) {
+    constructor(diagnosticCollection: vscode.DiagnosticCollection, loader: ConfigurationLoader) {
         this.diagnosticCollection = diagnosticCollection;
+        this.loader = loader;
+    }
+
+    public async initialize(): Promise<void> {
+        if (vscode.workspace.workspaceFolders) {
+            for (const folder of vscode.workspace.workspaceFolders) {
+                await this.loadConfiguration(folder.uri);
+            }
+        } else {
+            await this.loadConfiguration(undefined);
+        }
+    }
+
+    public async loadConfiguration(uri?: vscode.Uri): Promise<void> {
+        const workspaceFolder = uri ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
+        const folderUri = workspaceFolder ? workspaceFolder.uri.toString() : 'global';
+        
+        try {
+            const projectConfig = await this.loader.load(workspaceFolder);
+            if (projectConfig) {
+                this.projectConfigs.set(folderUri, projectConfig);
+            } else {
+                this.projectConfigs.delete(folderUri);
+            }
+        } catch (e) {
+            this.projectConfigs.delete(folderUri);
+        }
+        
+        // Invalidate and re-resolve
+        this.cache.set(folderUri, this.resolveConfiguration(workspaceFolder, uri));
     }
 
     public getConfiguration(uri: vscode.Uri | undefined): Configuration {
@@ -242,9 +282,12 @@ export class ConfigurationService {
         if (uri) {
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             if (workspaceFolder) {
-                this.cache.delete(workspaceFolder.uri.toString());
-                const configPath = path.join(workspaceFolder.uri.fsPath, '.gherkin-powertoolsrc.json');
-                this.diagnosticCollection.delete(vscode.Uri.file(configPath));
+                const folderUriStr = workspaceFolder.uri.toString();
+                this.cache.delete(folderUriStr);
+                const projectConfig = this.projectConfigs.get(folderUriStr);
+                if (projectConfig && projectConfig.uri) {
+                    this.diagnosticCollection.delete(projectConfig.uri);
+                }
             }
         } else {
             this.cache.clear();
@@ -253,42 +296,37 @@ export class ConfigurationService {
     }
 
     private resolveConfiguration(workspaceFolder: vscode.WorkspaceFolder | undefined, uri: vscode.Uri | undefined): Configuration {
+        const folderUriStr = workspaceFolder ? workspaceFolder.uri.toString() : 'global';
+        const projectConfig = this.projectConfigs.get(folderUriStr);
+
         let parsedProjectConfig: any = null;
         let projectProfile: string | undefined = undefined;
-        let configPath = '';
         let fileContent = '';
 
-        if (workspaceFolder) {
-            configPath = path.join(workspaceFolder.uri.fsPath, '.gherkin-powertoolsrc.json');
-            if (fs.existsSync(configPath)) {
-                try {
-                    fileContent = fs.readFileSync(configPath, 'utf8');
-                    parsedProjectConfig = JSON.parse(fileContent);
-                    if (parsedProjectConfig && typeof parsedProjectConfig.profile === 'string') {
-                        projectProfile = parsedProjectConfig.profile;
-                    }
-                } catch (e) {
-                    // Will be handled below
-                }
+        if (projectConfig) {
+            fileContent = projectConfig.content;
+            parsedProjectConfig = projectConfig.parsed;
+            if (parsedProjectConfig && typeof parsedProjectConfig.profile === 'string') {
+                projectProfile = parsedProjectConfig.profile;
             }
         }
 
         const vsCodeConfig = this.getVsCodeSettings(uri, projectProfile);
 
         if (!parsedProjectConfig) {
-            if (configPath && fs.existsSync(configPath)) {
+            if (projectConfig && projectConfig.uri && fileContent.trim() !== '') {
                 const range = new vscode.Range(0, 0, 0, 100);
                 const diag = new vscode.Diagnostic(range, `Invalid JSON`, vscode.DiagnosticSeverity.Error);
-                this.diagnosticCollection.set(vscode.Uri.file(configPath), [diag]);
-            } else if (configPath) {
-                this.diagnosticCollection.delete(vscode.Uri.file(configPath));
+                this.diagnosticCollection.set(projectConfig.uri, [diag]);
+            } else if (projectConfig && projectConfig.uri) {
+                this.diagnosticCollection.delete(projectConfig.uri);
             }
             return vsCodeConfig;
         }
 
         const { errors, config } = validateAndMergeConfig(parsedProjectConfig, vsCodeConfig);
         
-        if (errors.length > 0) {
+        if (errors.length > 0 && projectConfig && projectConfig.uri) {
             const diagnostics = errors.map(err => {
                 let line = 0;
                 const lines = fileContent.split('\n');
@@ -297,9 +335,9 @@ export class ConfigurationService {
                 const range = new vscode.Range(line, 0, line, 100);
                 return new vscode.Diagnostic(range, err.message, vscode.DiagnosticSeverity.Error);
             });
-            this.diagnosticCollection.set(vscode.Uri.file(configPath), diagnostics);
-        } else {
-            this.diagnosticCollection.delete(vscode.Uri.file(configPath));
+            this.diagnosticCollection.set(projectConfig.uri, diagnostics);
+        } else if (projectConfig && projectConfig.uri) {
+            this.diagnosticCollection.delete(projectConfig.uri);
         }
         
         return config;

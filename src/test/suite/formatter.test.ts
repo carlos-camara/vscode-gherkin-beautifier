@@ -81,16 +81,11 @@ export function applyTextEdits(source: string, edits: vscode.TextEdit[]): string
     return currentSource;
 }
 
+const dummyLoader = { async load() { return null; } };
 const mockConfigService = new ConfigurationService({
     name: 'mock',
-    set: () => {},
-    delete: () => {},
-    clear: () => {},
-    forEach: () => {},
-    get: () => [],
-    has: () => false,
-    dispose: () => {}
-} as any);
+    set: () => {}, delete: () => {}, clear: () => {}, forEach: () => {}, get: () => [], has: () => false, dispose: () => {}
+} as any, dummyLoader);
 
 suite('Formatter Test Suite', () => {
     test('Format simple feature and scenario with proper spacing', async () => {
