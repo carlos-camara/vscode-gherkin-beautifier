@@ -155,7 +155,7 @@
           "order": 20,
           "scope": "resource",
           "default": true,
-          "markdownDescription": "Enable or disable the real-time Gherkin linter. When `false`, no diagnostics (red/yellow underlines) will appear in `.feature` files. Useful when you rely exclusively on an external CI linter and want to reduce editor noise."
+          "markdownDescription": "Enable or disable the real-time Gherkin linter. When `false`, the linter enters a completely dormant state—suppressing AST parsing, debounce timers, and notifications to conserve system resources—and no diagnostics (red/yellow underlines) will appear in `.feature` files."
         },
         "gherkinPowerTools.diagnostics.metricsEnabled": {
           "type": "boolean",

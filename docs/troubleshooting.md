@@ -18,6 +18,12 @@ This guide addresses common problems organized by observable symptoms.
 2. Check your settings for `"gherkinPowerTools.formatter.enabled": false`.
 **Resolution:** Ensure the file extension is `.feature`. Remove the disabling setting.
 
+## Diagnostics do not appear
+**Symptom:** You type invalid Gherkin, but no red or yellow squiggly lines appear in the editor.
+**Likely Causes:** The real-time linter has been disabled in the settings.
+**Diagnostic Steps:** Check your settings for `"gherkinPowerTools.linter.enabled": false`. When disabled, the linter enters a completely dormant state to conserve system resources.
+**Resolution:** Remove the setting or set `"gherkinPowerTools.linter.enabled": true`.
+
 ## Format on Save does not work on some files
 **Symptom:** You have Format on Save enabled, but the file doesn't format when saving. However, manually formatting it shows a warning.
 **Likely Causes:** The Gherkin file contains structural syntax errors.
