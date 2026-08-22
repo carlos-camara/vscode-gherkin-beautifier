@@ -4,6 +4,8 @@ export class MetricsLogger {
     private parseRequests = 0;
     private cacheHits = 0;
     private cacheMisses = 0;
+    private cacheEvictions = 0;
+    private currentCacheMemoryBytes = 0;
     private totalParseTimeMs = 0;
     private totalAstGenerationTimeMs = 0;
     private totalFeatures = 0;
@@ -29,6 +31,16 @@ export class MetricsLogger {
         if (!this.isEnabled()) return;
         this.parseRequests++;
         this.cacheMisses++;
+    }
+
+    public recordCacheEviction(): void {
+        if (!this.isEnabled()) return;
+        this.cacheEvictions++;
+    }
+
+    public updateCacheMemory(bytes: number): void {
+        if (!this.isEnabled()) return;
+        this.currentCacheMemoryBytes = bytes;
     }
 
     public recordParse(
@@ -83,6 +95,8 @@ export class MetricsLogger {
         this.outputChannel.appendLine(`Cache Hits:           ${this.cacheHits}`);
         this.outputChannel.appendLine(`Cache Misses:         ${this.cacheMisses}`);
         this.outputChannel.appendLine(`Cache Hit Ratio:      ${hitRatio}%`);
+        this.outputChannel.appendLine(`Cache Evictions:      ${this.cacheEvictions}`);
+        this.outputChannel.appendLine(`Cache Est. Memory:    ${(this.currentCacheMemoryBytes / 1024 / 1024).toFixed(2)} MB`);
         this.outputChannel.appendLine(`Parser Failures:      ${this.parserFailures}`);
         this.outputChannel.appendLine('');
         this.outputChannel.appendLine('--- Performance ---');
