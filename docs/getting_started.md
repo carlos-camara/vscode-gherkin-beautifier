@@ -1,6 +1,6 @@
 # Getting Started
 
-> Get up and running in under 60 seconds. Gherkin PowerTools requires **no configuration** to start formatting and linting your Gherkin files.
+> Gherkin PowerTools requires **no configuration** to start formatting and linting your Gherkin files.
 
 ---
 
@@ -47,7 +47,7 @@ Try out the AST-powered formatter. Mess up the alignment of an `Examples:` table
 ## 4. Diagnostics & Quick Fixes
 
 Write an invalid keyword, or leave out a colon `:` after `Scenario`. The real-time linter will underline the error.
-Place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to apply a Quick Fix.
+Place your cursor anywhere on the line with the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) or click the lightbulb to apply a Quick Fix.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/linter.gif" alt="Linter - flags structural errors as you type" width="600" height="340" />
@@ -60,13 +60,16 @@ Place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.
 
 If you are using Python Behave, Gherkin PowerTools provides advanced step generation, navigation, and Test Explorer integration.
 
+> [!IMPORTANT]
+> To use Python Behave execution and step generation features, you **MUST** have a valid Workspace Folder opened in VS Code. Attempting to run tests or generate steps for standalone `.feature` files outside of an active workspace is explicitly blocked for security and context-resolution reasons.
+
 On your first run in a Python workspace, the **First-Run Onboarding Experience** automatically detects if it is a Behave project. If detected, a welcome notification will appear, providing a quick summary of the features found and direct links to the Walkthrough and Project Health Dashboard.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/onboarding.gif" alt="First-Run Onboarding Experience" width="600" height="340" />
 </div>
 
-To generate your first Python step, write an undefined step in your `.feature` file, press <kbd>Ctrl+.</kbd>, and select **Generate Python Step Definition**.
+To generate your first Python step, write an undefined step in your `.feature` file, press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS), and select **Generate Python Step Definition**.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" height="340" />
@@ -132,3 +135,4 @@ Explore the full capabilities:
 - [Run and Debug](run_and_debug.md) (Test Explorer)
 - [Command Line Interface (CLI)](cli.md) (Headless Execution & CI/CD)
 - [Configuration Reference](configuration.md)
+- [Configuration Profiles](configuration_profiles.md) (Team Baselines)

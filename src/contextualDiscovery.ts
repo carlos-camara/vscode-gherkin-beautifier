@@ -138,7 +138,7 @@ export class ContextualFeatureDiscoveryService implements vscode.Disposable {
         const ruleId = 'dashboardRule';
         if (this.hasBeenShown(ruleId)) { return; }
 
-        const nodes = this.graph.getAllNodes();
+        const nodes = this.graph.currentGeneration.getAllNodes();
         const features = nodes.filter(n => n.type === 'Feature');
 
         if (features.length >= 5) {

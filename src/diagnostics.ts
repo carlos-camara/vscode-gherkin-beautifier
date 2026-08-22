@@ -4,7 +4,9 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { SymbolCache, FeatureCache } from './cache';
 import { discoveryService } from './discovery';
+import { featureDiscoveryService } from './featureDiscovery';
 import { ConfigurationService } from './configuration';
+import { DeferredBootstrap, CapabilityStatus } from './bootstrap';
 
 export interface DiagnosticReport {
     extensionVersion: string;
@@ -21,6 +23,7 @@ export interface DiagnosticReport {
     behaveExecution: string;
     behaveExecutableStatus: string;
     projectConfigStatus: string;
+    bootstrapCapabilities: CapabilityStatus[];
     warnings: string[];
     recommendations: string[];
     rawTimestamp: string;
@@ -55,7 +58,8 @@ export class DiagnosticEngine {
     public async collectDiagnostics(
         symbolCache?: SymbolCache,
         _featureCache?: FeatureCache,
-        configService?: ConfigurationService
+        configService?: ConfigurationService,
+        bootstrap?: DeferredBootstrap
     ): Promise<DiagnosticReport> {
         const ext = vscode.extensions.getExtension('carloscamara.vscode-gherkin-powertools');
         const extensionVersion = ext?.packageJSON?.version || '1.7.6';
@@ -84,7 +88,7 @@ export class DiagnosticEngine {
         // Discovered files
         let featureFilesCount = 0;
         try {
-            const features = await vscode.workspace.findFiles('**/*.feature', '{**/node_modules/**,**/.venv/**,**/venv/**,**/env/**}');
+            const features = await featureDiscoveryService.getFeatureFiles();
             featureFilesCount = features.length;
         } catch {
             featureFilesCount = 0;
@@ -178,6 +182,8 @@ export class DiagnosticEngine {
             recommendations.push('Ensure your Python functions are decorated with @given, @when, @then, or @step decorators using string literals.');
         }
 
+        const bootstrapCapabilities = bootstrap ? bootstrap.getDiagnostics() : [];
+
         return {
             extensionVersion,
             vscodeVersion,
@@ -193,6 +199,7 @@ export class DiagnosticEngine {
             behaveExecution,
             behaveExecutableStatus,
             projectConfigStatus,
+            bootstrapCapabilities,
             warnings,
             recommendations,
             rawTimestamp: new Date().toISOString()
@@ -228,6 +235,16 @@ export class DiagnosticEngine {
         lines.push(`Project Config (.json)  : ${report.projectConfigStatus}`);
         lines.push('');
 
+        if (report.bootstrapCapabilities.length > 0) {
+            lines.push('--- BOOTSTRAP CAPABILITIES ---');
+            report.bootstrapCapabilities.forEach(c => {
+                const retryStr = c.retryCount > 0 ? ` (retries: ${c.retryCount})` : '';
+                const errorStr = c.error ? ` - Error: ${c.error}` : '';
+                lines.push(`[${c.criticality.toUpperCase()}] ${c.id}: ${c.state}${retryStr}${errorStr}`);
+            });
+            lines.push('');
+        }
+
         if (report.warnings.length > 0) {
             lines.push('--- WARNINGS ---');
             report.warnings.forEach(w => lines.push(`⚠️ ${w}`));
@@ -251,10 +268,11 @@ export async function showDiagnosticsReport(
     context: vscode.ExtensionContext,
     symbolCache?: SymbolCache,
     featureCache?: FeatureCache,
-    configService?: ConfigurationService
+    configService?: ConfigurationService,
+    bootstrap?: DeferredBootstrap
 ): Promise<string> {
     const engine = new DiagnosticEngine();
-    const report = await engine.collectDiagnostics(symbolCache, featureCache, configService);
+    const report = await engine.collectDiagnostics(symbolCache, featureCache, configService, bootstrap);
     const rawMarkdown = engine.generateReportMarkdown(report);
     const sanitizedMarkdown = redactReportText(rawMarkdown);
 
@@ -273,7 +291,7 @@ export async function showDiagnosticsReport(
     ).then(selection => {
         if (selection === '📋 Copy Sanitized Report') {
             vscode.env.clipboard.writeText(sanitizedMarkdown);
-            vscode.window.showInformationMessage('Sanitized diagnostic report copied to clipboard.');
+            vscode.window.showInformationMessage('Sanitized report copied to clipboard.');
         }
     });
 

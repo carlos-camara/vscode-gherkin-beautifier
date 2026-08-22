@@ -71,8 +71,10 @@ nav:
   - Run and Debug: run_and_debug.md
   - Gherkin Health & Analytics: gherkin_health.md
   - Configuration: configuration.md
+  - Configuration Profiles: configuration_profiles.md
   - Commands: commands.md
   - CLI: cli.md
+  - Capability Contract: capability_contract.md
   - Performance: performance.md
   - Compatibility: compatibility.md
   - Troubleshooting: troubleshooting.md

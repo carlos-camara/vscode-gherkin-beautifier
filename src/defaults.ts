@@ -14,7 +14,8 @@ export const DEFAULT_CONFIG = {
             executable: "behave",
             arguments: []
         }
-    }
+    },
+    featureGlobs: ["**/*.feature"]
 };
 
 export const DEFAULT_RULE_CONFIG: Record<string, string> = {

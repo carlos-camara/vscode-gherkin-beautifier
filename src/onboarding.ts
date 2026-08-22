@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigurationService } from './configuration';
 import { discoveryService } from './discovery';
+import { featureDiscoveryService } from './featureDiscovery';
 
 export interface OnboardingAnalysis {
     isBehaveProject: boolean;
@@ -300,7 +301,7 @@ export async function showOnboardingNotificationIfNeeded(
                     }
                     const merged = mergeSettingsJson(existing, analysis.suggestedStepGlobs);
                     fs.writeFileSync(settingsPath, merged, 'utf8');
-                    vscode.window.showInformationMessage('Workspace settings updated with suggested stepGlobs.');
+                    vscode.window.showInformationMessage('Workspace settings updated with suggested step definitions pattern.');
                 } else if (selection === '📄 Config') {
                     const configPath = path.join(folder.uri.fsPath, '.gherkin-powertoolsrc.json');
                     let existing = '';
@@ -309,7 +310,7 @@ export async function showOnboardingNotificationIfNeeded(
                     }
                     const merged = mergeProjectConfigFile(existing, analysis.suggestedStepGlobs);
                     fs.writeFileSync(configPath, merged, 'utf8');
-                    vscode.window.showInformationMessage('.gherkin-powertoolsrc.json updated with suggested stepGlobs.');
+                    vscode.window.showInformationMessage('.gherkin-powertoolsrc.json updated with suggested step definitions pattern.');
                 } else if (selection === '🩺 Diagnostics') {
                     vscode.commands.executeCommand('gherkinPowerTools.diagnoseWorkspace');
                 }
@@ -341,11 +342,8 @@ export class FirstRunExperience {
             if (detection.isBehaveProject) {
                 let featureCount = 0;
                 try {
-                    const featureFiles = await vscode.workspace.findFiles(
-                        new vscode.RelativePattern(folder.uri, '**/*.feature'),
-                        '{**/node_modules/**,**/.venv/**,**/venv/**,**/env/**}',
-                        100
-                    );
+                    const allFeatureFiles = await featureDiscoveryService.getFeatureFiles();
+                    const featureFiles = allFeatureFiles.filter(f => f.fsPath.startsWith(folder.uri.fsPath));
                     featureCount = featureFiles.length;
                 } catch {
                     featureCount = 0;

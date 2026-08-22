@@ -1,4 +1,5 @@
 import { WorkspaceGraph, StepNode, StepDefNode } from './graph';
+import { ResourceIdentity } from './utils/resourceIdentity';
 import { SymbolCache } from './cache';
 
 interface UnusedStep {
@@ -28,8 +29,8 @@ export class StepAnalyzer {
     constructor(private graph: WorkspaceGraph, private symbolCache: SymbolCache) {}
 
     public async analyze(): Promise<StepAnalysisResult> {
-        const stepDefs = this.graph.getAllStepDefNodes();
-        const steps = this.graph.getAllStepNodes();
+        const stepDefs = this.graph.currentGeneration.getAllStepDefNodes();
+        const steps = this.graph.currentGeneration.getAllStepNodes();
 
         // 1. Unused steps
         const unusedSteps = stepDefs.filter(d => d.usages.length === 0).map(d => ({ stepDef: d }));
@@ -55,7 +56,7 @@ export class StepAnalyzer {
             if (step.text) {
                 const matches = await this.symbolCache.getStepDefinitions(step.text, step.semanticType);
                 if (matches.length > 1) {
-                    const matchingDefs = matches.map(m => stepDefs.find(n => n.uri.toLowerCase() === m.uri.toString().toLowerCase() && n.line === m.decoratorRange.start.line)).filter(n => !!n) as StepDefNode[];
+                    const matchingDefs = matches.map(m => stepDefs.find(n => ResourceIdentity.getCanonicalUriString(n.uri) === ResourceIdentity.getCanonicalUriString(m.uri.toString()) && n.line === m.decoratorRange.start.line)).filter(n => !!n) as StepDefNode[];
                     if (matchingDefs.length > 1) {
                         ambiguousSteps.push({ step, matchingDefs });
                     }

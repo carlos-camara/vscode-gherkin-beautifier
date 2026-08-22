@@ -12,7 +12,20 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
     public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
         const actions: vscode.CodeAction[] = [];
 
-        for (const diagnostic of context.diagnostics) {
+        // Instead of only using context.diagnostics (which strictly intersect the cursor),
+        // fetch all diagnostics for the file and include any that are on the same line.
+        // This ensures the lightbulb appears anywhere on the line, even if a whole-line 
+        // diagnostic (like Syntax Error) shadows a more precise word-level diagnostic.
+        const allDiagnostics = vscode.languages.getDiagnostics(document.uri);
+        const lineDiagnostics = allDiagnostics.filter(d => 
+            d.range.start.line <= _range.end.line && d.range.end.line >= _range.start.line
+        );
+        
+        // Merge context diagnostics with line diagnostics to ensure we don't miss any,
+        // then deduplicate by object reference.
+        const relevantDiagnostics = Array.from(new Set([...context.diagnostics, ...lineDiagnostics]));
+
+        for (const diagnostic of relevantDiagnostics) {
             if (diagnostic.code === 'MISSING_COLON') {
                 const action = new vscode.CodeAction("Insert missing ':'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
@@ -41,30 +54,88 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 action.isPreferred = true;
                 actions.push(action);
             } else if (diagnostic.code === 'INCONSISTENT_CELL_COUNT') {
-                const replacement = diagnostic.relatedInformation?.[0]?.message || '';
-                if (replacement) {
-                    const action = new vscode.CodeAction("Close table row (append '|')", vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, diagnostic.range, replacement);
-                    action.diagnostics = [diagnostic];
-                    action.isPreferred = true;
-                    actions.push(action);
+                const lineIndex = diagnostic.range.start.line;
+                const line = document.lineAt(lineIndex);
+                const lineText = line.text;
+
+                // Find the header row to determine expected cell count
+                let headerLineIndex = lineIndex;
+                while (headerLineIndex > 0) {
+                    const prevLineText = document.lineAt(headerLineIndex - 1).text.trim();
+                    if (!prevLineText.startsWith('|')) {
+                        break;
+                    }
+                    headerLineIndex--;
+                }
+
+                if (headerLineIndex !== lineIndex) {
+                    const headerText = document.lineAt(headerLineIndex).text;
+                    const expectedCells = (headerText.match(/\|/g) || []).length;
+                    const currentCells = (lineText.match(/\|/g) || []).length;
+                    
+                    if (currentCells > expectedCells) {
+                        // Extra columns: find the Nth pipe and truncate
+                        let pipeCount = 0;
+                        let truncateIndex = -1;
+                        for (let i = 0; i < lineText.length; i++) {
+                            if (lineText[i] === '|') {
+                                pipeCount++;
+                                if (pipeCount === expectedCells) {
+                                    truncateIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (truncateIndex !== -1) {
+                            const action = new vscode.CodeAction("Remove extra cells", vscode.CodeActionKind.QuickFix);
+                            action.edit = new vscode.WorkspaceEdit();
+                            const fixedText = lineText.substring(0, truncateIndex + 1);
+                            action.edit.replace(document.uri, line.range, fixedText);
+                            action.diagnostics = [diagnostic];
+                            action.isPreferred = true;
+                            actions.push(action);
+                        }
+                    } else if (currentCells < expectedCells) {
+                        // Missing columns
+                        const action = new vscode.CodeAction("Add missing cells", vscode.CodeActionKind.QuickFix);
+                        action.edit = new vscode.WorkspaceEdit();
+                        
+                        const missingPipes = expectedCells - currentCells;
+                        let fixedText = lineText;
+                        
+                        if (!fixedText.trim().endsWith('|')) {
+                            fixedText += ' |';
+                            for (let i = 0; i < missingPipes - 1; i++) {
+                                fixedText += '   |';
+                            }
+                        } else {
+                            for (let i = 0; i < missingPipes; i++) {
+                                fixedText += '   |';
+                            }
+                        }
+                        
+                        action.edit.replace(document.uri, line.range, fixedText);
+                        action.diagnostics = [diagnostic];
+                        action.isPreferred = true;
+                        actions.push(action);
+                    }
                 }
             } else if (diagnostic.code === 'UNDEFINED_STEP') {
                 const action = new vscode.CodeAction('Create empty step definition', vscode.CodeActionKind.QuickFix);
-                
+
                 // Retrieve the keyword from relatedInformation
                 const keyword = diagnostic.relatedInformation && diagnostic.relatedInformation.length > 0
                     ? diagnostic.relatedInformation[0].message
                     : 'step';
-                
+
                 let pyKeyword = keyword.toLowerCase().trim();
                 const dialect = dialectService.getDialect(document);
-                
+
                 const andKeywords = dialect.and.map(k => k.trim().toLowerCase());
                 const butKeywords = dialect.but.map(k => k.trim().toLowerCase());
                 const isContinuation = andKeywords.includes(pyKeyword) || butKeywords.includes(pyKeyword) || pyKeyword === '*';
-                
+
                 // Resolve semantic keyword if it's a continuation
                 if (isContinuation) {
                     pyKeyword = dialectService.resolveAndBut(document, diagnostic.range.start.line);
@@ -182,10 +253,30 @@ export async function createStepDefinition(stepText: string, keyword: string, do
 
     if (pyFiles.length === 0) {
         // Find workspace folder
-        const workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : discoveryService.getBestWorkspaceFolder(vscode.Uri.file('/'));
-            
+        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
+
+        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            if (vscode.workspace.workspaceFolders.length === 1) {
+                workspaceFolder = vscode.workspace.workspaceFolders[0];
+            } else {
+                const items = vscode.workspace.workspaceFolders.map(folder => ({
+                    label: folder.name,
+                    description: folder.uri.fsPath,
+                    folder: folder
+                }));
+                const selection = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select a workspace folder to create step definitions in'
+                });
+                if (selection) {
+                    workspaceFolder = selection.folder;
+                } else {
+                    return undefined;
+                }
+            }
+        }
+
         if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
+            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
             return undefined;
         }
 
@@ -212,7 +303,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
             label: vscode.workspace.asRelativePath(uri),
             uri: uri
         }));
-        
+
         const selection = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select a Python file to append the step definition to'
         });
@@ -236,7 +327,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
         const { pattern, funcArgs } = extractStepParameters(stepText);
         const safeString = serializeToPythonString(pattern);
         const baseFuncName = generateStepFunctionName(stepText);
-        
+
         let funcName = baseFuncName;
         let suffix = 1;
         while (new RegExp(`^def\\s+${funcName}\\s*\\(`, 'm').test(fileContent)) {
@@ -282,7 +373,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
         // Let the user review the unsaved file.
         const document = await vscode.workspace.openTextDocument(targetUri);
         const editor = await vscode.window.showTextDocument(document);
-        
+
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
         editor.selection = new vscode.Selection(newEndPos, newEndPos);
         editor.revealRange(new vscode.Range(newEndPos, newEndPos));
@@ -303,9 +394,28 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
     let isNewFile = false;
 
     if (pyFiles.length === 0) {
-        const workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : discoveryService.getBestWorkspaceFolder(vscode.Uri.file('/'));
+        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
+        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            if (vscode.workspace.workspaceFolders.length === 1) {
+                workspaceFolder = vscode.workspace.workspaceFolders[0];
+            } else {
+                const items = vscode.workspace.workspaceFolders.map(folder => ({
+                    label: folder.name,
+                    description: folder.uri.fsPath,
+                    folder: folder
+                }));
+                const selection = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'Select a workspace folder to create step definitions in'
+                });
+                if (selection) {
+                    workspaceFolder = selection.folder;
+                } else {
+                    return undefined;
+                }
+            }
+        }
         if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Please open a workspace to create step definitions.");
+            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
             return undefined;
         }
 
@@ -331,7 +441,7 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
             label: vscode.workspace.asRelativePath(uri),
             uri: uri
         }));
-        
+
         const selection = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select a Python file to append the step definitions to'
         });
@@ -364,10 +474,10 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
 
         for (const step of steps) {
             const { pattern, funcArgs } = extractStepParameters(step.text);
-            
+
             // Avoid generating duplicate patterns in the same batch or if they already exist
             if (generatedPatterns.has(pattern)) continue;
-            
+
             // Check if it already exists in the file (basic check)
             const safeString = serializeToPythonString(pattern);
             if (fileContent.includes(safeString)) {
@@ -424,12 +534,12 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
 
         const document = await vscode.workspace.openTextDocument(targetUri);
         const editor = await vscode.window.showTextDocument(document);
-        
+
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
         editor.selection = new vscode.Selection(newEndPos, newEndPos);
         editor.revealRange(new vscode.Range(newEndPos, newEndPos));
 
-        vscode.window.showInformationMessage(`Generated ${addedCount} step definition(s)!`);
+        vscode.window.showInformationMessage(`Generated ${addedCount} step definition(s).`);
         return targetUri;
     }
     return undefined;

@@ -12,12 +12,13 @@ Gherkin PowerTools automatically scans your workspace to discover Python step de
 
 It does this through a lazy-initialized background indexer that parses your `*.py` files looking for Behave decorators (`@given`, `@when`, `@then`, `@step`). This happens automatically within a few seconds of opening your project.
 
+### Zero-Config Virtual Environment Discovery
+To prevent false matches and eliminate performance overhead from indexing irrelevant files, the extension implements **Zero-Config Virtual Environment Discovery**. It automatically detects and excludes local virtual environments (`node_modules`, `.venv`, `venv`, `env`, etc.) by default.
+
 ### Supported Project Structures
 By default, the extension searches for Python steps in:
 - `**/steps/**/*.py`
 - `**/features/steps/**/*.py`
-
-Virtual environments (`node_modules`, `.venv`, `venv`, `env`) are **excluded** by default to prevent false matches and performance issues.
 
 ### Custom Step Paths
 If your project uses a custom directory structure (e.g., a monorepo with `shared_steps/`), you can easily add those paths in your configuration:
@@ -98,7 +99,7 @@ A CodeLens appears directly above every step definition in your `.py` files show
 - **Impact: Low** (Used in 1 to 4 scenarios)
 - **Impact: Unused** (Not referenced anywhere)
 
-Clicking the CodeLens opens an interactive menu listing every specific scenario that uses this step. Selecting a scenario instantly opens the `.feature` file and navigates to the exact line, allowing you to quickly prioritize your testing when refactoring.
+Clicking the CodeLens opens an interactive menu listing every specific scenario that uses this step. The QuickPick menu uses a simplified path display for better readability. Selecting a scenario instantly opens the `.feature` file and navigates directly to the exact step (rather than just the top of the scenario), allowing you to quickly prioritize your testing when refactoring.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/impact-analysis.gif" alt="Impact Analysis - Blast Radius CodeLens" width="600" height="340" />

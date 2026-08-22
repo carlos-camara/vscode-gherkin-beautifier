@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write # Required for lint-codebase to update the PR checklist
   statuses: write # Required for Super-Linter to post commit statuses
 
 concurrency:
@@ -23,7 +22,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 🔍 Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -37,6 +36,13 @@ jobs:
         run: npx vsce ls
 
       - name: 🧹 Lint Codebase (Markdown, YAML, Actions)
-        uses: carlos-camara/qa-hub-actions/lint-codebase@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        uses: super-linter/super-linter@34dfdddf86c8da9508e3c52eb27bd8ac98d5d8a6 # v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: main
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_PYTHON: true
+          VALIDATE_YAML: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_GITHUB_ACTIONS: true
+          FILTER_REGEX_EXCLUDE: '(\.venv/|_pycache_/|reports/|\.git/|\.pytest_cache/|node_modules/|dist/|coverage/)'

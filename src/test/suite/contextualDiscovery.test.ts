@@ -33,7 +33,9 @@ suite('Contextual Feature Discovery Test Suite', () => {
         } as unknown as vscode.ExtensionContext;
 
         mockGraph = {
-            getAllNodes: () => []
+            currentGeneration: {
+                getAllNodes: () => []
+            }
         } as unknown as WorkspaceGraph;
 
         const originalGetDiagnostics = vscode.languages.getDiagnostics;
@@ -127,7 +129,7 @@ suite('Contextual Feature Discovery Test Suite', () => {
 
     test('Dashboard Rule triggers when there are 5 or more features', async () => {
         // Mock 5 features
-        mockGraph.getAllNodes = () => [
+        mockGraph.currentGeneration.getAllNodes = () => [
             { type: 'Feature' } as any, { type: 'Feature' } as any, 
             { type: 'Feature' } as any, { type: 'Feature' } as any, 
             { type: 'Feature' } as any

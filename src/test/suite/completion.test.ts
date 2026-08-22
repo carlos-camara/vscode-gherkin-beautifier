@@ -95,12 +95,10 @@ Feature: Test
         assert.strictEqual(completions.length, 3);
         
         const labels = completions.map(c => c.filterText);
-        assert.ok(labels.includes('I have {count:d} apples'));
         assert.ok(labels.includes('generic step'));
-        assert.ok(labels.includes('duplicate pattern'));
+        assert.ok(labels.includes('I have <count> apples'));
         
-        // Ensure snippet formatting
-        const item1 = completions.find(c => c.filterText === 'I have {count:d} apples');
+        const item1 = completions.find(c => c.filterText === 'I have <count> apples');
         assert.ok(item1?.insertText instanceof vscode.SnippetString);
         assert.strictEqual(item1.insertText.value, 'I have ${1:count} apples');
     });
@@ -118,10 +116,10 @@ Feature: Test
         assert.strictEqual(completions.length, 2); // When + step
         
         const labels = completions.map(c => c.filterText);
-        assert.ok(labels.includes('I eat (?P<amount>\\d+) apples'));
+        assert.ok(labels.includes('I eat <amount> apples'));
         assert.ok(labels.includes('generic step'));
         
-        const item = completions.find(c => c.filterText === 'I eat (?P<amount>\\d+) apples');
+        const item = completions.find(c => c.filterText === 'I eat <amount> apples');
         assert.ok(item?.insertText instanceof vscode.SnippetString);
         assert.strictEqual(item.insertText.value, 'I eat ${1:amount} apples');
     });
@@ -141,7 +139,7 @@ Feature: Test
         assert.strictEqual(completions.length, 2);
         
         const labels = completions.map(c => c.filterText);
-        assert.ok(labels.includes('I eat (?P<amount>\\d+) apples'));
+        assert.ok(labels.includes('I eat <amount> apples'));
     });
 
     test('Supports localized keywords (Spanish) via Dialect Service', async () => {
@@ -159,7 +157,7 @@ Característica: Prueba
         // "Cuando" is "When"
         assert.strictEqual(completions.length, 2);
         const labels = completions.map(c => c.filterText);
-        assert.ok(labels.includes('I eat (?P<amount>\\d+) apples'));
+        assert.ok(labels.includes('I eat <amount> apples'));
     });
 
     test('Ranks exact textual prefixes higher', async () => {

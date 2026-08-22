@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { astRepository } from './ast';
+import { featureDiscoveryService } from './featureDiscovery';
 import { logger } from './logger';
 import { ConfigurationService } from './configuration';
 import { runBehaveForTestRun } from './execution';
@@ -120,20 +121,25 @@ export class GherkinTestController {
 
 
     private async discoverAllFilesInWorkspace() {
-        if (!vscode.workspace.workspaceFolders) { return; }
-        for (const workspaceFolder of vscode.workspace.workspaceFolders) {
-            const pattern = new vscode.RelativePattern(workspaceFolder, '**/*.feature');
-            const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
-            for (const file of files) {
-                await this.parseTestsInFileContents(this.getOrCreateFile(file));
-            }
+        const files = await featureDiscoveryService.getFeatureFiles();
+        for (const file of files) {
+            await this.parseTestsInFileContents(this.getOrCreateFile(file));
         }
     }
 
     private getOrCreateFile(uri: vscode.Uri): vscode.TestItem {
         const existing = this.controller.items.get(uri.toString());
         if (existing) { return existing; }
-        const file = this.controller.createTestItem(uri.toString(), path.basename(uri.fsPath), uri);
+        
+        const fileName = path.basename(uri.fsPath);
+        const niceName = fileName
+            .replace(/\.feature$/i, '')
+            .replace(/[-_]/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase());
+
+        const file = this.controller.createTestItem(uri.toString(), niceName, uri);
+        file.description = fileName;
+        
         this.controller.items.add(file);
         file.canResolveChildren = true;
         return file;
@@ -159,9 +165,14 @@ export class GherkinTestController {
             const feature = docAST.feature;
             const featureItem = this.controller.createTestItem(
                 `${fileItem.uri.toString()}#feature`,
-                `Feature: ${feature.name}`,
+                feature.name || 'Unnamed Feature',
                 fileItem.uri
             );
+            featureItem.description = 'Feature';
+            featureItem.sortText = String(feature.location.line).padStart(5, '0');
+            if (feature.tags && Array.isArray(feature.tags)) {
+                featureItem.tags = feature.tags.map((t: any) => new vscode.TestTag(t.name));
+            }
             const fLine = feature.location.line - 1;
             featureItem.range = new vscode.Range(fLine, 0, fLine, 100);
             fileItem.children.add(featureItem);
@@ -172,9 +183,11 @@ export class GherkinTestController {
                 } else if (child.rule) {
                     const ruleItem = this.controller.createTestItem(
                         `${fileItem.uri.toString()}#rule:${child.rule.location.line}`,
-                        `Rule: ${child.rule.name}`,
+                        child.rule.name || 'Unnamed Rule',
                         fileItem.uri
                     );
+                    ruleItem.description = 'Rule';
+                    ruleItem.sortText = String(child.rule.location.line).padStart(5, '0');
                     const rLine = child.rule.location.line - 1;
                     ruleItem.range = new vscode.Range(rLine, 0, rLine, 100);
                     featureItem.children.add(ruleItem);
@@ -193,13 +206,19 @@ export class GherkinTestController {
     private addScenario(parentItem: vscode.TestItem, scenario: any, uri: vscode.Uri) {
         const line = scenario.location.line;
         const isOutline = scenario.keyword?.trim().toLowerCase().includes('outline');
-        const label = `${isOutline ? 'Scenario Outline' : 'Scenario'}: ${scenario.name || `Line ${line}`}`;
-
+        
         const scenarioItem = this.controller.createTestItem(
             `${uri.toString()}#scenario:${line}`,
-            label,
+            scenario.name || `Unnamed ${isOutline ? 'Outline' : 'Scenario'}`,
             uri
         );
+        scenarioItem.description = isOutline ? 'Scenario Outline' : 'Scenario';
+        scenarioItem.sortText = String(line).padStart(5, '0');
+        
+        if (scenario.tags && Array.isArray(scenario.tags)) {
+            scenarioItem.tags = scenario.tags.map((t: any) => new vscode.TestTag(t.name));
+        }
+
         scenarioItem.range = new vscode.Range(line - 1, 0, line - 1, 100);
         parentItem.children.add(scenarioItem);
 
@@ -216,9 +235,11 @@ export class GherkinTestController {
                     const preview = cellValues.slice(0, 2).map((v, i) => `${headerCells[i]}=${v}`).join(', ');
                     const exampleItem = this.controller.createTestItem(
                         `${uri.toString()}#scenario:${rowLine}`,
-                        `Example: ${preview || `Row ${rowLine}`}`,
+                        preview || `Row ${rowLine}`,
                         uri
                     );
+                    exampleItem.description = 'Example';
+                    exampleItem.sortText = String(rowLine).padStart(5, '0');
                     exampleItem.range = new vscode.Range(rowLine - 1, 0, rowLine - 1, 100);
                     scenarioItem.children.add(exampleItem);
                 }
@@ -232,7 +253,7 @@ export class GherkinTestController {
         mode: 'run' | 'debug' | 'edit'
     ) {
         if (!vscode.workspace.isTrusted) {
-            vscode.window.showWarningMessage("Gherkin PowerTools: Test execution is disabled in untrusted workspaces for security reasons.");
+            vscode.window.showWarningMessage("Test execution disabled in untrusted workspace.");
             return;
         }
 
@@ -391,7 +412,11 @@ export class GherkinTestController {
                                     }
                                     const rawMsg = currentScenarioErrorMessage || "Scenario failed";
                                     const msgText = rawMsg.split('\n').filter((line, index, arr) => index === 0 || line !== arr[index - 1]).join('\n');
-                                    const msg = new vscode.TestMessage(msgText);
+                                    
+                                    const md = new vscode.MarkdownString();
+                                    md.appendMarkdown(`**Execution Failed**\n\n\`\`\`python\n${msgText}\n\`\`\``);
+                                    const msg = new vscode.TestMessage(md);
+                                    
                                     let stepItem: vscode.TestItem | undefined;
                                     if (currentScenarioErrorFile && currentScenarioErrorLine !== undefined) {
                                         const uri = vscode.Uri.file(currentScenarioErrorFile);
@@ -402,9 +427,10 @@ export class GherkinTestController {
                                         const stepId = `${currentScenarioItem.id}#error:${currentScenarioErrorLine}`;
                                         stepItem = this.controller.createTestItem(
                                             stepId,
-                                            `Failed Step (Line ${currentScenarioErrorLine})`,
+                                            `Failed at line ${currentScenarioErrorLine}`,
                                             uri
                                         );
+                                        stepItem.description = 'Exception';
                                         stepItem.range = new vscode.Range(pos, pos);
                                         currentScenarioItem.children.add(stepItem);
                                         run.started(stepItem);

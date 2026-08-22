@@ -51,7 +51,7 @@ suite('Command Center Test Suite', () => {
         const options = showQuickPickLastArgs[1] as vscode.QuickPickOptions;
 
         // Verify options
-        assert.strictEqual(options.placeHolder, 'Select a Gherkin PowerTools command to execute...');
+        assert.strictEqual(options.placeHolder, 'Select a command');
         assert.strictEqual(options.matchOnDescription, true);
 
         // Verify some expected items exist

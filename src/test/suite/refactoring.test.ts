@@ -75,7 +75,7 @@ suite('Step Refactoring Engine Test Suite', () => {
         const featureUri = vscode.Uri.file('/fake/test.feature');
         const pythonUri = vscode.Uri.file('/fake/steps.py');
 
-        sinon.stub(graph, 'getAllStepDefNodes').returns([{
+        sinon.stub(graph.currentGeneration, "getAllStepDefNodes").returns([{
             id: `${pythonUri.toString()}:5`,
             uri: pythonUri.toString(),
             line: 5,
@@ -83,7 +83,7 @@ suite('Step Refactoring Engine Test Suite', () => {
             regex: /old step name/
         } as any]);
 
-        sinon.stub(graph, 'getAllStepNodes').returns([{
+        sinon.stub(graph.currentGeneration, "getAllStepNodes").returns([{
             id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
             line: 3,
@@ -92,7 +92,7 @@ suite('Step Refactoring Engine Test Suite', () => {
             definitionId: `${pythonUri.toString()}:5`
         } as any]);
 
-        sinon.stub(graph, 'getUsages').returns([{
+        sinon.stub(graph.currentGeneration, "getUsages").returns([{
             id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
             line: 3,
@@ -155,7 +155,7 @@ suite('Step Refactoring Engine Test Suite', () => {
         const featureUri = vscode.Uri.file('/fake/test.feature');
         const pythonUri = vscode.Uri.file('/fake/steps.py');
 
-        sinon.stub(graph, 'getAllStepDefNodes').returns([{
+        sinon.stub(graph.currentGeneration, "getAllStepDefNodes").returns([{
             id: `${pythonUri.toString()}:5`,
             uri: pythonUri.toString(),
             line: 5,
@@ -171,7 +171,7 @@ suite('Step Refactoring Engine Test Suite', () => {
             range: new vscode.Range(5, 0, 7, 0)
         } as any]);
 
-        sinon.stub(graph, 'getAllStepNodes').returns([{
+        sinon.stub(graph.currentGeneration, "getAllStepNodes").returns([{
             id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
             line: 3,
@@ -180,7 +180,7 @@ suite('Step Refactoring Engine Test Suite', () => {
             definitionId: `${pythonUri.toString()}:5`
         } as any]);
 
-        sinon.stub(graph, 'getUsages').returns([{
+        sinon.stub(graph.currentGeneration, "getUsages").returns([{
             id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
             line: 3,

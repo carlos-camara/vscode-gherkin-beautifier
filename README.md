@@ -4,10 +4,11 @@
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/logo-transparent.png" alt="Gherkin PowerTools logo" width="120" />
 </div>
 
-<h1 align="center">Ship BDD Faster with Gherkin PowerTools</h1>
+<h1 align="center">Gherkin PowerTools: Workspace Intelligence for Python Behave</h1>
 
 <p align="center">
-  <strong>The all-in-one VS Code extension for formatting, validating, and debugging Gherkin feature files—with deep, first-class support for Python Behave.</strong>
+  <strong>Visual execution, AST-powered linting, and real-time impact analysis for enterprise BDD teams.</strong><br>
+  <em>A premium VS Code testing environment that transforms plain-text Gherkin specifications into an interactive, debuggable, and strictly validated codebase.</em>
 </p>
 
 <div align="center">
@@ -42,12 +43,12 @@
 
 ## Why Gherkin PowerTools?
 
-Deliver behavior faster without wrestling with the terminal or configuration:
+A premium testing environment that eliminates the friction between plain-text `.feature` files and your Python backend logic:
 
-- **Never Write Regex Manually:** 1-click Python step generation from undefined Gherkin steps.
-- **Catch Errors Before CI:** Dialect-aware real-time linting catches malformed syntax as you type.
-- **Visual Testing Integration:** Run, debug, and trace Behave scenarios visually directly from the VS Code sidebar.
-- **Navigate Instantly:** Context-aware IntelliSense and <kbd>Cmd+Click</kbd> bridge plain-text `.feature` files and Python backend logic.
+- **Visual Testing Integration:** Run, debug, and trace Python Behave scenarios visually directly from the VS Code sidebar.
+- **Workspace Intelligence:** Context-aware IntelliSense and <kbd>Cmd+Click</kbd> navigation with O(1) in-memory indexing.
+- **Safe Step Refactoring:** View the exact blast radius of a step before refactoring, and rename it globally with 1-click.
+- **Catch Errors Before CI:** Dialect-aware real-time AST linting catches malformed syntax as you type.
 
 ---
 
@@ -63,7 +64,7 @@ Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to instantly generate a vali
 </div>
 
 ### 2. Gherkin Health Dashboard & Anti-pattern Engine
-Powered by the new **BDD Anti-pattern Detection Engine**, you can now visually identify unused, duplicated, ambiguous, or highly complex step definitions and scenarios. Gherkin PowerTools calculates Technical Debt and Maintainability, persisting branch-isolated historical snapshots to securely visualize your project's evolution over time.
+Powered by the new **BDD Anti-pattern Detection Engine**, you can now visually identify unused, duplicated, ambiguous, or highly complex step definitions and scenarios. Gherkin PowerTools calculates Technical Debt and Maintainability, persisting branch-isolated historical snapshots to securely visualize your project's evolution over time in a premium, interactive dashboard.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" height="340" />
@@ -86,12 +87,15 @@ Gherkin PowerTools acts in two tiers depending on your project:
 - **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd> or Editor Context Menu).
 - **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
 - **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
+- **Gherkin Health Dashboard:** Interactive modern webview to analyze oversized features, tag usage, and architectural anti-patterns with built-in DOM node limits for massive workspaces.
 
 ### Exclusive to Python Behave
 - **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
 - **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
-- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking, powered by **Zero-Config Virtual Environment Discovery**.
-- **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines with 100% feature parity to the VS Code extension. *(Note: In Remote Development environments like WSL or SSH, run the CLI from the VS Code Integrated Terminal, not your local OS terminal).*
+- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking and pristine Markdown-formatted error traces, ordered strictly chronologically as written in your code.
+- **BDD Anti-pattern Detection Engine:** Instant technical debt diagnostics for unused, ambiguous, or duplicated step definitions across the workspace.
+- **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines.
+  The CLI uses the exact same parsing, formatting, and BDD Anti-pattern engine as the VS Code extension. [View the Capability Contract](https://carlos-camara.github.io/vscode-gherkin-powertools/capability_contract/). *(Note: In Remote Development environments like WSL or SSH, run the CLI from the VS Code Integrated Terminal, not your local OS terminal).*
 
 ---
 
@@ -102,6 +106,7 @@ Share team formatting rules by committing a `.gherkin-powertoolsrc.json` to your
 | Setting | Default | Description |
 | --- | --- | --- |
 | `gherkinPowerTools.profile` | `"custom"` | Formatting baseline: `strict`, `team`, `minimal`, `legacy`, or `custom`. |
+| `gherkinPowerTools.featureGlobs` | `["**/*.feature"]` | Paths to feature files to include in discovery and analysis. |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", ...]` | Paths to Python step definitions. |
 | `gherkinPowerTools.behave.execution` | `{"executable": "behave", "arguments": []}` | Secure Test Explorer execution command (e.g., `{"executable": "poetry", "arguments": ["run", "behave"]}`). |
 | `gherkinPowerTools.behave.localExecutable` | *None* | Machine-specific override for the Behave executable absolute path. |

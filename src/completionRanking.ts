@@ -3,6 +3,7 @@ import { parseGherkin } from './parser';
 import { StepDefinition } from './cache';
 import type { Step } from '@cucumber/messages';
 import { WorkspaceEventBus } from './eventBus';
+import { featureDiscoveryService } from './featureDiscovery';
 
 export interface RankingContext {
     semanticType: 'given' | 'when' | 'then' | 'step';
@@ -31,7 +32,7 @@ class UsageIndexer {
         this.isIndexed = true;
         
         try {
-            const files = await vscode.workspace.findFiles('**/*.feature', '**/node_modules/**');
+            const files = await featureDiscoveryService.getFeatureFiles();
             await Promise.all(files.map(uri => this.indexFile(uri)));
         } catch (e) {
             console.error('Failed to index workspace for completion ranking', e);

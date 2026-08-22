@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { SymbolCache } from './cache';
 import { dialectService } from './dialect';
 import { astRepository } from './ast';
-import type { GherkinDocument, Step } from '@cucumber/messages';
+import type { Step } from '@cucumber/messages';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
 
@@ -19,6 +19,7 @@ export class GherkinLinter {
     private eventBusDisposable?: vscode.Disposable;
 
     constructor(symbolCache: SymbolCache, private configService: ConfigurationService) {
+        // Ensure only one debounced call happens at a time
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('gherkin');
         this.symbolCache = symbolCache;
     }
@@ -33,7 +34,13 @@ export class GherkinLinter {
         this.eventBusDisposable = this.eventBus.onEvent(e => {
             if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
                 const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
-                this.scheduleLint(doc);
+                if (e.type === 'textDocumentOpened') {
+                    process.stdout.write(`\n--- LINTER EVENT: textDocumentOpened ${doc.uri.toString()} ---\n`);
+                    this.immediateLint(doc);
+                } else {
+                    process.stdout.write(`\n--- LINTER EVENT: textDocumentChanged ${doc.uri.toString()} ---\n`);
+                    this.scheduleLint(doc);
+                }
             } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
                 vscode.workspace.textDocuments.forEach(doc => {
                     this.immediateLint(doc);
@@ -88,37 +95,36 @@ export class GherkinLinter {
 
         const config = this.configService.getConfiguration(document.uri);
         if (!config.linter.enabled) {
-            vscode.window.showInformationMessage("Linter is currently DISABLED by configuration.");
+            vscode.window.showInformationMessage("Linter is disabled in settings.");
             this.diagnosticCollection.delete(document.uri);
             return;
         }
 
-        const diagnostics: vscode.Diagnostic[] = [];
         const dialect = dialectService.getDialect(document);
-        let gherkinDocument: GherkinDocument | null = null;
-        const result = await astRepository.getAST(document);
-        gherkinDocument = result.document;
-        const errors = result.errors;
-        
+        const { document: gherkinDocument, errors } = await astRepository.getAST(document);
+
+        if (errors && errors.length > 0) {
+            // Error handling below
+        }
+
+        const diagnostics: vscode.Diagnostic[] = [];
         let hasFatalSyntaxError = false;
 
         for (const error of errors) {
-            const location = error.location;
-            if (location && typeof location.line === 'number') {
+            if (typeof error.line === 'number') {
                 // AST locations are 1-indexed, VS Code positions are 0-indexed
-                const lineIndex = Math.min(Math.max(0, location.line - 1), document.lineCount > 0 ? document.lineCount - 1 : 0);
+                const lineIndex = Math.min(Math.max(0, error.line - 1), document.lineCount > 0 ? document.lineCount - 1 : 0);
                 const lineText = document.lineCount > 0 ? document.lineAt(lineIndex).text : '';
                 
                 // Column from AST is 1-indexed. If not present or 0, default to first non-whitespace char.
-                let startChar = location.column ? Math.max(0, location.column - 1) : 0;
+                let startChar = error.column ? Math.max(0, error.column - 1) : 0;
                 if (startChar === 0) {
                     const firstWordMatch = lineText.match(/\S+/);
                     startChar = firstWordMatch ? lineText.indexOf(firstWordMatch[0]) : 0;
                 }
                     
-                    // Try to highlight the word at the error column, or just the rest of the line
-                    const matchRest = lineText.substring(startChar).match(/\S+/);
-                    let endChar = matchRest ? startChar + matchRest[0].length : lineText.length;
+                    // Highlight the whole line to ensure the lightbulb is easily accessible
+                    let endChar = lineText.length;
                     
                     // Format the error message cleanly
                     let message = error.message;
@@ -154,9 +160,10 @@ export class GherkinLinter {
                         if (startsWithBlockKeyword && !gotText.startsWith(startsWithBlockKeyword + ':')) {
                             code = 'MISSING_COLON';
                             message = `Missing colon (':') after ${startsWithBlockKeyword}`;
-                            suggestedEdit = startsWithBlockKeyword + ':';
-                            // Adjust endChar to cover the full keyword
-                            endChar = startChar + startsWithBlockKeyword.length;
+                            suggestedEdit = ':';
+                            // Point diagnostic exactly at the end of the keyword where colon is missing
+                            startChar = startChar + startsWithBlockKeyword.length;
+                            endChar = startChar;
                         } else {
                             const firstWord = gotText.split(/\s+/)[0];
                             const stepKeywords = dialectService.getStepKeywords(dialect);
@@ -201,68 +208,26 @@ export class GherkinLinter {
                                     message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
                                     suggestedEdit = bestMatch + ':';
                                 } else {
-                                    message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
-                                    suggestedEdit = bestMatch;
+                                    message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch.trim()}'?`;
+                                    suggestedEdit = bestMatch.trim();
                                 }
+                                // Adjust endChar to cover only the misspelled word
                                 endChar = startChar + firstWord.length;
                             } else {
                                 if (message.includes('expected:')) {
-                                    message = `Invalid Gherkin syntax. Expected a valid keyword in ${dialect.name} (${validKeywords.slice(0, 5).join(', ')}, etc.)`;
+                                    message = `Syntax Error\nInvalid Gherkin syntax. Expected a valid keyword in ${dialect.name} (${validKeywords.slice(0, 5).join(', ')}, etc.)`;
                                 } else {
-                                    message = message.replace(/^(\d+:\d+):\s*/, '');
+                                    message = `Syntax Error\n${message.replace(/^(\d+:\d+):\s*/, '')}`;
                                 }
                             }
                         }
                     } else if (message.includes('inconsistent cell count')) {
-                        // The parser reports the error on the first row that diffs from the previous rows.
-                        // However, the missing pipe could be on the header row or a previous row.
-                        // We will scan up and down to find the row(s) missing a pipe.
-                        let foundMissingPipe = false;
-                        
-                        // Find start of table
-                        let tableStart = lineIndex;
-                        while (tableStart > 0 && document.lineAt(tableStart - 1).text.trim().startsWith('|')) {
-                            tableStart--;
-                        }
-                        
-                        // Find end of table
-                        let tableEnd = lineIndex;
-                        while (tableEnd < document.lineCount - 1 && document.lineAt(tableEnd + 1).text.trim().startsWith('|')) {
-                            tableEnd++;
-                        }
-
-                        for (let i = tableStart; i <= tableEnd; i++) {
-                            const tLine = document.lineAt(i).text;
-                            if (tLine.trim().startsWith('|') && !tLine.trim().endsWith('|')) {
-                                foundMissingPipe = true;
-                                const firstNonWhitespace = tLine.search(/\S/);
-                                const tStartChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
-                                const tEndChar = tLine.length;
-                                
-                                const range = new vscode.Range(i, tStartChar, i, tEndChar);
-                                const diagnostic = new vscode.Diagnostic(
-                                    range,
-                                    'Inconsistent cell count. Missing closing pipe?',
-                                    vscode.DiagnosticSeverity.Error
-                                );
-                                diagnostic.source = 'Gherkin Parser';
-                                diagnostic.code = 'INCONSISTENT_CELL_COUNT';
-                                diagnostic.relatedInformation = [
-                                    new vscode.DiagnosticRelatedInformation(
-                                        new vscode.Location(document.uri, range),
-                                        tLine.substring(tStartChar) + ' |'
-                                    )
-                                ];
-                                diagnostics.push(diagnostic);
-                            }
-                        }
-
-                        if (foundMissingPipe) {
-                            // We already added specific diagnostics for the bad rows, so we can skip adding a generic one.
-                            continue;
+                        code = 'INCONSISTENT_CELL_COUNT';
+                        const tLine = document.lineAt(lineIndex).text.trim();
+                        if (tLine.startsWith('|') && !tLine.endsWith('|')) {
+                            message = "Table row is missing a closing pipe ('|'). All rows must begin and end with a pipe.";
                         } else {
-                            code = 'INCONSISTENT_CELL_COUNT';
-                            message = 'Inconsistent cell count in table row.';
+                            message = "Inconsistent table row: The number of cells (separated by '|') doesn't match the header. Check for missing or extra cells.";
                         }
                     } else {
                         if (message.includes('expected:')) {
@@ -273,12 +238,18 @@ export class GherkinLinter {
                         }
                     }
 
-                    const range = new vscode.Range(lineIndex, startChar, lineIndex, Math.max(startChar, endChar));
+                    let severity = vscode.DiagnosticSeverity.Error;
+                    message = `❌ ${message}`;
+
+                    // Ensure startChar and endChar are bounded properly
+                    startChar = Math.max(0, Math.min(startChar, lineText.length));
+                    endChar = Math.max(startChar, Math.min(endChar, lineText.length));
+                    const range = new vscode.Range(lineIndex, startChar, lineIndex, endChar);
 
                     const diagnostic = new vscode.Diagnostic(
                         range,
                         message,
-                        vscode.DiagnosticSeverity.Error
+                        severity
                     );
                     diagnostic.source = 'Gherkin Parser';
                     diagnostic.code = code;
@@ -341,23 +312,32 @@ export class GherkinLinter {
             // the AST is null and we can't detect SCENARIO_WITH_EXAMPLES via AST.
             // Let's do a fallback text scan just for this specific semantic error.
             this.fallbackCheckScenarioExamples(document, diagnostics, dialect);
-            this.fallbackCheckMisspelledKeywords(document, diagnostics, dialect);
         }
+
+        // Always run the fallback misspelled keyword check because Gherkin's forgiving parser
+        // often swallows misspelled keywords (like 'Whn') into scenario descriptions without throwing a parse error.
+        this.fallbackCheckMisspelledKeywords(document, diagnostics, dialect);
 
         // Before publishing, verify we are still the most recent request for this document,
         // and the document hasn't been modified or closed during our async parse.
         if (document.isClosed || document.version !== version) {
+            process.stdout.write(`\n--- LINTER ABORT: version mismatch or closed. doc=${document.uri.toString()} ---\n`);
             return;
         }
 
         const uriStr = document.uri.toString();
         const pending = this.pendingRequests.get(uriStr);
         if (pending && pending.requestId !== requestId) {
+            process.stdout.write(`\n--- LINTER ABORT: pending request mismatch. doc=${document.uri.toString()} ---\n`);
             return;
         }
         let finalDiagnostics = diagnostics;
         if (config.linter.enabledRules && config.linter.enabledRules.length > 0) {
-            finalDiagnostics = diagnostics.filter(d => typeof d.code === 'string' && config.linter.enabledRules.includes(d.code));
+            const coreRules = ['SYNTAX_ERROR', 'MISSPELLED_KEYWORD', 'UNDEFINED_STEP', 'MISSING_COLON', 'INCONSISTENT_CELL_COUNT', 'SCENARIO_WITH_EXAMPLES', 'AMBIGUOUS_STEP'];
+            finalDiagnostics = diagnostics.filter(d => 
+                typeof d.code === 'string' && 
+                (coreRules.includes(d.code) || config.linter.enabledRules.includes(d.code))
+            );
         }
 
         this.diagnosticCollection.set(document.uri, finalDiagnostics);
@@ -573,41 +553,32 @@ export class GherkinLinter {
                             bestMatch = kw;
                         }
                     }
-                    if (prefixMatch) {
-                        bestMatch = prefixMatch;
-                    }
                 }
 
                 if (bestMatch) {
                     const documentLineText = document.lineAt(currentLineIdx).text;
                     const firstNonWhitespace = documentLineText.search(/\S/);
-                    const startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
-                    const endChar = startChar + firstWord.length;
-                    const range = new vscode.Range(currentLineIdx, startChar, currentLineIdx, endChar);
-
-                    const isBlockKeyword = blockKeywords.includes(bestMatch);
-
-                    let code = '';
-                    let message = '';
-                    let suggestedEdit = '';
+                    let startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
+                    let endChar = startChar + firstWord.length;
+                    
+                    let code = 'MISSPELLED_KEYWORD';
+                    let message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
+                    let suggestedEdit = bestMatch;
                     
                     const isExactMatch = normalizedTrimmed.startsWith(bestMatch.toLowerCase());
+                    const isBlockKeyword = blockKeywords.includes(bestMatch);
 
                     if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
-                        // Exact match (case insensitive)
                         if (isBlockKeyword) {
-                            // They spelled it perfectly but it's in the description. They forgot the colon!
                             code = 'MISSING_COLON';
                             message = `Missing colon (':') after ${bestMatch}`;
-                            suggestedEdit = bestMatch + ':';
+                            suggestedEdit = ':';
+                            startChar = endChar;
                         } else {
-                            // Step keyword.
                             if (isExactMatch && trimmed.startsWith(bestMatch)) {
-                                // Exactly correctly cased. It's just out of place (likely due to structural error above). Do not flag.
                                 currentLineIdx++;
                                 continue;
                             } else {
-                                // e.g., 'given' instead of 'Given'. Offer to fix casing.
                                 code = 'MISSPELLED_KEYWORD';
                                 message = `Incorrect casing: '${isExactMatch ? bestMatch.toLowerCase() : firstWord}'. Did you mean '${bestMatch}'?`;
                                 suggestedEdit = bestMatch;
@@ -627,6 +598,7 @@ export class GherkinLinter {
                         }
                     }
 
+                    const range = new vscode.Range(currentLineIdx, startChar, currentLineIdx, endChar);
                     const diagnostic = new vscode.Diagnostic(
                         range,
                         message,
@@ -715,7 +687,7 @@ export class GherkinLinter {
                 if (defs.length === 0) {
                     const diagnostic = new vscode.Diagnostic(
                         range,
-                        `Undefined step: "${stepText}"`,
+                        `⚠️ Undefined step: "${stepText}"`,
                         vscode.DiagnosticSeverity.Warning
                     );
                     diagnostic.source = 'Gherkin Definition';
@@ -734,7 +706,7 @@ export class GherkinLinter {
                     const patterns = defs.map(d => `'${d.rawPattern}'`).join(', ');
                     const diagnostic = new vscode.Diagnostic(
                         range,
-                        `Ambiguous step: matches multiple definitions (${patterns})`,
+                        `⚠️ Ambiguous step: matches multiple definitions (${patterns})`,
                         vscode.DiagnosticSeverity.Warning
                     );
                     diagnostic.source = 'Gherkin Definition';

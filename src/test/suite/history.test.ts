@@ -49,8 +49,17 @@ suite('MetricsHistory Test Suite', () => {
 
     const createMockMetrics = (health = 80, maintain = 90, complex = 20, debt = 5): ProjectHealthMetrics => ({
         scores: { health, maintainability: maintain, complexity: complex },
-        undefinedSteps: new Array(debt) as any,
-        stepAnalysis: { unusedSteps: [], duplicatedSteps: [], ambiguousSteps: [], totalStepDefs: 10 } as any
+        stepAnalysis: { 
+            technicalDebt: debt,
+            totalStepDefs: 10,
+            unusedSteps: [],
+            duplicatedSteps: [],
+            ambiguousSteps: []
+        },
+        parseErrors: [],
+        totalFiles: 0, totalFeatures: 0, totalScenarios: 0, totalBackgrounds: 0, totalSteps: 0, totalTags: 0,
+        averageScenarioLength: 0, averageBackgroundLength: 0,
+        largestFeatures: [], largestScenarios: [], undefinedSteps: [], tagFrequencies: []
     } as any);
 
     test('Initial state should be empty schema', () => {

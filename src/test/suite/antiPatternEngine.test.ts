@@ -42,6 +42,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
                 duplicatedSteps: [],
                 ambiguousSteps: []
             },
+            parseErrors: [],
             scores: { complexity: 0, maintainability: 100, health: 100 },
             largestFeatures: [],
             largestScenarios: []
@@ -148,15 +149,15 @@ suite('Anti-Pattern Engine Test Suite', () => {
     });
 
     test('ExcessiveTagsRule triggers for scenario with > 5 tags', () => {
-        (mockGraph as any).nodes.set('scen1', {
+        mockGraph.setNodeForTest({
             id: 'scen1', type: 'Scenario', uri: 'file:///tags.feature', tags: ['@t1', '@t2', '@t3', '@t4', '@t5', '@t6'], name: 'Tagged Scenario'
-        });
+        } as any as any);
         const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, ruleConfig);
         const tagRec = ap.find(r => r.title.startsWith('Excessive Tags on Scenario'));
         assert.ok(tagRec);
         assert.strictEqual(tagRec.severity, 'info');
         
-        (mockGraph as any).nodes.delete('scen1');
+        mockGraph.deleteNodeForTest('scen1');
     });
 
     test('PoorMaintainabilityRule triggers when maintainability < 60', () => {
@@ -168,15 +169,15 @@ suite('Anti-Pattern Engine Test Suite', () => {
     });
 
     test('InconsistentFormattingRule triggers for steps with trailing spaces', () => {
-        (mockGraph as any).nodes.set('step1', {
+        mockGraph.setNodeForTest({
             id: 'step1', type: 'Step', uri: 'file:///format.feature', text: 'Step with space '
-        });
+        } as any as any);
         const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, ruleConfig);
         const formatRec = ap.find(r => r.title === 'Inconsistent Formatting: Trailing Spaces');
         assert.ok(formatRec);
         assert.strictEqual(formatRec.severity, 'info');
         
-        (mockGraph as any).nodes.delete('step1');
+        mockGraph.deleteNodeForTest('step1');
     });
     
     test('Severity Configuration Overrides work', () => {

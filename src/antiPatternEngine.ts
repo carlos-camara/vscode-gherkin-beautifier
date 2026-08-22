@@ -33,6 +33,7 @@ class OversizedFeatureRule implements AntiPatternRule {
                 affectedFiles: oversized.map(f => f.uri),
                 affectedItems: oversized.map(f => ({
                     label: `${f.name || 'Unnamed'} (${f.size} steps)`,
+                    description: `This feature contains ${f.size} steps, which is considered too large (limit is 50).`,
                     uri: f.uri,
                     line: 0
                 })),
@@ -58,6 +59,7 @@ class OversizedScenarioRule implements AntiPatternRule {
                 affectedFiles: oversized.map(s => s.uri),
                 affectedItems: oversized.map(s => ({
                     label: `${s.name || 'Unnamed'} (${s.size} steps)`,
+                    description: `This scenario contains ${s.size} steps, which is considered too large (limit is 15).`,
                     uri: s.uri,
                     line: s.line
                 })),
@@ -82,6 +84,7 @@ class DuplicatedStepsRule implements AntiPatternRule {
                 affectedFiles: Array.from(new Set(dupGroup.stepDefs.map(sd => sd.uri))),
                 affectedItems: dupGroup.stepDefs.map(sd => ({
                     label: sd.uri.split('/').pop() + `:${sd.line + 1}`,
+                    description: `This step pattern "${dupGroup.pattern}" is defined multiple times.`,
                     uri: sd.uri,
                     line: sd.line + 1
                 })),
@@ -106,6 +109,7 @@ class UnusedStepsRule implements AntiPatternRule {
                 affectedFiles: Array.from(new Set(metrics.stepAnalysis.unusedSteps.map(u => u.stepDef.uri))),
                 affectedItems: metrics.stepAnalysis.unusedSteps.map(u => ({
                     label: u.stepDef.pattern,
+                    description: `This step definition is never used in any feature file.`,
                     uri: u.stepDef.uri,
                     line: u.stepDef.line + 1
                 })),
@@ -154,6 +158,7 @@ class UndefinedStepsRule implements AntiPatternRule {
             affectedFiles: Array.from(new Set(metrics.undefinedSteps.map(u => u.uri))),
             affectedItems: metrics.undefinedSteps.map(u => ({
                 label: `Step: ${u.keyword} ${u.text}`,
+                description: `This step does not match any known step definition.`,
                 uri: u.uri,
                 line: u.line
             })),
@@ -167,7 +172,7 @@ class ExcessiveTagsRule implements AntiPatternRule {
     analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
-        const allNodes = graph.getAllNodes();
+        const allNodes = graph.currentGeneration.getAllNodes();
         const features = allNodes.filter(n => n.type === 'Feature') as FeatureNode[];
         const scenarios = allNodes.filter(n => n.type === 'Scenario') as ScenarioNode[];
         
@@ -181,6 +186,7 @@ class ExcessiveTagsRule implements AntiPatternRule {
                 affectedFiles: heavyFeatures.map(f => f.uri),
                 affectedItems: heavyFeatures.map(f => ({
                     label: `${f.name || 'Unnamed'} (${f.tags.length} tags)`,
+                    description: `This feature has ${f.tags.length} tags, which exceeds the recommended limit of 5.`,
                     uri: f.uri,
                     line: f.line
                 })),
@@ -198,6 +204,7 @@ class ExcessiveTagsRule implements AntiPatternRule {
                 affectedFiles: heavyScenarios.map(s => s.uri),
                 affectedItems: heavyScenarios.map(s => ({
                     label: `${s.name || 'Unnamed'} (${s.tags.length} tags)`,
+                    description: `This scenario has ${s.tags.length} tags, which exceeds the recommended limit of 5.`,
                     uri: s.uri,
                     line: s.line
                 })),
@@ -231,7 +238,7 @@ class InconsistentFormattingRule implements AntiPatternRule {
     analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
-        const allNodes = graph.getAllNodes();
+        const allNodes = graph.currentGeneration.getAllNodes();
         const steps = allNodes.filter(n => n.type === 'Step') as StepNode[];
         
         const stepsWithTrailingSpaces = steps.filter(s => s.text.endsWith(' '));
@@ -250,6 +257,35 @@ class InconsistentFormattingRule implements AntiPatternRule {
     }
 }
 
+class SyntaxErrorsRule implements AntiPatternRule {
+    id = 'syntax-errors';
+    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
+        if (severity === 'off' || !metrics.parseErrors || metrics.parseErrors.length === 0) return [];
+        
+        const antiPatterns: AntiPattern[] = [];
+        
+        for (const fileErrors of metrics.parseErrors) {
+            if (fileErrors.errors.length > 0) {
+                antiPatterns.push({
+                    id: this.id,
+                    title: `Syntax Error`,
+                    explanation: `Found ${fileErrors.errors.length} parsing error(s). Gherkin structure is compromised.`,
+                    severity,
+                    affectedFiles: [fileErrors.uri],
+                    affectedItems: fileErrors.errors.map((e: any) => ({
+                        label: e.message || 'Syntax Error',
+                        uri: fileErrors.uri,
+                        line: e.line ? e.line - 1 : 0
+                    })),
+                    suggestedFix: 'Fix the Gherkin syntax errors highlighted in the file to allow proper parsing and validation.'
+                });
+            }
+        }
+        
+        return antiPatterns;
+    }
+}
+
 export class AntiPatternEngine {
     private rules: AntiPatternRule[] = [];
 
@@ -263,6 +299,7 @@ export class AntiPatternEngine {
         this.registerRule(new ExcessiveTagsRule());
         this.registerRule(new PoorMaintainabilityRule());
         this.registerRule(new InconsistentFormattingRule());
+        this.registerRule(new SyntaxErrorsRule());
     }
 
     registerRule(rule: AntiPatternRule) {

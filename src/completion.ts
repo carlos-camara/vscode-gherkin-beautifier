@@ -4,6 +4,43 @@ import { dialectService } from './dialect';
 import type { Dialect } from '@cucumber/gherkin';
 import { CompletionRankingService, RankingContext } from './completionRanking';
 
+/**
+ * Cleans up raw regex syntax from step definition patterns to provide
+ * human-readable completion snippets.
+ */
+function cleanRegexSnippet(snippet: string): string {
+    let clean = snippet;
+    
+    // 1. Remove ^ and $ anchors at start and end
+    clean = clean.replace(/^\^/, '').replace(/\$$/, '');
+
+    // 2. Resolve non-capturing groups (?:a|b|c) -> always pick the first option 'a'
+    let prev;
+    do {
+        prev = clean;
+        clean = clean.replace(/\(\?:([^|)]+)(?:\|[^|)]+)*\)/g, '$1');
+    } while (clean !== prev);
+
+    // 3. Remove optional modifiers (?) and any stray parentheses left from groups
+    clean = clean.replace(/\?/g, '');
+    clean = clean.replace(/[()]/g, '');
+
+    // 4. Replace regex spaces \s*, \s+, \s? with actual spaces
+    clean = clean.replace(/\\s[*+?]/g, ' ');
+
+    // 5. Replace other common raw regex quantifiers/classes with placeholders
+    clean = clean.replace(/\\d\+/g, '123');
+    clean = clean.replace(/\\w\+/g, 'text');
+    clean = clean.replace(/\.\*/g, '...');
+
+    // 6. Clean up escape characters (e.g. \. -> .)
+    clean = clean.replace(/\\([a-zA-Z0-9.])/g, '$1');
+
+    // 7. Collapse multiple spaces
+    clean = clean.replace(/\s+/g, ' ').trim();
+
+    return clean;
+}
 export class GherkinCompletionProvider implements vscode.CompletionItemProvider {
     private symbolCache: SymbolCache;
     private rankingService: CompletionRankingService;
@@ -123,8 +160,11 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             }
             seenPatterns.add(pattern);
 
-            const item = new vscode.CompletionItem(pattern, vscode.CompletionItemKind.Snippet);
-            
+            let kind = vscode.CompletionItemKind.Function;
+            if (def.type === 'given') kind = vscode.CompletionItemKind.Event;
+            else if (def.type === 'when') kind = vscode.CompletionItemKind.Method;
+            else if (def.type === 'then') kind = vscode.CompletionItemKind.Value;
+
             // Convert Behave parameters {param} or {param:d} and regex (?P<param>.*) to Snippets ${1:param}
             let snippetString = pattern;
             let counter = 1;
@@ -139,14 +179,26 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
                 return `\${${counter++}:${paramName}}`;
             });
 
-            item.insertText = new vscode.SnippetString(snippetString);
-            item.detail = `Python @${def.type} Definition`;
+            // Clean up regex artifacts for human-readable completion
+            const cleanedSnippetString = cleanRegexSnippet(snippetString);
+            const readableLabel = cleanedSnippetString.replace(/\$\{\d+:([^}]+)\}/g, '<$1>');
+
+            const item = new vscode.CompletionItem(readableLabel, kind);
+            item.insertText = new vscode.SnippetString(cleanedSnippetString);
+            item.detail = `(behave) @${def.type}`;
+            
+            if (def.documentation) {
+                const doc = new vscode.MarkdownString();
+                doc.appendMarkdown(`**${def.functionName || 'step_impl'}**\n\n`);
+                doc.appendMarkdown(`---\n${def.documentation}`);
+                item.documentation = doc;
+            }
             
             // Set the range to replace the entire typed text after the keyword
             item.range = replaceRange;
             
-            // Allow VS Code to filter by matching what the user typed against the full pattern
-            item.filterText = pattern;
+            // Allow VS Code to filter by matching what the user typed against the human-readable pattern
+            item.filterText = readableLabel;
             
             // Apply contextual ranking
             const score = this.rankingService.scoreItem(def, rankingContext);

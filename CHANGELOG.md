@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.4] - 2026-08-22
+
+### 💅 User Experience & Polish
+- **Modern Dashboard**: The Gherkin Health Dashboard has been completely redesigned with a strict modern aesthetic for a premium, responsive, and minimalist native feel.
+- **CodeLens Simplification**: Impact Analysis CodeLens now navigates directly to the exact step (instead of the scenario top) and uses a simplified path display for better readability.
+- **Cross-Platform Quick Fixes**: Updated Quick Fixes and walkthroughs to explicitly support both macOS (`Cmd+.`) and Windows (`Ctrl+.`) shortcuts.
+- **Immediate Linter Diagnostics**: The Gherkin Linter now executes instantaneously upon opening a file, bypassing the standard typing debounce. This ensures warnings (like ambiguous steps) appear immediately without requiring you to type or switch tabs.
+- **Refined Ambiguous Step Diagnostics**: Injected a clear `⚠️` emoji into the native VS Code diagnostic string (`⚠️ Ambiguous step: matches multiple definitions...`) and removed the redundant header from the hover provider to ensure a clean, single-warning UI.
+
+### 🚀 Architecture & Reliability
+- **Authoritative Feature Discovery**: Implemented a central `FeatureDiscoveryService` that acts as the single source of truth for all `*.feature` files in the workspace. This resolves inconsistencies between the Extension Cache, Test Explorer, CLI, and Diagnostics by unifying file watchers, respecting ignore globs (`gherkinPowerTools.featureGlobs`), and debouncing file I/O bursts.
+- **Optimized Behave File Discovery**: The `BehaveFileDiscoveryService` now caches active glob patterns and only reconstructs file system watchers when the resolved configuration actually changes. In multi-root workspaces, it precisely targets only the affected roots, and aggressively deduplicates overlapping concurrent file system events into a single pending state per URI.
+- **Transactional Workspace Graph**: The core semantic index (`WorkspaceGraph`) has been completely redesigned around an immutable, transactional generation model (`WorkspaceGraphGeneration`). Readers (like the Impact Analyzer and Test Explorer) now query a stable, immutable snapshot of the graph,
+  while writers use an atomic `executeTransaction` queue that strictly isolates state, eliminates race conditions, and safely aborts stale file updates during heavy workspace I/O.
+- **Capability-Based Deferred Bootstrap**: Hardened the extension startup sequence. `DeferredBootstrap` now orchestrates initialization using isolated Capabilities rather than a monolithic `Promise.all()`.
+- **Stable Parser Error Contract**: Introduced a unified `GherkinParseError` interface across the parser, linter, graph, and statistics engines. This strictly normalizes `@cucumber/gherkin` composite errors, eliminating cascading crashes during malformed document edits.
+- **Syntax Errors Anti-Pattern**: The BDD Anti-pattern Detection Engine now actively surfaces parser `syntax-errors` to block execution on invalid Gherkin files.
+- **Cross-Platform Resource Canonicalization**: Redesigned internal cache mechanisms and Graph queries to use a strict `ResourceIdentity` abstraction. Correctly handles URI canonicalization and prevents cache poisoning/collisions across case-sensitive (Linux, Remote SSH) and case-insensitive (macOS, Windows) filesystems.
+  This crucially fixes silent failures where **Impact Analysis CodeLenses** and **Rename Step** features would not appear on macOS/Windows.
+- **Resilient Cache Initialization**: Implemented bounded exponential retries for I/O-bound indexers (Symbol Cache, Usage Indexer), allowing them to automatically recover from transient read errors (e.g., file locks) without crashing the extension.
+- **Diagnostic Observability**: The `Diagnose Workspace` command now reports the real-time status of every bootstrap capability, providing unprecedented visibility into startup failures.
+
+### 🛡️ Security & Release Engineering
+- **Strict Execution Boundaries**: Safely eliminated the implicit `workspaceFolders[0]` fallback for external/untitled files. Test execution requests for `.feature` files located outside of active workspaces are now explicitly blocked to protect the user's root disk from arbitrary runs.
+- **Multi-Root Target Prompting**: Step definition generation (Quick Fixes) will now present an explicit `QuickPick` folder selection dialog if multiple roots are available and the file context is ambiguous, rather than silently writing to the first project.
+
+### 📚 Documentation
+- **Comprehensive Documentation Audit**: Performed a repository-wide documentation audit. Verified that the Gherkin Health Dashboard, Real-Time Impact Analysis, Anti-pattern Detection Engine, Contextual Feature Discovery, and the standalone CLI (`@carlos-camara/gherkin-pt`) are thoroughly and accurately documented across the README, MKDocs, getting started guides, and command references.
+- **Markdown Linting Compliance**: Fixed markdown linting line-length errors (`MD013`) in the Run and Debug documentation to guarantee CI/CD compliance.
+
+### 🛡️ Security & Release Engineering
+- **Provenance Hardening**: Implemented rigorous cryptographic validation to enforce a strict immutable relationship between the source commit, git tag, generated `.vsix`, and GitHub Release asset.
+- **Supply Chain Protection**: Redesigned the GitHub Actions `release.yml` into a decoupled, dual-job workflow. Unprivileged jobs build the extension, while a privileged job publishes it, ensuring that no `npm install` or build scripts ever have access to the `GITHUB_TOKEN`.
+- **Anti-Clobbering Mechanics**: Eliminated silent release overwrites. The pipeline now verifies the SHA-256 of any existing release assets and aborts immediately if a tampered or duplicate VSIX is detected, forcing manual intervention.
+- **Internal Manifest Validation**: The VSIX generation process now strictly extracts and matches the packaged `extension/package.json` against the repository source of truth to detect internal tampered versions before publication.
+
 ## [1.8.3] - 2026-08-18
 
 ### 🚀 Added

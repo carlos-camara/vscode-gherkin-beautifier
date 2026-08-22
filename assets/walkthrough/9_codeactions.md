@@ -34,7 +34,7 @@ The linter uses a **multi-pass hybrid parsing strategy** so you always get pinpo
 
 ## Quick Fixes — `Cmd + .` / `Ctrl + .`
 
-When a diagnostic appears, click the lightbulb or press `Cmd+.` to see available fixes:
+When a diagnostic appears, click the lightbulb or press `Cmd+.` (macOS) / `Ctrl+.` (Windows) to see available fixes:
 
 - **Insert missing `:`** — appends `:` to `Feature`, `Scenario`, `Scenario Outline`, etc.
 - **Replace with `Given` / `When` / `Then`** — Levenshtein-distance typo correction for misspelled keywords

@@ -17,26 +17,26 @@ suiteOrSkip('CodeLens Performance Benchmarks', function () {
         
         // Generate Scenarios
         for (let i = 0; i < scenarioCount; i++) {
-            nodes.set(`Scenario:${i}`, {
+            graph.setNodeForTest({
                 id: `Scenario:${i}`,
                 type: 'Scenario',
                 uri: 'file:///features/test.feature',
                 line: i * 10,
                 parent: `Feature:0`,
                 steps: []
-            });
+            } as any as any);
         }
         
         // Generate StepDefs
         for (let i = 0; i < stepCount; i++) {
-            nodes.set(`Def:${i}`, {
+            graph.setNodeForTest({
                 id: `Def:${i}`,
                 type: 'StepDefinition',
                 uri: 'file:///steps/test.py',
                 line: i * 5,
                 pattern: `step pattern ${i}`,
                 usages: []
-            });
+            } as any as any);
         }
         
         // Generate Usages (Each step def is used in (scenarioCount / stepCount) scenarios)
@@ -51,14 +51,14 @@ suiteOrSkip('CodeLens Performance Benchmarks', function () {
                 if (scenarioIdx >= scenarioCount) break;
                 
                 const stepId = `Step:${i}_${j}`;
-                nodes.set(stepId, {
+                graph.setNodeForTest({
                     id: stepId,
                     type: 'Step',
                     uri: 'file:///features/test.feature',
                     line: scenarioIdx * 10 + 1,
                     parent: `Scenario:${scenarioIdx}`,
                     definitionId: defId
-                });
+                } as any as any);
                 
                 defNode.usages.push(stepId);
                 scenarioIdx++;
@@ -69,14 +69,14 @@ suiteOrSkip('CodeLens Performance Benchmarks', function () {
         const highImpactDef = nodes.get('Def:0');
         for(let j=0; j<25; j++) {
             const stepId = `Step:High_${j}`;
-            nodes.set(stepId, {
+            graph.setNodeForTest({
                 id: stepId,
                 type: 'Step',
                 uri: 'file:///features/test.feature',
                 line: j * 10 + 2,
                 parent: `Scenario:${j}`,
                 definitionId: 'Def:0'
-            });
+            } as any as any);
             highImpactDef.usages.push(stepId);
         }
 

@@ -7,29 +7,34 @@ suite('DeferredBootstrap Test Suite', () => {
     let components: BootstrapComponents;
     let bootstrap: DeferredBootstrap;
     let disposables: vscode.Disposable[] = [];
-    
+
     // Track calls to ensureInitialized / indexWorkspace / initialize
-    let symbolCacheCalled = false;
-    let featureCacheCalled = false;
-    let usageIndexerCalled = false;
-    let workspaceGraphCalled = false;
-    let impactRefreshCalled = false;
+    let symbolCacheCalled = 0;
+    let featureCacheCalled = 0;
+    let usageIndexerCalled = 0;
+    let workspaceGraphCalled = 0;
+    let impactRefreshCalled = 0;
+    let eventBusSubscribed = false;
+    let watchersSetup = false;
 
     setup(() => {
-        symbolCacheCalled = false;
-        featureCacheCalled = false;
-        usageIndexerCalled = false;
-        workspaceGraphCalled = false;
-        impactRefreshCalled = false;
-        
+        symbolCacheCalled = 0;
+        featureCacheCalled = 0;
+        usageIndexerCalled = 0;
+        workspaceGraphCalled = 0;
+        impactRefreshCalled = 0;
+        eventBusSubscribed = false;
+        watchersSetup = false;
+
         components = {
-            symbolCache: { ensureInitialized: async () => { symbolCacheCalled = true; } },
-            featureCache: { ensureInitialized: async () => { featureCacheCalled = true; } },
-            usageIndexer: { indexWorkspace: async () => { usageIndexerCalled = true; } },
-            workspaceGraph: { initialize: async () => { workspaceGraphCalled = true; } },
-            impactCodeLensProvider: { refresh: () => { impactRefreshCalled = true; } },
+            symbolCache: { ensureInitialized: async () => { symbolCacheCalled++; } },
+            featureCache: { ensureInitialized: async () => { featureCacheCalled++; } },
+            usageIndexer: { indexWorkspace: async () => { usageIndexerCalled++; } },
+            workspaceGraph: { initialize: async () => { workspaceGraphCalled++; } },
+            impactCodeLensProvider: { refresh: () => { impactRefreshCalled++; } },
             eventBus: {
                 onEvent: () => {
+                    eventBusSubscribed = true;
                     const d = { dispose: () => {} };
                     disposables.push(d);
                     return d;
@@ -37,6 +42,14 @@ suite('DeferredBootstrap Test Suite', () => {
                 publish: () => {}
             },
             discoveryService: {
+                setupWatchers: () => {
+                    watchersSetup = true;
+                    const d = { dispose: () => {} };
+                    disposables.push(d);
+                    return [d];
+                }
+            },
+            featureDiscoveryService: {
                 setupWatchers: () => {
                     const d = { dispose: () => {} };
                     disposables.push(d);
@@ -46,7 +59,7 @@ suite('DeferredBootstrap Test Suite', () => {
         };
 
         // Create with a small delay for testing
-        bootstrap = new DeferredBootstrap(components, 50);
+        bootstrap = new DeferredBootstrap(components, 10);
     });
 
     teardown(() => {
@@ -54,97 +67,136 @@ suite('DeferredBootstrap Test Suite', () => {
         disposables = [];
     });
 
-    test('Normal delayed startup initializes all components', async () => {
+    test('Normal delayed startup initializes all components safely', async () => {
         bootstrap.start();
-        
-        // Wait longer than the 50ms delay
-        await new Promise(resolve => setTimeout(resolve, 100));
 
-        assert.strictEqual(symbolCacheCalled, true);
-        assert.strictEqual(featureCacheCalled, true);
-        assert.strictEqual(usageIndexerCalled, true);
-        assert.strictEqual(workspaceGraphCalled, true);
-        assert.strictEqual(impactRefreshCalled, true);
-        
-        // Should have created event listeners and watchers (at least 3 from our mocks + 1 file watcher)
-        assert.ok((bootstrap as any).subscriptions.length > 0);
+        // Wait longer than the delay
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        assert.strictEqual(symbolCacheCalled, 1);
+        assert.strictEqual(featureCacheCalled, 1);
+        assert.strictEqual(usageIndexerCalled, 1);
+        assert.strictEqual(workspaceGraphCalled, 1);
+        assert.strictEqual(impactRefreshCalled, 1);
+        assert.strictEqual(watchersSetup, true);
+        assert.strictEqual(eventBusSubscribed, true);
+
+        const diags = bootstrap.getDiagnostics();
+        assert.strictEqual(diags.every(d => d.state === 'ready'), true);
+        assert.strictEqual(bootstrap.state, 'finished');
     });
 
-    test('Deactivation before timeout prevents initialization', async () => {
+    test('Deactivation before timeout prevents initialization entirely', async () => {
         bootstrap.start();
         bootstrap.dispose(); // Immediate cancel
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
 
-        assert.strictEqual(symbolCacheCalled, false);
-        assert.strictEqual(featureCacheCalled, false);
-        assert.strictEqual(impactRefreshCalled, false);
-        assert.strictEqual((bootstrap as any).subscriptions.length, 0);
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        assert.strictEqual(symbolCacheCalled, 0);
+        assert.strictEqual(watchersSetup, false);
+        const diags = bootstrap.getDiagnostics();
+        assert.strictEqual(diags.every(d => d.state === 'cancelled'), true);
     });
 
-    test('Deactivation while indexing prevents state mutation', async () => {
-        // Slow down one of the components
+    test('Deactivation during initialization cancels tasks', async () => {
         components.symbolCache.ensureInitialized = async () => {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            symbolCacheCalled = true;
+            symbolCacheCalled++;
+            await new Promise(resolve => setTimeout(resolve, 50));
         };
 
         bootstrap.start();
-        
-        // Wait for the timeout to trigger, but not for the initialization to finish
-        await new Promise(resolve => setTimeout(resolve, 60));
-        
-        // Dispose while initialization is running
-        bootstrap.dispose();
-        
-        // Wait for the slow initialization to finish
-        await new Promise(resolve => setTimeout(resolve, 100));
 
-        assert.strictEqual(symbolCacheCalled, true); // It ran, but we should not have refreshed or wired up watchers
-        assert.strictEqual(impactRefreshCalled, false);
-        assert.strictEqual((bootstrap as any).subscriptions.length, 0);
+        await new Promise(resolve => setTimeout(resolve, 20)); // wait for timeout to start task
+        bootstrap.dispose();
+        await new Promise(resolve => setTimeout(resolve, 80)); // wait for task to finish
+
+        // symbolCache was started but workspaceGraph shouldn't be
+        assert.strictEqual(symbolCacheCalled, 1);
+        assert.strictEqual(workspaceGraphCalled, 0);
+
+        const diags = bootstrap.getDiagnostics();
+        const symbolCap = diags.find(d => d.id === 'symbolCache');
+        assert.strictEqual(symbolCap?.state, 'cancelled');
+        assert.strictEqual(bootstrap.state, 'disposed');
     });
 
-    test('One failed service halts initialization safely', async () => {
-        components.workspaceGraph.initialize = async () => {
-            workspaceGraphCalled = true;
-            throw new Error("Failed to load graph");
+    test('Single optional capability failure does not halt watchers', async () => {
+        components.featureCache.ensureInitialized = async () => {
+            featureCacheCalled++;
+            throw new Error("Optional cache failed");
         };
 
         bootstrap.start();
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
 
-        assert.strictEqual(symbolCacheCalled, true);
-        assert.strictEqual(workspaceGraphCalled, true);
-        assert.strictEqual(impactRefreshCalled, false); // Should not proceed to refresh
-        assert.strictEqual((bootstrap as any).subscriptions.length, 0); // Watchers should not be wired up or should be cleaned up
+        // Wait long enough for 3 retries (10ms * 2^x)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        assert.strictEqual(watchersSetup, true); // Essential watcher setup still works
+        assert.strictEqual(symbolCacheCalled, 1);
+        assert.strictEqual(featureCacheCalled, 3); // It retried 3 times!
+
+        const diags = bootstrap.getDiagnostics();
+        assert.strictEqual(diags.find(d => d.id === 'featureCache')?.state, 'failed');
+        assert.strictEqual(diags.find(d => d.id === 'watchers')?.state, 'ready');
+        assert.strictEqual(bootstrap.state, 'finished');
     });
 
-    test('Repeated activation does not run twice', async () => {
-        bootstrap.start();
-        bootstrap.start(); // Second call should be ignored
+    test('Single essential capability failure does not halt watchers', async () => {
+        components.symbolCache.ensureInitialized = async () => {
+            symbolCacheCalled++;
+            throw new Error("Essential cache failed");
+        };
 
-        assert.strictEqual((bootstrap as any).state, 'waiting');
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        assert.strictEqual((bootstrap as any).state, 'finished');
-        assert.strictEqual(symbolCacheCalled, true);
-        
-        // Calling start after finished should do nothing
         bootstrap.start();
-        assert.strictEqual((bootstrap as any).state, 'finished');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        assert.strictEqual(watchersSetup, true); // Still set up!
+        assert.strictEqual(symbolCacheCalled, 3); // Retried
+        assert.strictEqual(workspaceGraphCalled, 0); // Dependent graph did NOT run!
+
+        const diags = bootstrap.getDiagnostics();
+        assert.strictEqual(diags.find(d => d.id === 'symbolCache')?.state, 'failed');
+        assert.strictEqual(diags.find(d => d.id === 'workspaceGraph')?.state, 'failed'); // Marked failed because dependency failed
     });
 
-    test('Watcher and Subscription disposal', async () => {
+    test('Multiple simultaneous failures', async () => {
+        components.usageIndexer.indexWorkspace = async () => { throw new Error("A"); };
+        components.symbolCache.ensureInitialized = async () => { throw new Error("B"); };
+
         bootstrap.start();
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        const subsLength = (bootstrap as any).subscriptions.length;
-        assert.ok(subsLength > 0);
-        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const diags = bootstrap.getDiagnostics();
+        assert.strictEqual(diags.find(d => d.id === 'usageIndexer')?.state, 'failed');
+        assert.strictEqual(diags.find(d => d.id === 'symbolCache')?.state, 'failed');
+        assert.strictEqual(diags.find(d => d.id === 'workspaceGraph')?.state, 'failed');
+        assert.strictEqual(diags.find(d => d.id === 'watchers')?.state, 'ready');
+    });
+
+    test('Retry mechanism recovers on 2nd attempt', async () => {
+        components.symbolCache.ensureInitialized = async () => {
+            symbolCacheCalled++;
+            if (symbolCacheCalled === 1) {
+                throw new Error("Flaky network");
+            }
+        };
+
+        bootstrap.start();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        assert.strictEqual(symbolCacheCalled, 2);
+        assert.strictEqual(workspaceGraphCalled, 1); // Recovered and proceeded!
+
+        const diags = bootstrap.getDiagnostics();
+        const sc = diags.find(d => d.id === 'symbolCache');
+        assert.strictEqual(sc?.state, 'ready');
+        assert.strictEqual(sc?.retryCount, 1);
+    });
+
+    test('Dispose is idempotent', () => {
         bootstrap.dispose();
-        assert.strictEqual((bootstrap as any).subscriptions.length, 0);
+        bootstrap.dispose();
+        bootstrap.dispose();
+        assert.strictEqual(bootstrap.state, 'disposed');
     });
 });

@@ -112,6 +112,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:**
   ```json
   {
+      "syntax-errors": "error",
       "oversized-scenario": "warning",
       "oversized-feature": "info",
       "duplicated-steps": "error",
@@ -129,13 +130,18 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 ## Behave Discovery & Execution Settings
 
+### `gherkinPowerTools.featureGlobs`
+- **Purpose:** Glob patterns used to discover Gherkin feature files. These patterns drive diagnostics, health statistics, and the test explorer.
+- **Type:** `array` of strings
+- **Default:** `["**/*.feature"]`
+
 ### `gherkinPowerTools.behave.stepGlobs`
 - **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, and Linting.
 - **Type:** `array` of strings
 - **Default:** `["**/steps/**/*.py", "**/features/steps/**/*.py"]`
 
 ### `gherkinPowerTools.behave.ignoreGlobs`
-- **Purpose:** Patterns excluded from step discovery. Always exclude virtual environments to prevent false matches.
+- **Purpose:** Patterns excluded from step discovery. The extension implements **Zero-Config Virtual Environment Discovery**, which automatically excludes standard virtual environments. Use this setting to exclude additional custom directories to prevent false matches.
 - **Type:** `array` of strings
 - **Default:** `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]`
 

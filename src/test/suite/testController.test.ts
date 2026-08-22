@@ -7,11 +7,14 @@ import { GherkinTestController } from '../../testController';
 import { ConfigurationService } from '../../configuration';
 
 suite('GherkinTestController Test Suite', () => {
+    let originalGetWorkspaceFolder: any;
     let tempDir: string;
     let configService: ConfigurationService;
     let controller: GherkinTestController;
 
     setup(() => {
+        originalGetWorkspaceFolder = vscode.workspace.getWorkspaceFolder;
+        (vscode.workspace as any).getWorkspaceFolder = (_uri: vscode.Uri) => { return { uri: vscode.Uri.file(tempDir), name: 'temp', index: 0 }; };
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gherkin-test-controller-'));
         const configDiagnostics = vscode.languages.createDiagnosticCollection('gherkin-configuration-test');
         configService = new ConfigurationService(configDiagnostics);
@@ -20,7 +23,10 @@ suite('GherkinTestController Test Suite', () => {
         controller = new GherkinTestController(mockContext, configService, uniqueId);
     });
 
+
     teardown(() => {
+        (vscode.workspace as any).getWorkspaceFolder = originalGetWorkspaceFolder;
+
         controller.dispose();
         try {
             fs.rmSync(tempDir, { recursive: true, force: true });
@@ -31,7 +37,7 @@ suite('GherkinTestController Test Suite', () => {
 
     test('Initializes correctly and creates TestController', () => {
         assert.ok(controller);
-        // We can't easily access the private controller property to check items, 
+        // We can't easily access the private controller property to check items,
         // but we can verify it doesn't throw on initialization.
     });
 
@@ -46,19 +52,19 @@ Feature: Sample Feature
         // We simulate the file watcher event by calling the private method through cast
         const testControllerPrivate = controller as any;
         const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
-        
+
         await testControllerPrivate.parseTestsInFileContents(fileItem);
-        
+
         // Assertions on the generated TestItems
         assert.strictEqual(fileItem.children.size, 1);
-        
+
         let featureItem: vscode.TestItem | undefined;
         fileItem.children.forEach((item: vscode.TestItem) => {
             featureItem = item;
         });
 
         assert.ok(featureItem);
-        assert.strictEqual(featureItem!.label, 'Feature: Sample Feature');
+        assert.strictEqual(featureItem!.label, 'Sample Feature');
         assert.strictEqual(featureItem!.children.size, 1);
 
         let scenarioItem: vscode.TestItem | undefined;
@@ -67,7 +73,7 @@ Feature: Sample Feature
         });
 
         assert.ok(scenarioItem);
-        assert.strictEqual(scenarioItem!.label, 'Scenario: First scenario');
+        assert.strictEqual(scenarioItem!.label, 'First scenario');
     });
 
     test('Parses Rules and nested Scenarios correctly', async () => {
@@ -81,24 +87,24 @@ Feature: Rules Feature
 
         const testControllerPrivate = controller as any;
         const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
-        
+
         await testControllerPrivate.parseTestsInFileContents(fileItem);
-        
+
         let featureItem: vscode.TestItem | undefined;
         fileItem.children.forEach((item: vscode.TestItem) => { featureItem = item; });
-        
+
         assert.strictEqual(featureItem!.children.size, 1);
         let ruleItem: vscode.TestItem | undefined;
         featureItem!.children.forEach((item: vscode.TestItem) => { ruleItem = item; });
-        
+
         assert.ok(ruleItem);
-        assert.strictEqual(ruleItem!.label, 'Rule: A business rule');
+        assert.strictEqual(ruleItem!.label, 'A business rule');
         assert.strictEqual(ruleItem!.children.size, 1);
-        
+
         let scenarioItem: vscode.TestItem | undefined;
         ruleItem!.children.forEach((item: vscode.TestItem) => { scenarioItem = item; });
-        
-        assert.strictEqual(scenarioItem!.label, 'Scenario: Rule scenario');
+
+        assert.strictEqual(scenarioItem!.label, 'Rule scenario');
     });
 
     test('Parses Scenario Outline and Examples rows into TestItems', async () => {
@@ -115,31 +121,31 @@ Feature: Outline Feature
 
         const testControllerPrivate = controller as any;
         const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
-        
+
         await testControllerPrivate.parseTestsInFileContents(fileItem);
-        
+
         let featureItem: vscode.TestItem | undefined;
         fileItem.children.forEach((item: vscode.TestItem) => { featureItem = item; });
-        
+
         assert.ok(featureItem);
         assert.strictEqual(featureItem!.children.size, 1);
-        
+
         let scenarioOutlineItem: vscode.TestItem | undefined;
         featureItem!.children.forEach((item: vscode.TestItem) => { scenarioOutlineItem = item; });
-        
+
         assert.ok(scenarioOutlineItem);
-        assert.strictEqual(scenarioOutlineItem!.label, 'Scenario Outline: Outline scenario');
-        
+        assert.strictEqual(scenarioOutlineItem!.label, 'Outline scenario');
+
         // Check that the two Example rows are parsed as children
         assert.strictEqual(scenarioOutlineItem!.children.size, 2);
-        
+
         const exampleItems: vscode.TestItem[] = [];
         scenarioOutlineItem!.children.forEach((item: vscode.TestItem) => { exampleItems.push(item); });
-        
-        assert.strictEqual(exampleItems[0].label, 'Example: arg=1');
+
+        assert.strictEqual(exampleItems[0].label, 'arg=1');
         assert.strictEqual(exampleItems[0].id, `${featureUri.toString()}#scenario:7`);
-        
-        assert.strictEqual(exampleItems[1].label, 'Example: arg=2');
+
+        assert.strictEqual(exampleItems[1].label, 'arg=2');
         assert.strictEqual(exampleItems[1].id, `${featureUri.toString()}#scenario:8`);
     });
     test('Binds to WorkspaceEventBus correctly', () => {
@@ -153,7 +159,7 @@ Feature: Outline Feature
 
         const fileItem = testControllerPrivate.controller.items.get(testUri.toString());
         assert.ok(fileItem, 'Item should be created on featureFileCreated event');
-        
+
         eventBus.dispose();
     });
 
@@ -190,7 +196,7 @@ Feature: Run Feature
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
             child.kill = () => {};
-            
+
             // Simulate Behave NDJSON stream
             setTimeout(() => {
                 child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Run scenario"}}\n'));
@@ -199,7 +205,7 @@ Feature: Run Feature
                 child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3, "context_snapshot": {"foo": "bar"}}}\n'));
                 child.emit('close', 0);
             }, 10);
-            
+
             return child;
         };
 
@@ -207,7 +213,7 @@ Feature: Run Feature
             // Trigger test run
             const request = new vscode.TestRunRequest([fileItem]);
             const tokenSource = new vscode.CancellationTokenSource();
-            
+
             await testControllerPrivate.runHandler(request, tokenSource.token, 'run');
 
             // Verify Live Step Tracking called setDecorations with the correct line (line 4 is 0-indexed as 3)
@@ -243,21 +249,21 @@ Feature: Fail Feature
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
             child.kill = () => {};
-            
+
             setTimeout(() => {
                 child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Fail scenario"}}\n'));
                 child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step", "data": {"status": "failed", "error_message": "AssertionError", "error_file": "steps.py", "error_line": 10}}\n'));
                 child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "failed", "line": 3}}\n'));
                 child.emit('close', 1);
             }, 10);
-            
+
             return child;
         };
 
         try {
             const request = new vscode.TestRunRequest([fileItem]);
             const tokenSource = new vscode.CancellationTokenSource();
-            
+
             await testControllerPrivate.runHandler(request, tokenSource.token, 'run');
 
             let scenarioItem: vscode.TestItem | undefined;
@@ -269,7 +275,7 @@ Feature: Fail Feature
             };
             findScenario(fileItem);
             assert.ok(scenarioItem, 'Should find Fail scenario');
-            
+
             // Should have created an error child item
             let foundErrorChild = false;
             scenarioItem.children.forEach((child: vscode.TestItem) => {
@@ -303,19 +309,19 @@ Feature: Error Feature
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
             child.kill = () => {};
-            
+
             setTimeout(() => {
                 child.stdout.emit('data', Buffer.from('Some catastrophic failure\n'));
                 child.emit('close', 1);
             }, 10);
-            
+
             return child;
         };
 
         try {
             const request = new vscode.TestRunRequest([fileItem]);
             const tokenSource = new vscode.CancellationTokenSource();
-            
+
             // Mock test run to capture failed() calls
             let failedCalled = false;
             let failedMessage = '';
@@ -336,7 +342,7 @@ Feature: Error Feature
             assert.strictEqual(failedCalled, true, 'run.failed should have been called');
             assert.ok(failedMessage.includes('Behave exited with code 1'), 'Message should indicate exit code');
             assert.ok(failedMessage.includes('Some catastrophic failure'), 'Message should include output');
-            
+
             testControllerPrivate.controller.createTestRun = originalCreateTestRun;
         } finally {
             cp.spawn = originalSpawn;
@@ -365,21 +371,21 @@ Feature: Skip Feature
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
             child.kill = () => {};
-            
+
             setTimeout(() => {
                 // Only process Scenario 1
                 child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Scenario 1"}}\n'));
                 child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3}}\n'));
                 child.emit('close', 0);
             }, 10);
-            
+
             return child;
         };
 
         try {
             const request = new vscode.TestRunRequest([fileItem]);
             const tokenSource = new vscode.CancellationTokenSource();
-            
+
             let skippedCalled = false;
             let skippedItemLabel = '';
             const originalCreateTestRun = testControllerPrivate.controller.createTestRun;
@@ -396,7 +402,7 @@ Feature: Skip Feature
 
             assert.strictEqual(skippedCalled, true, 'run.skipped should have been called');
             assert.ok(skippedItemLabel.includes('Scenario 2'), 'Scenario 2 should be skipped because it was unprocessed');
-            
+
             testControllerPrivate.controller.createTestRun = originalCreateTestRun;
         } finally {
             cp.spawn = originalSpawn;
@@ -408,7 +414,7 @@ Feature: Skip Feature
         const originalFindFiles = vscode.workspace.findFiles;
         const originalWorkspaceFolders = Object.getOwnPropertyDescriptor(vscode.workspace, 'workspaceFolders');
         let findFilesCalled = false;
-        
+
         Object.defineProperty(vscode.workspace, 'workspaceFolders', {
             get: () => [{ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 }]
         });
@@ -429,7 +435,7 @@ Feature: Skip Feature
         try {
             await testControllerPrivate.controller.resolveHandler();
             assert.strictEqual(findFilesCalled, true, 'Should have searched for .feature files');
-            
+
             // It should have created the file item
             const fileItem = testControllerPrivate.controller.items.get(vscode.Uri.file(path.join(tempDir, 'resolve.feature')).toString());
             assert.ok(fileItem, 'File item should have been created');
@@ -490,13 +496,13 @@ Feature: Debug Feature
         try {
             const request = new vscode.TestRunRequest([fileItem]);
             const tokenSource = new vscode.CancellationTokenSource();
-            
+
             await testControllerPrivate.runHandler(request, tokenSource.token, 'debug');
 
             assert.strictEqual(executeCommandCalled, true, 'debug command should have been called');
             assert.ok(executeCommandArgs[0], 'Should have passed uri to debug command');
             assert.strictEqual(endCalled, false, 'Run should not have been created or ended in debug mode');
-            
+
             testControllerPrivate.controller.createTestRun = originalCreateTestRun;
         } finally {
             vscode.commands.executeCommand = originalExecuteCommand;

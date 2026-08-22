@@ -46,12 +46,12 @@ Feature: Test Feature
 
         const scenarioSymbol = featureSymbol.children[0];
         assert.strictEqual(scenarioSymbol.name, 'Scenario: Test Scenario');
-        assert.strictEqual(scenarioSymbol.kind, vscode.SymbolKind.Method);
+        assert.strictEqual(scenarioSymbol.kind, vscode.SymbolKind.Module);
         assert.strictEqual(scenarioSymbol.children.length, 3);
 
         const stepSymbol = scenarioSymbol.children[0];
         assert.strictEqual(stepSymbol.name, 'Given I have a step');
-        assert.strictEqual(stepSymbol.kind, vscode.SymbolKind.String);
+        assert.strictEqual(stepSymbol.kind, vscode.SymbolKind.Event);
     });
 
     test('Handles Rule and Background', async () => {
@@ -77,7 +77,7 @@ Feature: Test
         
         const globalBackground = featureSymbol.children[0];
         assert.strictEqual(globalBackground.name, 'Background: Global Setup');
-        assert.strictEqual(globalBackground.kind, vscode.SymbolKind.Method);
+        assert.strictEqual(globalBackground.kind, vscode.SymbolKind.Module);
 
         const ruleSymbol = featureSymbol.children[1];
         assert.strictEqual(ruleSymbol.name, 'Rule: Business Rule');
@@ -86,7 +86,9 @@ Feature: Test
         // Rule Background + Scenario
         assert.strictEqual(ruleSymbol.children.length, 2);
         assert.strictEqual(ruleSymbol.children[0].name, 'Background: Rule Setup');
+        assert.strictEqual(ruleSymbol.children[0].kind, vscode.SymbolKind.Module);
         assert.strictEqual(ruleSymbol.children[1].name, 'Scenario: Under rule');
+        assert.strictEqual(ruleSymbol.children[1].kind, vscode.SymbolKind.Module);
     });
 
     test('Returns empty array on parsing failure', async () => {

@@ -27,19 +27,25 @@ export class AntiPatternDiagnosticsManager {
                 event.type === 'configurationChanged' ||
                 event.type === 'textDocumentOpened' // To show diagnostics when opening a file
             ) {
-                this.triggerAnalysis();
+                const immediate = (event.type === 'textDocumentOpened' || event.type === 'configurationChanged');
+                this.triggerAnalysis(immediate);
             }
         });
     }
 
-    private triggerAnalysis() {
+    private triggerAnalysis(immediate: boolean = false) {
         if (this.timeout) {
             clearTimeout(this.timeout);
         }
-        // Debounce the analysis by 1.5 seconds to avoid locking up on every keystroke/save
-        this.timeout = setTimeout(() => {
+        
+        if (immediate) {
             this.runAnalysis();
-        }, 1500);
+        } else {
+            // Debounce the analysis by 500ms to avoid locking up on every keystroke/save
+            this.timeout = setTimeout(() => {
+                this.runAnalysis();
+            }, 500);
+        }
     }
 
     private async runAnalysis() {
@@ -58,7 +64,8 @@ export class AntiPatternDiagnosticsManager {
             // to prevent double-squiggles in the editor.
             antiPatterns = antiPatterns.filter(ap => 
                 ap.title !== 'Undefined Steps' && 
-                ap.title !== 'Ambiguous Steps in Feature Files'
+                ap.title !== 'Ambiguous Steps in Feature Files' &&
+                ap.title !== 'Syntax Error'
             );
             
             this.updateDiagnostics(antiPatterns);
@@ -84,14 +91,17 @@ export class AntiPatternDiagnosticsManager {
                         diagnosticsMap.set(uriString, []);
                     }
                     
-                    // All item.lines from antiPatternEngine are now 1-indexed
+                    // item.lines from antiPatternEngine are 1-indexed
                     const line = item.line !== undefined && item.line > 0 ? item.line - 1 : 0;
                     
                     const range = new vscode.Range(line, 0, line, 200); // Highlight the whole line roughly
                     
-                    const diag = new vscode.Diagnostic(range, `${pattern.title}: ${pattern.explanation}\n\nSuggested Fix: ${pattern.suggestedFix}`, vscodeSeverity);
+                    const inlineMessage = item.description || pattern.explanation;
+                    const message = `${pattern.title}: ${inlineMessage}\n💡 Fix: ${pattern.suggestedFix}`;
+                    
+                    const diag = new vscode.Diagnostic(range, message, vscodeSeverity);
                     diag.source = 'Gherkin PowerTools';
-                    diag.code = pattern.title;
+                    diag.code = pattern.id; // Use ID for shorter code instead of long title
                     
                     diagnosticsMap.get(uriString)!.push(diag);
                 }
@@ -102,9 +112,11 @@ export class AntiPatternDiagnosticsManager {
                         diagnosticsMap.set(fileUri, []);
                     }
                     const range = new vscode.Range(0, 0, 0, 100);
-                    const diag = new vscode.Diagnostic(range, `${pattern.title}: ${pattern.explanation}\n\nSuggested Fix: ${pattern.suggestedFix}`, vscodeSeverity);
+                    
+                    const message = `${pattern.title}: ${pattern.explanation}\n💡 Fix: ${pattern.suggestedFix}`;
+                    const diag = new vscode.Diagnostic(range, message, vscodeSeverity);
                     diag.source = 'Gherkin PowerTools';
-                    diag.code = pattern.title;
+                    diag.code = pattern.id;
 
                     diagnosticsMap.get(fileUri)!.push(diag);
                 }

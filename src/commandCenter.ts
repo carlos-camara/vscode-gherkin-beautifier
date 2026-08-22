@@ -14,7 +14,7 @@ export async function showCommandCenter() {
         },
         {
             label: '$(paintcan) Format Gherkin Document',
-            description: 'Formats the current Gherkin file',
+            description: 'Format current file',
             commandId: GherkinPowerToolsCommands.format.id
         },
 
@@ -25,32 +25,32 @@ export async function showCommandCenter() {
         },
         {
             label: '$(play) Run Feature',
-            description: 'Executes the entire feature file',
+            description: 'Run current feature',
             commandId: GherkinPowerToolsCommands.runFeature.id
         },
         {
             label: '$(play) Run Scenario',
-            description: 'Executes the scenario at the cursor position',
+            description: 'Run scenario at cursor',
             commandId: GherkinPowerToolsCommands.runScenario.id
         },
         {
             label: '$(gear) Edit Feature...',
-            description: 'Executes the feature with custom interactive arguments',
+            description: 'Run feature with custom arguments',
             commandId: GherkinPowerToolsCommands.runFeatureWithArgs.id
         },
         {
             label: '$(gear) Edit Scenario...',
-            description: 'Executes the scenario with custom interactive arguments',
+            description: 'Run scenario with custom arguments',
             commandId: GherkinPowerToolsCommands.runScenarioWithArgs.id
         },
         {
             label: '$(debug-alt) Debug Feature',
-            description: 'Starts a debug session for the feature file',
+            description: 'Debug current feature',
             commandId: GherkinPowerToolsCommands.debugFeature.id
         },
         {
             label: '$(debug-alt) Debug Scenario',
-            description: 'Starts a debug session for the scenario at the cursor position',
+            description: 'Debug scenario at cursor',
             commandId: GherkinPowerToolsCommands.debugScenario.id
         },
 
@@ -61,7 +61,7 @@ export async function showCommandCenter() {
         },
         {
             label: '$(add) Create Step Definition',
-            description: 'Generates Python code for an undefined step',
+            description: 'Generate Python code for undefined step',
             commandId: GherkinPowerToolsCommands.createStepDefinition.id
         },
 
@@ -72,18 +72,18 @@ export async function showCommandCenter() {
         },
         {
             label: '$(graph) Show Gherkin Health',
-            description: 'Generates a visual dashboard of project metrics and actionable anti-patterns',
+            description: 'View project metrics and anti-patterns dashboard',
             commandId: GherkinPowerToolsCommands.showGherkinHealth.id
         },
         {
             label: '$(stethoscope) Diagnose Workspace',
-            description: 'Generates a troubleshooting report for the workspace',
+            description: 'Generate workspace troubleshooting report',
             commandId: GherkinPowerToolsCommands.diagnoseWorkspace.id
         }
     ];
 
     const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select a Gherkin PowerTools command to execute...',
+        placeHolder: 'Select a command',
         matchOnDescription: true
     });
 

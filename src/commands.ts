@@ -2,12 +2,6 @@
 
 export const CommandCategory = "Gherkin PowerTools";
 
-export interface CommandRegistration {
-    id: string;
-    title: string;
-    category: string;
-    aliases?: readonly string[];
-}
 
 export const GherkinPowerToolsCommands = {
     showImpactDetails: {

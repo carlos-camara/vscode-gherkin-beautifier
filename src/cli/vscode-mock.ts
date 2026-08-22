@@ -25,6 +25,16 @@ export class Uri {
     toString(): string {
         return `file://${this.path}`;
     }
+
+    with(change: { scheme?: string, authority?: string, path?: string, query?: string, fragment?: string }): Uri {
+        return new Uri(
+            change.scheme ?? this.scheme,
+            change.authority ?? this.authority,
+            change.path ?? this.path,
+            change.query ?? this.query,
+            change.fragment ?? this.fragment
+        );
+    }
 }
 
 export class Position {
@@ -46,7 +56,6 @@ export class Range {
         }
     }
 }
-
 export class Location {
     constructor(public uri: Uri, public rangeOrPosition: Range | Position) {}
 }
@@ -79,6 +88,7 @@ export class Diagnostic {
     source?: string;
     code?: string | number;
 }
+
 
 export class TextEdit {
     constructor(public range: Range, public newText: string) {}
