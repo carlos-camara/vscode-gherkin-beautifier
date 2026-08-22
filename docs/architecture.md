@@ -246,3 +246,13 @@ To bring the Workspace Intelligence Engine into CI/CD environments without dupli
 3. **The VS Code Shim:** During the `esbuild` compilation step for the CLI (orchestrated by `scripts/build-npm-cli.js`), any `import * as vscode from 'vscode'` is intercepted and redirected to `src/cli/vscode-mock.ts`. This file provides a lightweight, pure-Node.js shim containing functional implementations of `Uri`, `Position`, `Range`, and diagnostic severities.
 4. **Unified Configuration Layer (`defaults.ts`)**: To guarantee 100% feature parity between the CLI and the VS Code Extension, all default configuration values, schema validations, and precedence hierarchies are strictly centralized in a pure-TypeScript module (`defaults.ts`). This ensures both environments resolve profiles and settings identically without code duplication.
 5. **Output Generation:** The CLI consumes the results of the `WorkspaceGraph` or `Formatter` and translates the mocked VS Code diagnostics/edits into standard `stdout` (human-readable console tables or machine-readable JSON), exiting with code `1` if issues are found.
+
+## Configuration Loader Architecture
+
+To support seamless configuration across local VS Code, remote development environments (SSH, Dev Containers, WSL), and the standalone CLI, the `ConfigurationService` decouples all file system interactions into a `ConfigurationLoader` interface.
+
+### How Configuration Loading Works
+1. **Abstraction:** The core `ConfigurationService` contains pure logic for resolving, merging, and caching configuration profiles. It does not import `fs` or `path`.
+2. **VS Code Environment:** When running inside VS Code (`src/extension.ts`), it is injected with `VsCodeConfigurationLoader`. This loader utilizes `vscode.workspace.fs.readFile`, guaranteeing that configurations can be read over the network in remote workspaces without throwing `ENOENT` errors on the extension host.
+3. **CLI Environment:** When running via the CLI (`src/cli/index.ts`), it is injected with `NodeConfigurationLoader`. This loader utilizes native `fs.promises` to read configuration files locally from disk.
+4. **Resiliency:** Both loaders safely catch missing files or syntax errors in `.gherkin-powertoolsrc.json` and return a fallback state. The service translates these fallback states into non-blocking diagnostics in the problems view instead of crashing the bootstrap sequence.

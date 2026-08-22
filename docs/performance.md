@@ -49,9 +49,12 @@ To monitor the performance of the `AstRepository`, you can enable parser metrics
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing Developer Metrics" width="600" height="340" />
 </div>
 
-These metrics are collected independently of any provider (formatter, linter) and impose zero performance penalty when the setting is left disabled (the default). The `MetricsLogger` efficiently subscribes to VS Code configuration changes to cache its enabled state, ensuring logging operations remain strictly allocation-light and avoid synchronous IPC overhead during hot paths.
+These metrics are collected independently of any provider (formatter, linter) and impose zero performance penalty when the setting is left disabled (the default).
+The `MetricsLogger` efficiently subscribes to VS Code configuration changes to cache its enabled state.
+This ensures logging operations remain strictly allocation-light and avoid synchronous IPC overhead during hot paths.
 
-To ensure long-term stability across rapid configuration changes and Extension Host test runs, all telemetry and diagnostic loggers formally track their own lifecycles via the extension context, guaranteeing zero-overhead cleanup and strict state isolation when deactivated or reset.
+To ensure long-term stability across rapid configuration changes and Extension Host test runs, all telemetry and diagnostic loggers formally track their own lifecycles via the extension context.
+This guarantees zero-overhead cleanup and strict state isolation when deactivated or reset.
 
 ## Performance Troubleshooting
 
