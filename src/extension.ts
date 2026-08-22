@@ -187,6 +187,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 7. Providers Initialization
     const linter = new GherkinLinter(symbolCache, configService);
+    linter.setWorkspaceGraph(workspaceGraph);
     linter.setEventBus(eventBus);
 
     const highlighter = new GherkinHighlighter();

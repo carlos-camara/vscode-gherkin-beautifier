@@ -5,7 +5,20 @@ import { astRepository } from './ast';
 import type { Step } from '@cucumber/messages';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
+import { WorkspaceGraph } from './graph';
 
+export type InvalidationReason = 
+    | { type: 'documentOpened', document: vscode.TextDocument }
+    | { type: 'documentChanged', document: vscode.TextDocument }
+    | { type: 'configurationChanged', affectsLinter: boolean }
+    | { type: 'stepDefinitionsUpdated', affectedFeatureUris?: vscode.Uri[] };
+
+export interface LinterMetrics {
+    candidateDocs: number;
+    lintedDocs: number;
+    skippedDocs: number;
+    elapsedTimeMs: number;
+}
 /**
  * Diagnostic Provider that acts as a realtime Linter for Gherkin files.
  * It uses the official @cucumber/gherkin AST parser to catch syntax errors instantly.
@@ -17,89 +30,144 @@ export class GherkinLinter {
     private nextRequestId: number = 0;
     private eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
+    private workspaceGraph?: WorkspaceGraph;
+    
+    private invalidationQueue: Map<string, InvalidationReason> = new Map();
+    private flushDebounceTimer?: NodeJS.Timeout;
+    private isFlushing = false;
 
     constructor(symbolCache: SymbolCache, private configService: ConfigurationService) {
-        // Ensure only one debounced call happens at a time
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('gherkin');
         this.symbolCache = symbolCache;
     }
 
-    /**
-     * Subscribes to the Workspace Event Bus to receive file system and editor changes.
-     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
-     */
+    public setWorkspaceGraph(graph: WorkspaceGraph) {
+        this.workspaceGraph = graph;
+    }
+
     public setEventBus(eventBus: WorkspaceEventBus) {
         this.eventBus = eventBus;
         this.eventBusDisposable?.dispose();
         this.eventBusDisposable = this.eventBus.onEvent(e => {
-            if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
-                const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
-                if (e.type === 'textDocumentOpened') {
-                    process.stdout.write(`\n--- LINTER EVENT: textDocumentOpened ${doc.uri.toString()} ---\n`);
-                    this.immediateLint(doc);
-                } else {
-                    process.stdout.write(`\n--- LINTER EVENT: textDocumentChanged ${doc.uri.toString()} ---\n`);
-                    this.scheduleLint(doc);
+            if (e.type === 'textDocumentOpened') {
+                this.immediateInvalidation({ type: 'documentOpened', document: e.document });
+            } else if (e.type === 'textDocumentChanged') {
+                this.queueInvalidation({ type: 'documentChanged', document: e.event.document });
+            } else if (e.type === 'configurationChanged') {
+                // A quick check if it affects linter could be done here, but for simplicity we assume it might.
+                this.queueInvalidation({ type: 'configurationChanged', affectsLinter: true });
+            } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted') {
+                let affected: vscode.Uri[] | undefined = undefined;
+                if (this.workspaceGraph) {
+                    // Correctness-first: if definitions change, any unresolved step might now be resolved, 
+                    // and any resolved step might become ambiguous.
+                    // For now, we consider all open feature files as candidates to be safe, but we let the queue batch it.
+                    affected = vscode.workspace.textDocuments.map(d => d.uri);
                 }
-            } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
-                vscode.workspace.textDocuments.forEach(doc => {
-                    this.immediateLint(doc);
-                });
+                this.queueInvalidation({ type: 'stepDefinitionsUpdated', affectedFeatureUris: affected });
             }
         });
     }
 
-    /**
-     * Schedules a debounced linting request for a document.
-     */
-    public scheduleLint(document: vscode.TextDocument, delayMs: number = 250) {
-        if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
-            return;
+    private queueInvalidation(reason: InvalidationReason) {
+        if (reason.type === 'documentOpened' || reason.type === 'documentChanged') {
+            this.invalidationQueue.set(reason.document.uri.toString(), reason);
+        } else if (reason.type === 'configurationChanged') {
+            this.invalidationQueue.set(`config:global`, reason);
+        } else if (reason.type === 'stepDefinitionsUpdated') {
+            this.invalidationQueue.set('stepDefs', reason);
         }
-
-        const config = this.configService.getConfiguration(document.uri);
-        if (!config.linter.enabled) {
-            this.clear(document);
-            return;
+        
+        if (this.flushDebounceTimer) {
+            clearTimeout(this.flushDebounceTimer);
         }
-
-        const uriStr = document.uri.toString();
-        const existing = this.pendingRequests.get(uriStr);
-        if (existing?.timer) {
-            clearTimeout(existing.timer);
+        this.flushDebounceTimer = setTimeout(() => this.flush(), 250);
+    }
+    
+    private immediateInvalidation(reason: InvalidationReason) {
+        this.queueInvalidation(reason);
+        if (this.flushDebounceTimer) clearTimeout(this.flushDebounceTimer);
+        this.flush();
+    }
+    
+    private async flush(): Promise<LinterMetrics | undefined> {
+        if (this.isFlushing || this.invalidationQueue.size === 0) return;
+        this.isFlushing = true;
+        const startTime = Date.now();
+        
+        const reasons = Array.from(this.invalidationQueue.values());
+        this.invalidationQueue.clear();
+        
+        let candidates = new Map<string, vscode.TextDocument>();
+        let globalConfigChanged = false;
+        let stepDefsChanged = false;
+        
+        for (const reason of reasons) {
+            if (reason.type === 'documentOpened' || reason.type === 'documentChanged') {
+                candidates.set(reason.document.uri.toString(), reason.document);
+            } else if (reason.type === 'configurationChanged') {
+                globalConfigChanged = true;
+            } else if (reason.type === 'stepDefinitionsUpdated') {
+                stepDefsChanged = true;
+            }
         }
-
-        const requestId = ++this.nextRequestId;
-        const timer = setTimeout(() => {
-            this.lint(document, requestId, document.version);
-        }, delayMs);
-
-        this.pendingRequests.set(uriStr, { timer, requestId });
+        
+        if (globalConfigChanged || stepDefsChanged) {
+            // Add all open feature documents as candidates
+            vscode.workspace.textDocuments.forEach(doc => {
+                if (doc.languageId === 'feature' || doc.languageId === 'gherkin') {
+                    candidates.set(doc.uri.toString(), doc);
+                }
+            });
+        }
+        
+        const metrics: LinterMetrics = {
+            candidateDocs: candidates.size,
+            lintedDocs: 0,
+            skippedDocs: 0,
+            elapsedTimeMs: 0
+        };
+        
+        // Limit concurrency to 5
+        const limit = 5;
+        const activePromises = new Set<Promise<void>>();
+        
+        for (const doc of candidates.values()) {
+            const config = this.configService.getConfiguration(doc.uri);
+            if (!config.linter.enabled) {
+                this.clear(doc);
+                metrics.skippedDocs++;
+                continue;
+            }
+            
+            const p = this.lint(doc, ++this.nextRequestId, doc.version).then(() => {
+                metrics.lintedDocs++;
+            }).finally(() => {
+                activePromises.delete(p);
+            });
+            activePromises.add(p);
+            
+            if (activePromises.size >= limit) {
+                await Promise.race(activePromises);
+            }
+        }
+        
+        await Promise.all(activePromises);
+        
+        metrics.elapsedTimeMs = Date.now() - startTime;
+        this.isFlushing = false;
+        
+        // Output metrics for observability
+        process.stdout.write(`\n--- LINTER FLUSH METRICS: candidates=${metrics.candidateDocs}, linted=${metrics.lintedDocs}, skipped=${metrics.skippedDocs}, time=${metrics.elapsedTimeMs}ms ---\n`);
+        return metrics;
     }
 
-    /**
-     * Immediately lints a document, bypassing any active debounce.
-     */
+    public scheduleLint(document: vscode.TextDocument) {
+        this.queueInvalidation({ type: 'documentChanged', document });
+    }
+
     public immediateLint(document: vscode.TextDocument) {
-        if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
-            return;
-        }
-
-        const config = this.configService.getConfiguration(document.uri);
-        if (!config.linter.enabled) {
-            this.clear(document);
-            return;
-        }
-
-        const uriStr = document.uri.toString();
-        const existing = this.pendingRequests.get(uriStr);
-        if (existing?.timer) {
-            clearTimeout(existing.timer);
-        }
-
-        const requestId = ++this.nextRequestId;
-        this.pendingRequests.set(uriStr, { requestId });
-        this.lint(document, requestId, document.version);
+        this.immediateInvalidation({ type: 'documentChanged', document });
     }
 
     /**
@@ -764,6 +832,7 @@ export class GherkinLinter {
      */
     public clear(document: vscode.TextDocument) {
         const uriStr = document.uri.toString();
+        this.invalidationQueue.delete(uriStr);
         const pending = this.pendingRequests.get(uriStr);
         if (pending?.timer) {
             clearTimeout(pending.timer);
