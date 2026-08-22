@@ -58,6 +58,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const contextService = new GherkinContextService();
     context.subscriptions.push(contextService);
 
+    metricsLogger.bind(context);
     registerExecutionListeners(context);
 
     // 3. Service Dependencies
