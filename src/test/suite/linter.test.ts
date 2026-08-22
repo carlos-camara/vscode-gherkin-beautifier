@@ -90,7 +90,7 @@ Feature: Test
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         const diag = diagnostics.find(d => d.code === 'MISSING_COLON');
         assert.ok(diag, 'Should detect MISSING_COLON on Scenario Outline');
-        assert.strictEqual(diag!.relatedInformation![0].message, 'Scenario Outline:');
+        assert.strictEqual(diag!.relatedInformation![0].message, ':');
     });
 
     test('Undefined step should generate a diagnostic', async () => {

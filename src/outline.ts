@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { astRepository } from './ast';
 import type { Scenario, Background } from '@cucumber/messages';
+import { dialectService } from './dialect';
 
 /**
  * Provides a Document Symbol tree (Outline) for Gherkin feature files.
@@ -21,6 +22,7 @@ export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvi
         const symbols: vscode.DocumentSymbol[] = [];
         const text = document.getText();
         const feature = gherkinDocument.feature;
+        const dialect = dialectService.getDialect(document);
 
         const featureSymbol = this.createSymbol(
             feature.keyword + ': ' + feature.name,
@@ -44,17 +46,17 @@ export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvi
                     if (child.rule.children) {
                         for (const ruleChild of child.rule.children) {
                             if (ruleChild.background) {
-                                ruleSymbol.children.push(this.buildScenarioSymbol(ruleChild.background, document, text));
+                                ruleSymbol.children.push(this.buildScenarioSymbol(ruleChild.background, document, text, dialect));
                             } else if (ruleChild.scenario) {
-                                ruleSymbol.children.push(this.buildScenarioSymbol(ruleChild.scenario, document, text));
+                                ruleSymbol.children.push(this.buildScenarioSymbol(ruleChild.scenario, document, text, dialect));
                             }
                         }
                     }
                     featureSymbol.children.push(ruleSymbol);
                 } else if (child.background) {
-                    featureSymbol.children.push(this.buildScenarioSymbol(child.background, document, text));
+                    featureSymbol.children.push(this.buildScenarioSymbol(child.background, document, text, dialect));
                 } else if (child.scenario) {
-                    featureSymbol.children.push(this.buildScenarioSymbol(child.scenario, document, text));
+                    featureSymbol.children.push(this.buildScenarioSymbol(child.scenario, document, text, dialect));
                 }
             }
         }
@@ -63,21 +65,38 @@ export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvi
         return symbols;
     }
 
-    private buildScenarioSymbol(node: Scenario | Background, document: vscode.TextDocument, text: string): vscode.DocumentSymbol {
+    private buildScenarioSymbol(node: Scenario | Background, document: vscode.TextDocument, text: string, dialect: any): vscode.DocumentSymbol {
         const symbol = this.createSymbol(
             (node.keyword || 'Background') + ': ' + (node.name || ''),
             node.description || '',
-            vscode.SymbolKind.Method,
+            vscode.SymbolKind.Module,
             this.getRange(node.location, document, text),
             this.getRange(node.location, document, text, true)
         );
 
         if (node.steps) {
             for (const step of node.steps) {
+                const kw = step.keyword.trim();
+                let semanticType: 'given' | 'when' | 'then' | 'step' = 'step';
+                
+                if (dialect.given.includes(kw) || dialect.given.includes(kw + ' ')) semanticType = 'given';
+                else if (dialect.when.includes(kw) || dialect.when.includes(kw + ' ')) semanticType = 'when';
+                else if (dialect.then.includes(kw) || dialect.then.includes(kw + ' ')) semanticType = 'then';
+                else if (dialect.and.includes(kw) || dialect.and.includes(kw + ' ') || 
+                         dialect.but.includes(kw) || dialect.but.includes(kw + ' ') || 
+                         kw === '*') {
+                    semanticType = dialectService.resolveAndBut(document, Math.max(0, step.location.line - 1));
+                }
+                
+                let kind = vscode.SymbolKind.String;
+                if (semanticType === 'given') kind = vscode.SymbolKind.Event;
+                else if (semanticType === 'when') kind = vscode.SymbolKind.Method;
+                else if (semanticType === 'then') kind = vscode.SymbolKind.Constant;
+
                 const stepSymbol = this.createSymbol(
                     step.keyword + step.text,
                     '',
-                    vscode.SymbolKind.String,
+                    kind,
                     this.getRange(step.location, document, text),
                     this.getRange(step.location, document, text, true)
                 );

@@ -63,7 +63,9 @@ function normalizeGherkinError(e: any): GherkinParseError[] {
 
     const name = e.constructor?.name || e.name || 'UnknownError';
     
-    if (name === 'CompositeParserException' && Array.isArray(e.errors)) {
+    // Check for e.errors directly instead of class name, since esbuild minification
+    // mangles class names (e.g. CompositeParserException -> a).
+    if (e.errors && Array.isArray(e.errors)) {
         return e.errors.flatMap((err: any) => normalizeGherkinError(err));
     }
 

@@ -56,7 +56,6 @@ export class Range {
         }
     }
 }
-
 export class Location {
     constructor(public uri: Uri, public rangeOrPosition: Range | Position) {}
 }
@@ -89,6 +88,7 @@ export class Diagnostic {
     source?: string;
     code?: string | number;
 }
+
 
 export class TextEdit {
     constructor(public range: Range, public newText: string) {}

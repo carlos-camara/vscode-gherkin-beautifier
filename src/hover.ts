@@ -74,7 +74,12 @@ export class GherkinHoverProvider implements vscode.HoverProvider {
             const line = stepDef.decoratorRange ? stepDef.decoratorRange.start.line + 1 : 1;
             const link = `${stepDef.uri.toString()}#${line}`;
             
-            hoverContent.appendMarkdown(`$(symbol-function) **${stepDef.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) [${basename}:${line}](${link}) &nbsp;•&nbsp; $(gear) \`${stepDef.matcherType}\`\n\n`);
+            let icon = 'symbol-function';
+            if (stepDef.type === 'given') icon = 'symbol-event';
+            else if (stepDef.type === 'when') icon = 'symbol-method';
+            else if (stepDef.type === 'then') icon = 'symbol-constant';
+
+            hoverContent.appendMarkdown(`$(${icon}) **${stepDef.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) [${basename}:${line}](${link}) &nbsp;•&nbsp; $(gear) \`${stepDef.matcherType}\`\n\n`);
             
             if (!stepDef.evaluable) {
                 hoverContent.appendMarkdown(`> ⚠️ **Unsupported Matcher:** ${stepDef.compilationError || 'Dynamic expression is not supported'}\n\n`);

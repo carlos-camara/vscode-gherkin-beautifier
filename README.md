@@ -64,7 +64,7 @@ Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to instantly generate a vali
 </div>
 
 ### 2. Gherkin Health Dashboard & Anti-pattern Engine
-Powered by the new **BDD Anti-pattern Detection Engine**, you can now visually identify unused, duplicated, ambiguous, or highly complex step definitions and scenarios. Gherkin PowerTools calculates Technical Debt and Maintainability, persisting branch-isolated historical snapshots to securely visualize your project's evolution over time in a premium, Apple-style interactive dashboard.
+Powered by the new **BDD Anti-pattern Detection Engine**, you can now visually identify unused, duplicated, ambiguous, or highly complex step definitions and scenarios. Gherkin PowerTools calculates Technical Debt and Maintainability, persisting branch-isolated historical snapshots to securely visualize your project's evolution over time in a premium, interactive dashboard.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" height="340" />
@@ -87,11 +87,13 @@ Gherkin PowerTools acts in two tiers depending on your project:
 - **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd> or Editor Context Menu).
 - **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
 - **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
+- **Gherkin Health Dashboard:** Interactive modern webview to analyze oversized features, tag usage, and architectural anti-patterns with built-in DOM node limits for massive workspaces.
 
 ### Exclusive to Python Behave
 - **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
 - **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
-- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking, powered by **Zero-Config Virtual Environment Discovery**.
+- **Test Explorer Integration:** Run and debug features with line-by-line execution tracking and pristine Markdown-formatted error traces, ordered strictly chronologically as written in your code.
+- **BDD Anti-pattern Detection Engine:** Instant technical debt diagnostics for unused, ambiguous, or duplicated step definitions across the workspace.
 - **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines.
   The CLI uses the exact same parsing, formatting, and BDD Anti-pattern engine as the VS Code extension. [View the Capability Contract](https://carlos-camara.github.io/vscode-gherkin-powertools/capability_contract/). *(Note: In Remote Development environments like WSL or SSH, run the CLI from the VS Code Integrated Terminal, not your local OS terminal).*
 

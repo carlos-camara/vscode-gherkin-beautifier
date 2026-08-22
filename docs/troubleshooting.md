@@ -38,11 +38,11 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Likely Causes:** You have multiple regular expressions in your Python decorators that match the exact same string (e.g., overlapping wildcards like `(.*)`).
 **Resolution:** Tighten your regular expressions in Python to be mutually exclusive.
 
-## I see double squiggles for Undefined or Ambiguous Steps
-**Symptom:** Your feature file displays two overlapping underlines (e.g., one yellow, one red) for the same undefined or ambiguous step.
+## I see double squiggles for Undefined, Ambiguous Steps or Syntax Errors
+**Symptom:** Your feature file displays two overlapping underlines (e.g., one yellow, one red) for the same undefined step, ambiguous step, or syntax error (such as a misspelled keyword). The generic `Syntax Error` might also mask the Quick Fix bulb.
 **Likely Causes:** Both the realtime Linter and the BDD Anti-pattern Detection Engine are configured to report on the same file, but the filtering mechanism failed or configuration is conflicting.
-**Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps` and `ambiguous-steps` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the Quick Fixes).
-**Resolution:** This should be handled automatically by the extension. If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.antiPatterns.rules`.
+**Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps`, `ambiguous-steps`, and `syntax-errors` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the highly-granular Quick Fixes).
+**Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.antiPatterns.rules`.
 
 ## Yellow line (diagnostics) doesn't appear immediately on file open
 **Symptom:** You open a feature file and the yellow squiggly lines for undefined or ambiguous steps do not appear until you type a character or switch files back and forth.
@@ -70,9 +70,12 @@ Wait a few seconds for the lazy-initialization to complete. If it still doesn't 
 ## Test Execution is Blocked (Untrusted Workspace or External File)
 **Symptom:** You attempt to run a test from the Test Explorer or CodeLens, but VS Code blocks the execution or throws a "Cannot run Behave against a file outside of a workspace folder" error.
 **Likely Causes:**
+
 1. The extension uses VS Code's Workspace Trust API. If your workspace is marked as "Untrusted" (Restricted Mode), test execution is disabled.
 2. The `.feature` file you are trying to run is located outside of your currently open workspace folders (e.g. opened loosely or as an Untitled file).
+
 **Resolution:**
+
 1. Click the "Restricted Mode" banner in the bottom status bar and select "Trust Workspace & Install" to enable test execution.
 2. Ensure you have explicitly opened the root folder containing the `.feature` file via **File > Open Folder...**. The extension strictly prevents execution on external files to protect your root disk from arbitrary runs.
 
@@ -149,12 +152,13 @@ If you need to point to a specific local Python virtual environment via an absol
 **Symptom:** You invoke the native VS Code `Rename Symbol` command (e.g., <kbd>F2</kbd>) on a Gherkin step, rename it, but some `.feature` files still use the old step name.
 **Likely Causes:** The affected `.feature` files were not yet indexed in the `WorkspaceGraph`, or the Workspace Graph failed to initialize.
 **Diagnostic Steps:**
+
 1. Ensure the Python step file containing the definition is within your configured `stepGlobs`.
 2. Run **Gherkin PowerTools: Diagnose Workspace** and check the **Bootstrap Capabilities** section. If the `Workspace Graph` shows a `failed` state, review the error message provided.
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/bootstrap-diagnostics-view.gif" alt="User running Diagnose Workspace command to check extension startup capability statuses" width="600" height="340" />
-</div>
+    <div align="center">
+      <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/bootstrap-diagnostics-view.gif" alt="User running Diagnose Workspace command to check extension startup capability statuses" width="600" height="340" />
+    </div>
 
 3. Check the "Discovered Steps" section.
 **Resolution:** Verify `stepGlobs` covers all relevant step files. If a capability failed, you can restart the extension Host. The graph is rebuilt automatically when files are saved.

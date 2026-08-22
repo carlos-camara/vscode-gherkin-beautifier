@@ -52,7 +52,7 @@ export class SymbolCache {
                 this.updateFile(e.uri);
             } else if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
                 const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
-                if (doc.languageId === 'python') {
+                if (doc.languageId === 'python' && this.cache.has(this.getCanonicalUri(doc.uri))) {
                     this.updateFile(doc.uri);
                 }
             } else if (e.type === 'stepFileDeleted') {
@@ -93,6 +93,7 @@ export class SymbolCache {
 
                 this.state = 'ready';
                 logger.info(`Gherkin PowerTools: Symbol cache initialized with ${stepFiles.length} files.`);
+                this.eventBus?.publish({ type: 'stepDefinitionsUpdated', uri: vscode.Uri.parse('file:///symbolCache/ready') });
             } catch (err) {
                 this.state = 'failed';
                 logger.error('Error initializing symbol cache:', err);

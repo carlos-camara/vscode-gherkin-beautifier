@@ -64,7 +64,7 @@ Feature: Sample Feature
         });
 
         assert.ok(featureItem);
-        assert.strictEqual(featureItem!.label, 'Feature: Sample Feature');
+        assert.strictEqual(featureItem!.label, 'Sample Feature');
         assert.strictEqual(featureItem!.children.size, 1);
 
         let scenarioItem: vscode.TestItem | undefined;
@@ -73,7 +73,7 @@ Feature: Sample Feature
         });
 
         assert.ok(scenarioItem);
-        assert.strictEqual(scenarioItem!.label, 'Scenario: First scenario');
+        assert.strictEqual(scenarioItem!.label, 'First scenario');
     });
 
     test('Parses Rules and nested Scenarios correctly', async () => {
@@ -98,13 +98,13 @@ Feature: Rules Feature
         featureItem!.children.forEach((item: vscode.TestItem) => { ruleItem = item; });
 
         assert.ok(ruleItem);
-        assert.strictEqual(ruleItem!.label, 'Rule: A business rule');
+        assert.strictEqual(ruleItem!.label, 'A business rule');
         assert.strictEqual(ruleItem!.children.size, 1);
 
         let scenarioItem: vscode.TestItem | undefined;
         ruleItem!.children.forEach((item: vscode.TestItem) => { scenarioItem = item; });
 
-        assert.strictEqual(scenarioItem!.label, 'Scenario: Rule scenario');
+        assert.strictEqual(scenarioItem!.label, 'Rule scenario');
     });
 
     test('Parses Scenario Outline and Examples rows into TestItems', async () => {
@@ -134,7 +134,7 @@ Feature: Outline Feature
         featureItem!.children.forEach((item: vscode.TestItem) => { scenarioOutlineItem = item; });
 
         assert.ok(scenarioOutlineItem);
-        assert.strictEqual(scenarioOutlineItem!.label, 'Scenario Outline: Outline scenario');
+        assert.strictEqual(scenarioOutlineItem!.label, 'Outline scenario');
 
         // Check that the two Example rows are parsed as children
         assert.strictEqual(scenarioOutlineItem!.children.size, 2);
@@ -142,10 +142,10 @@ Feature: Outline Feature
         const exampleItems: vscode.TestItem[] = [];
         scenarioOutlineItem!.children.forEach((item: vscode.TestItem) => { exampleItems.push(item); });
 
-        assert.strictEqual(exampleItems[0].label, 'Example: arg=1');
+        assert.strictEqual(exampleItems[0].label, 'arg=1');
         assert.strictEqual(exampleItems[0].id, `${featureUri.toString()}#scenario:7`);
 
-        assert.strictEqual(exampleItems[1].label, 'Example: arg=2');
+        assert.strictEqual(exampleItems[1].label, 'arg=2');
         assert.strictEqual(exampleItems[1].id, `${featureUri.toString()}#scenario:8`);
     });
     test('Binds to WorkspaceEventBus correctly', () => {

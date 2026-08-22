@@ -42,8 +42,12 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
             const items = report.usages.map(usage => {
                 const parts = vscode.Uri.parse(usage.uri).path.split('/');
                 const description = parts.length >= 2 ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}` : parts[parts.length - 1];
+                let icon = 'symbol-event';
+                if (usage.semanticType === 'when') icon = 'symbol-method';
+                else if (usage.semanticType === 'then') icon = 'symbol-constant';
+
                 return {
-                    label: `$(symbol-event) ${usage.keyword.trim()} ${usage.text}`,
+                    label: `$(${icon}) ${usage.keyword.trim()} ${usage.text}`,
                     description,
                     node: usage
                 };

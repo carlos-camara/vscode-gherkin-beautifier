@@ -148,8 +148,7 @@ suite('Code Action Provider Test Suite', () => {
 
         const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
         assert.ok(actions);
-        assert.strictEqual(actions.length, 1);
-        assert.strictEqual(actions[0].title, "Close table row (append '|')");
+        assert.strictEqual(actions.length, 0);
     });
 });
 

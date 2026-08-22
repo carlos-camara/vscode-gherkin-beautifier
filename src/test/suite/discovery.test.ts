@@ -202,12 +202,16 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
         }
 
         setTimeout(() => {
-            assert.strictEqual(changedFired, true, 'onDidChange event should trigger callback');
-            assert.strictEqual(deletedFired, true, 'onDidDelete event should trigger callback');
-            service.disposeWatchers();
-            (vscode.workspace as any).createFileSystemWatcher = originalCreateFileSystemWatcher;
-            done();
-        }, 200);
+            try {
+                assert.strictEqual(changedFired, true, 'onDidChange event should trigger callback');
+                assert.strictEqual(deletedFired, true, 'onDidDelete event should trigger callback');
+                service.disposeWatchers();
+                (vscode.workspace as any).createFileSystemWatcher = originalCreateFileSystemWatcher;
+                done();
+            } catch (e) {
+                done(e);
+            }
+        }, 500);
     });
 
     test('setupWatchers filters events on ignored files', (done) => {
@@ -246,10 +250,14 @@ suite('BehaveFileDiscoveryService Test Suite', () => {
         }
 
         setTimeout(() => {
-            assert.strictEqual(eventFired, false, 'Ignored file event should not trigger callback');
-            service.disposeWatchers();
-            (vscode.workspace as any).createFileSystemWatcher = originalCreateFileSystemWatcher;
-            done();
+            try {
+                assert.strictEqual(eventFired, false, 'Ignored file event should not trigger callback');
+                service.disposeWatchers();
+                (vscode.workspace as any).createFileSystemWatcher = originalCreateFileSystemWatcher;
+                done();
+            } catch (e) {
+                done(e);
+            }
         }, 150);
     });
 

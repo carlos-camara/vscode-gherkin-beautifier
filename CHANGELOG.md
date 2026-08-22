@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.4] - 2026-08-20
 
 ### 💅 User Experience & Polish
-- **Apple HIG Dashboard**: The Gherkin Health Dashboard has been completely redesigned with a strict Apple Human Interface Guidelines (HIG) aesthetic for a premium, responsive, and minimalist native feel.
+- **Modern Dashboard**: The Gherkin Health Dashboard has been completely redesigned with a strict modern aesthetic for a premium, responsive, and minimalist native feel.
 - **CodeLens Simplification**: Impact Analysis CodeLens now navigates directly to the exact step (instead of the scenario top) and uses a simplified path display for better readability.
 - **Cross-Platform Quick Fixes**: Updated Quick Fixes and walkthroughs to explicitly support both macOS (`Cmd+.`) and Windows (`Ctrl+.`) shortcuts.
 - **Immediate Linter Diagnostics**: The Gherkin Linter now executes instantaneously upon opening a file, bypassing the standard typing debounce. This ensures warnings (like ambiguous steps) appear immediately without requiring you to type or switch tabs.

@@ -151,19 +151,22 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
         const diags1 = mockCollection.get(vscode.Uri.parse('file:///test1.feature'));
         assert.strictEqual(diags1?.length, 1);
         assert.strictEqual(diags1[0].severity, vscode.DiagnosticSeverity.Error);
-        assert.strictEqual(diags1[0].range.start.line, 9); // 0-indexed line 9 for 1-indexed 10
+        assert.strictEqual(diags1[0].range.start.line, 9); // 0-indexed line 10 directly
+        assert.strictEqual(diags1[0].message, 'Item Error: Err\n💡 Fix: Fix');
 
         // Warning with item no line
         const diags2 = mockCollection.get(vscode.Uri.parse('file:///test2.feature'));
         assert.strictEqual(diags2?.length, 1);
         assert.strictEqual(diags2[0].severity, vscode.DiagnosticSeverity.Warning);
         assert.strictEqual(diags2[0].range.start.line, 0); // fallback to line 0
+        assert.strictEqual(diags2[0].message, 'Item Warning No Line: Warn\n💡 Fix: Fix');
 
         // Info with affectedFiles
         const diags3 = mockCollection.get(vscode.Uri.parse('file:///test3.feature'));
         assert.strictEqual(diags3?.length, 1);
         assert.strictEqual(diags3[0].severity, vscode.DiagnosticSeverity.Information);
         assert.strictEqual(diags3[0].range.end.character, 100);
+        assert.strictEqual(diags3[0].message, 'File Info: Info\n💡 Fix: Fix');
 
         // Off (should not be mapped)
         const diags4 = mockCollection.get(vscode.Uri.parse('file:///test4.feature'));

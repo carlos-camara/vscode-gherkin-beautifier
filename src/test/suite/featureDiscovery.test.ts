@@ -22,8 +22,31 @@ suite('FeatureDiscoveryService Test Suite', () => {
         mockEventBus.dispose();
     });
 
-    test('getFeatureGlobs returns default if no config provided', () => {
+    test('getFeatureGlobs returns default if no config provided or empty', () => {
         assert.deepStrictEqual(service.getFeatureGlobs(), ['**/*.feature']);
+        service.configService = {
+            getConfiguration: () => ({ featureGlobs: [] })
+        } as any;
+        assert.deepStrictEqual(service.getFeatureGlobs(), ['**/*.feature']);
+    });
+
+    test('getFeatureGlobs returns configured globs when available', () => {
+        service.configService = {
+            getConfiguration: () => ({ featureGlobs: ['**/*.spec', '**/*.gherkin'] })
+        } as any;
+        assert.deepStrictEqual(service.getFeatureGlobs(), ['**/*.spec', '**/*.gherkin']);
+    });
+
+    test('eventBus subscription resets watchers on configurationChanged', () => {
+        let called = false;
+        sandbox.stub(service, 'setupWatchers').callsFake(() => {
+            called = true;
+            return [];
+        });
+
+        mockEventBus.publish({ type: 'configurationChanged' });
+
+        assert.ok(called, 'setupWatchers should be called on configurationChanged');
     });
 
     test('isIgnored checks default ignores', () => {

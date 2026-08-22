@@ -12,7 +12,20 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
     public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
         const actions: vscode.CodeAction[] = [];
 
-        for (const diagnostic of context.diagnostics) {
+        // Instead of only using context.diagnostics (which strictly intersect the cursor),
+        // fetch all diagnostics for the file and include any that are on the same line.
+        // This ensures the lightbulb appears anywhere on the line, even if a whole-line 
+        // diagnostic (like Syntax Error) shadows a more precise word-level diagnostic.
+        const allDiagnostics = vscode.languages.getDiagnostics(document.uri);
+        const lineDiagnostics = allDiagnostics.filter(d => 
+            d.range.start.line <= _range.end.line && d.range.end.line >= _range.start.line
+        );
+        
+        // Merge context diagnostics with line diagnostics to ensure we don't miss any,
+        // then deduplicate by object reference.
+        const relevantDiagnostics = Array.from(new Set([...context.diagnostics, ...lineDiagnostics]));
+
+        for (const diagnostic of relevantDiagnostics) {
             if (diagnostic.code === 'MISSING_COLON') {
                 const action = new vscode.CodeAction("Insert missing ':'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
@@ -41,14 +54,72 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 action.isPreferred = true;
                 actions.push(action);
             } else if (diagnostic.code === 'INCONSISTENT_CELL_COUNT') {
-                const replacement = diagnostic.relatedInformation?.[0]?.message || '';
-                if (replacement) {
-                    const action = new vscode.CodeAction("Close table row (append '|')", vscode.CodeActionKind.QuickFix);
-                    action.edit = new vscode.WorkspaceEdit();
-                    action.edit.replace(document.uri, diagnostic.range, replacement);
-                    action.diagnostics = [diagnostic];
-                    action.isPreferred = true;
-                    actions.push(action);
+                const lineIndex = diagnostic.range.start.line;
+                const line = document.lineAt(lineIndex);
+                const lineText = line.text;
+
+                // Find the header row to determine expected cell count
+                let headerLineIndex = lineIndex;
+                while (headerLineIndex > 0) {
+                    const prevLineText = document.lineAt(headerLineIndex - 1).text.trim();
+                    if (!prevLineText.startsWith('|')) {
+                        break;
+                    }
+                    headerLineIndex--;
+                }
+
+                if (headerLineIndex !== lineIndex) {
+                    const headerText = document.lineAt(headerLineIndex).text;
+                    const expectedCells = (headerText.match(/\|/g) || []).length;
+                    const currentCells = (lineText.match(/\|/g) || []).length;
+                    
+                    if (currentCells > expectedCells) {
+                        // Extra columns: find the Nth pipe and truncate
+                        let pipeCount = 0;
+                        let truncateIndex = -1;
+                        for (let i = 0; i < lineText.length; i++) {
+                            if (lineText[i] === '|') {
+                                pipeCount++;
+                                if (pipeCount === expectedCells) {
+                                    truncateIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (truncateIndex !== -1) {
+                            const action = new vscode.CodeAction("Remove extra cells", vscode.CodeActionKind.QuickFix);
+                            action.edit = new vscode.WorkspaceEdit();
+                            const fixedText = lineText.substring(0, truncateIndex + 1);
+                            action.edit.replace(document.uri, line.range, fixedText);
+                            action.diagnostics = [diagnostic];
+                            action.isPreferred = true;
+                            actions.push(action);
+                        }
+                    } else if (currentCells < expectedCells) {
+                        // Missing columns
+                        const action = new vscode.CodeAction("Add missing cells", vscode.CodeActionKind.QuickFix);
+                        action.edit = new vscode.WorkspaceEdit();
+                        
+                        const missingPipes = expectedCells - currentCells;
+                        let fixedText = lineText;
+                        
+                        if (!fixedText.trim().endsWith('|')) {
+                            fixedText += ' |';
+                            for (let i = 0; i < missingPipes - 1; i++) {
+                                fixedText += '   |';
+                            }
+                        } else {
+                            for (let i = 0; i < missingPipes; i++) {
+                                fixedText += '   |';
+                            }
+                        }
+                        
+                        action.edit.replace(document.uri, line.range, fixedText);
+                        action.diagnostics = [diagnostic];
+                        action.isPreferred = true;
+                        actions.push(action);
+                    }
                 }
             } else if (diagnostic.code === 'UNDEFINED_STEP') {
                 const action = new vscode.CodeAction('Create empty step definition', vscode.CodeActionKind.QuickFix);

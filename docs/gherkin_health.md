@@ -30,7 +30,7 @@ It generates deep heuristics and scores, including:
 **Real-Time Editor Diagnostics**: Beyond the dashboard, the Anti-pattern Engine integrates directly with VS Code's problems view.
 When enabled, it underlines rule violations (like Duplicated Steps or Oversized Scenarios) directly in your `.feature` and `.py` files.
 To keep your editor responsive, these diagnostics are debounced by 500ms after a file change.
-Note that Ambiguous and Undefined Steps are handled instantly by the real-time Linter (displaying an immediate `⚠️ Ambiguous step: matches multiple definitions` diagnostic). They are automatically filtered out from the hover tooltip and debounced anti-pattern engine to prevent duplicate squiggles.
+Note that Ambiguous Steps, Undefined Steps, and Syntax Errors are handled instantly by the real-time Linter (displaying immediate diagnostics and highly-granular Quick Fixes). They are automatically filtered out from the debounced anti-pattern engine to prevent duplicate squiggles and masking of the lightbulb action.
 
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 
@@ -58,7 +58,7 @@ To generate the dashboard:
 - Open the Command Palette (<kbd>Ctrl+Shift+P</kbd> or <kbd>Cmd+Shift+P</kbd>), type and select **Gherkin PowerTools: Show Gherkin Health**.
 - Or, right-click anywhere in a `.feature` file and select **Gherkin PowerTools > Show Gherkin Health**.
 
-A Webview panel will open in VS Code displaying the generated HTML report. The dashboard is designed with a strict Apple Human Interface Guidelines (HIG) aesthetic, ensuring a premium, responsive, and minimalist native feel.
+A Webview panel will open in VS Code displaying the generated HTML report. The dashboard is designed with a strict modern aesthetic, ensuring a premium, responsive, and minimalist native feel.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Gherkin Health Dashboard - showing maintainability, complexity, and tech debt metrics" width="600" height="340" />
@@ -118,3 +118,4 @@ This helps you understand the "blast radius" of executing a specific tag before 
 - The dashboard relies on the internal `WorkspaceGraph` and `SymbolCache`, which parse all `.feature` and Python step files upon workspace load.
 - Thanks to the graph architecture, the dashboard generation is completely $O(1)$ after initial indexing and loads instantaneously, even on enterprise repositories.
 - Excluded folders (like `node_modules` or `.venv`) are appropriately ignored during the initial index to maintain performance.
+- To guarantee UI responsiveness in massive workspaces, the Webview employs strict DOM node limits. Rendering of affected items in technical debt lists is capped (e.g., maximum 30 files, 50 items per file). When limits are hit, the dashboard safely displays a "Show more" interactive button or an ellipsis, protecting the VS Code Extension Host from memory exhaustion.

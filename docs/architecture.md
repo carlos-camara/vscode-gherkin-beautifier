@@ -179,7 +179,15 @@ To prevent race conditions during heavy background indexing and ensure dependent
    Standard VS Code message passing (`acquireVsCodeApi().postMessage`) bridges the UI clicks back to the extension host to trigger `vscode.window.showTextDocument` for interactive file navigation.
    The extension also uses `MetricsHistory` to persist a lightweight snapshot of the metrics securely inside VS Code's `ExtensionContext.workspaceState`. This local storage enables the dashboard to render Historical Trend Analysis charts using Chart.js without sending any data off the machine.
    - **Metrics Versioning & Isolation:** The storage architecture guarantees resilience by enforcing a strict schema (`HistorySchemaV1`). It implements branch-isolated metrics mapping by interrogating the active Git branch via `WorkspaceEventBus`. Deduplication logic further compresses the storage footprint by intelligently ignoring consecutive identical snapshots.
-6. **Encapsulation:** Internal diagnostics rules (such as `OversizedFeatureRule`, `DuplicatedStepsRule`, etc.) and configuration profiles remain strongly encapsulated within the Anti-pattern Engine. By explicitly eliminating dead code and avoiding public `export` keywords for these internal utilities, the extension keeps its bundle size minimized and its API surface safe from regressions.
+6. **Encapsulation:** Internal diagnostics rules (such as `OversizedFeatureRule`, `DuplicatedStepsRule`, etc.) and configuration profiles remain strongly encapsulated.
+
+### BDD Anti-Pattern Detection Engine
+
+The extension implements a dedicated `AntiPatternEngine` that operates asynchronously to decouple heavy workspace analysis from real-time syntax linting.
+
+1. **Event-Driven Execution:** The engine subscribes to `WorkspaceEventBus` and re-evaluates the active graph generation after a 500ms debounce window following file modifications.
+2. **Decoupled from Linter:** Unlike the `GherkinLinter` (which performs instant, single-file AST syntax checks), the `AntiPatternEngine` analyzes the entire `WorkspaceGraph` for semantic and architectural debt (e.g., duplicated steps, oversized scenarios). This separation guarantees that typing remains 100% responsive without blocking the extension host.
+3. **Diagnostics & Dashboard Integration:** The engine pushes VS Code `Diagnostic` objects to the Problems view, while also calculating aggregate metrics (Maintainability, Complexity) that power the Gherkin Health Dashboard.
 
 ## Real-Time Impact Analysis Engine
 

@@ -47,7 +47,7 @@ Try out the AST-powered formatter. Mess up the alignment of an `Examples:` table
 ## 4. Diagnostics & Quick Fixes
 
 Write an invalid keyword, or leave out a colon `:` after `Scenario`. The real-time linter will underline the error.
-Place your cursor on the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to apply a Quick Fix.
+Place your cursor anywhere on the line with the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) or click the lightbulb to apply a Quick Fix.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/linter.gif" alt="Linter - flags structural errors as you type" width="600" height="340" />

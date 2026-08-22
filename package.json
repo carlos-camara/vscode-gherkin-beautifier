@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
-  "version": "1.8.4",
+  "version": "1.8.11",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -445,11 +445,11 @@
         },
         {
           "command": "gherkinPowerTools.diagnoseWorkspace",
-          "group": "2_workspace@1"
+          "group": "2_workspace@2"
         },
         {
           "command": "gherkinPowerTools.showGherkinHealth",
-          "group": "2_workspace@2"
+          "group": "2_workspace@1"
         }
       ],
       "view/title": [
@@ -679,9 +679,23 @@
     "postcoverage": "node scripts/filter-lcov.js"
   },
   "c8": {
-    "include": ["src/**/*.ts"],
-    "exclude": ["dist/**", "out/**", "scripts/**", "src/test/**", "**/*.js", "**/*.d.ts"],
-    "reporter": ["lcov", "text", "html", "json-summary"]
+    "include": [
+      "src/**/*.ts"
+    ],
+    "exclude": [
+      "dist/**",
+      "out/**",
+      "scripts/**",
+      "src/test/**",
+      "**/*.js",
+      "**/*.d.ts"
+    ],
+    "reporter": [
+      "lcov",
+      "text",
+      "html",
+      "json-summary"
+    ]
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",

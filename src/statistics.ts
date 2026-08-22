@@ -1151,20 +1151,26 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                 if (!grouped[item.uri]) grouped[item.uri] = [];
                                 grouped[item.uri].push(item);
                             });
+                            const MAX_FILES = 30;
+                            const MAX_ITEMS = 50;
                             const fileUris = Object.keys(grouped);
+                            const renderedFiles = fileUris.slice(0, MAX_FILES);
                             return `
                             <div data-visible="10" data-items-list="true" style="margin-top: 12px;">
-                                ${fileUris.map((uri, i) => `
+                                ${renderedFiles.map((uri, i) => {
+                                    const items = grouped[uri];
+                                    const renderedItems = items.slice(0, MAX_ITEMS);
+                                    return `
                                     <div data-file="${escapeHtml(uri)}" class="filterable-item" style="${i >= 10 ? 'display: none;' : ''} margin-bottom: 12px; background: rgba(128,128,128,0.04); border: 1px solid var(--glass-border); border-radius: 8px; padding: 12px;">
                                         <div style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
                                             <div>
                                                 <span style="opacity: 0.8; margin-right: 6px;">📁</span>
                                                 <a href="javascript:void(0)" class="file-link" onclick="openFile('${escapeHtml(uri)}', 0)">${escapeHtml(uri.split('/').pop() || uri)}</a>
                                             </div>
-                                            <span class="badge" style="background: transparent; border: 1px solid var(--vscode-badge-background); color: var(--vscode-foreground);">${grouped[uri].length} items</span>
+                                            <span class="badge" style="background: transparent; border: 1px solid var(--vscode-badge-background); color: var(--vscode-foreground);">${items.length} items</span>
                                         </div>
                                         <div class="inner-items-container" data-visible="10" style="padding-left: 28px; display: flex; flex-direction: column; gap: 6px;">
-                                            ${grouped[uri].map((item: any, j: number) => `
+                                            ${renderedItems.map((item: any, j: number) => `
                                                 <div class="inner-item" style="display: ${j >= 10 ? 'none' : 'flex'}; gap: 8px; font-size: 0.95em; align-items: flex-start;">
                                                     <span style="color: var(--vscode-descriptionForeground); font-variant-numeric: tabular-nums; opacity: 0.8; min-width: 35px;">L${item.line || 0}</span>
                                                     <span style="flex-grow: 1; font-family: var(--vscode-editor-font-family);">
@@ -1188,11 +1194,14 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                                 </div>
                                             `).join('')}
                                         </div>
-                                        ${grouped[uri].length > 10 ? `<button type="button" class="load-more-inner-btn" onclick="showMoreInnerItems(this)" style="margin-top: 8px; margin-left: 28px; background: transparent; border: 1px solid var(--glass-border); color: var(--vscode-textLink-foreground); cursor: pointer; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 500;">Show more (${grouped[uri].length - 10} hidden)</button>` : ''}
+                                        ${renderedItems.length > 10 ? `<button type="button" class="load-more-inner-btn" onclick="showMoreInnerItems(this)" style="margin-top: 8px; margin-left: 28px; background: transparent; border: 1px solid var(--glass-border); color: var(--vscode-textLink-foreground); cursor: pointer; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 500;">Show more (${renderedItems.length - 10} hidden)</button>` : ''}
+                                        ${items.length > MAX_ITEMS ? `<div style="margin-top: 8px; margin-left: 28px; font-size: 0.85em; opacity: 0.7; font-style: italic;">...and ${items.length - MAX_ITEMS} more items not shown</div>` : ''}
                                     </div>
-                                `).join('')}
+                                    `;
+                                }).join('')}
                             </div>
-                            ${fileUris.length > 10 ? `<button class="load-more-btn" onclick="showMoreItems(this)">Show more (${fileUris.length - 10} files remaining)</button>` : ''}
+                            ${renderedFiles.length > 10 ? `<button class="load-more-btn" onclick="showMoreItems(this)">Show more (${renderedFiles.length - 10} files hidden)</button>` : ''}
+                            ${fileUris.length > MAX_FILES ? `<div style="margin-top: 12px; font-size: 0.9em; opacity: 0.7; font-style: italic;">...and ${fileUris.length - MAX_FILES} more files not shown</div>` : ''}
                             `;
                         })()}
                     </details>
@@ -1202,11 +1211,16 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                     <details>
                         <summary class="rec-summary">Show all <span class="summary-count">${rec.affectedFiles.length}</span> files</summary>
                         <ul data-visible="10" data-files-list="true">
-                            ${rec.affectedFiles.map((uri, i) => `
-                                <li data-file="${escapeHtml(uri)}" class="filterable-item" style="${i >= 10 ? 'display: none;' : ''}"><a href="javascript:void(0)" class="file-link" onclick="openFile('${escapeHtml(uri)}', 0)">${escapeHtml(uri.split('/').pop() || uri)}</a></li>
-                            `).join('')}
+                            ${(() => {
+                                const MAX_FILES = 30;
+                                const renderedFiles = rec.affectedFiles.slice(0, MAX_FILES);
+                                return renderedFiles.map((uri, i) => `
+                                    <li data-file="${escapeHtml(uri)}" class="filterable-item" style="${i >= 10 ? 'display: none;' : ''}"><a href="javascript:void(0)" class="file-link" onclick="openFile('${escapeHtml(uri)}', 0)">${escapeHtml(uri.split('/').pop() || uri)}</a></li>
+                                `).join('') + 
+                                (renderedFiles.length > 10 ? `<button class="load-more-btn" onclick="showMoreItems(this)">Show more (${renderedFiles.length - 10} hidden)</button>` : '') +
+                                (rec.affectedFiles.length > MAX_FILES ? `<div style="margin-top: 12px; font-size: 0.9em; opacity: 0.7; font-style: italic;">...and ${rec.affectedFiles.length - MAX_FILES} more files not shown</div>` : '');
+                            })()}
                         </ul>
-                        ${rec.affectedFiles.length > 10 ? `<button class="load-more-btn" onclick="showMoreItems(this)">Show more (${rec.affectedFiles.length - 10} remaining)</button>` : ''}
                     </details>
                 </div>` : ''}
             </div>

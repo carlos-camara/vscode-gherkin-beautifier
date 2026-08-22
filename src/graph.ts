@@ -209,11 +209,21 @@ export class WorkspaceGraph {
             } else if (e.type === 'featureFileDeleted') {
                 this.removeFileAsync(this.getCanonicalUri(e.uri));
             } else if (e.type === 'stepDefinitionsUpdated') {
-                this.indexPythonFile(e.uri);
+                if (e.uri.scheme === 'file' && e.uri.path === '/symbolCache/ready') {
+                    this.rebuildGraph();
+                } else {
+                    this.indexPythonFile(e.uri);
+                }
             } else if (e.type === 'stepFileDeleted') {
                 this.removeFileAsync(this.getCanonicalUri(e.uri));
             }
         });
+    }
+
+    private async rebuildGraph(): Promise<void> {
+        this.currentGeneration = new WorkspaceGraphGeneration(this.currentGeneration.version + 1, new Map(), new Map(), new Set());
+        this.isInitialized = false;
+        await this.initialize();
     }
 
     private isInitialized = false;
