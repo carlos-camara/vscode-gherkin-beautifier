@@ -18,7 +18,7 @@ function cleanRegexSnippet(snippet: string): string {
     let prev;
     do {
         prev = clean;
-        clean = clean.replace(/\(\?:([^|)]+)(?:\|[^)]+)*\)/g, '$1');
+        clean = clean.replace(/\(\?:([^|)]+)(?:\|[^|)]+)*\)/g, '$1');
     } while (clean !== prev);
 
     // 3. Remove optional modifiers (?) and any stray parentheses left from groups
