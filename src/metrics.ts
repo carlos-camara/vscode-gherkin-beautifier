@@ -19,11 +19,19 @@ export class MetricsLogger implements vscode.Disposable {
 
     constructor() {
         this.updateConfiguration();
+    }
+
+    public bind(context: vscode.ExtensionContext): void {
+        this.dispose(); // Ensure no duplicate listeners if bound multiple times
+
+        this.updateConfiguration();
         this.configListener = vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('gherkinPowerTools.diagnostics.metricsEnabled')) {
                 this.updateConfiguration();
             }
         });
+
+        context.subscriptions.push(this);
     }
 
     private updateConfiguration(): void {
@@ -37,7 +45,31 @@ export class MetricsLogger implements vscode.Disposable {
     }
 
     public dispose(): void {
-        this.configListener?.dispose();
+        if (this.configListener) {
+            this.configListener.dispose();
+            this.configListener = undefined;
+        }
+        if (this.outputChannel) {
+            if (typeof this.outputChannel.dispose === 'function') {
+                this.outputChannel.dispose();
+            }
+            this.outputChannel = undefined;
+        }
+    }
+
+    public reset(): void {
+        this.parseRequests = 0;
+        this.cacheHits = 0;
+        this.cacheMisses = 0;
+        this.cacheEvictions = 0;
+        this.currentCacheMemoryBytes = 0;
+        this.totalParseTimeMs = 0;
+        this.totalAstGenerationTimeMs = 0;
+        this.totalFeatures = 0;
+        this.totalScenarios = 0;
+        this.totalSteps = 0;
+        this.parserFailures = 0;
+        this.updateConfiguration();
     }
 
     public recordCacheHit(): void {

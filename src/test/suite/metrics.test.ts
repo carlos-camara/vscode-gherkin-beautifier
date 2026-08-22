@@ -1,10 +1,9 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
-import { MetricsLogger } from '../../metrics';
+import { metricsLogger } from '../../metrics';
 
 suite('MetricsLogger Test Suite', () => {
-    let metricsLogger: MetricsLogger;
     let getConfigurationStub: sinon.SinonStub;
     let configChangeCallback: (e: vscode.ConfigurationChangeEvent) => void;
 
@@ -19,11 +18,13 @@ suite('MetricsLogger Test Suite', () => {
             return { dispose: () => {} };
         });
 
-        metricsLogger = new MetricsLogger();
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
     });
 
     teardown(() => {
-        metricsLogger.dispose();
+        metricsLogger.reset();
+        metricsLogger.dispose(); // clean up the listener created during bind
         sinon.restore();
     });
 
@@ -51,8 +52,8 @@ suite('MetricsLogger Test Suite', () => {
             get: sinon.stub().withArgs('metricsEnabled', false).returns(true)
         } as any);
         
-        metricsLogger.dispose();
-        metricsLogger = new MetricsLogger();
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
 
         assert.strictEqual(metricsLogger.isEnabled(), true);
 
@@ -101,8 +102,8 @@ suite('MetricsLogger Test Suite', () => {
             get: sinon.stub().withArgs('metricsEnabled', false).returns(true)
         } as any);
         
-        metricsLogger.dispose();
-        metricsLogger = new MetricsLogger();
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
 
         const outputChannelStub = {
             clear: sinon.spy(),
@@ -129,8 +130,8 @@ suite('MetricsLogger Test Suite', () => {
         } as any);
 
         // Re-initialize to pick up the disabled state
-        metricsLogger.dispose();
-        metricsLogger = new MetricsLogger();
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
         assert.strictEqual(metricsLogger.isEnabled(), false);
 
         // Change config to enabled
