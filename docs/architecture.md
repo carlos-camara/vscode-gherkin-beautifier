@@ -80,6 +80,11 @@ Instead of resolving selections to purely hierarchical AST nodes (which often ov
 the AST is mapped into a flat array of contiguous multi-line groups (`groupIds`) for atomic units (DataTables, DocStrings, Tag Blocks).
 The range formatter performs O(1) bounds-checking on this array to securely contain formatting edits to the absolute minimum safe lines, radically reducing structural blast radius.
 
+### Formatter Error UX Separation
+To provide a native and non-intrusive VS Code experience, the extension strictly decouples the error reporting behavior of formatting based on the invocation context:
+1. **Automatic Invocations (e.g., Format on Save):** If the AST Repository detects structural syntax errors, the formatter silently returns no edits. It completely suppresses toast warnings (`showWarningMessage`) to ensure the user's typing flow is never interrupted by popups while drafting incomplete documents.
+2. **Explicit Invocations (Command Palette / Shortcuts):** Explicitly requested formatting commands proactively check the AST for errors and provide a concise, actionable toast warning if formatting cannot proceed, confirming to the user why their manual action was rejected.
+
 ### How the Repository Works
 1. **Memoization:** When a provider requests the AST for a document, the repository checks its cache. If a cached `ParseResult` exists for the current document version, it is returned immediately.
 2. **Thundering Herd Protection:** The repository caches the *Promise* of the parse operation. If multiple providers request the AST simultaneously before the first parse completes, they all await the exact same Promise, guaranteeing the document is only parsed once per version.

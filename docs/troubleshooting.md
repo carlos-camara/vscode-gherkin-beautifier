@@ -18,6 +18,11 @@ This guide addresses common problems organized by observable symptoms.
 2. Check your settings for `"gherkinPowerTools.formatter.enabled": false`.
 **Resolution:** Ensure the file extension is `.feature`. Remove the disabling setting.
 
+## Format on Save does not work on some files
+**Symptom:** You have Format on Save enabled, but the file doesn't format when saving. However, manually formatting it shows a warning.
+**Likely Causes:** The Gherkin file contains structural syntax errors.
+**Resolution:** Automatic formatting (like Format on Save) is intentionally designed to be **silent** when syntax errors are present. This prevents intrusive warning popups from interrupting you while you type an incomplete document. Fix the syntax errors (indicated by the red squiggly lines) and the formatter will resume working automatically.
+
 ## Python steps are not found (Go to Definition / Autocomplete fail)
 **Symptom:** You use Python Behave, but steps show as "Undefined" in the Linter, and Go to Definition does not work.
 **Likely Causes:** The extension is looking in the wrong directory, or your virtual environment is causing performance timeouts.

@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { GherkinFormattingEditProvider, FormatterOptions } from '../../formatter';
 import { ConfigurationService } from '../../configuration';
 import { parseGherkin } from '../../parser';
-
+import * as sinon from 'sinon';
 const defaultOptions: FormatterOptions = {
     stepIndentation: 2,
     alignTableToKeyword: true,
@@ -34,22 +34,22 @@ async function runRangeFormat(formatter: GherkinFormattingEditProvider, unformat
         lineAt: (line: number) => ({ text: lines[line] || '' }),
         lineCount: lines.length
     } as any as vscode.TextDocument;
-    
+
     const range = new vscode.Range(startLine, 0, endLine, doc.lineAt(endLine).text.length);
     const edits = await formatter.provideDocumentRangeFormattingEdits(doc, range, {} as vscode.FormattingOptions, { isCancellationRequested: false } as vscode.CancellationToken);
-    
+
     let result = unformatted;
     if (edits && edits.length > 0) {
         result = applyTextEdits(unformatted, edits);
     }
-    
+
     // 3. Reparse the final result
     const parseResult = await parseGherkin(result);
     // 4. Verify no syntax errors
     if (!expectSyntaxErrors && parseResult.errors.length > 0) {
         assert.fail(`Range formatting introduced syntax errors: ${parseResult.errors.map(e => e.message).join(', ')}`);
     }
-    
+
     return result;
 }
 
@@ -204,7 +204,7 @@ suite('Formatter Test Suite', () => {
 
         const result = await runFormat(formatter, unformatted);
         const formatted = result.split('\n');
-        
+
         assert.strictEqual(formatted[2], '  Scenario: Docstrings');
         assert.strictEqual(formatted[3], '    Given a docstring:');
         assert.strictEqual(formatted[4], '      """');
@@ -260,7 +260,7 @@ suite('Formatter Test Suite', () => {
 
         const result = await runFormat(formatter, unformatted);
         const formatted = result.split('\n');
-        
+
         assert.strictEqual(formatted[0], 'Feature: desc');
         assert.strictEqual(formatted[1], '  this is a feature description line');
         assert.strictEqual(formatted[3], '  Scenario: scenario');
@@ -294,7 +294,7 @@ suite('Formatter Test Suite', () => {
         const edits = await formatter.provideDocumentFormattingEdits(mockDocument, {} as any, { isCancellationRequested: false } as any);
         if (edits.length > 0) {
             assert.ok(edits[0].newText.includes('\r\n'));
-            assert.ok(!edits[0].newText.includes('\nScenario')); 
+            assert.ok(!edits[0].newText.includes('\nScenario'));
         }
     });
 
@@ -310,7 +310,7 @@ suite('Formatter Test Suite', () => {
 
         const result1 = await runFormat(formatter, unformatted);
         const result2 = await runFormat(formatter, result1);
-        
+
         assert.strictEqual(result1, result2);
     });
 
@@ -359,7 +359,7 @@ suite('Formatter Test Suite', () => {
         assert.strictEqual(formatted[1], ''); // emptyLineBetweenScenarios
         assert.strictEqual(formatted[2], '  Scenario: S');
         assert.strictEqual(formatted[3], '      Given data:');
-        
+
         // Table should have its own 6 spaces instead of keyword alignment
         assert.strictEqual(formatted[4], '        | col1 | col2                |');
         assert.strictEqual(formatted[5], '        | val1 | extremely_long_val2 |');
@@ -369,7 +369,7 @@ suite('Formatter Test Suite', () => {
 suite('Formatter VS Code API Wrapper Tests', () => {
     test('provideDocumentFormattingEdits checks idempotency and final newline', async () => {
         const formatter = new GherkinFormattingEditProvider(mockConfigService);
-        
+
         const textWithNewline = 'Feature: Final Newline\n';
         const mockDocument = {
             uri: vscode.Uri.file('test.feature'),
@@ -378,9 +378,9 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             lineCount: 2,
             eol: vscode.EndOfLine.LF
         } as any;
-        
+
         const edits = await formatter.provideDocumentFormattingEdits(mockDocument, {} as any, { isCancellationRequested: false } as any);
-        
+
         // Should return [] because it's already correctly formatted and idempotent
         assert.strictEqual(edits.length, 0);
 
@@ -392,9 +392,9 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             lineCount: 1,
             eol: vscode.EndOfLine.LF
         } as any;
-        
+
         const edits2 = await formatter.provideDocumentFormattingEdits(mockDocument2, {} as any, { isCancellationRequested: false } as any);
-        
+
         // Output will be the same as input, but without final newline
         assert.strictEqual(edits2.length, 0);
     });
@@ -407,7 +407,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Given     unformatted step',
             'Then end'
         ].join('\n');
-        
+
         // line 2: 'Given     unformatted step'
         const result = await runRangeFormat(formatter, unformatted, 2, 2);
         // VS Code defaults stepIndentation to 4. Scenario is 2, Step is 6.
@@ -428,7 +428,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Then     2',
             'And   3'
         ].join('\n');
-        
+
         // line 2 to 3 formats ONLY those steps
         const result = await runRangeFormat(formatter, unformatted, 2, 3);
         assert.strictEqual(result, [
@@ -449,7 +449,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             '|username|pass|',
             '|u1|p1|'
         ].join('\n');
-        
+
         // line 4 (the second row) -> expands to the entire DataTable node
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
         assert.strictEqual(result, [
@@ -471,7 +471,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             '  hello',
             '"""'
         ].join('\n');
-        
+
         // line 4 ('  hello')
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
         assert.strictEqual(result, [
@@ -490,7 +490,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             '@t1 @t2 @t3',
             'Feature: F'
         ].join('\n');
-        
+
         // line 0
         const result = await runRangeFormat(formatter, unformatted, 0, 0);
         assert.strictEqual(result, [
@@ -509,7 +509,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Scenario: S2',
             'Given 2'
         ].join('\n');
-        
+
         // Formatter should insert a blank line before Scenario: S2
         // If we select just Scenario: S2 (line 4)
         const result = await runRangeFormat(formatter, unformatted, 4, 4);
@@ -531,7 +531,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Scenario: S', // Missing Feature keyword causes fatal AST parser error
             'Given 1'
         ].join('\n');
-        
+
         // Since formatting fails on invalid syntax, it should return original unformatted slice
         const result = await runRangeFormat(formatter, unformatted, 1, 1, true);
         assert.strictEqual(result, unformatted);
@@ -546,7 +546,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             '|u1|p1|',
             '|u2|p2|'
         ].join('\n');
-        
+
         // select lines 3 and 4 (header and first row only)
         const result = await runRangeFormat(formatter, unformatted, 3, 4);
         assert.strictEqual(result, [
@@ -569,7 +569,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             '|u1|',
             '|u2|'
         ].join('\n');
-        
+
         // select line 5 ('|u1|')
         const result = await runRangeFormat(formatter, unformatted, 5, 5);
         // Should expand to encompass the Table block (lines 4, 5, 6), not Examples keyword
@@ -593,7 +593,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Scenario: S',
             'Given s'
         ].join('\n');
-        
+
         // select line 1 ('Background:')
         const result = await runRangeFormat(formatter, unformatted, 1, 1);
         assert.strictEqual(result, [
@@ -615,7 +615,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Given s',
             '# comment after'
         ].join('\n');
-        
+
         // select line 2 to 3 ('Scenario: S', 'Given s')
         const result = await runRangeFormat(formatter, unformatted, 2, 3);
         assert.strictEqual(result, [
@@ -635,7 +635,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Scenario: S',
             'Given s'
         ].join('\r\n');
-        
+
         // select line 2 ('Given s')
         const result = await runRangeFormat(formatter, unformatted, 2, 2);
         assert.strictEqual(result, [
@@ -648,7 +648,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
     test('Range formatting: no final newline', async () => {
         const formatter = new GherkinFormattingEditProvider(mockConfigService);
         const unformatted = 'Feature: F\nScenario: S\nGiven s';
-        
+
         // select line 2 ('Given s')
         const result = await runRangeFormat(formatter, unformatted, 2, 2);
         assert.strictEqual(result, 'Feature: F\nScenario: S\n      Given s');
@@ -661,7 +661,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             'Scenario: 🚀 S',
             'Given 👨‍👩‍👧‍👦 s'
         ].join('\n');
-        
+
         // select line 2 ('Given 👨‍👩‍👧‍👦 s')
         const result = await runRangeFormat(formatter, unformatted, 2, 2);
         assert.strictEqual(result, [
@@ -678,7 +678,7 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             tags,
             'Feature: Tag wrap'
         ].join('\n');
-        
+
         // select line 0 (tags)
         const result = await runRangeFormat(formatter, unformatted, 0, 0);
         const formattedLines = result.split('\n');
@@ -705,15 +705,87 @@ suite('Range Formatting Idempotence Test Suite', () => {
             '|user|',
             '|u1|'
         ].join('\n');
-        
+
         const lines = unformatted.split('\n');
         // First format
         const result1 = await runRangeFormat(formatter, unformatted, 0, lines.length - 1);
-        
+
         const lines2 = result1.split('\n');
         // Second format
         const result2 = await runRangeFormat(formatter, result1, 0, lines2.length - 1);
-        
+
         assert.strictEqual(result2, result1, 'Full document range formatting is not idempotent!');
+    });
+});
+
+suite('Formatter UX and Error Handling Tests', () => {
+    let sandbox: sinon.SinonSandbox;
+
+    setup(() => {
+        sandbox = sinon.createSandbox();
+    });
+
+    teardown(() => {
+        sandbox.restore();
+    });
+
+    test('Automatic formatting on save (provideDocumentFormattingEdits) is silent on syntax errors', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const showWarningMessageStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves();
+
+        const unformatted = [
+            'Scenario: S', // Missing Feature keyword causes fatal AST parser error
+            'Given 1'
+        ].join('\n');
+
+        const doc = {
+            getText: () => unformatted,
+            uri: vscode.Uri.file('test.feature'),
+            version: docVersion++,
+            eol: vscode.EndOfLine.LF,
+            lineAt: (line: number) => ({ text: unformatted.split('\n')[line] || '' }),
+            lineCount: 2
+        } as any as vscode.TextDocument;
+
+        const edits = await formatter.provideDocumentFormattingEdits(doc, {} as vscode.FormattingOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+
+        // 1. It must return no edits on syntax errors
+        assert.deepStrictEqual(edits, []);
+
+        // 2. It must NOT show a warning toast (silence requirement for automatic providers)
+        assert.strictEqual(showWarningMessageStub.callCount, 0, 'showWarningMessage should not be called by automatic formatter execution');
+    });
+
+    test('Formatter disabled behaviour remains completely silent', async () => {
+        const disabledConfigService = {
+            getConfiguration: (_uri: vscode.Uri) => ({
+                formatter: { enabled: false }
+            } as any),
+            onDidChangeConfiguration: new vscode.EventEmitter<vscode.ConfigurationChangeEvent>().event
+        } as any;
+        const formatter = new GherkinFormattingEditProvider(disabledConfigService);
+        const showWarningMessageStub = sandbox.stub(vscode.window, 'showWarningMessage').resolves();
+
+        const unformatted = [
+            'Feature: F',
+            'Scenario: S'
+        ].join('\n');
+
+        const doc = {
+            getText: () => unformatted,
+            uri: vscode.Uri.file('test.feature'),
+            version: docVersion++,
+            eol: vscode.EndOfLine.LF,
+            lineAt: (line: number) => ({ text: unformatted.split('\n')[line] || '' }),
+            lineCount: 2
+        } as any as vscode.TextDocument;
+
+        const edits = await formatter.provideDocumentFormattingEdits(doc, {} as vscode.FormattingOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+
+        // 1. It must return no edits
+        assert.deepStrictEqual(edits, []);
+
+        // 2. It must NOT show a warning toast
+        assert.strictEqual(showWarningMessageStub.callCount, 0, 'showWarningMessage should not be called when formatter is disabled via settings');
     });
 });
