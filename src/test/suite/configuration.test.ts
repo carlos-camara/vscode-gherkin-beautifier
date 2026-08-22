@@ -20,7 +20,7 @@ suite('ConfigurationService Test Suite', () => {
             has: () => false,
             dispose: () => {}
         } as any;
-        
+
         const testLoader: ConfigurationLoader = {
             async load(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<ProjectConfiguration | null> {
                 if (!workspaceFolder) return null;
@@ -95,7 +95,7 @@ suite('ConfigurationService Test Suite', () => {
 
     test('3. Precedence hierarchy: project .gherkin-powertoolsrc.json > workspace settings > defaults', async () => {
         const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
-        
+
         fs.writeFileSync(configPath, JSON.stringify({
             indentation: { steps: 8 },
             tables: { alignToKeyword: false }
@@ -155,7 +155,7 @@ suite('ConfigurationService Test Suite', () => {
 
     test('6. Handles invalid value types and enum options in project configuration gracefully', async () => {
         const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
-        
+
         fs.writeFileSync(configPath, JSON.stringify({
             indentation: { steps: "not a number" },
             tags: { format: "invalidFormat" },
@@ -183,7 +183,7 @@ suite('ConfigurationService Test Suite', () => {
 
     test('7. Handles unknown keys and unknown root sections gracefully', async () => {
         const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
-        
+
         fs.writeFileSync(configPath, JSON.stringify({
             unknownSection: { foo: 'bar' },
             indentation: { steps: 2, unknownSubKey: 10 }
@@ -201,7 +201,7 @@ suite('ConfigurationService Test Suite', () => {
 
     test('8. Loads behave execution settings correctly', async () => {
         const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
-        
+
         fs.writeFileSync(configPath, JSON.stringify({
             behave: {
                 execution: {
@@ -223,7 +223,7 @@ suite('ConfigurationService Test Suite', () => {
     test('9. Live configuration changes and cache invalidation', async () => {
         const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
         fs.writeFileSync(configPath, JSON.stringify({ indentation: { steps: 8 } }));
-        
+
         const uri = vscode.workspace.workspaceFolders?.[0].uri;
         await configService.loadConfiguration(uri);
         let config = configService.getConfiguration(uri);
@@ -232,14 +232,14 @@ suite('ConfigurationService Test Suite', () => {
         // Modify file and invalidate cache
         fs.writeFileSync(configPath, JSON.stringify({ indentation: { steps: 2 } }));
         await configService.loadConfiguration(uri);
-        
+
         config = configService.getConfiguration(uri);
         assert.strictEqual(config.indentation.steps, 2);
     });
 
     test('10. Validates all invalid property values and unknown subkeys in config schema', async () => {
         const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
-        
+
         fs.writeFileSync(configPath, JSON.stringify({
             tables: { alignToKeyword: "not_a_bool", unknownTableKey: true },
             tags: { sort: "alphabetical", unknownTagKey: 1 },
@@ -297,7 +297,7 @@ suite('ConfigurationService Test Suite', () => {
 
         // Strict profile sets tags.sort to alphabetical
         assert.strictEqual(config.tags.sort, 'alphabetical');
-        
+
         // Strict profile defaults to 4, but user overrides to 8
         assert.strictEqual(config.indentation.steps, 8);
 
@@ -355,5 +355,58 @@ suite('ConfigurationService Test Suite', () => {
         assert.strictEqual(config.behave.localExecutable, '/absolute/path/to/venv/bin/behave');
 
         vscode.workspace.getConfiguration = originalGetConfig;
+    });
+
+    test('15. Migrates deprecated linter.enabledRules and antiPatterns.rules into unified rules object', async () => {
+        const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
+        if (fs.existsSync(configPath)) {
+            fs.unlinkSync(configPath);
+        }
+
+        const originalGetConfig = vscode.workspace.getConfiguration;
+        vscode.workspace.getConfiguration = () => ({
+            get: () => undefined,
+            inspect: (key: string) => {
+                if (key === 'linter.enabledRules') return { workspaceValue: ['invalid-keyword', 'table-inconsistency'] };
+                if (key === 'antiPatterns.rules') return { workspaceValue: { 'oversized-scenario': 'warning' } };
+                return undefined;
+            }
+        } as any);
+
+        await configService.loadConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+        const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+
+        // The unified rules object should contain defaults + migrated values
+        assert.strictEqual(config.rules['invalid-keyword'], 'error'); // from linter
+        assert.strictEqual(config.rules['table-inconsistency'], 'error'); // from linter
+        assert.strictEqual(config.rules['oversized-scenario'], 'warning'); // from antiPatterns
+
+        vscode.workspace.getConfiguration = originalGetConfig;
+    });
+
+    test('16. Validates new rules configuration and allows unified dictionary overrides', async () => {
+        const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
+
+        fs.writeFileSync(configPath, JSON.stringify({
+            rules: {
+                'undefined-step': 'info',
+                'invalid-keyword': 'off',
+                'unknown-rule': 'error' // Should be filtered out by validation
+            }
+        }));
+
+        let diagnostics: vscode.Diagnostic[] = [];
+        mockDiagnostics.set = ((_uri: any, diags: vscode.Diagnostic[]) => { diagnostics = diags; }) as any;
+
+        await configService.loadConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+        const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+
+        assert.strictEqual(config.rules['undefined-step'], 'info');
+        assert.strictEqual(config.rules['invalid-keyword'], 'off');
+        // Unknown rule should NOT be present in final config, as we build it via RULES_REGISTRY keys
+        assert.strictEqual(config.rules['unknown-rule'], undefined);
+
+        // There should be a diagnostic for 'unknown-rule'
+        assert.ok(diagnostics.length > 0);
     });
 });

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This allows the extension to safely scale across massive enterprise workspaces (>10,000 files) by estimating AST byte sizes and shedding oldest documents only when real memory pressure demands it, drastically improving hit ratios without exhausting the VS Code Extension Host.
 - **Robust Parser Loader**: Audited and redesigned the dynamic loader for `@cucumber/gherkin` and `@cucumber/messages` to include a bounded retry strategy. This improves extension resilience during transient filesystem errors or Extension Host initialization failures.
 - **Concurrent Loader Deduplication**: Prevented multiple concurrent parser triggers from creating duplicate loader instances.
+- **Unified Diagnostics Model**: Replaced divergent `linter.enabledRules` and `antiPatterns.rules` configuration objects with a single, authoritative `gherkinPowerTools.rules` dictionary. All diagnostic identifiers have been standardized to `kebab-case` across the AST linter and Anti-Pattern Engine. Legacy settings are automatically migrated at runtime.
 
 ### ✨ Improved
 - **Formatter Error UX Separation**: Automatic formatting (like Format on Save) is now strictly silent when a Gherkin document contains structural syntax errors, preventing intrusive warning popups from interrupting typing. Manual formatting commands via the Command Palette proactively display one concise, actionable warning when syntax errors block formatting.

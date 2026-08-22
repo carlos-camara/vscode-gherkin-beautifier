@@ -47,7 +47,7 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Symptom:** Your feature file displays two overlapping underlines (e.g., one yellow, one red) for the same undefined step, ambiguous step, or syntax error (such as a misspelled keyword). The generic `Syntax Error` might also mask the Quick Fix bulb.
 **Likely Causes:** Both the realtime Linter and the BDD Anti-pattern Detection Engine are configured to report on the same file, but the filtering mechanism failed or configuration is conflicting.
 **Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps`, `ambiguous-steps`, and `syntax-errors` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the highly-granular Quick Fixes).
-**Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.antiPatterns.rules`.
+**Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.rules`.
 
 ## Yellow line (diagnostics) doesn't appear immediately on file open
 **Symptom:** You open a feature file and the yellow squiggly lines for undefined or ambiguous steps do not appear until you type a character or switch files back and forth.

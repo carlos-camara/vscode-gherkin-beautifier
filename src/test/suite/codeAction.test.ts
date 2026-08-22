@@ -51,7 +51,7 @@ suite('Code Action Provider Test Suite', () => {
             "Misspelled keyword",
             vscode.DiagnosticSeverity.Error
         );
-        diagnostic.code = 'MISSPELLED_KEYWORD';
+        diagnostic.code = 'invalid-keyword';
         diagnostic.relatedInformation = [
             new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0,0,0,4)), 'Given')
         ];
@@ -69,7 +69,7 @@ suite('Code Action Provider Test Suite', () => {
             "Undefined step: \"undefined step\"",
             vscode.DiagnosticSeverity.Warning
         );
-        diagnostic.code = 'UNDEFINED_STEP';
+        diagnostic.code = 'undefined-step';
         diagnostic.relatedInformation = [
             new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0,0,0,19)), 'Then')
         ];
@@ -89,7 +89,7 @@ suite('Code Action Provider Test Suite', () => {
             "Undefined step: \"undefined step\"",
             vscode.DiagnosticSeverity.Warning
         );
-        diagnostic.code = 'UNDEFINED_STEP';
+        diagnostic.code = 'undefined-step';
         diagnostic.relatedInformation = [
             new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(1,0,1,18)), 'And')
         ];
@@ -108,7 +108,7 @@ suite('Code Action Provider Test Suite', () => {
             "Missing colon",
             vscode.DiagnosticSeverity.Error
         );
-        diagnostic.code = 'MISSING_COLON';
+        diagnostic.code = 'missing-colon';
         diagnostic.relatedInformation = [
             new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0, 0, 0, 8)), 'Feature:')
         ];
@@ -126,7 +126,7 @@ suite('Code Action Provider Test Suite', () => {
             "Scenario with Examples should be Scenario Outline",
             vscode.DiagnosticSeverity.Warning
         );
-        diagnostic.code = 'SCENARIO_WITH_EXAMPLES';
+        diagnostic.code = 'scenario-with-examples';
 
         const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
         assert.ok(actions);
@@ -141,7 +141,7 @@ suite('Code Action Provider Test Suite', () => {
             "Inconsistent cell count",
             vscode.DiagnosticSeverity.Warning
         );
-        diagnostic.code = 'INCONSISTENT_CELL_COUNT';
+        diagnostic.code = 'table-inconsistency';
         diagnostic.relatedInformation = [
             new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0, 0, 0, 12)), '| col1 | col2 |')
         ];
