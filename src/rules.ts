@@ -1,3 +1,5 @@
+import * as vscode from 'vscode';
+
 export type RuleSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
 export type RuleCategory = 'AST' | 'Semantic' | 'Behave' | 'Anti-Pattern';
 
@@ -195,3 +197,29 @@ export function isValidRule(id: string): id is RuleId {
 export function isValidSeverity(severity: string): severity is RuleSeverity {
     return ['error', 'warning', 'info', 'hint', 'off'].includes(severity);
 }
+
+export interface CodeActionPayload {
+    replacementText?: string;
+    stepText?: string;
+    stepKeyword?: string;
+}
+
+export class RuleDiagnostic extends vscode.Diagnostic {
+    constructor(
+        range: vscode.Range,
+        message: string,
+        severity: vscode.DiagnosticSeverity,
+        public readonly ruleId: RuleId,
+        public readonly documentVersion: number,
+        public readonly actionPayload?: CodeActionPayload
+    ) {
+        super(range, message, severity);
+        this.code = ruleId;
+    }
+}
+
+/**
+ * A side-channel registry to preserve strongly typed RuleDiagnostic 
+ * instances that are otherwise stripped by VS Code's DiagnosticCollection.
+ */
+export const diagnosticRegistry = new Map<string, RuleDiagnostic[]>();
