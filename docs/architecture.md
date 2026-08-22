@@ -205,8 +205,21 @@ To prevent race conditions during heavy background indexing and ensure dependent
 The extension implements a dedicated `AntiPatternEngine` that operates asynchronously to decouple heavy workspace analysis from real-time syntax linting.
 
 1. **Event-Driven Execution:** The engine subscribes to `WorkspaceEventBus` and re-evaluates the active graph generation after a 500ms debounce window following file modifications.
-2. **Decoupled from Linter:** Unlike the `GherkinLinter` (which performs instant, single-file AST syntax checks), the `AntiPatternEngine` analyzes the entire `WorkspaceGraph` for semantic and architectural debt (e.g., duplicated steps, oversized scenarios). This separation guarantees that typing remains 100% responsive without blocking the extension host.
+2. **Decoupled from Linter:** Both the `GherkinLinter` (which performs concurrent AST syntax checks) and the `AntiPatternEngine` (which analyzes the entire `WorkspaceGraph` for semantic debt) operate asynchronously on decoupled debounce schedules. This separation guarantees that typing remains 100% responsive without blocking the extension host.
 3. **Diagnostics & Dashboard Integration:** The engine pushes VS Code `Diagnostic` objects to the Problems view, while also calculating aggregate metrics (Maintainability, Complexity) that power the Gherkin Health Dashboard.
+
+## Linter Engine
+
+The `GherkinLinter` validates `.feature` files in real-time, leveraging the shared AST Repository. 
+
+### Batched Invalidation Queue
+To protect the Extension Host against catastrophic event spikes (such as a large `git checkout` mutating 500 files at once), the Linter acts as an event sink. Events (`documentOpened`, `documentChanged`, `configurationChanged`, `stepDefinitionsUpdated`) are deduplicated into an `invalidationQueue`. 
+
+### Concurrency Limiting
+A centralized `flush()` cycle executes after a short debounce window. During flushing, the Linter processes invalidated documents concurrently, but relies on a strict concurrency limiter (e.g., maximum 5 concurrent AST operations) to maintain a low Extension Host CPU profile. 
+
+### Correctness Fallback
+When a global dependency changes (like `stepDefinitionsUpdated`), the Linter attempts to use the `WorkspaceGraph` to identify exclusively affected `.feature` files. If the graph is not yet initialized or the blast radius is too large, it seamlessly falls back to relinting all open Gherkin documents, guaranteeing correctness above all.
 
 ## Real-Time Impact Analysis Engine
 

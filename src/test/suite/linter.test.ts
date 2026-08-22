@@ -335,13 +335,18 @@ Feature: Test
         const text = 'Feature: Schedule\n  Scenario: Sched\n    Givn something';
         const doc = createMockDocument(text, 'file:///schedule.feature');
 
-        // Schedule it with 50ms delay
-        linter.scheduleLint(doc, 50);
+        // Schedule it
+        linter.scheduleLint(doc);
         let diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 0, 'Should not be linted immediately');
 
         // Wait for it to trigger
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const anyLinter = linter as any;
+        while (anyLinter.isFlushing) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
 
         diagnostics = vscode.languages.getDiagnostics(doc.uri);
         // Now it should have executed
@@ -352,7 +357,7 @@ Feature: Test
         const text = 'Feature: Timer\n  Scenario: Timer\n    Givn something';
         const doc = createMockDocument(text, 'file:///timer.feature');
 
-        linter.scheduleLint(doc, 500);
+        linter.scheduleLint(doc);
         linter.clear(doc);
 
         await new Promise(resolve => setTimeout(resolve, 600));
@@ -496,7 +501,7 @@ Feature: Semantic Boundary
         vscode.window.showInformationMessage = (() => { notificationCount++; return Promise.resolve(undefined); }) as any;
 
         try {
-            linter.scheduleLint(doc, 50);
+            linter.scheduleLint(doc);
 
             // Wait beyond the debounce time
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -558,6 +563,53 @@ Feature: Semantic Boundary
             assert.strictEqual(notificationCount, 1, 'Notification SHOULD be shown for explicit commands');
         } finally {
             vscode.window.showInformationMessage = originalShowInfo;
+        }
+    });
+
+    test('Benchmark: 500-file branch-switch burst', async () => {
+        // Create 500 mock documents
+        const docs: vscode.TextDocument[] = [];
+        for (let i = 0; i < 500; i++) {
+            docs.push(createMockDocument(`Feature: F${i}\n  Scenario: S${i}\n    Given step ${i}`, `file:///burst-${i}.feature`));
+        }
+
+        // Mock workspace.textDocuments safely
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', {
+            get: () => docs,
+            configurable: true
+        });
+
+        try {
+            // Start the clock
+            const startTime = Date.now();
+
+            // Simulate the burst by calling scheduleLint for all 500 files
+            for (const doc of docs) {
+                linter.scheduleLint(doc);
+            }
+
+            // Wait for the debounce
+            await new Promise(resolve => setTimeout(resolve, 300)); 
+            
+            // Wait for the async flush to finish
+            const anyLinter = linter as any;
+            while (anyLinter.isFlushing) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            const elapsed = Date.now() - startTime;
+            assert.ok(elapsed < 5000, `Should complete 500-file linting within reasonable time (took ${elapsed}ms)`);
+            
+            // Output for the report
+            process.stdout.write(`\\n--- BENCHMARK 500 FILES: ${elapsed}ms ---\\n`);
+        } finally {
+            if (originalTextDocuments) {
+                Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+            } else {
+                // Should not happen, but safe fallback
+                delete (vscode.workspace as any).textDocuments;
+            }
         }
     });
 });
