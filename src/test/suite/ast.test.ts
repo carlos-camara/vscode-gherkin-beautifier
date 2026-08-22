@@ -57,9 +57,11 @@ suite('AST Repository Test Suite', () => {
         assert.notStrictEqual(result1, result2, 'Should return new result after invalidate()');
     });
 
-    test('should evict oldest cached items when maxCacheSize is exceeded', async () => {
-        // Force maxCacheSize to 2 for easier testing
-        (astRepository as any).maxCacheSize = 2;
+    test('should evict oldest cached items when maxCacheBytes is exceeded', async () => {
+        // Force maxCacheBytes to 800 for easier testing.
+        // Each mock doc below is 16 chars * 20 bytes/char = 320 bytes estimated size.
+        // 3 docs = 960 bytes. Target eviction is 75% of 800 = 600 bytes.
+        (astRepository as any).maxCacheBytes = 800;
 
         const doc1 = { uri: vscode.Uri.file('/fake/path1.feature'), version: 1, getText: () => 'Feature: Fake 1\n' };
         const doc2 = { uri: vscode.Uri.file('/fake/path2.feature'), version: 1, getText: () => 'Feature: Fake 2\n' };
@@ -71,7 +73,9 @@ suite('AST Repository Test Suite', () => {
         await astRepository.getAST(doc2 as any);
         await new Promise(r => setTimeout(r, 2));
         
-        // At this point cache has 2 items. Accessing a third will trigger eviction of half (1 item, the oldest)
+        // At this point cache has 2 items (640 bytes). 
+        // Accessing a third pushes to 960 bytes > 800 budget.
+        // It evicts until <= 600 bytes, which requires removing both doc1 and doc2.
         await astRepository.getAST(doc3 as any);
 
         assert.strictEqual((astRepository as any).cache.size, 1);

@@ -134,10 +134,10 @@ If you need to point to a specific local Python virtual environment via an absol
 
 ## Large workspace performance is poor
 **Symptom:** VS Code feels slow when typing in `.feature` files.
-**Likely Causes:** The extension is scanning too many files (e.g., inside `.venv` or `node_modules`), or parsing a massive file is bottlenecking the AST.
+**Likely Causes:** The extension is scanning too many files (e.g., inside `.venv` or `node_modules`), or the AST Cache memory budget is constantly thrashing on massive files.
 **Resolution:**
 1. Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores all dependency directories.
-2. Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run the **Show Developer Metrics** command to identify if specific files have high parsing durations or poor cache hit ratios.
+2. Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run the **Show Developer Metrics** command to identify if specific files have high parsing durations, poor cache hit ratios, or if **Cache Evictions** are rapidly exhausting the 50MB memory budget.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" height="340" />
