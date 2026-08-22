@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
-export class MetricsLogger {
+export class MetricsLogger implements vscode.Disposable {
+    private isMetricsEnabled: boolean = false;
+    private configListener?: vscode.Disposable;
     private parseRequests = 0;
     private cacheHits = 0;
     private cacheMisses = 0;
@@ -15,10 +17,27 @@ export class MetricsLogger {
 
     private outputChannel?: vscode.OutputChannel;
 
-    public isEnabled(): boolean {
-        return vscode.workspace
+    constructor() {
+        this.updateConfiguration();
+        this.configListener = vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('gherkinPowerTools.diagnostics.metricsEnabled')) {
+                this.updateConfiguration();
+            }
+        });
+    }
+
+    private updateConfiguration(): void {
+        this.isMetricsEnabled = vscode.workspace
             .getConfiguration('gherkinPowerTools.diagnostics')
             .get<boolean>('metricsEnabled', false);
+    }
+
+    public isEnabled(): boolean {
+        return this.isMetricsEnabled;
+    }
+
+    public dispose(): void {
+        this.configListener?.dispose();
     }
 
     public recordCacheHit(): void {
