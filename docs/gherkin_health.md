@@ -32,6 +32,8 @@ When enabled, it underlines rule violations (like Duplicated Steps or Oversized 
 To keep your editor responsive, these diagnostics are debounced by 500ms after a file change.
 Note that Ambiguous Steps, Undefined Steps, and Syntax Errors are handled instantly by the real-time Linter (displaying immediate diagnostics and highly-granular Quick Fixes). They are automatically filtered out from the debounced anti-pattern engine to prevent duplicate squiggles and masking of the lightbulb action.
 
+To prevent Quick Fixes from applying edits to stale code (e.g. if you continue typing before clicking the lightbulb), Gherkin PowerTools strictly guards its diagnostics using an internal `diagnosticRegistry` and document version validation. This isolates machine-readable diagnostic data from human-readable error messages.
+
 **Important:** This dashboard provides *static source analysis*. It does **not** provide runtime test execution results, code coverage, pass/fail rates, or act as an Allure replacement.
 
 ---

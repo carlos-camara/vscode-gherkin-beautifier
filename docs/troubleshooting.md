@@ -59,6 +59,11 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Symptom:** You open a feature file and the yellow squiggly lines for undefined or ambiguous steps do not appear until you type a character or switch files back and forth.
 **Resolution:** This behavior was fixed in v1.8.4. The real-time Linter now triggers `immediateLint` directly on file load, bypassing standard debounce delays. Ensure you are on the latest version of the extension.
 
+## Quick Fix (Lightbulb) does not apply or fails silently
+**Symptom:** You click a Quick Fix (e.g. to generate an undefined step or fix a misspelled keyword) and nothing happens.
+**Likely Causes:** You continued typing in the `.feature` file *after* the diagnostic appeared but *before* you clicked the lightbulb.
+**Resolution:** To protect against code corruption, Gherkin PowerTools strictly validates the document version. If the document has changed since the diagnostic was generated, the Code Action is aborted to prevent applying a stale edit. Wait a half-second for the linter to re-evaluate the file and generate a fresh Quick Fix lightbulb, then click it.
+
 ## Impact Analysis CodeLenses are not appearing
 **Symptom:** You open a Python step definition file, but you do not see the CodeLenses displaying the number of affected scenarios.
 **Likely Causes:** The feature is disabled in settings, or the `WorkspaceGraph` is still indexing the feature files.
