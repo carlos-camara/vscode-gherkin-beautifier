@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.5] - Unreleased
+
+### 🚀 Added
+- ...
+
+### ✨ Improved
+- ...
+
+### 🐛 Fixed
+- ...
+
 ## [1.8.4] - 2026-08-22
 
 ### 💅 User Experience & Polish
