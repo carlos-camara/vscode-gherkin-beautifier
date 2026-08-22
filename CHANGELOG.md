@@ -9,10 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.5] - Unreleased
 
 ### 🚀 Added
-- ...
+- **Robust Parser Loader**: Audited and redesigned the dynamic loader for `@cucumber/gherkin` and `@cucumber/messages` to include a bounded retry strategy. This improves extension resilience during transient filesystem errors or Extension Host initialization failures.
+- **Concurrent Loader Deduplication**: Prevented multiple concurrent parser triggers from creating duplicate loader instances.
 
 ### ✨ Improved
-- ...
+- **Parser Reliability**: Fixed an issue where a temporarily failed module load would permanently break the parser by caching the rejected promise. The cache is now correctly evicted on failure, allowing seamless automatic recovery on subsequent parses.
 
 ### 🐛 Fixed
 - ...
