@@ -77,7 +77,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 ## Diagnostics (Linter) Settings
 
 ### `gherkinPowerTools.linter.enabled`
-- **Purpose:** Master toggle for the real-time Gherkin linter.
+- **Purpose:** Master toggle for the real-time Gherkin linter. When `false`, the linter enters a completely dormant state—suppressing AST parsing, debounce timers, and notifications to conserve system resources.
 - **Type:** `boolean`
 - **Default:** `true`
 

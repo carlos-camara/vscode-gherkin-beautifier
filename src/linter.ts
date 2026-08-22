@@ -53,6 +53,16 @@ export class GherkinLinter {
      * Schedules a debounced linting request for a document.
      */
     public scheduleLint(document: vscode.TextDocument, delayMs: number = 250) {
+        if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
+            return;
+        }
+
+        const config = this.configService.getConfiguration(document.uri);
+        if (!config.linter.enabled) {
+            this.clear(document);
+            return;
+        }
+
         const uriStr = document.uri.toString();
         const existing = this.pendingRequests.get(uriStr);
         if (existing?.timer) {
@@ -71,6 +81,16 @@ export class GherkinLinter {
      * Immediately lints a document, bypassing any active debounce.
      */
     public immediateLint(document: vscode.TextDocument) {
+        if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
+            return;
+        }
+
+        const config = this.configService.getConfiguration(document.uri);
+        if (!config.linter.enabled) {
+            this.clear(document);
+            return;
+        }
+
         const uriStr = document.uri.toString();
         const existing = this.pendingRequests.get(uriStr);
         if (existing?.timer) {
@@ -88,15 +108,17 @@ export class GherkinLinter {
      * @param requestId The execution request ID to track stale runs.
      * @param version The document version at the time of the request.
      */
-    public async lint(document: vscode.TextDocument, requestId: number = ++this.nextRequestId, version: number = document.version) {
+    public async lint(document: vscode.TextDocument, requestId: number = ++this.nextRequestId, version: number = document.version, isExplicitCommand: boolean = false) {
         if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
             return;
         }
 
         const config = this.configService.getConfiguration(document.uri);
         if (!config.linter.enabled) {
-            vscode.window.showInformationMessage("Linter is disabled in settings.");
-            this.diagnosticCollection.delete(document.uri);
+            this.clear(document);
+            if (isExplicitCommand) {
+                vscode.window.showInformationMessage("Linter is currently DISABLED by configuration.");
+            }
             return;
         }
 

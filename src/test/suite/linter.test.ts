@@ -482,4 +482,82 @@ Feature: Semantic Boundary
         );
         assert.ok(undefinedStep, 'Should flag UNDEFINED_STEP for malformed And because it resolves to "step" context');
     });
+
+    test('Linter disabled UX: Automatic scheduleLint avoids work when disabled', async () => {
+        const anyLinter = linter as any;
+        const mockConfigService = anyLinter.configService;
+        mockConfigService.getConfiguration = () => ({ linter: { enabled: false } });
+
+        const text = 'Feature: Test\n  Scenario: Sched\n    Givn something';
+        const doc = createMockDocument(text, 'file:///schedule-disabled.feature');
+
+        let notificationCount = 0;
+        const originalShowInfo = vscode.window.showInformationMessage;
+        vscode.window.showInformationMessage = (() => { notificationCount++; return Promise.resolve(undefined); }) as any;
+
+        try {
+            linter.scheduleLint(doc, 50);
+
+            // Wait beyond the debounce time
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Verify no pending timer was created
+            const uriStr = doc.uri.toString();
+            const pending = anyLinter.pendingRequests.get(uriStr);
+            assert.ok(!pending?.timer, 'No timer should be created when linter is disabled');
+
+            // Verify notification was not shown
+            assert.strictEqual(notificationCount, 0, 'No notification should be shown for automatic scheduleLint');
+        } finally {
+            vscode.window.showInformationMessage = originalShowInfo;
+        }
+    });
+
+    test('Linter disabled UX: immediateLint avoids work when disabled', async () => {
+        const anyLinter = linter as any;
+        const mockConfigService = anyLinter.configService;
+        mockConfigService.getConfiguration = () => ({ linter: { enabled: false } });
+
+        const text = 'Feature: Test\n  Scenario: Sched\n    Givn something';
+        const doc = createMockDocument(text, 'file:///immediate-disabled.feature');
+
+        let notificationCount = 0;
+        const originalShowInfo = vscode.window.showInformationMessage;
+        vscode.window.showInformationMessage = (() => { notificationCount++; return Promise.resolve(undefined); }) as any;
+
+        try {
+            linter.immediateLint(doc);
+
+            // Verify request was dropped immediately
+            const uriStr = doc.uri.toString();
+            const pending = anyLinter.pendingRequests.get(uriStr);
+            assert.ok(!pending, 'Request should be dropped immediately when disabled');
+
+            // Verify notification was not shown
+            assert.strictEqual(notificationCount, 0, 'No notification should be shown for automatic immediateLint');
+        } finally {
+            vscode.window.showInformationMessage = originalShowInfo;
+        }
+    });
+
+    test('Linter disabled UX: explicit lint command triggers notification when disabled', async () => {
+        const anyLinter = linter as any;
+        const mockConfigService = anyLinter.configService;
+        mockConfigService.getConfiguration = () => ({ linter: { enabled: false } });
+
+        const text = 'Feature: Test\n  Scenario: Sched\n    Givn something';
+        const doc = createMockDocument(text, 'file:///explicit-disabled.feature');
+
+        let notificationCount = 0;
+        const originalShowInfo = vscode.window.showInformationMessage;
+        vscode.window.showInformationMessage = (() => { notificationCount++; return Promise.resolve(undefined); }) as any;
+
+        try {
+            await linter.lint(doc, 1, 1, true); // true = isExplicitCommand
+
+            assert.strictEqual(notificationCount, 1, 'Notification SHOULD be shown for explicit commands');
+        } finally {
+            vscode.window.showInformationMessage = originalShowInfo;
+        }
+    });
 });
