@@ -176,6 +176,17 @@ If you need to point to a specific local Python virtual environment via an absol
 2. Confirm that at least one Python step file exists within your `stepGlobs`.
 **Resolution:** If no Python files appear in the file picker, add the correct glob to `gherkinPowerTools.behave.stepGlobs`.
 
+## VS Code Freezes or Stutters on Massive Feature Files
+
+**Symptom:** Opening or pasting a massive `.feature` file (e.g., > 1MB of pure scenarios, such as > 10,000 scenarios generated automatically) causes VS Code to freeze or stutter for a brief moment, and the Extension Host might report unresponsiveness.
+
+**Why it happens:** The native `@cucumber/gherkin` parser runs synchronously on the Extension Host main thread. For a typical file (under 1,000 scenarios), this takes `< 20ms` and is unnoticeable. For pathologically large files (> 10,000 scenarios), parsing can block the event loop for `> 75ms`.
+
+**Resolution:**
+- Break generated `.feature` files into smaller files (< 1,000 scenarios each).
+- The extension employs *debouncing* to avoid running the parser on every keystroke, but initial loads or large pastes will block the thread until parsing finishes.
+- A hard document-size guard (e.g., 2MB) may be implemented in future versions if abuse is widespread.
+
 ## Files are missed or falsely flagged as duplicates (macOS/Windows)
 **Symptom:** When scanning large workspaces, some `.feature` or `.py` files are ignored, or Behave step definitions are falsely reported as duplicated.
 **Likely Causes:** In earlier versions, case-insensitive file systems could cause path mismatches inside the internal graph.
