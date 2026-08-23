@@ -61,7 +61,33 @@ Place your cursor anywhere on the line with the underlined text and press <kbd>C
 
 ## 5. Python Behave Setup (Optional)
 
-If you are using Python Behave, Gherkin PowerTools provides advanced step generation, navigation, and Test Explorer integration.
+When you open a workspace with Behave step definitions, Gherkin PowerTools automatically detects them.
+
+1. **Go to Definition**: <kbd>F12</kbd> (<kbd>F12</kbd>) from a step in your `.feature` file to jump to the python code.
+2. **Hover Information**: Hover over a step to see its Python signature, documentation string, and source file.
+3. **Step Autocompletion**: Start typing `Given`, `When`, or `Then` to get intelligent step suggestions.
+
+---
+
+## Workspace Trust (Restricted Mode)
+
+Gherkin PowerTools strictly adheres to VS Code's **Workspace Trust** model to keep you safe from executing untrusted code. When you open a repository in Restricted Mode, the extension will adapt its capabilities intelligently:
+
+| Capability | Status in Restricted Mode | Rationale |
+|---|---|---|
+| **Syntax Highlighting** | ✅ Available | Completely safe, relies only on static grammar files. |
+| **Document Formatting** | ✅ Available | Completely safe, relies on static AST rules without executing workspace code. |
+| **Gherkin Linter & Diagnostics** | ✅ Available | Safe static parsing to detect structural typos and missing colons. |
+| **Behave Step Discovery** | ✅ Available | Safe static Python AST parsing (does not `import` or execute your Python files). |
+| **Create Step Definition** | ❌ Disabled | Generating Python code is restricted. Quick Fixes will show as disabled. |
+| **Batch Create Definitions** | ❌ Disabled | Creating bulk Python definitions requires trust. |
+| **Rename Step** | ❌ Disabled | Renaming steps mutates Python code. |
+| **Extract Step** | ❌ Disabled | Refactoring into Python definitions requires trust. |
+| **Run & Debug Behave** | ❌ Disabled | Executing test commands requires trust. |
+
+Disabled actions will display a clean, native VS Code tooltip or a notification containing a "Manage Workspace Trust" button, ensuring you are never left guessing why a capability is unavailable.
+
+---
 
 > [!IMPORTANT]
 > To use Python Behave execution and step generation features, you **MUST** have a valid Workspace Folder opened in VS Code. Attempting to run tests or generate steps for standalone `.feature` files outside of an active workspace is explicitly blocked for security and context-resolution reasons.

@@ -99,6 +99,14 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
                     vscode.window.showErrorMessage(`Could not open file: ${e}`);
                 }
             } else if (message.command === 'autoFix') {
+                if (!vscode.workspace.isTrusted) {
+                    vscode.window.showWarningMessage("Execution disabled in untrusted workspace.", "Manage Workspace Trust").then(res => {
+                        if (res === "Manage Workspace Trust") {
+                            vscode.commands.executeCommand("workbench.trust.manage");
+                        }
+                    });
+                    return;
+                }
                 if (message.ruleId === 'undefined-steps') {
                     if (metrics.undefinedSteps && metrics.undefinedSteps.length > 0) {
                         let stepsToFix = metrics.undefinedSteps;

@@ -156,6 +156,9 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     title: 'Create empty step definition',
                     arguments: [stepText, pyKeyword, document.uri]
                 };
+                if (!vscode.workspace.isTrusted) {
+                    action.disabled = { reason: 'Workspace Trust is required to modify Python code' };
+                }
                 action.diagnostics = [diagnostic];
                 action.isPreferred = true;
                 actions.push(action);
@@ -169,6 +172,9 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 command: 'gherkinPowerTools.refactor.extractStep',
                 title: 'Extract Step'
             };
+            if (!vscode.workspace.isTrusted) {
+                extractAction.disabled = { reason: 'Workspace Trust is required to modify Python code' };
+            }
             actions.push(extractAction);
         }
 
