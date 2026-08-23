@@ -43,7 +43,7 @@ To maintain compatibility and prevent side effects in users' workspaces, develop
 
 When contributing a new rule to the `AntiPatternEngine`, you must implement the `AntiPatternRule<T>` interface located in `src/antiPatternEngine.ts`.
 1. **Rule Classification**: You must categorize your rule appropriately (Correctness, Reliability, Maintainability, Style) via `RuleMetadata`. Do not treat subjective heuristics (Maintainability) as objective Correctness errors.
-2. **Object Configuration**: If your rule relies on numeric thresholds (e.g., maximum steps), you must declare a generic configuration interface `<T>` (e.g., `OversizedScenarioParams`) and provide sensible defaults in `defaultParams`. The engine will automatically pass the resolved configuration object to your `analyze()` method, handling Team Profile scaling dynamically.
+2. **Object Configuration**: If your rule relies on numeric thresholds (e.g., maximum steps), you must declare a generic configuration interface `<T>` (e.g., `OversizedScenarioParams`) and provide sensible defaults in `defaultParams`. The engine will automatically pass the resolved configuration object to your `analyze()` method.
 3. **Immutability**: Analyze the `WorkspaceGraph` strictly in a read-only manner. Do not mutate nodes during analysis.
 
 ### Contributors Deep-Dive: Implementing a new LanguageService Provider

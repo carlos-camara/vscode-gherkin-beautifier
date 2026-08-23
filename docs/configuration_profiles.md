@@ -14,9 +14,6 @@ Create a `.gherkin-powertoolsrc.json` (or `.gherkin-powertoolsrc`) file in the r
 ```json
 {
   "profile": "team",
-  "antiPatterns": {
-    "profile": "strict"
-  },
   "indentation": {
     "steps": 4
   },
@@ -31,7 +28,7 @@ Create a `.gherkin-powertoolsrc.json` (or `.gherkin-powertoolsrc`) file in the r
 
 ## Available Profiles
 
-Gherkin PowerTools exposes profiles for both Formatting (`profile`) and the Anti-Pattern Engine (`antiPatterns.profile`).
+Gherkin PowerTools exposes profiles for Formatting (`profile`).
 
 ### Formatting Profiles (`profile`)
 You can specify a base `profile` to inherit a predefined set of formatting rules:
@@ -41,12 +38,6 @@ You can specify a base `profile` to inherit a predefined set of formatting rules
 - `team`: Standard team baseline: sensible defaults for large projects without being restrictive.
 - `minimal`: Low-interference: 2-space indent, table alignment off, tags on one line, no blank line enforcement.
 - `legacy`: Targets older Gherkin/SpecFlow codebases: 2-space indent, table alignment off.
-
-### Anti-Pattern Profiles (`antiPatterns.profile`)
-You can leverage Team Profiles to automatically set severity thresholds for subjective heuristics:
-- `default`: A balanced profile providing warnings for common anti-patterns without failing builds.
-- `strict`: Enforces best-practices vigorously (e.g., `oversized-scenario` defaults to `error`). Ideal for mature projects or strict CI gates.
-- `relaxed`: Mutes most maintainability and style warnings. Ideal for prototyping or onboarding legacy test suites.
 
 ## Validation and Schema
 

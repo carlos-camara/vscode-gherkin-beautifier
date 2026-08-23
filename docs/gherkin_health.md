@@ -61,11 +61,7 @@ You can configure rules using simple severity strings or objects to pass custom 
 }
 ```
 
-### Team Profiles
-
-Gherkin PowerTools supports **Team Profiles** (`strict`, `default`, `relaxed`) to automatically scale heuristic severities based on your team's maturity without needing to configure individual rules.
-
-See the [Configuration Reference](configuration.md#unified-diagnostics-rules) for the full list of rules and Profile details.
+See the [Configuration Reference](configuration.md#unified-diagnostics-rules) for the full list of rules.
 
 ---
 

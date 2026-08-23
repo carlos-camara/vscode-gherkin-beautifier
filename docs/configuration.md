@@ -92,7 +92,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.linter.enabledRules`
-- **Purpose:** *(Deprecated)* Whitelist of linting rule IDs to enforce. Please use `gherkinPowerTools.rules` instead.
+- **Purpose:** *(Deprecated)* Whitelist of linting rule IDs to enforce. Please use `gherkinPowerTools.rules` instead. Legacy values are automatically migrated at runtime.
 - **Type:** `array` of strings
 - **Default:** `[]`
 
@@ -106,7 +106,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.antiPatterns.rules`
-- **Purpose:** *(Deprecated)* Configure severity levels for individual anti-pattern rules. Please use `gherkinPowerTools.rules` instead.
+- **Purpose:** *(Deprecated)* Configure severity levels for individual anti-pattern rules. Please use `gherkinPowerTools.rules` instead. Legacy values are automatically migrated at runtime.
 - **Type:** `object` (Key-value pairs of rule ID to severity level)
 
 ---
@@ -132,17 +132,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
       }
   }
   ```
-
-### Anti-Pattern Team Profiles
-You can also leverage Team Profiles to automatically set severity thresholds for subjective heuristics without manually overriding each rule:
-- **`strict`**: Enforces best-practices vigorously (e.g. `oversized-scenario` defaults to `error`). Ideal for mature projects or strict CI gates.
-- **`default`**: A balanced profile providing warnings for common anti-patterns without failing builds.
-- **`relaxed`**: Mutes most maintainability and style warnings. Ideal for prototyping or onboarding legacy test suites.
-
-To use a profile, set it in your configuration (this applies strictly to rule severities, unlike formatting profiles):
-```json
-"gherkinPowerTools.antiPatterns.profile": "strict"
-```
 
 ---
 
