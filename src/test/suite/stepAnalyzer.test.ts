@@ -134,6 +134,69 @@ suite('StepAnalyzer Test Suite', () => {
         assert.strictEqual(result.duplicatedSteps.length, 0);
     });
 
+    test('Should handle complex patterns with colons, regex, placeholders and unicode in duplicated steps', async () => {
+        const createDef = (id: string, pattern: string, matcherType: string): StepDefNode => ({
+            id, type: 'StepDefinition', uri: 'file:///tests/steps.py', line: 1,
+            pattern, matcherType, pythonFile: 'file:///tests/steps.py', usages: [], semanticType: 'given'
+        });
+
+        // 1. One colon
+        const defColon1 = createDef('c1', 'Time is 10:00', 'parse');
+        const defColon2 = createDef('c2', 'Time is 10:00', 'parse');
+
+        // 2. Multiple colons
+        const defMultiColon1 = createDef('mc1', 'a:b:c:d', 'parse');
+        const defMultiColon2 = createDef('mc2', 'a:b:c:d', 'parse');
+
+        // 3. Regex syntax
+        const defRe1 = createDef('re1', '^user (.*?) logs in$', 're');
+        const defRe2 = createDef('re2', '^user (.*?) logs in$', 're');
+
+        // 4. Placeholders
+        const defPh1 = createDef('ph1', 'I have {count:d} cucumbers', 'parse');
+        const defPh2 = createDef('ph2', 'I have {count:d} cucumbers', 'parse');
+
+        // 5. Unicode
+        const defUni1 = createDef('u1', 'the emoji is 🚀', 'parse');
+        const defUni2 = createDef('u2', 'the emoji is 🚀', 'parse');
+
+        // Non-duplicate to ensure no false positives
+        const defNonDup = createDef('nd', 'Time is 10:00', 're'); // different matcher
+
+        const customGraph = {
+            currentGeneration: {
+                getAllStepDefNodes: () => [
+                    defColon1, defColon2,
+                    defMultiColon1, defMultiColon2,
+                    defRe1, defRe2,
+                    defPh1, defPh2,
+                    defUni1, defUni2,
+                    defNonDup
+                ],
+                getAllStepNodes: () => []
+            }
+        };
+
+        const analyzer = new StepAnalyzer(customGraph as unknown as WorkspaceGraph, mockSymbolCache as SymbolCache);
+        const result = await analyzer.analyze();
+
+        assert.strictEqual(result.duplicatedSteps.length, 5);
+
+        const duplicatedPatterns = result.duplicatedSteps.map(d => d.pattern).sort();
+        assert.deepStrictEqual(duplicatedPatterns, [
+            'I have {count:d} cucumbers',
+            'Time is 10:00',
+            '^user (.*?) logs in$',
+            'a:b:c:d',
+            'the emoji is 🚀'
+        ]);
+
+        // Ensure that the one with colon parsed correctly
+        const colonDup = result.duplicatedSteps.find(d => d.pattern === 'a:b:c:d');
+        assert.ok(colonDup);
+        assert.strictEqual(colonDup.stepDefs.length, 2);
+    });
+
 
     test('Should identify ambiguous steps', async () => {
         const analyzer = new StepAnalyzer(mockGraph as WorkspaceGraph, mockSymbolCache as SymbolCache);

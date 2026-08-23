@@ -15,7 +15,7 @@ It generates deep heuristics and scores, including:
 - **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
 - **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
   The engine uses semantic context tracking to accurately resolve `And` and `But` steps.
-  It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then), ensuring that step definitions reused across different contexts are not falsely flagged as duplicated.
+  It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then). The structural identity model uses nested object structures to safely index complex regular expressions containing colons or unicode, ensuring that step definitions reused across different contexts are not falsely flagged as corrupted or duplicated.
 - **Actionable Anti-patterns**: Prioritized rules (configurable as Error, Warning, Info, Hint, Off). The engine actively detects:
   - **Syntax Errors** that cause parse failures
   - **Oversized Features** and **Oversized Scenarios**

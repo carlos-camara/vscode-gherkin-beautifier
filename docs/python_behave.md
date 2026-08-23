@@ -131,7 +131,7 @@ Gherkin PowerTools includes a comprehensive **BDD Anti-pattern Detection Engine*
 You can generate this report by running the **Gherkin PowerTools: Show Gherkin Health** command from the Command Palette. It opens an interactive **Dashboard Webview** displaying actionable Anti-patterns:
 
 - **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace, nor invoked programmatically via `context.execute_steps()` in other Python files. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
-- **Duplicated Implementations:** Finds identical step definitions (same matcher type, keyword, and regex pattern) across different files which will cause a runtime failure in Behave. Semantic analysis ensures identical patterns with different keywords (e.g. `@given` vs `@then`) are correctly allowed.
+- **Duplicated Implementations:** Finds identical step definitions (same matcher type, keyword, and regex pattern) across different files which will cause a runtime failure in Behave. Semantic analysis ensures identical patterns with different keywords (e.g. `@given` vs `@then`) are correctly allowed. The structural identity engine robustly handles patterns containing complex regular expressions, unicode characters, and colons without false positives.
 - **Ambiguous Step Usages:** Identifies specific steps in your feature files that match multiple definitions, helping you pinpoint exactly where Behave will fail.
 - **Oversized Scenarios & Excessive Tags:** Flags overly complex features that degrade test maintainability.
 
