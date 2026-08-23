@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { DEFAULT_CONFIG } from '../../configuration';
 import { GherkinLinter } from '../../linter';
 import { SymbolCache } from '../../cache';
+import { diagnosticRegistry } from '../../rules';
 
 function createMockDocument(text: string, uriStr: string): vscode.TextDocument {
     const lines = text.split('\n');
@@ -86,10 +87,10 @@ Feature: Test
         const doc = createMockDocument(text, 'file:///scenario-outline-missing-colon.feature');
         await linter.lint(doc);
 
-        const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const diag = diagnostics.find(d => d.code === 'missing-colon');
+        const diagnostics = diagnosticRegistry.get(doc.uri.toString()) || [];
+        const diag = diagnostics.find(d => d.ruleId === 'missing-colon');
         assert.ok(diag, 'Should detect MISSING_COLON on Scenario Outline');
-        assert.strictEqual(diag!.relatedInformation![0].message, ':');
+        assert.strictEqual(diag.actionPayload?.replacementText, ':');
     });
 
     test('Undefined step should generate a diagnostic', async () => {
