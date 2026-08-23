@@ -6,6 +6,7 @@ import type { Step } from '@cucumber/messages';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
 import { WorkspaceGraph } from './graph';
+import { RuleDiagnostic, diagnosticRegistry } from './rules';
 
 export type InvalidationReason = 
     | { type: 'documentOpened', document: vscode.TextDocument }
@@ -336,22 +337,15 @@ export class GherkinLinter {
                     endChar = Math.max(startChar, Math.min(endChar, lineText.length));
                     const range = new vscode.Range(lineIndex, startChar, lineIndex, endChar);
 
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         message,
-                        severity
+                        severity,
+                        code as any,
+                        document.version,
+                        suggestedEdit ? { replacementText: suggestedEdit } : undefined
                     );
                     diagnostic.source = 'Gherkin Parser';
-                    diagnostic.code = code;
-
-                    if (suggestedEdit) {
-                        diagnostic.relatedInformation = [
-                            new vscode.DiagnosticRelatedInformation(
-                                new vscode.Location(document.uri, range),
-                                suggestedEdit
-                            )
-                        ];
-                    }
 
                     diagnostics.push(diagnostic);
 
@@ -450,6 +444,7 @@ export class GherkinLinter {
             finalDiagnostics.push(d);
         }
 
+        diagnosticRegistry.set(document.uri.toString(), finalDiagnostics as RuleDiagnostic[]);
         this.diagnosticCollection.set(document.uri, finalDiagnostics);
     }
 
@@ -494,13 +489,14 @@ export class GherkinLinter {
                         currentScenarioLine,
                         currentScenarioStartChar + matchKeyword.length
                     );
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         `A '${matchKeyword}' cannot have '${examplesKeyword}'. Use '${outlineKeyword}' instead.`,
-                        vscode.DiagnosticSeverity.Error
+                        vscode.DiagnosticSeverity.Error,
+                        'scenario-with-examples',
+                        document.version
                     );
                     diagnostic.source = 'Gherkin Semantic';
-                    diagnostic.code = 'scenario-with-examples';
                     diagnostics.push(diagnostic);
 
                     currentScenarioLine = -1;
@@ -597,12 +593,15 @@ export class GherkinLinter {
                 // Check if the syntax error loop ALREADY added an error overlapping this exact range
                 const alreadyHasError = diagnostics.some((d: vscode.Diagnostic) => d.range.intersection(range));
                 if (!alreadyHasError) {
-                    const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
+                    const diagnostic = new RuleDiagnostic(
+                        range,
+                        message,
+                        vscode.DiagnosticSeverity.Error,
+                        code as any,
+                        document.version,
+                        suggestedEdit ? { replacementText: suggestedEdit } : undefined
+                    );
                     diagnostic.source = 'Gherkin Semantic';
-                    diagnostic.code = code;
-                    diagnostic.relatedInformation = [
-                        new vscode.DiagnosticRelatedInformation(new vscode.Location(document.uri, range), suggestedEdit)
-                    ];
                     diagnostics.push(diagnostic);
                 }
             }
@@ -709,19 +708,15 @@ export class GherkinLinter {
                     }
 
                     const range = new vscode.Range(currentLineIdx, startChar, currentLineIdx, endChar);
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         message,
-                        vscode.DiagnosticSeverity.Error
+                        vscode.DiagnosticSeverity.Error,
+                        code as any,
+                        document.version,
+                        suggestedEdit ? { replacementText: suggestedEdit } : undefined
                     );
                     diagnostic.source = 'Gherkin Semantic';
-                    diagnostic.code = code;
-                    diagnostic.relatedInformation = [
-                        new vscode.DiagnosticRelatedInformation(
-                            new vscode.Location(document.uri, range),
-                            suggestedEdit
-                        )
-                    ];
                     diagnostics.push(diagnostic);
                 }
             }
@@ -744,13 +739,14 @@ export class GherkinLinter {
             const outlineKeyword = dialect.scenarioOutline[0]?.trim() || 'Scenario Outline';
 
             const range = new vscode.Range(lineIndex, startChar, lineIndex, endChar);
-            const diagnostic = new vscode.Diagnostic(
+            const diagnostic = new RuleDiagnostic(
                 range,
                 `A '${matchKeyword}' cannot have '${examplesKeyword}'. Use '${outlineKeyword}' instead.`,
-                vscode.DiagnosticSeverity.Error
+                vscode.DiagnosticSeverity.Error,
+                'scenario-with-examples',
+                document.version
             );
             diagnostic.source = 'Gherkin Semantic';
-            diagnostic.code = 'scenario-with-examples';
             diagnostics.push(diagnostic);
         }
     }
@@ -795,32 +791,27 @@ export class GherkinLinter {
                 const range = new vscode.Range(lineIndex, startChar, lineIndex, Math.max(startChar + 1, endChar));
 
                 if (defs.length === 0) {
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         `⚠️ Undefined step: "${stepText}"`,
-                        vscode.DiagnosticSeverity.Warning
+                        vscode.DiagnosticSeverity.Warning,
+                        'undefined-step',
+                        document.version,
+                        { stepText, stepKeyword: step.keyword.trim() }
                     );
                     diagnostic.source = 'Gherkin Definition';
-                    diagnostic.code = 'undefined-step';
-
-                    // Attach the keyword as related information string for the code action to use
-                    diagnostic.relatedInformation = [
-                        new vscode.DiagnosticRelatedInformation(
-                            new vscode.Location(document.uri, range),
-                            step.keyword.trim()
-                        )
-                    ];
 
                     diagnostics.push(diagnostic);
                 } else if (defs.length > 1) {
                     const patterns = defs.map(d => `'${d.rawPattern}'`).join(', ');
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         `⚠️ Ambiguous step: matches multiple definitions (${patterns})`,
-                        vscode.DiagnosticSeverity.Warning
+                        vscode.DiagnosticSeverity.Warning,
+                        'ambiguous-step',
+                        document.version
                     );
                     diagnostic.source = 'Gherkin Definition';
-                    diagnostic.code = 'ambiguous-step';
                     diagnostics.push(diagnostic);
                 }
             }
@@ -838,6 +829,7 @@ export class GherkinLinter {
             clearTimeout(pending.timer);
         }
         this.pendingRequests.delete(uriStr);
+        diagnosticRegistry.delete(document.uri.toString());
         this.diagnosticCollection.delete(document.uri);
     }
 
@@ -852,6 +844,7 @@ export class GherkinLinter {
         }
         this.pendingRequests.clear();
         this.eventBusDisposable?.dispose();
+        diagnosticRegistry.clear();
         this.diagnosticCollection.clear();
         this.diagnosticCollection.dispose();
     }
