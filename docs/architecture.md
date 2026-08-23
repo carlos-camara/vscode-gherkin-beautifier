@@ -221,6 +221,10 @@ A centralized `flush()` cycle executes after a short debounce window. During flu
 ### Correctness Fallback
 When a global dependency changes (like `stepDefinitionsUpdated`), the Linter attempts to use the `WorkspaceGraph` to identify exclusively affected `.feature` files. If the graph is not yet initialized or the blast radius is too large, it seamlessly falls back to relinting all open Gherkin documents, guaranteeing correctness above all.
 
+### Diagnostic to Code Action Communication
+To maintain strict independence between human-readable copy and machine-readable data, Gherkin PowerTools does **not** encode data payloads (like replacement text or parsed step syntax) into the user-facing `Diagnostic.message` or `DiagnosticRelatedInformation`.
+Instead, the Linter engine populates an internal `diagnosticRegistry` utilizing a custom `RuleDiagnostic` model. The `CodeActionProvider` queries this internal registry via the diagnostic reference, ensuring that fixes apply precise, strongly-typed operations. Furthermore, Code Actions enforce a strict `document.version` validation check before applying an edit, protecting users against applying a stale payload if the document was modified prior to executing the Quick Fix.
+
 ## Real-Time Impact Analysis Engine
 
 Leveraging the `WorkspaceGraph`, the extension provides a real-time Impact Analysis engine (`ImpactAnalyzer`).
