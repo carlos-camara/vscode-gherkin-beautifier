@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { GherkinCodeActionProvider, createStepDefinition, serializeToPythonString, generateStepFunctionName } from '../../codeAction';
 import { discoveryService } from '../../discovery';
+import { RuleDiagnostic, diagnosticRegistry } from '../../rules';
 
 function createMockDocument(text: string, uriStr: string): vscode.TextDocument {
     const lines = text.split('\n');
@@ -42,21 +43,23 @@ suite('Code Action Provider Test Suite', () => {
 
     setup(() => {
         provider = new GherkinCodeActionProvider();
+        diagnosticRegistry.clear();
     });
 
     test('Provides Code Actions for misspelled keywords', () => {
         const doc = createMockDocument('Givn misspelled', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0,0,0,4),
             "Misspelled keyword",
-            vscode.DiagnosticSeverity.Error
+            vscode.DiagnosticSeverity.Error,
+            'invalid-keyword',
+            1,
+            { replacementText: 'Given' }
         );
-        diagnostic.code = 'invalid-keyword';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0,0,0,4)), 'Given')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Replace with 'Given'");
@@ -64,17 +67,18 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for undefined steps', () => {
         const doc = createMockDocument('Then undefined step', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0,0,0,19),
             "Undefined step: \"undefined step\"",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'undefined-step',
+            1,
+            { stepText: 'undefined step', stepKeyword: 'Then' }
         );
-        diagnostic.code = 'undefined-step';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0,0,0,19)), 'Then')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Create empty step definition");
@@ -84,17 +88,18 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Resolves previous keyword for And/But steps', () => {
         const doc = createMockDocument('Given some setup\nAnd undefined step', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(1,0,1,18),
             "Undefined step: \"undefined step\"",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'undefined-step',
+            1,
+            { stepText: 'undefined step', stepKeyword: 'And' }
         );
-        diagnostic.code = 'undefined-step';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(1,0,1,18)), 'And')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(1,0,1,0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(1,0,1,0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         // It should resolve 'And' to 'given' because line 0 starts with 'Given'
@@ -103,17 +108,18 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for MISSING_COLON', () => {
         const doc = createMockDocument('Feature Feature name', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0, 0, 0, 7),
             "Missing colon",
-            vscode.DiagnosticSeverity.Error
+            vscode.DiagnosticSeverity.Error,
+            'missing-colon',
+            1,
+            { replacementText: 'Feature:' }
         );
-        diagnostic.code = 'missing-colon';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0, 0, 0, 8)), 'Feature:')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Insert missing ':'");
@@ -121,14 +127,17 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for SCENARIO_WITH_EXAMPLES', () => {
         const doc = createMockDocument('Scenario: Test', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0, 0, 0, 8),
             "Scenario with Examples should be Scenario Outline",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'scenario-with-examples',
+            1
         );
-        diagnostic.code = 'scenario-with-examples';
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Convert to 'Scenario Outline'");
@@ -136,18 +145,37 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for INCONSISTENT_CELL_COUNT', () => {
         const doc = createMockDocument('| col1 | col2', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0, 0, 0, 11),
             "Inconsistent cell count",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'table-inconsistency',
+            1
         );
-        diagnostic.code = 'table-inconsistency';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0, 0, 0, 12)), '| col1 | col2 |')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
+        assert.strictEqual(actions.length, 0);
+    });
+
+    test('Ignores stale diagnostics when document version changed', () => {
+        const doc = createMockDocument('Givn misspelled', 'file:///code-actions-stale.feature');
+        (doc as any).version = 2; // Document is newer!
+        
+        const diagnostic = new RuleDiagnostic(
+            new vscode.Range(0,0,0,4),
+            "Misspelled keyword",
+            vscode.DiagnosticSeverity.Error,
+            'invalid-keyword',
+            1, // Stale diagnostic version!
+            { replacementText: 'Given' }
+        );
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [] } as any, {} as any);
+        // Should not provide actions because it is stale
         assert.strictEqual(actions.length, 0);
     });
 });
