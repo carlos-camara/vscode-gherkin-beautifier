@@ -36,7 +36,7 @@
 ## ⚡ Quick Start
 
 1. **Install** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-powertools).
-2. **Open** any `.feature` file to instantly activate formatting and linting.
+2. **Open** any `.feature` file to rapidly activate formatting and linting.
 3. *(Behave only)* Gherkin PowerTools automatically discovers your project and offers a guided Walkthrough.
 
 ---
@@ -84,7 +84,7 @@ A Blast Radius CodeLens appears above every Python step definition. View exactly
 Gherkin PowerTools acts in two tiers depending on your project:
 
 ### Generic BDD Frameworks (Cucumber, SpecFlow, Playwright)
-- **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd> or Editor Context Menu).
+- **AST-Powered Formatting:** Rapidly align tables, tags, and indentation (`Shift+Alt+F` or Editor Context Menu).
 - **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
 - **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
 - **Gherkin Health Dashboard:** Interactive modern webview to analyze oversized features, tag usage, and architectural anti-patterns with built-in DOM node limits for massive workspaces.
@@ -106,7 +106,6 @@ Share team formatting rules by committing a `.gherkin-powertoolsrc.json` to your
 | Setting | Default | Description |
 | --- | --- | --- |
 | `gherkinPowerTools.profile` | `"custom"` | Formatting baseline: `strict`, `team`, `minimal`, `legacy`, or `custom`. |
-| `gherkinPowerTools.featureGlobs` | `["**/*.feature"]` | Paths to feature files to include in discovery and analysis. |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", ...]` | Paths to Python step definitions. |
 | `gherkinPowerTools.behave.execution` | `{"executable": "behave", "arguments": []}` | Secure Test Explorer execution command (e.g., `{"executable": "poetry", "arguments": ["run", "behave"]}`). |
 | `gherkinPowerTools.behave.localExecutable` | *None* | Machine-specific override for the Behave executable absolute path. |

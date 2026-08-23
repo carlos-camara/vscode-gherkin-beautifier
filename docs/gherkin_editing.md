@@ -16,7 +16,12 @@ You can format the entire document or just a selection:
 
 ### Formatter Behavior
 
-- **Idempotence:** The formatter is 100% idempotent. Running it multiple times yields the exact same result.
+- **Idempotence & Range Formatting:** The formatter is 100% idempotent.
+  When formatting a specific selection (Range Formatting), the extension employs a **Safe-Unit Grouping Model** to minimize formatting blast radius.
+  Instead of unexpectedly expanding to format an entire Scenario, it groups contiguous structural elements (e.g., data tables, doc strings, tag blocks) into safe, atomic units.
+  It only expands your selection to the nearest safe boundaries, ensuring editing two steps doesn't inadvertently format the rest of the document.
+- **Syntax Error Handling:** The formatter requires a valid Gherkin AST. If your document contains syntax errors (like a missing colon on a `Scenario`), automatic formatting (like Format on Save) will be completely **silent** to prevent intrusive toast warnings from interrupting your typing flow.
+  If you trigger the Format Document command explicitly via the Command Palette or keyboard shortcut, you will receive a single concise actionable warning.
 - **Tables:** Data Tables and Examples are dynamically aligned to the preceding step text (by default) to keep everything visually clean.
 - **Doc Strings:** Content inside `"""` doc strings is dynamically padded to align with the step keyword (or preserved exactly, based on configuration).
 - **Tags:** Long lines of tags are intelligently wrapped or can be kept on a single line depending on your settings.

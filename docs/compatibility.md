@@ -54,7 +54,7 @@ The advanced integrations (Go to Definition, Hover, Autocomplete, Step Generatio
 - **Case-Insensitive File Systems:** Supported. The extension uses strict case-insensitive URI normalization (added in v1.8.2) to prevent duplicate index entries or cache misses natively on macOS and Windows.
 - **Monorepos:** Supported. Configure `gherkinPowerTools.behave.stepGlobs` to point to all sub-directories where steps reside.
 - **Large Workspaces:** Supported. The AST parser and file system watchers are deferred and operate in the background. Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores virtual environments to prevent parsing timeouts.
-
+- **Massive Documents:** Supported but limited. While typical `.feature` files parse instantly (<20ms), auto-generated files exceeding `1MB` or `10,000 scenarios` will cause brief Extension Host UI blocking during parsing. Limit manual editing of generated files over 2MB.
 ## Gherkin Dialects
 
 - **Language Support:** Supported & Tested. The semantic parser automatically adapts to 70+ languages (e.g. Spanish `Dado`, French `Soit`) via the `# language: <lang>` header.

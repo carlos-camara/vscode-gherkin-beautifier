@@ -38,6 +38,9 @@ Try out the AST-powered formatter. Mess up the alignment of an `Examples:` table
 - Or open the Command Palette and type **Format Document**.
 - Or right-click in the editor and select **Gherkin PowerTools > Format Document**.
 
+> [!NOTE]
+> The formatter silently skips invalid documents when triggered automatically (e.g., Format on Save) so your typing flow is not interrupted. If you explicitly request formatting (via shortcut or command palette) on an invalid document, you will see a non-intrusive notification explaining why it couldn't format.
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/formatter.gif" alt="Formatter - full document alignment" width="600" height="340" />
 </div>

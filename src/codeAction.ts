@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { dialectService } from './dialect';
 import { discoveryService } from './discovery';
+import { diagnosticRegistry } from './rules';
 
 export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
     public static readonly providedCodeActionKinds = [
@@ -9,35 +10,35 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
         vscode.CodeActionKind.RefactorExtract
     ];
 
-    public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
+    public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, _context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
         const actions: vscode.CodeAction[] = [];
 
-        // Instead of only using context.diagnostics (which strictly intersect the cursor),
-        // fetch all diagnostics for the file and include any that are on the same line.
-        // This ensures the lightbulb appears anywhere on the line, even if a whole-line 
-        // diagnostic (like Syntax Error) shadows a more precise word-level diagnostic.
-        const allDiagnostics = vscode.languages.getDiagnostics(document.uri);
-        const lineDiagnostics = allDiagnostics.filter(d => 
+        const allRichDiagnostics = diagnosticRegistry.get(document.uri.toString()) || [];
+        
+        // Fetch all rich diagnostics for the file and include any that are on the same line.
+        // This ensures the lightbulb appears anywhere on the line.
+        const relevantDiagnostics = allRichDiagnostics.filter(d => 
             d.range.start.line <= _range.end.line && d.range.end.line >= _range.start.line
         );
-        
-        // Merge context diagnostics with line diagnostics to ensure we don't miss any,
-        // then deduplicate by object reference.
-        const relevantDiagnostics = Array.from(new Set([...context.diagnostics, ...lineDiagnostics]));
 
         for (const diagnostic of relevantDiagnostics) {
-            if (diagnostic.code === 'MISSING_COLON') {
+            // Prevent applying Code Actions for stale diagnostics where line ranges or text may have shifted.
+            if (diagnostic.documentVersion !== document.version) {
+                continue;
+            }
+
+            if (diagnostic.ruleId === 'missing-colon') {
                 const action = new vscode.CodeAction("Insert missing ':'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
-                const replacement = diagnostic.relatedInformation?.[0]?.message || '';
+                const replacement = diagnostic.actionPayload?.replacementText || '';
                 if (replacement) {
                     action.edit.replace(document.uri, diagnostic.range, replacement);
                     action.diagnostics = [diagnostic];
                     action.isPreferred = true;
                     actions.push(action);
                 }
-            } else if (diagnostic.code === 'MISSPELLED_KEYWORD') {
-                const replacement = diagnostic.relatedInformation?.[0]?.message || '';
+            } else if (diagnostic.ruleId === 'invalid-keyword') {
+                const replacement = diagnostic.actionPayload?.replacementText || '';
                 if (replacement) {
                     const action = new vscode.CodeAction(`Replace with '${replacement}'`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
@@ -46,14 +47,14 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     action.isPreferred = true;
                     actions.push(action);
                 }
-            } else if (diagnostic.code === 'SCENARIO_WITH_EXAMPLES') {
+            } else if (diagnostic.ruleId === 'scenario-with-examples') {
                 const action = new vscode.CodeAction("Convert to 'Scenario Outline'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
                 action.edit.replace(document.uri, diagnostic.range, 'Scenario Outline');
                 action.diagnostics = [diagnostic];
                 action.isPreferred = true;
                 actions.push(action);
-            } else if (diagnostic.code === 'INCONSISTENT_CELL_COUNT') {
+            } else if (diagnostic.ruleId === 'table-inconsistency') {
                 const lineIndex = diagnostic.range.start.line;
                 const line = document.lineAt(lineIndex);
                 const lineText = line.text;
@@ -121,13 +122,11 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                         actions.push(action);
                     }
                 }
-            } else if (diagnostic.code === 'UNDEFINED_STEP') {
+            } else if (diagnostic.ruleId === 'undefined-step') {
                 const action = new vscode.CodeAction('Create empty step definition', vscode.CodeActionKind.QuickFix);
 
-                // Retrieve the keyword from relatedInformation
-                const keyword = diagnostic.relatedInformation && diagnostic.relatedInformation.length > 0
-                    ? diagnostic.relatedInformation[0].message
-                    : 'step';
+                // Retrieve the keyword from the typed payload
+                const keyword = diagnostic.actionPayload?.stepKeyword || 'step';
 
                 let pyKeyword = keyword.toLowerCase().trim();
                 const dialect = dialectService.getDialect(document);
@@ -149,9 +148,8 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     else pyKeyword = 'step';
                 }
 
-                // Extract step text
-                const stepTextMatch = diagnostic.message.match(/Undefined step: "(.*)"/);
-                const stepText = stepTextMatch ? stepTextMatch[1] : '';
+                // Extract step text securely without parsing the human-readable message
+                const stepText = diagnostic.actionPayload?.stepText || '';
 
                 action.command = {
                     command: 'gherkinPowerTools.createStepDefinition',

@@ -101,7 +101,8 @@
             "enum": ["MISSING_COLON", "INVALID_KEYWORD", "SEMANTIC_ERROR", "TABLE_INCONSISTENCY", "UNDEFINED_STEP", "AMBIGUOUS_STEP"]
           },
           "default": [],
-          "description": "Whitelist of linting rule IDs to enforce. An empty array (default) enables ALL rules. Populate to restrict linting to specific rules only — useful for enterprise teams that want to suppress certain checks. Available: MISSING_COLON, INVALID_KEYWORD, SEMANTIC_ERROR, TABLE_INCONSISTENCY, UNDEFINED_STEP, AMBIGUOUS_STEP."
+          "description": "DEPRECATED: Use 'rules' instead. Whitelist of linting rule IDs to enforce.",
+          "deprecated": true
         }
       }
     },
@@ -137,6 +138,26 @@
           "default": [],
           "description": "Extra flags appended to every Behave invocation from the Test Explorer. Examples: ['--no-capture'], ['-D', 'env=staging'], ['--format', 'progress']."
         }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Configure severities for specific rules across the AST Linter and Anti-Pattern engine. Values can be `error`, `warning`, `info`, `hint`, or `off`.",
+      "properties": {
+        "missing-colon": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "invalid-keyword": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "scenario-with-examples": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "table-inconsistency": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "undefined-step": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "ambiguous-step": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "oversized-scenario": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "oversized-feature": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "duplicated-steps": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "unused-steps": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "excessive-tags": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "inconsistent-formatting": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] },
+        "poor-maintainability": { "type": "string", "enum": ["error", "warning", "info", "hint", "off"] }
       }
     }
   }

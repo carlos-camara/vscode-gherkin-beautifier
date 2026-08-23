@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { GherkinFormattingEditProvider } from '../formatter';
 import { ConfigurationService } from '../configuration';
+import { astRepository } from '../ast';
 
 /**
  * Registers commands specific to interactive walkthroughs and demos.
@@ -48,7 +49,12 @@ export function registerWalkthroughCommands(
                     }
                 });
             } else {
-                vscode.window.showInformationMessage("Document is already formatted.");
+                const { errors } = await astRepository.getAST(editor.document);
+                if (errors.length > 0) {
+                    vscode.window.showWarningMessage("Cannot format document with syntax errors. Check diagnostics.");
+                } else {
+                    vscode.window.showInformationMessage("Document is already formatted.");
+                }
             }
         }),
 

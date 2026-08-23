@@ -25,7 +25,7 @@ import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
 import { StepRefactoringService } from './refactoring';
 import { GherkinRenameProvider } from './renameProvider';
-import { ConfigurationService } from './configuration';
+import { ConfigurationService, ConfigurationLoader, ProjectConfiguration } from './configuration';
 import { ContextualFeatureDiscoveryService } from './contextualDiscovery';
 import { ImpactCodeLensProvider } from './impactCodeLens';
 import { AntiPatternDiagnosticsManager } from './antiPatternDiagnostics';
@@ -37,6 +37,40 @@ import { registerWalkthroughCommands } from './activation/walkthrough';
 import { registerProductionCommands } from './activation/commands';
 
 const GHERKIN_LANGUAGES = ['feature', 'gherkin'];
+
+class VsCodeConfigurationLoader implements ConfigurationLoader {
+    async load(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<ProjectConfiguration | null> {
+        if (!workspaceFolder) return null;
+        
+        try {
+            const configUri = vscode.Uri.joinPath(workspaceFolder.uri, '.gherkin-powertoolsrc.json');
+            
+            try {
+                // Try to stat first to avoid throwing if not found, since readFile throws
+                await vscode.workspace.fs.stat(configUri);
+            } catch (e) {
+                return null; // File doesn't exist
+            }
+            
+            const fileData = await vscode.workspace.fs.readFile(configUri);
+            const content = new TextDecoder('utf-8').decode(fileData);
+            let parsed = null;
+            try {
+                parsed = JSON.parse(content);
+            } catch (e) {
+                // Return content anyway for diagnostics
+            }
+            
+            return {
+                content,
+                parsed,
+                uri: configUri
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+}
 
 export async function activate(context: vscode.ExtensionContext) {
     logger.info('Extension "vscode-gherkin-powertools" is now active.');
@@ -50,7 +84,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const configDiagnostics = vscode.languages.createDiagnosticCollection('gherkin-configuration');
     context.subscriptions.push(configDiagnostics);
-    const configService = new ConfigurationService(configDiagnostics);
+    const configLoader = new VsCodeConfigurationLoader();
+    const configService = new ConfigurationService(configDiagnostics, configLoader);
+    await configService.initialize();
 
     const configWatcher = vscode.workspace.createFileSystemWatcher('**/.gherkin-powertoolsrc.json');
     context.subscriptions.push(configWatcher);
@@ -58,6 +94,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const contextService = new GherkinContextService();
     context.subscriptions.push(contextService);
 
+    metricsLogger.bind(context);
     registerExecutionListeners(context);
 
     // 3. Service Dependencies
@@ -150,6 +187,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 7. Providers Initialization
     const linter = new GherkinLinter(symbolCache, configService);
+    linter.setWorkspaceGraph(workspaceGraph);
     linter.setEventBus(eventBus);
 
     const highlighter = new GherkinHighlighter();
@@ -182,9 +220,18 @@ export async function activate(context: vscode.ExtensionContext) {
             eventBus.publish({ type: 'configurationChanged', event: e });
         }
     }));
-    configWatcher.onDidChange(() => eventBus.publish({ type: 'configurationChanged' }));
-    configWatcher.onDidCreate(() => eventBus.publish({ type: 'configurationChanged' }));
-    configWatcher.onDidDelete(() => eventBus.publish({ type: 'configurationChanged' }));
+    configWatcher.onDidChange(async (uri) => { 
+        await configService.loadConfiguration(uri);
+        eventBus.publish({ type: 'configurationChanged' }); 
+    });
+    configWatcher.onDidCreate(async (uri) => { 
+        await configService.loadConfiguration(uri);
+        eventBus.publish({ type: 'configurationChanged' }); 
+    });
+    configWatcher.onDidDelete(async (uri) => { 
+        await configService.loadConfiguration(uri);
+        eventBus.publish({ type: 'configurationChanged' }); 
+    });
 
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument(document => { eventBus.publish({ type: 'textDocumentOpened', document }); }),

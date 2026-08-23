@@ -1,9 +1,13 @@
 import * as vscode from 'vscode';
 
-export class MetricsLogger {
+export class MetricsLogger implements vscode.Disposable {
+    private isMetricsEnabled: boolean = false;
+    private configListener?: vscode.Disposable;
     private parseRequests = 0;
     private cacheHits = 0;
     private cacheMisses = 0;
+    private cacheEvictions = 0;
+    private currentCacheMemoryBytes = 0;
     private totalParseTimeMs = 0;
     private totalAstGenerationTimeMs = 0;
     private totalFeatures = 0;
@@ -13,10 +17,59 @@ export class MetricsLogger {
 
     private outputChannel?: vscode.OutputChannel;
 
-    public isEnabled(): boolean {
-        return vscode.workspace
+    constructor() {
+        this.updateConfiguration();
+    }
+
+    public bind(context: vscode.ExtensionContext): void {
+        this.dispose(); // Ensure no duplicate listeners if bound multiple times
+
+        this.updateConfiguration();
+        this.configListener = vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('gherkinPowerTools.diagnostics.metricsEnabled')) {
+                this.updateConfiguration();
+            }
+        });
+
+        context.subscriptions.push(this);
+    }
+
+    private updateConfiguration(): void {
+        this.isMetricsEnabled = vscode.workspace
             .getConfiguration('gherkinPowerTools.diagnostics')
             .get<boolean>('metricsEnabled', false);
+    }
+
+    public isEnabled(): boolean {
+        return this.isMetricsEnabled;
+    }
+
+    public dispose(): void {
+        if (this.configListener) {
+            this.configListener.dispose();
+            this.configListener = undefined;
+        }
+        if (this.outputChannel) {
+            if (typeof this.outputChannel.dispose === 'function') {
+                this.outputChannel.dispose();
+            }
+            this.outputChannel = undefined;
+        }
+    }
+
+    public reset(): void {
+        this.parseRequests = 0;
+        this.cacheHits = 0;
+        this.cacheMisses = 0;
+        this.cacheEvictions = 0;
+        this.currentCacheMemoryBytes = 0;
+        this.totalParseTimeMs = 0;
+        this.totalAstGenerationTimeMs = 0;
+        this.totalFeatures = 0;
+        this.totalScenarios = 0;
+        this.totalSteps = 0;
+        this.parserFailures = 0;
+        this.updateConfiguration();
     }
 
     public recordCacheHit(): void {
@@ -29,6 +82,16 @@ export class MetricsLogger {
         if (!this.isEnabled()) return;
         this.parseRequests++;
         this.cacheMisses++;
+    }
+
+    public recordCacheEviction(): void {
+        if (!this.isEnabled()) return;
+        this.cacheEvictions++;
+    }
+
+    public updateCacheMemory(bytes: number): void {
+        if (!this.isEnabled()) return;
+        this.currentCacheMemoryBytes = bytes;
     }
 
     public recordParse(
@@ -83,6 +146,8 @@ export class MetricsLogger {
         this.outputChannel.appendLine(`Cache Hits:           ${this.cacheHits}`);
         this.outputChannel.appendLine(`Cache Misses:         ${this.cacheMisses}`);
         this.outputChannel.appendLine(`Cache Hit Ratio:      ${hitRatio}%`);
+        this.outputChannel.appendLine(`Cache Evictions:      ${this.cacheEvictions}`);
+        this.outputChannel.appendLine(`Cache Est. Memory:    ${(this.currentCacheMemoryBytes / 1024 / 1024).toFixed(2)} MB`);
         this.outputChannel.appendLine(`Parser Failures:      ${this.parserFailures}`);
         this.outputChannel.appendLine('');
         this.outputChannel.appendLine('--- Performance ---');
