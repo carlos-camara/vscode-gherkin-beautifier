@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.5] - Unreleased
 
 ### 🚀 Added
+- **Workspace-Aware Step Destination**: Redesigned step definition generation to intelligently infer the optimal destination directory based on the project's `stepGlobs` configuration. The extension now respects your workspace architecture instead of blindly writing to `features/steps`, falling back to a clean QuickPick menu to resolve ambiguity.
 - **Safe Concurrent Code Generation**: Step definition generation (Quick Fix) now enforces strict `{ overwrite: false }` bounds and prioritizes in-memory document state to definitively eliminate silent overwrites and race conditions when bootstrapping new features.
 - **Range Formatting Safe-Unit Model**: Redesigned range formatting expansion to significantly reduce unintended formatting blast radius. The algorithm now groups non-splittable elements (Data Tables, DocStrings, and Tag Blocks) into isolated safe units, ensuring a selection of two independent steps no longer formats the entire encompassing Scenario.
 - **Range Formatting Integrity**: Strengthened the VS Code range formatting API by enforcing strict idempotency guarantees and AST boundary reparsing to prevent syntax corruption during partial formatting.

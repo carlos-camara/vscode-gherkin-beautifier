@@ -178,7 +178,10 @@ If you write a step in your `.feature` file that doesn't exist yet, Gherkin Powe
 1. Write the undefined step.
 2. Place your cursor on the underlined step and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS).
 3. Select **Generate Python Step Definition**.
-4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and insert the stub into your most recently modified `steps.py` file.
+4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and determine the safest destination for the stub:
+   - **Workspace Aware Destination**: Instead of blindly generating files in `features/steps`, the engine inspects your `gherkinPowerTools.behave.stepGlobs` configuration to understand your specific project architecture.
+   - **Intelligent Inference**: If there is a clear, standard destination (e.g. an existing step file next to your feature, or a single configured step directory), the engine will automatically select or create the correct `steps.py` file there.
+   - **Ambiguity Resolution**: If your configuration allows multiple valid destinations, a clean QuickPick menu will appear, ensuring you retain control over where code is generated.
    - **Safety First**: The generation logic prioritizes reading the in-memory, unsaved state of your open editors instead of the disk state. This strictly prevents concurrent file modification race conditions, guaranteeing your unsaved work is never accidentally overwritten when appending new steps.
 
 <div align="center">

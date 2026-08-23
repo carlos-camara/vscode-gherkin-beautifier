@@ -142,7 +142,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 ## Behave Discovery & Execution Settings
 
 ### `gherkinPowerTools.behave.stepGlobs`
-- **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, and Linting.
+- **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, Linting, and to intelligently resolve destinations when generating new step definitions.
 - **Type:** `array` of strings
 - **Default:** `["**/steps/**/*.py", "**/features/steps/**/*.py"]`
 
