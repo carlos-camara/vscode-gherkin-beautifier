@@ -36,7 +36,8 @@ jobs:
         run: npx vsce ls
 
       - name: 🧹 Lint Codebase (Markdown, YAML, Actions)
-        uses: super-linter/super-linter@34dfdddf86c8da9508e3c52eb27bd8ac98d5d8a6 # v7
+        # v7
+        uses: super-linter/super-linter@34dfdddf86c8da9508e3c52eb27bd8ac98d5d8a6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: main

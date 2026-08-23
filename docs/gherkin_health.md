@@ -42,13 +42,13 @@ You can configure the Anti-pattern Detection Engine's behavior and rule severiti
 
 ```json
 "gherkinPowerTools.antiPatterns.enabled": true,
-"gherkinPowerTools.antiPatterns.rules": {
+"gherkinPowerTools.rules": {
     "oversized-scenario": "warning",
     "duplicated-steps": "error",
-    "ambiguous-steps": "error"
+    "ambiguous-step": "error"
 }
 ```
-See the [Configuration Reference](configuration.md#anti-pattern-detection-engine-settings) for the full list of rules.
+See the [Configuration Reference](configuration.md#unified-diagnostics-rules) for the full list of rules.
 
 ---
 

@@ -50,13 +50,18 @@ export class AntiPatternDiagnosticsManager {
 
     private async runAnalysis() {
         try {
-            const config = vscode.workspace.getConfiguration('gherkinPowerTools.antiPatterns');
-            if (!config.get<boolean>('enabled', true)) {
+            const config = vscode.workspace.getConfiguration('gherkinPowerTools');
+            const antiPatternsConfig = vscode.workspace.getConfiguration('gherkinPowerTools.antiPatterns');
+            if (!antiPatternsConfig.get<boolean>('enabled', true)) {
                 this.diagnosticCollection.clear();
                 return;
             }
 
-            const ruleConfig = config.get<Record<string, string>>('rules', {});
+            let ruleConfig = config.get<Record<string, string>>('rules', {});
+            // Fallback for deprecated config
+            if (!ruleConfig || Object.keys(ruleConfig).length === 0) {
+                ruleConfig = antiPatternsConfig.get<Record<string, string>>('rules', {});
+            }
             const metrics = await calculateHealthMetrics(this.graph, this.symbolCache);
             let antiPatterns = this.engine.generateAntiPatterns(this.graph, metrics, ruleConfig);
             

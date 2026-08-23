@@ -216,6 +216,7 @@ export const workspace = {
     fs: new FileSystem(),
     textDocuments: [],
     getConfiguration: (_section?: string) => new WorkspaceConfiguration(),
+    onDidChangeConfiguration: (_listener: any, _thisArgs?: any, _disposables?: any[]) => ({ dispose: () => {} }),
     async findFiles(include: string | RelativePattern, exclude?: string | RelativePattern | null, maxResults?: number): Promise<Uri[]> {
         let cwd = process.cwd();
         let incl = typeof include === 'string' ? include : include.pattern;

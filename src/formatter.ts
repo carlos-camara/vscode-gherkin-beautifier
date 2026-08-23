@@ -19,6 +19,7 @@ interface NodeInfo {
     cells?: readonly TableCell[];
     lines?: string[]; // for FormattedTags or DocString content
     emptyLinesBefore?: number;
+    groupId?: string;
 }
 
 interface FormattedLine {
@@ -26,11 +27,7 @@ interface FormattedLine {
     originalLine: number;
 }
 
-interface ASTNodeRange {
-    type: string;
-    startLine: number;
-    endLine: number;
-}
+
 
 
 export class GherkinFormattingEditProvider implements vscode.DocumentFormattingEditProvider, vscode.DocumentRangeFormattingEditProvider {
@@ -94,41 +91,35 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         const options = this.getOptions(document.uri);
         const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
 
-        const { document: gherkinDocument, errors } = await astRepository.getAST(document);
-        if (!gherkinDocument || errors.length > 0) {
-            // Fallback to full document format or return empty if we can't parse safely
-            vscode.window.showWarningMessage("Cannot range-format document with syntax errors.");
-            return [];
-        }
+        const internalResult = await this.formatGherkinInternal(document, options, token);
+        if (internalResult === null || token.isCancellationRequested) return [];
 
-        const formattedLines = await this.formatGherkin(document, options, token);
-        if (formattedLines === null || token.isCancellationRequested) return [];
+        const { lines: formattedLines, map: astMap } = internalResult;
 
-        const startLineOriginal = range.start.line + 1; // 1-indexed
-        const endLineOriginal = range.end.line + 1; // 1-indexed
+        let startLineOriginal = range.start.line + 1; // 1-indexed
+        let endLineOriginal = range.end.line + 1; // 1-indexed
 
-        const ranges = this.buildASTRanges(gherkinDocument);
-        
-        // Find the smallest ASTNodeRange that fully encompasses the selection
-        let bestRange: ASTNodeRange | undefined;
-        let bestSize = Infinity;
-
-        for (const r of ranges) {
-            if (r.startLine <= startLineOriginal && r.endLine >= endLineOriginal) {
-                const size = r.endLine - r.startLine;
-                if (size < bestSize) {
-                    bestSize = size;
-                    bestRange = r;
-                }
+        // Expand Start if inside a multi-line safe unit
+        const startNode = astMap.get(startLineOriginal);
+        if (startNode && startNode.groupId) {
+            let i = startLineOriginal;
+            while (i > 1 && astMap.get(i - 1)?.groupId === startNode.groupId) {
+                i--;
             }
+            startLineOriginal = i;
         }
 
-        if (!bestRange) {
-            // Fallback if no node encompasses the selection (e.g. out of bounds)
-            return [];
+        // Expand End if inside a multi-line safe unit
+        const endNode = astMap.get(endLineOriginal);
+        if (endNode && endNode.groupId) {
+            let i = endLineOriginal;
+            while (i < document.lineCount && astMap.get(i + 1)?.groupId === endNode.groupId) {
+                i++;
+            }
+            endLineOriginal = i;
         }
 
-        const filteredLines = formattedLines.filter(l => l.originalLine >= bestRange!.startLine && l.originalLine <= bestRange!.endLine);
+        const filteredLines = formattedLines.filter(l => l.originalLine >= startLineOriginal && l.originalLine <= endLineOriginal);
         if (filteredLines.length === 0) {
             return [];
         }
@@ -137,8 +128,8 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         
         // Construct the full-line exact replacement range
         const replacementRange = new vscode.Range(
-            new vscode.Position(bestRange.startLine - 1, 0),
-            new vscode.Position(bestRange.endLine - 1, document.lineAt(bestRange.endLine - 1).text.length)
+            new vscode.Position(startLineOriginal - 1, 0),
+            new vscode.Position(endLineOriginal - 1, document.lineAt(endLineOriginal - 1).text.length)
         );
 
         const originalTextRange = document.getText(replacementRange);
@@ -150,11 +141,15 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
     }
 
     public async formatGherkin(document: vscode.TextDocument | { uri: vscode.Uri, version: number, getText(): string }, options: FormatterOptions, token: vscode.CancellationToken): Promise<FormattedLine[] | null> {
+        const result = await this.formatGherkinInternal(document, options, token);
+        return result ? result.lines : null;
+    }
+
+    private async formatGherkinInternal(document: vscode.TextDocument | { uri: vscode.Uri, version: number, getText(): string }, options: FormatterOptions, token: vscode.CancellationToken): Promise<{ lines: FormattedLine[], map: Map<number, NodeInfo> } | null> {
         const text = document.getText();
         const { document: gherkinDocument, errors } = await astRepository.getAST(document);
 
         if (!gherkinDocument || errors.length > 0) {
-            vscode.window.showWarningMessage("Cannot format document with syntax errors.");
             return null;
         }
 
@@ -267,79 +262,10 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             out.pop();
         }
 
-        return out;
+        return { lines: out, map: astMap };
     }
 
-    private buildASTRanges(document: GherkinDocument): ASTNodeRange[] {
-        const ranges: ASTNodeRange[] = [];
-        
-        function traverse(node: any, type: string): { startLine: number, endLine: number } {
-            if (!node) return { startLine: 0, endLine: 0 };
-            
-            let startLine = node.location?.line || 1;
-            if (node.tags && node.tags.length > 0) {
-                startLine = Math.min(startLine, node.tags[0].location.line);
-            }
-            
-            let endLine = node.location?.line || 1;
-            
-            if (node.description) {
-                endLine = Math.max(endLine, node.location.line + node.description.split('\n').length);
-            }
-            
-            if (node.docString) {
-                const dsStart = node.docString.location.line;
-                const dsEnd = dsStart + node.docString.content.split('\n').length + 1;
-                ranges.push({ type: 'DocString', startLine: dsStart, endLine: dsEnd });
-                endLine = Math.max(endLine, dsEnd);
-            }
-            
-            if (node.dataTable && node.dataTable.rows && node.dataTable.rows.length > 0) {
-                const dtStart = node.dataTable.rows[0].location.line;
-                const dtEnd = node.dataTable.rows[node.dataTable.rows.length - 1].location.line;
-                ranges.push({ type: 'DataTable', startLine: dtStart, endLine: dtEnd });
-                endLine = Math.max(endLine, dtEnd);
-            }
-            
-            if (node.tableHeader) {
-                endLine = Math.max(endLine, node.tableHeader.location.line);
-            }
-            if (node.tableBody && node.tableBody.length > 0) {
-                endLine = Math.max(endLine, node.tableBody[node.tableBody.length - 1].location.line);
-            }
-            
-            if (node.steps) {
-                node.steps.forEach((s: any) => {
-                    const b = traverse(s, 'Step');
-                    endLine = Math.max(endLine, b.endLine);
-                });
-            }
-            
-            if (node.examples) {
-                node.examples.forEach((e: any) => {
-                    const b = traverse(e, 'Examples');
-                    endLine = Math.max(endLine, b.endLine);
-                });
-            }
-            
-            if (node.children) {
-                node.children.forEach((c: any) => {
-                    if (c.rule) endLine = Math.max(endLine, traverse(c.rule, 'Rule').endLine);
-                    if (c.background) endLine = Math.max(endLine, traverse(c.background, 'Background').endLine);
-                    if (c.scenario) endLine = Math.max(endLine, traverse(c.scenario, 'Scenario').endLine);
-                });
-            }
-            
-            ranges.push({ type, startLine, endLine });
-            return { startLine, endLine };
-        }
-        
-        if (document.feature) {
-            traverse(document.feature, 'Feature');
-        }
-        
-        return ranges;
-    }
+
 
     private buildASTMap(document: GherkinDocument, options: FormatterOptions, map: Map<number, NodeInfo>) {
         if (!document.feature) return;
@@ -389,7 +315,8 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             
             if (step.dataTable) {
                 const tableIndent = options.alignTableToKeyword ? stepIndent + (step.keyword?.length || 6) : stepIndent + 2;
-                step.dataTable.rows?.forEach(r => map.set(r.location.line, { type: 'TableRow', indent: tableIndent, cells: r.cells }));
+                const groupId = `table-${step.location.line}`;
+                step.dataTable.rows?.forEach(r => map.set(r.location.line, { type: 'TableRow', indent: tableIndent, cells: r.cells, groupId }));
             }
             if (step.docString) {
                 const startLine = step.docString.location.line;
@@ -397,15 +324,17 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                 const endLine = startLine + contentLines.length + 1;
                 
                 const docStringIndent = options.docStrings?.alignToKeyword ? stepIndent + (step.keyword?.length || 6) : stepIndent + 2;
+                const groupId = `docstring-${startLine}`;
                 map.set(startLine, { 
                     type: 'DocString', 
                     indent: docStringIndent, 
                     keyword: step.docString.delimiter,
-                    lines: contentLines
+                    lines: contentLines,
+                    groupId
                 });
                 
                 for (let j = startLine + 1; j <= endLine; j++) {
-                    map.set(j, { type: 'Skip', indent: 0 });
+                    map.set(j, { type: 'Skip', indent: 0, groupId });
                 }
             }
         });
@@ -419,10 +348,11 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                 map.set(ex.location.line, { type: 'Examples', indent: examplesIndent, keyword: ex.keyword, emptyLinesBefore: map.get(ex.location.line)?.emptyLinesBefore });
                 
                 const tableIndent = examplesIndent + 2;
+                const groupId = `table-${ex.location.line}`;
                 if (ex.tableHeader) {
-                    map.set(ex.tableHeader.location.line, { type: 'TableRow', indent: tableIndent, cells: ex.tableHeader.cells });
+                    map.set(ex.tableHeader.location.line, { type: 'TableRow', indent: tableIndent, cells: ex.tableHeader.cells, groupId });
                 }
-                ex.tableBody?.forEach(r => map.set(r.location.line, { type: 'TableRow', indent: tableIndent, cells: r.cells }));
+                ex.tableBody?.forEach(r => map.set(r.location.line, { type: 'TableRow', indent: tableIndent, cells: r.cells, groupId }));
             });
         }
     }
@@ -456,12 +386,13 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             }
         }
         
+        const groupId = `tags-${tagLines[0]}`;
         for (let i = 0; i < tagLines.length; i++) {
             const line = tagLines[i];
             if (i === 0) {
-                map.set(line, { type: 'FormattedTags', indent, lines: formattedTagLines });
+                map.set(line, { type: 'FormattedTags', indent, lines: formattedTagLines, groupId });
             } else {
-                map.set(line, { type: 'Skip', indent: 0 });
+                map.set(line, { type: 'Skip', indent: 0, groupId });
             }
         }
     }
