@@ -210,20 +210,22 @@ The extension implements a dedicated `AntiPatternEngine` that operates asynchron
 
 ## Linter Engine
 
-The `GherkinLinter` validates `.feature` files in real-time, leveraging the shared AST Repository. 
+The `GherkinLinter` validates `.feature` files in real-time, leveraging the shared AST Repository.
 
 ### Batched Invalidation Queue
-To protect the Extension Host against catastrophic event spikes (such as a large `git checkout` mutating 500 files at once), the Linter acts as an event sink. Events (`documentOpened`, `documentChanged`, `configurationChanged`, `stepDefinitionsUpdated`) are deduplicated into an `invalidationQueue`. 
+To protect the Extension Host against catastrophic event spikes (such as a large `git checkout` mutating 500 files at once), the Linter acts as an event sink. Events (`documentOpened`, `documentChanged`, `configurationChanged`, `stepDefinitionsUpdated`) are deduplicated into an `invalidationQueue`.
 
 ### Concurrency Limiting
-A centralized `flush()` cycle executes after a short debounce window. During flushing, the Linter processes invalidated documents concurrently, but relies on a strict concurrency limiter (e.g., maximum 5 concurrent AST operations) to maintain a low Extension Host CPU profile. 
+A centralized `flush()` cycle executes after a short debounce window. During flushing, the Linter processes invalidated documents concurrently, but relies on a strict concurrency limiter (e.g., maximum 5 concurrent AST operations) to maintain a low Extension Host CPU profile.
 
 ### Correctness Fallback
 When a global dependency changes (like `stepDefinitionsUpdated`), the Linter attempts to use the `WorkspaceGraph` to identify exclusively affected `.feature` files. If the graph is not yet initialized or the blast radius is too large, it seamlessly falls back to relinting all open Gherkin documents, guaranteeing correctness above all.
 
 ### Diagnostic to Code Action Communication
 To maintain strict independence between human-readable copy and machine-readable data, Gherkin PowerTools does **not** encode data payloads (like replacement text or parsed step syntax) into the user-facing `Diagnostic.message` or `DiagnosticRelatedInformation`.
-Instead, the Linter engine populates an internal `diagnosticRegistry` utilizing a custom `RuleDiagnostic` model. The `CodeActionProvider` queries this internal registry via the diagnostic reference, ensuring that fixes apply precise, strongly-typed operations. Furthermore, Code Actions enforce a strict `document.version` validation check before applying an edit, protecting users against applying a stale payload if the document was modified prior to executing the Quick Fix.
+Instead, the Linter engine populates an internal `diagnosticRegistry` utilizing a custom `RuleDiagnostic` model.
+The `CodeActionProvider` queries this internal registry via the diagnostic reference, ensuring that fixes apply precise, strongly-typed operations.
+Furthermore, Code Actions enforce a strict `document.version` validation check before applying an edit, protecting users against applying a stale payload if the document was modified prior to executing the Quick Fix.
 
 ## Real-Time Impact Analysis Engine
 
