@@ -227,6 +227,14 @@ Instead, the Linter engine populates an internal `diagnosticRegistry` utilizing 
 The `CodeActionProvider` queries this internal registry via the diagnostic reference, ensuring that fixes apply precise, strongly-typed operations.
 Furthermore, Code Actions enforce a strict `document.version` validation check before applying an edit, protecting users against applying a stale payload if the document was modified prior to executing the Quick Fix.
 
+## Code Generation & I/O Hardening
+
+To guarantee data integrity during code generation (such as extracting steps or generating new Python step definitions), Gherkin PowerTools implements a hardened I/O strategy:
+
+1. **In-Memory State Prioritization**: When appending code to an existing file, the extension strictly prioritizes `vscode.workspace.textDocuments` over the file system. This ensures that new step definitions are safely appended to the unsaved, in-memory state of the editor, eliminating race conditions where uncommitted changes could be overwritten.
+2. **Safe Concurrent Creation**: Code actions utilize `WorkspaceEdit.createFile` with strict `{ overwrite: false, ignoreIfExists: false }` flags. This blocks concurrent file creation collisions if multiple users or processes attempt to bootstrap a step definition file simultaneously.
+3. **Graceful Read Fallbacks**: If a target file exists but becomes unreadable (e.g., due to permission changes or remote disconnection), the generator safely aborts with a user warning instead of silently appending boilerplate.
+
 ## Real-Time Impact Analysis Engine
 
 Leveraging the `WorkspaceGraph`, the extension provides a real-time Impact Analysis engine (`ImpactAnalyzer`).

@@ -322,10 +322,18 @@ export async function createStepDefinition(stepText: string, keyword: string, do
     if (targetUri) {
         let fileContent = '';
         if (!isNewFile) {
-            try {
-                const data = await vscode.workspace.fs.readFile(targetUri);
-                fileContent = Buffer.from(data).toString('utf8');
-            } catch(e) {}
+            const openDocument = vscode.workspace.textDocuments.find(d => d.uri.toString() === targetUri!.toString());
+            if (openDocument) {
+                fileContent = openDocument.getText();
+            } else {
+                try {
+                    const data = await vscode.workspace.fs.readFile(targetUri);
+                    fileContent = Buffer.from(data).toString('utf8');
+                } catch (e) {
+                    vscode.window.showErrorMessage(`Failed to read target file for step generation: ${vscode.workspace.asRelativePath(targetUri)}`);
+                    return undefined;
+                }
+            }
         }
 
         const { pattern, funcArgs } = extractStepParameters(stepText);
@@ -351,21 +359,12 @@ export async function createStepDefinition(stepText: string, keyword: string, do
 
         const edit = new vscode.WorkspaceEdit();
         if (isNewFile) {
-            edit.createFile(targetUri, { ignoreIfExists: true });
+            edit.createFile(targetUri, { overwrite: false, ignoreIfExists: false });
             edit.insert(targetUri, new vscode.Position(0, 0), snippet);
         } else {
-            // Document might be open, calculate end position
-            let lineCount = 0;
-            let lastLineLength = 0;
-            try {
-                const openDoc = await vscode.workspace.openTextDocument(targetUri);
-                lineCount = openDoc.lineCount;
-                lastLineLength = lineCount > 0 ? openDoc.lineAt(lineCount - 1).text.length : 0;
-            } catch(e) {
-                const lines = fileContent.split('\n');
-                lineCount = lines.length;
-                lastLineLength = lines[lines.length - 1].length;
-            }
+            const lines = fileContent.split('\n');
+            const lineCount = lines.length;
+            const lastLineLength = lineCount > 0 ? lines[lineCount - 1].length : 0;
             const lastLine = lineCount > 0 ? lineCount - 1 : 0;
             const endPos = new vscode.Position(lastLine, lastLineLength);
             edit.insert(targetUri, endPos, snippet);
@@ -460,10 +459,18 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
     if (targetUri) {
         let fileContent = '';
         if (!isNewFile) {
-            try {
-                const data = await vscode.workspace.fs.readFile(targetUri);
-                fileContent = Buffer.from(data).toString('utf8');
-            } catch(e) {}
+            const openDocument = vscode.workspace.textDocuments.find(d => d.uri.toString() === targetUri!.toString());
+            if (openDocument) {
+                fileContent = openDocument.getText();
+            } else {
+                try {
+                    const data = await vscode.workspace.fs.readFile(targetUri);
+                    fileContent = Buffer.from(data).toString('utf8');
+                } catch (e) {
+                    vscode.window.showErrorMessage(`Failed to read target file for batch step generation: ${vscode.workspace.asRelativePath(targetUri)}`);
+                    return undefined;
+                }
+            }
         }
 
         let snippet = '';
@@ -515,20 +522,12 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
 
         const edit = new vscode.WorkspaceEdit();
         if (isNewFile) {
-            edit.createFile(targetUri, { ignoreIfExists: true });
+            edit.createFile(targetUri, { overwrite: false, ignoreIfExists: false });
             edit.insert(targetUri, new vscode.Position(0, 0), snippet.trimEnd() + '\n');
         } else {
-            let lineCount = 0;
-            let lastLineLength = 0;
-            try {
-                const openDoc = await vscode.workspace.openTextDocument(targetUri);
-                lineCount = openDoc.lineCount;
-                lastLineLength = lineCount > 0 ? openDoc.lineAt(lineCount - 1).text.length : 0;
-            } catch(e) {
-                const lines = fileContent.split('\n');
-                lineCount = lines.length;
-                lastLineLength = lines[lines.length - 1].length;
-            }
+            const lines = fileContent.split('\n');
+            const lineCount = lines.length;
+            const lastLineLength = lineCount > 0 ? lines[lineCount - 1].length : 0;
             const lastLine = lineCount > 0 ? lineCount - 1 : 0;
             const endPos = new vscode.Position(lastLine, lastLineLength);
             edit.insert(targetUri, endPos, snippet.trimEnd() + '\n');

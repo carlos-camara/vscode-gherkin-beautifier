@@ -76,6 +76,12 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 If you are in a **Multi-Root Workspace**, and the feature file being edited does not clearly belong to one of the roots, it will explicitly prompt you to select the correct target folder to prevent accidental cross-project modifications.
 **Resolution:** Open the specific `steps.py` file you want to use, save it, and try generating the step again. The extension will pick up that file as the active target. If prompted for a folder, explicitly choose the intended project root.
 
+**Symptom:** Step definition generation aborts safely and shows an error message like "Cannot read target file" instead of inserting the new step.
+**Likely Causes:** The target Python file exists but is unreadable (e.g., due to strict filesystem permissions or a temporarily disconnected remote filesystem like SSH/WSL).
+**Resolution:** This is a deliberate safety mechanism to prevent the extension from assuming the file is empty and injecting conflicting boilerplate. Verify your file permissions and remote connection status, then try generating the step again.
+
+## Test Explorer and Debugging
+
 ## Test Explorer is empty
 **Symptom:** You open the Testing sidebar, but no feature files or scenarios appear.
 **Likely Causes:** The extension hasn't finished indexing, or there are no valid `.feature` files in the workspace.

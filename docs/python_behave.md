@@ -179,6 +179,7 @@ If you write a step in your `.feature` file that doesn't exist yet, Gherkin Powe
 2. Place your cursor on the underlined step and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS).
 3. Select **Generate Python Step Definition**.
 4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and insert the stub into your most recently modified `steps.py` file.
+   - **Safety First**: The generation logic prioritizes reading the in-memory, unsaved state of your open editors instead of the disk state. This strictly prevents concurrent file modification race conditions, guaranteeing your unsaved work is never accidentally overwritten when appending new steps.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" height="340" />

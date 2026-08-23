@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.5] - Unreleased
 
 ### 🚀 Added
+- **Safe Concurrent Code Generation**: Step definition generation (Quick Fix) now enforces strict `{ overwrite: false }` bounds and prioritizes in-memory document state to definitively eliminate silent overwrites and race conditions when bootstrapping new features.
 - **Range Formatting Safe-Unit Model**: Redesigned range formatting expansion to significantly reduce unintended formatting blast radius. The algorithm now groups non-splittable elements (Data Tables, DocStrings, and Tag Blocks) into isolated safe units, ensuring a selection of two independent steps no longer formats the entire encompassing Scenario.
 - **Range Formatting Integrity**: Strengthened the VS Code range formatting API by enforcing strict idempotency guarantees and AST boundary reparsing to prevent syntax corruption during partial formatting.
 - **AST Caching Redesign**: Replaced the rigid count-based AST cache with a dynamic **Weighted LRU Cache** enforcing a 50MB soft memory budget.
@@ -18,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unified Diagnostics Model**: Replaced divergent `linter.enabledRules` and `antiPatterns.rules` configuration objects with a single, authoritative `gherkinPowerTools.rules` dictionary. All diagnostic identifiers have been standardized to `kebab-case` across the AST linter and Anti-Pattern Engine. Legacy settings are automatically migrated at runtime.
 
 ### ✨ Improved
-- **Code Action Reliability**: Completely redesigned how the Linter transmits machine data to Quick Fixes. By leveraging a strict internal `diagnosticRegistry` and validating document versions, the extension now guarantees that generating an undefined step or fixing a typo will never silently apply a stale payload or corrupt your document if you continue typing before clicking the lightbulb.
+- **Code Action Reliability**: Completely redesigned how the Linter transmits machine data to Quick Fixes.
+  By leveraging a strict internal `diagnosticRegistry` and validating document versions, the extension now guarantees that generating an undefined step or fixing a typo will never silently apply a stale payload or corrupt your document if you continue typing before clicking the lightbulb.
 - **Linter Invalidation Redesign**: Replaced instantaneous file-event handlers with a centralized `invalidationQueue`.
   The Linter now intelligently batches multiple file events (e.g., rapid document saves or `stepDefinitionsUpdated`) and executes AST parsing concurrently with a strict concurrency limit (maximum 5 documents).
   This completely eliminates CPU starvation and Extension Host freezing during massive branch switches or global dependency updates.
