@@ -395,42 +395,103 @@ suite('createStepDefinition Test Suite', () => {
         assert.strictEqual(editApplied, false);
     });
 
-    test('Uses fileContent fallback if openTextDocument throws', async () => {
-        let editApplied = false;
+
+
+    test('createStepDefinition aborts safely if target is unreadable', async () => {
         discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
+        let errorShown = false;
+        const originalShowErrorMessage = (vscode.window as any).showErrorMessage;
+        (vscode.window as any).showErrorMessage = async () => {
+            errorShown = true;
+        };
 
-        Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
-            readFile: async () => Buffer.from("def dummy():\n    pass\n")
-        })});
+        const originalFs = vscode.workspace.fs;
+        Object.defineProperty(vscode.workspace, 'fs', {
+            get: () => ({
+                readFile: async () => { throw new Error('Permission denied'); },
+                stat: originalFs.stat,
+                readDirectory: originalFs.readDirectory,
+                writeFile: originalFs.writeFile,
+                createDirectory: originalFs.createDirectory,
+                delete: originalFs.delete,
+                rename: originalFs.rename,
+                copy: originalFs.copy
+            }),
+            configurable: true
+        });
 
+        const result = await createStepDefinition('I test unreadable file', 'Given');
+
+        Object.defineProperty(vscode.workspace, 'fs', { get: () => originalFs, configurable: true });
+        (vscode.window as any).showErrorMessage = originalShowErrorMessage;
+
+        assert.strictEqual(result, undefined, 'Should return undefined if read fails');
+        assert.ok(errorShown, 'Should display an error message');
+    });
+
+    test('createStepDefinition prioritizes unsaved editor content over disk', async () => {
+        discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
+        let editApplied = false;
         let insertedText = '';
+
+        const originalTextDocuments = vscode.workspace.textDocuments;
+        Object.defineProperty(vscode.workspace, 'textDocuments', {
+            get: () => [{
+                uri: vscode.Uri.file('/tmp/file1.py'),
+                getText: () => 'from behave import *\n\n@given("existing")\ndef existing(context):\n    pass\n',
+                lineCount: 5,
+                lineAt: () => ({text: '    pass'})
+            }],
+            configurable: true
+        });
+
+        const originalFs = vscode.workspace.fs;
+        Object.defineProperty(vscode.workspace, 'fs', {
+            get: () => ({
+                readFile: async () => { throw new Error('Should not be called because open doc exists'); },
+                stat: originalFs.stat,
+                readDirectory: originalFs.readDirectory,
+                writeFile: originalFs.writeFile,
+                createDirectory: originalFs.createDirectory,
+                delete: originalFs.delete,
+                rename: originalFs.rename,
+                copy: originalFs.copy
+            }),
+            configurable: true
+        });
+
+        const originalApplyEdit = vscode.workspace.applyEdit;
         (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {
             editApplied = true;
-            insertedText = edit.entries()[0][1][0].newText;
+            for (const [, edits] of (edit as any).entries()) {
+                insertedText = edits[0].newText;
+            }
             return true;
         };
 
-        let openCallCount = 0;
-        (vscode.workspace as any).openTextDocument = async () => {
-            openCallCount++;
-            if (openCallCount === 1) {
-                // First call throws (simulating failure to get line count from open doc)
-                throw new Error("Cannot open doc");
-            } else {
-                // Second call (for revealing) succeeds
-                return createMockDocument('', 'file:///tmp/file1.py');
-            }
-        };
+        const originalOpenTextDocument = vscode.workspace.openTextDocument;
+        (vscode.workspace as any).openTextDocument = async () => ({
+            lineCount: 1,
+            lineAt: () => ({text: ''})
+        });
 
+        const originalShowTextDocument = vscode.window.showTextDocument;
         (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
             revealRange: () => {}
-        } as any);
+        });
 
-        await createStepDefinition('I test fallback doc', 'Given');
+        await createStepDefinition('I test unsaved content', 'Given');
+
+        Object.defineProperty(vscode.workspace, 'textDocuments', { get: () => originalTextDocuments, configurable: true });
+        Object.defineProperty(vscode.workspace, 'fs', { get: () => originalFs, configurable: true });
+        (vscode.workspace as any).applyEdit = originalApplyEdit;
+        (vscode.workspace as any).openTextDocument = originalOpenTextDocument;
+        (vscode.window as any).showTextDocument = originalShowTextDocument;
 
         assert.ok(editApplied);
-        assert.ok(insertedText.includes('def i_test_fallback_doc(context):'));
+        assert.ok(insertedText.includes('def i_test_unsaved_content(context):'));
+        assert.strictEqual(insertedText.startsWith('\n@given('), true, 'Should append with correct newline based on open document text');
     });
 });
 
