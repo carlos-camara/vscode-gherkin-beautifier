@@ -13,12 +13,16 @@ interface CacheEntry {
     version: number;
     promise: Promise<ParseResult>;
     lastAccessed: number;
+    sizeBytes: number;
 }
 
 class AstRepository {
     private cache = new Map<string, CacheEntry>();
     private eventBusDisposable?: vscode.Disposable;
-    private maxCacheSize = 100;
+    
+    // Soft memory budget (approx. 50MB)
+    private maxCacheBytes = 50 * 1024 * 1024;
+    private currentCacheBytes = 0;
 
     /**
      * Subscribes to the Workspace Event Bus to automatically invalidate caches on file changes.
@@ -50,16 +54,33 @@ class AstRepository {
             return cached.promise;
         }
 
+        // Handle version mismatch eviction
+        if (cached && cached.version !== document.version) {
+            this.currentCacheBytes -= cached.sizeBytes;
+            this.cache.delete(uriStr);
+        }
+
         // Cache miss or version mismatch: parse and cache
         metricsLogger.recordCacheMiss();
+        
+        // Use a 20x multiplier of the text length as a safe proxy for the JS heap size of the AST
+        const estimatedSizeBytes = document.getText().length * 20;
+        
         const promise = parseGherkin(document.getText());
-        this.cache.set(uriStr, {
+        
+        const entry: CacheEntry = {
             version: document.version,
             promise,
-            lastAccessed: Date.now()
-        });
+            lastAccessed: Date.now(),
+            sizeBytes: estimatedSizeBytes
+        };
+        
+        this.cache.set(uriStr, entry);
+        this.currentCacheBytes += estimatedSizeBytes;
+        
+        metricsLogger.updateCacheMemory(this.currentCacheBytes);
 
-        // Optional: evict old entries if cache grows too large
+        // Evict old entries if cache grows beyond soft memory budget
         this.evictIfNecessary();
 
         return promise;
@@ -69,7 +90,13 @@ class AstRepository {
      * Invalidates the cache for a specific document URI.
      */
     public invalidate(uri: vscode.Uri): void {
-        this.cache.delete(uri.toString());
+        const uriStr = uri.toString();
+        const cached = this.cache.get(uriStr);
+        if (cached) {
+            this.currentCacheBytes -= cached.sizeBytes;
+            this.cache.delete(uriStr);
+            metricsLogger.updateCacheMemory(this.currentCacheBytes);
+        }
     }
 
     /**
@@ -77,6 +104,8 @@ class AstRepository {
      */
     public clear(): void {
         this.cache.clear();
+        this.currentCacheBytes = 0;
+        metricsLogger.updateCacheMemory(this.currentCacheBytes);
     }
 
     public dispose(): void {
@@ -85,17 +114,27 @@ class AstRepository {
     }
 
     /**
-     * LRU eviction strategy for large workspaces with many un-opened feature files.
+     * Weighted LRU eviction strategy. 
+     * Keeps removing the oldest elements until the memory budget is respected (plus a 25% buffer).
      */
     private evictIfNecessary(): void {
-        if (this.cache.size > this.maxCacheSize) {
+        if (this.currentCacheBytes > this.maxCacheBytes) {
             const entries = Array.from(this.cache.entries());
             entries.sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
             
-            // Remove oldest half
-            for (let i = 0; i < entries.length / 2; i++) {
-                this.cache.delete(entries[i][0]);
+            let i = 0;
+            // Evict until we are down to 75% of the max budget to prevent thrashing
+            const targetBytes = this.maxCacheBytes * 0.75;
+            
+            while (this.currentCacheBytes > targetBytes && i < entries.length) {
+                const [uriStr, entry] = entries[i];
+                this.cache.delete(uriStr);
+                this.currentCacheBytes -= entry.sizeBytes;
+                metricsLogger.recordCacheEviction();
+                i++;
             }
+            
+            metricsLogger.updateCacheMemory(this.currentCacheBytes);
         }
     }
 }

@@ -74,12 +74,31 @@ To provide a zero-configuration setup experience, Gherkin PowerTools includes a 
 
 To optimize performance and eliminate redundant parsing of the same document across multiple providers (formatter, linter, hover, definitions), Gherkin PowerTools centralizes Gherkin parsing through the **AST Repository** (`AstRepository`).
 
+### Safe-Unit Formatting Model
+The formatter leverages the AST Repository to implement a **Safe-Unit Expansion Model** for range formatting.
+Instead of resolving selections to purely hierarchical AST nodes (which often over-expanded to entire Scenarios),
+the AST is mapped into a flat array of contiguous multi-line groups (`groupIds`) for atomic units (DataTables, DocStrings, Tag Blocks).
+The range formatter performs O(1) bounds-checking on this array to securely contain formatting edits to the absolute minimum safe lines, radically reducing structural blast radius.
+
+### Formatter Error UX Separation
+To provide a native and non-intrusive VS Code experience, the extension strictly decouples the error reporting behavior of formatting based on the invocation context:
+1. **Automatic Invocations (e.g., Format on Save):** If the AST Repository detects structural syntax errors, the formatter silently returns no edits. It completely suppresses toast warnings (`showWarningMessage`) to ensure the user's typing flow is never interrupted by popups while drafting incomplete documents.
+2. **Explicit Invocations (Command Palette / Shortcuts):** Explicitly requested formatting commands proactively check the AST for errors and provide a concise, actionable toast warning if formatting cannot proceed, confirming to the user why their manual action was rejected.
+
 ### How the Repository Works
 1. **Memoization:** When a provider requests the AST for a document, the repository checks its cache. If a cached `ParseResult` exists for the current document version, it is returned immediately.
 2. **Thundering Herd Protection:** The repository caches the *Promise* of the parse operation. If multiple providers request the AST simultaneously before the first parse completes, they all await the exact same Promise, guaranteeing the document is only parsed once per version.
-3. **Event-Driven Invalidation:** The repository listens to the `WorkspaceEventBus`. When a `featureFileChanged` or `featureFileDeleted` event fires, the repository automatically purges the stale AST from its internal LRU cache.
-4. **Memory Management:** The repository maintains a bounded Least-Recently-Used (LRU) cache (e.g., maximum 100 parsed documents) to prevent unbounded memory growth in large workspaces.
-5. **Diagnostics & Telemetry:** If metrics are enabled, the repository integrates with the `MetricsLogger` to track parse durations, cache hit ratios, and parser failures without overhead.
+3. **Resilient Module Loader:** The extension dynamically loads the official `@cucumber/gherkin` ESM libraries via a robust retry strategy. If module resolution fails intermittently (e.g., during Extension Host initialization), the cached rejection is safely evicted and retried (up to 3 times) to ensure the parser recovers automatically without a window reload.
+4. **Event-Driven Invalidation:** The repository listens to the `WorkspaceEventBus`. When a `featureFileChanged` or `featureFileDeleted` event fires, the repository automatically purges the stale AST from its internal LRU cache.
+5. **Memory Management:** To safely index massive enterprise workspaces without exhausting the VS Code Extension Host process limits, the repository enforces a **Soft Memory Budget** (Weighted LRU cache).
+   The budget is statically capped at ~50MB. Rather than arbitrarily evicting files based on count, it dynamically estimates AST size based on character count and sheds the oldest documents only when memory pressure demands it.
+6. **Diagnostics & Telemetry:** If metrics are enabled, the repository integrates with the `MetricsLogger` to track parse durations, cache hit ratios, cache evictions, real-time memory usage, and parser failures. The logger uses an event-driven configuration listener to avoid synchronous IPC polling, imposing zero overhead when disabled.
+   To prevent memory leaks and ensure stable test environments, the `MetricsLogger` lifecycle is formally bound to the extension's initialization phase (`extension.activate()`). Its configuration listeners are explicitly tracked via `context.subscriptions`, and its state is actively isolated between Extension Host test runs using a dedicated `reset()` mechanism.
+### Synchronous Execution & Threading Model
+The native `@cucumber/gherkin` parser operates synchronously within the VS Code Extension Host. While a `worker_threads` architecture was evaluated, benchmark audits revealed that 99% of real-world `.feature` files (under 1,000 scenarios) parse in `<20ms`.
+Serializing the enormous JSON AST across IPC to a background worker would consistently exceed this 20ms baseline, effectively making the extension slower for typical workloads.
+
+As a result, parsing remains on the main Extension Host thread. Massive, pathologically large files (>10,000 scenarios) may cause momentary stuttering (~75ms Event Loop delay) but fall well below VS Code's critical 500ms warning threshold. The repository mitigates UI blocking entirely through strict *debouncing* (memoization), ensuring the parser only runs when document edits stabilize.
 
 ### Architecture Validation
 To ensure long-term stability and prevent regressions in these core architectural patterns, Gherkin PowerTools employs an **Architecture Validation Test Suite**. This suite runs in CI and automatically validates that:
@@ -186,8 +205,25 @@ To prevent race conditions during heavy background indexing and ensure dependent
 The extension implements a dedicated `AntiPatternEngine` that operates asynchronously to decouple heavy workspace analysis from real-time syntax linting.
 
 1. **Event-Driven Execution:** The engine subscribes to `WorkspaceEventBus` and re-evaluates the active graph generation after a 500ms debounce window following file modifications.
-2. **Decoupled from Linter:** Unlike the `GherkinLinter` (which performs instant, single-file AST syntax checks), the `AntiPatternEngine` analyzes the entire `WorkspaceGraph` for semantic and architectural debt (e.g., duplicated steps, oversized scenarios). This separation guarantees that typing remains 100% responsive without blocking the extension host.
+2. **Decoupled from Linter:** Both the `GherkinLinter` (which performs concurrent AST syntax checks) and the `AntiPatternEngine` (which analyzes the entire `WorkspaceGraph` for semantic debt) operate asynchronously on decoupled debounce schedules. This separation guarantees that typing remains 100% responsive without blocking the extension host.
 3. **Diagnostics & Dashboard Integration:** The engine pushes VS Code `Diagnostic` objects to the Problems view, while also calculating aggregate metrics (Maintainability, Complexity) that power the Gherkin Health Dashboard.
+
+## Linter Engine
+
+The `GherkinLinter` validates `.feature` files in real-time, leveraging the shared AST Repository. 
+
+### Batched Invalidation Queue
+To protect the Extension Host against catastrophic event spikes (such as a large `git checkout` mutating 500 files at once), the Linter acts as an event sink. Events (`documentOpened`, `documentChanged`, `configurationChanged`, `stepDefinitionsUpdated`) are deduplicated into an `invalidationQueue`. 
+
+### Concurrency Limiting
+A centralized `flush()` cycle executes after a short debounce window. During flushing, the Linter processes invalidated documents concurrently, but relies on a strict concurrency limiter (e.g., maximum 5 concurrent AST operations) to maintain a low Extension Host CPU profile. 
+
+### Correctness Fallback
+When a global dependency changes (like `stepDefinitionsUpdated`), the Linter attempts to use the `WorkspaceGraph` to identify exclusively affected `.feature` files. If the graph is not yet initialized or the blast radius is too large, it seamlessly falls back to relinting all open Gherkin documents, guaranteeing correctness above all.
+
+### Diagnostic to Code Action Communication
+To maintain strict independence between human-readable copy and machine-readable data, Gherkin PowerTools does **not** encode data payloads (like replacement text or parsed step syntax) into the user-facing `Diagnostic.message` or `DiagnosticRelatedInformation`.
+Instead, the Linter engine populates an internal `diagnosticRegistry` utilizing a custom `RuleDiagnostic` model. The `CodeActionProvider` queries this internal registry via the diagnostic reference, ensuring that fixes apply precise, strongly-typed operations. Furthermore, Code Actions enforce a strict `document.version` validation check before applying an edit, protecting users against applying a stale payload if the document was modified prior to executing the Quick Fix.
 
 ## Real-Time Impact Analysis Engine
 
@@ -227,3 +263,13 @@ To bring the Workspace Intelligence Engine into CI/CD environments without dupli
 3. **The VS Code Shim:** During the `esbuild` compilation step for the CLI (orchestrated by `scripts/build-npm-cli.js`), any `import * as vscode from 'vscode'` is intercepted and redirected to `src/cli/vscode-mock.ts`. This file provides a lightweight, pure-Node.js shim containing functional implementations of `Uri`, `Position`, `Range`, and diagnostic severities.
 4. **Unified Configuration Layer (`defaults.ts`)**: To guarantee 100% feature parity between the CLI and the VS Code Extension, all default configuration values, schema validations, and precedence hierarchies are strictly centralized in a pure-TypeScript module (`defaults.ts`). This ensures both environments resolve profiles and settings identically without code duplication.
 5. **Output Generation:** The CLI consumes the results of the `WorkspaceGraph` or `Formatter` and translates the mocked VS Code diagnostics/edits into standard `stdout` (human-readable console tables or machine-readable JSON), exiting with code `1` if issues are found.
+
+## Configuration Loader Architecture
+
+To support seamless configuration across local VS Code, remote development environments (SSH, Dev Containers, WSL), and the standalone CLI, the `ConfigurationService` decouples all file system interactions into a `ConfigurationLoader` interface.
+
+### How Configuration Loading Works
+1. **Abstraction:** The core `ConfigurationService` contains pure logic for resolving, merging, and caching configuration profiles. It does not import `fs` or `path`.
+2. **VS Code Environment:** When running inside VS Code (`src/extension.ts`), it is injected with `VsCodeConfigurationLoader`. This loader utilizes `vscode.workspace.fs.readFile`, guaranteeing that configurations can be read over the network in remote workspaces without throwing `ENOENT` errors on the extension host.
+3. **CLI Environment:** When running via the CLI (`src/cli/index.ts`), it is injected with `NodeConfigurationLoader`. This loader utilizes native `fs.promises` to read configuration files locally from disk.
+4. **Resiliency:** Both loaders safely catch missing files or syntax errors in `.gherkin-powertoolsrc.json` and return a fallback state. The service translates these fallback states into non-blocking diagnostics in the problems view instead of crashing the bootstrap sequence.

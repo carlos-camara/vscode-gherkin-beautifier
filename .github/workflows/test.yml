@@ -56,7 +56,8 @@ jobs:
           always() &&
           runner.os == 'Linux' &&
           github.event_name == 'pull_request'
-        uses: EnricoMi/publish-unit-test-result-action@b3f8796819acf652cecbf27a64fa9ac8d7e137ee # v2
+        # v2
+        uses: EnricoMi/publish-unit-test-result-action@b3f8796819acf652cecbf27a64fa9ac8d7e137ee
         with:
           files: "test-results/**/*.xml"
           check_name: "Unit Test Results (${{ matrix.os }})"
@@ -68,7 +69,8 @@ jobs:
           always() &&
           runner.os == 'Windows' &&
           github.event_name == 'pull_request'
-        uses: EnricoMi/publish-unit-test-result-action/windows@b3f8796819acf652cecbf27a64fa9ac8d7e137ee # v2
+        # v2
+        uses: EnricoMi/publish-unit-test-result-action/windows@d0a4676d0e0b938bc201470d88276b7c74c712b3
         with:
           files: 'test-results/**/*.xml'
           check_name: "Unit Test Results (${{ matrix.os }})"
@@ -80,7 +82,8 @@ jobs:
           always() &&
           runner.os == 'macOS' &&
           github.event_name == 'pull_request'
-        uses: EnricoMi/publish-unit-test-result-action/macos@b3f8796819acf652cecbf27a64fa9ac8d7e137ee # v2
+        # v2
+        uses: EnricoMi/publish-unit-test-result-action/macos@d0a4676d0e0b938bc201470d88276b7c74c712b3
         with:
           files: "test-results/**/*.xml"
           check_name: "Unit Test Results (${{ matrix.os }})"

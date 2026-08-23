@@ -11,7 +11,37 @@ import { WorkspaceGraph } from '../graph';
 import { AntiPatternEngine } from '../antiPatternEngine';
 import { calculateHealthMetrics } from '../statistics';
 import { GherkinFormattingEditProvider } from '../formatter';
-import { ConfigurationService, DEFAULT_RULE_CONFIG } from '../configuration';
+import { ConfigurationService, DEFAULT_RULE_CONFIG, ConfigurationLoader, ProjectConfiguration } from '../configuration';
+import * as fs from 'fs';
+
+class NodeConfigurationLoader implements ConfigurationLoader {
+    async load(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<ProjectConfiguration | null> {
+        if (!workspaceFolder) return null;
+        
+        try {
+            const configPath = path.join(workspaceFolder.uri.fsPath, '.gherkin-powertoolsrc.json');
+            if (!fs.existsSync(configPath)) {
+                return null;
+            }
+            
+            const content = await fs.promises.readFile(configPath, 'utf8');
+            let parsed = null;
+            try {
+                parsed = JSON.parse(content);
+            } catch (e) {
+                // Return content anyway for diagnostics
+            }
+            
+            return {
+                content,
+                parsed,
+                uri: vscode.Uri.file(configPath)
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+}
 
 const program = new Command();
 
@@ -105,7 +135,9 @@ program.command('format')
     .action(async (files: string[], options) => {
         try {
             const diagCollection = vscode.languages.createDiagnosticCollection('gherkin-pt');
-            const configService = new ConfigurationService(diagCollection);
+            const configLoader = new NodeConfigurationLoader();
+            const configService = new ConfigurationService(diagCollection, configLoader);
+            await configService.initialize();
             const formatter = new GherkinFormattingEditProvider(configService);
             
             let targetFiles: vscode.Uri[] = [];
