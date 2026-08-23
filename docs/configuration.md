@@ -114,28 +114,35 @@ Individual settings (like `indentation.steps`) always override the profile defau
 ## Unified Diagnostics Rules
 
 ### `gherkinPowerTools.rules`
-- **Purpose:** The central, authoritative configuration for diagnostic severities across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to severity levels.
-- **Type:** `object` (Key-value pairs of rule ID to severity level)
-- **Default:**
+- **Purpose:** The central, authoritative configuration for diagnostic severities and heuristic parameters across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to either a severity string or a configuration object.
+- **Type:** `object` (Key-value pairs of rule ID to severity level or configuration object)
+- **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+- **Example:**
   ```json
   {
       "syntax-error": "error",
-      "missing-colon": "error",
-      "invalid-keyword": "error",
-      "table-inconsistency": "error",
-      "scenario-with-examples": "warning",
-      "undefined-step": "error",
       "ambiguous-step": "error",
-      "oversized-scenario": "warning",
-      "oversized-feature": "info",
-      "duplicated-steps": "error",
-      "unused-steps": "info",
-      "excessive-tags": "info",
-      "inconsistent-formatting": "info",
-      "poor-maintainability": "warning"
+      "oversized-scenario": {
+          "severity": "warning",
+          "maxSteps": 20
+      },
+      "oversized-feature": {
+          "severity": "info",
+          "maxSteps": 100
+      }
   }
   ```
-- **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+
+### Anti-Pattern Team Profiles
+You can also leverage Team Profiles to automatically set severity thresholds for subjective heuristics without manually overriding each rule:
+- **`strict`**: Enforces best-practices vigorously (e.g. `oversized-scenario` defaults to `error`). Ideal for mature projects or strict CI gates.
+- **`default`**: A balanced profile providing warnings for common anti-patterns without failing builds.
+- **`relaxed`**: Mutes most maintainability and style warnings. Ideal for prototyping or onboarding legacy test suites.
+
+To use a profile, set it in your configuration (this applies strictly to rule severities, unlike formatting profiles):
+```json
+"gherkinPowerTools.antiPatterns.profile": "strict"
+```
 
 ---
 

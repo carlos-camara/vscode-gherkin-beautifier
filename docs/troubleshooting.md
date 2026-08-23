@@ -55,6 +55,19 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps`, `ambiguous-steps`, and `syntax-errors` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the highly-granular Quick Fixes).
 **Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.rules`.
 
+## Rule Configuration (like maxSteps) is ignored
+**Symptom:** You configured a rule like `oversized-scenario` to use a custom threshold (e.g. `maxSteps: 20`), but the engine still uses the default threshold.
+**Likely Causes:** You might have used the legacy string-based format or incorrectly nested the object.
+**Resolution:** Ensure you are using the Object-based configuration correctly in `gherkinPowerTools.rules`. It must look like this:
+```json
+"gherkinPowerTools.rules": {
+    "oversized-scenario": {
+        "severity": "warning",
+        "maxSteps": 20
+    }
+}
+```
+
 ## Yellow line (diagnostics) doesn't appear immediately on file open
 **Symptom:** You open a feature file and the yellow squiggly lines for undefined or ambiguous steps do not appear until you type a character or switch files back and forth.
 **Resolution:** This behavior was fixed in v1.8.4. The real-time Linter now triggers `immediateLint` directly on file load, bypassing standard debounce delays. Ensure you are on the latest version of the extension.

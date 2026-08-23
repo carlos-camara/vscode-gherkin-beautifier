@@ -72,7 +72,7 @@ program.command('analyze')
             
             const metrics = await calculateHealthMetrics(graph, symbolCache);
             const engine = new AntiPatternEngine();
-            const antiPatterns = engine.generateAntiPatterns(graph, metrics, DEFAULT_RULE_CONFIG);
+            const antiPatterns = engine.generateAntiPatterns(graph, metrics, { rules: DEFAULT_RULE_CONFIG });
 
             if (options.json) {
                 console.log(JSON.stringify(antiPatterns, null, 2));
@@ -80,11 +80,15 @@ program.command('analyze')
             } else {
                 console.log(`\nFound ${antiPatterns.length} anti-pattern(s):\n`);
                 antiPatterns.forEach(r => {
-                    console.log(`[${r.severity.toUpperCase()}] ${r.title}`);
-                    console.log(`  ${r.explanation}`);
-                    console.log(`  Fix: ${r.suggestedFix}`);
-                    if (r.affectedFiles) {
-                        console.log(`  Files:`);
+                    console.log(`[${r.severity.toUpperCase()}] ${r.title} (${r.category})`);
+                    console.log(`  What: ${r.explanation}`);
+                    console.log(`  Why:  ${r.rationale}`);
+                    console.log(`  Fix:  ${r.suggestedFix}`);
+                    if (r.affectedItems && r.affectedItems.length > 0) {
+                        console.log(`  Where:`);
+                        r.affectedItems.forEach(i => console.log(`   - ${i.label} (${i.uri}:${(i.line || 0) + 1})`));
+                    } else if (r.affectedFiles && r.affectedFiles.length > 0) {
+                        console.log(`  Where:`);
                         r.affectedFiles.forEach(f => console.log(`   - ${f}`));
                     }
                     console.log('');

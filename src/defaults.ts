@@ -1,6 +1,6 @@
 import { RULES_REGISTRY } from './rules';
 
-const defaultRules: Record<string, string> = {};
+const defaultRules: Record<string, any> = {};
 for (const [key, rule] of Object.entries(RULES_REGISTRY)) {
     if (rule.enabledByDefault) {
         defaultRules[key] = rule.defaultSeverity;
@@ -30,4 +30,4 @@ export const DEFAULT_CONFIG = {
     featureGlobs: ["**/*.feature"]
 };
 
-export const DEFAULT_RULE_CONFIG: Record<string, string> = defaultRules;
+export const DEFAULT_RULE_CONFIG: Record<string, any> = defaultRules;

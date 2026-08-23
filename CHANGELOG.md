@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.8.5] - Unreleased
 
 ### 🚀 Added
+- **Anti-Pattern Engine Redesign**: Completely overhauled the BDD Anti-Pattern detection engine with a structured rule contract separating objective Correctness errors from subjective Reliability, Maintainability, and Style heuristics.
+- **Dynamic Team Profiles**: Introduced Team Profile resolution (`strict`, `default`, `relaxed`) for Anti-Pattern rules. The engine now dynamically scales severities to match your team's quality gates without configuring individual rules.
+- **Object-based Rule Configuration**: `gherkinPowerTools.rules` now accepts configuration objects (e.g., `{ "severity": "error", "maxSteps": 20 }`), allowing teams to easily tweak subjective thresholds like `maxSteps` without being overwhelmed by low-value settings.
 - **Workspace-Aware Step Destination**: Redesigned step definition generation to intelligently infer the optimal destination directory based on the project's `stepGlobs` configuration. The extension now respects your workspace architecture instead of blindly writing to `features/steps`, falling back to a clean QuickPick menu to resolve ambiguity.
 - **Safe Concurrent Code Generation**: Step definition generation (Quick Fix) now enforces strict `{ overwrite: false }` bounds and prioritizes in-memory document state to definitively eliminate silent overwrites and race conditions when bootstrapping new features.
 - **Range Formatting Safe-Unit Model**: Redesigned range formatting expansion to significantly reduce unintended formatting blast radius. The algorithm now groups non-splittable elements (Data Tables, DocStrings, and Tag Blocks) into isolated safe units, ensuring a selection of two independent steps no longer formats the entire encompassing Scenario.

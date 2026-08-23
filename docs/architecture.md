@@ -202,11 +202,13 @@ To prevent race conditions during heavy background indexing and ensure dependent
 
 ### BDD Anti-Pattern Detection Engine
 
-The extension implements a dedicated `AntiPatternEngine` that operates asynchronously to decouple heavy workspace analysis from real-time syntax linting.
+The extension implements a dedicated `AntiPatternEngine` that operates asynchronously to decouple heavy workspace analysis from real-time syntax linting. The engine was recently redesigned to use a strongly typed Rule Contract using the Strategy pattern.
 
-1. **Event-Driven Execution:** The engine subscribes to `WorkspaceEventBus` and re-evaluates the active graph generation after a 500ms debounce window following file modifications.
-2. **Decoupled from Linter:** Both the `GherkinLinter` (which performs concurrent AST syntax checks) and the `AntiPatternEngine` (which analyzes the entire `WorkspaceGraph` for semantic debt) operate asynchronously on decoupled debounce schedules. This separation guarantees that typing remains 100% responsive without blocking the extension host.
-3. **Diagnostics & Dashboard Integration:** The engine pushes VS Code `Diagnostic` objects to the Problems view, while also calculating aggregate metrics (Maintainability, Complexity) that power the Gherkin Health Dashboard.
+1. **Rule Contract (`AntiPatternRule<T>`)**: Every rule implements a standardized contract enforcing separation between objective Correctness errors and subjective heuristics (Reliability, Maintainability, Style).
+2. **Dynamic Configuration & Profiles**: Rules define default severities and parameters via `RuleMetadata`. The engine supports Object-based configuration and Team Profiles (`strict`, `default`, `relaxed`) to dynamically scale subjective thresholds (like `maxSteps`) without manual configuration noise.
+3. **Event-Driven Execution**: The engine subscribes to `WorkspaceEventBus` and re-evaluates the active graph generation after a 500ms debounce window following file modifications.
+4. **Decoupled from Linter**: Both the `GherkinLinter` (which performs concurrent AST syntax checks) and the `AntiPatternEngine` (which analyzes the entire `WorkspaceGraph` for semantic debt) operate asynchronously on decoupled debounce schedules. This separation guarantees that typing remains 100% responsive without blocking the extension host.
+5. **Diagnostics & Dashboard Integration**: The engine pushes VS Code `Diagnostic` objects to the Problems view, while also calculating aggregate metrics (Maintainability, Complexity) that power the Gherkin Health Dashboard.
 
 ## Linter Engine
 

@@ -174,21 +174,7 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
 
 export type RuleId = keyof typeof RULES_REGISTRY;
 
-/**
- * Normalizes a rule ID by checking aliases.
- * Returns the stable ID if valid, or null if totally unknown.
- */
-export function normalizeRuleId(id: string): string | null {
-    if (RULES_REGISTRY[id]) {
-        return id;
-    }
-    for (const [stableId, rule] of Object.entries(RULES_REGISTRY)) {
-        if (rule.aliases.includes(id)) {
-            return stableId;
-        }
-    }
-    return null;
-}
+
 
 export function isValidRule(id: string): id is RuleId {
     return id in RULES_REGISTRY;

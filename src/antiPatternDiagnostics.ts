@@ -57,13 +57,14 @@ export class AntiPatternDiagnosticsManager {
                 return;
             }
 
-            let ruleConfig = config.get<Record<string, string>>('rules', {});
+            let ruleConfig = config.get<Record<string, any>>('rules', {});
             // Fallback for deprecated config
             if (!ruleConfig || Object.keys(ruleConfig).length === 0) {
-                ruleConfig = antiPatternsConfig.get<Record<string, string>>('rules', {});
+                ruleConfig = antiPatternsConfig.get<Record<string, any>>('rules', {});
             }
             const metrics = await calculateHealthMetrics(this.graph, this.symbolCache);
-            let antiPatterns = this.engine.generateAntiPatterns(this.graph, metrics, ruleConfig);
+            const profile = config.get<string>('profile', 'default');
+            let antiPatterns = this.engine.generateAntiPatterns(this.graph, metrics, { profile: profile as any, rules: ruleConfig });
             
             // Filter out patterns that are already handled in real-time by the Linter 
             // to prevent double-squiggles in the editor.
@@ -102,7 +103,7 @@ export class AntiPatternDiagnosticsManager {
                     const range = new vscode.Range(line, 0, line, 200); // Highlight the whole line roughly
                     
                     const inlineMessage = item.description || pattern.explanation;
-                    const message = `${pattern.title}: ${inlineMessage}\n💡 Fix: ${pattern.suggestedFix}`;
+                    const message = `[${pattern.category}] ${pattern.title}\n${inlineMessage}\n\nRationale: ${pattern.rationale}\n💡 Fix: ${pattern.suggestedFix}`;
                     
                     const diag = new vscode.Diagnostic(range, message, vscodeSeverity);
                     diag.source = 'Gherkin PowerTools';
@@ -118,7 +119,7 @@ export class AntiPatternDiagnosticsManager {
                     }
                     const range = new vscode.Range(0, 0, 0, 100);
                     
-                    const message = `${pattern.title}: ${pattern.explanation}\n💡 Fix: ${pattern.suggestedFix}`;
+                    const message = `[${pattern.category}] ${pattern.title}\n${pattern.explanation}\n\nRationale: ${pattern.rationale}\n💡 Fix: ${pattern.suggestedFix}`;
                     const diag = new vscode.Diagnostic(range, message, vscodeSeverity);
                     diag.source = 'Gherkin PowerTools';
                     diag.code = pattern.id;

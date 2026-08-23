@@ -50,7 +50,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
     });
 
     test('Returns no anti-patterns for perfect health', () => {
-        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, { rules: ruleConfig as any });
         assert.strictEqual(ap.length, 0);
     });
 
@@ -58,7 +58,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
         const metrics = { ...baseMetrics, undefinedSteps: [
             { keyword: 'Given', text: 'I am undefined', uri: 'file:///test.feature', line: 1 } as any
         ]};
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
         assert.strictEqual(ap.length, 1);
         assert.strictEqual(ap[0].title, 'Undefined Steps');
         assert.strictEqual(ap[0].severity, 'error');
@@ -67,7 +67,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
     });
 
     test('OversizedScenarioRule does not crash if graph is empty', () => {
-        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, { rules: ruleConfig as any });
         assert.strictEqual(ap.length, 0);
     });
     
@@ -85,7 +85,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
             ]
         } as any};
         
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
         assert.strictEqual(ap.length, 1);
         assert.strictEqual(ap[0].title, 'Ambiguous Steps in Feature Files');
         assert.strictEqual(ap[0].severity, 'error');
@@ -96,7 +96,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
         const metrics = { ...baseMetrics, largestFeatures: [
             { uri: 'file:///huge.feature', name: 'Huge Feature', size: 55 }
         ]};
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
         const oversizedFeat = ap.find(r => r.title.startsWith('Oversized Feature'));
         assert.ok(oversizedFeat);
         assert.strictEqual(oversizedFeat.severity, 'info');
@@ -107,7 +107,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
         const metrics = { ...baseMetrics, largestScenarios: [
             { uri: 'file:///huge.feature', line: 1, name: 'Huge Scenario', size: 25 }
         ]};
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
         const oversizedScen = ap.find(r => r.title.startsWith('Oversized Scenario'));
         assert.ok(oversizedScen);
         assert.strictEqual(oversizedScen.severity, 'warning');
@@ -127,7 +127,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
                 }
             ]
         } as any};
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
         const dupRec = ap.find(r => r.title.startsWith('Duplicate Step Definition'));
         assert.ok(dupRec);
         assert.strictEqual(dupRec.severity, 'error');
@@ -141,7 +141,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
                 { stepDef: { uri: 'file:///unused.py', line: 1, pattern: 'unused pattern' } }
             ]
         } as any};
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
         const unusedRec = ap.find(r => r.title === 'Unused Step Definitions');
         assert.ok(unusedRec);
         assert.strictEqual(unusedRec.severity, 'info');
@@ -152,7 +152,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
         mockGraph.setNodeForTest({
             id: 'scen1', type: 'Scenario', uri: 'file:///tags.feature', tags: ['@t1', '@t2', '@t3', '@t4', '@t5', '@t6'], name: 'Tagged Scenario'
         } as any as any);
-        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, { rules: ruleConfig as any });
         const tagRec = ap.find(r => r.title.startsWith('Excessive Tags on Scenario'));
         assert.ok(tagRec);
         assert.strictEqual(tagRec.severity, 'info');
@@ -162,7 +162,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
 
     test('PoorMaintainabilityRule triggers when maintainability < 60', () => {
         const metrics = { ...baseMetrics, scores: { complexity: 0, maintainability: 50, health: 50 }};
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
         const maintRec = ap.find(r => r.title === 'Low Maintainability Score');
         assert.ok(maintRec);
         assert.strictEqual(maintRec.severity, 'warning');
@@ -172,7 +172,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
         mockGraph.setNodeForTest({
             id: 'step1', type: 'Step', uri: 'file:///format.feature', text: 'Step with space '
         } as any as any);
-        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, ruleConfig);
+        const ap = engine.generateAntiPatterns(mockGraph, baseMetrics, { rules: ruleConfig as any });
         const formatRec = ap.find(r => r.title === 'Inconsistent Formatting: Trailing Spaces');
         assert.ok(formatRec);
         assert.strictEqual(formatRec.severity, 'info');
@@ -185,11 +185,11 @@ suite('Anti-Pattern Engine Test Suite', () => {
             { uri: 'file:///huge.feature', line: 1, name: 'Huge Scenario', size: 25 }
         ]};
         const customConfig = { ...ruleConfig, "oversized-scenario": "off" };
-        const apOff = engine.generateAntiPatterns(mockGraph, metrics, customConfig);
+        const apOff = engine.generateAntiPatterns(mockGraph, metrics, { rules: customConfig as any });
         assert.strictEqual(apOff.length, 0, 'Should be 0 because rule is turned off');
         
         const customConfigError = { ...ruleConfig, "oversized-scenario": "error" };
-        const apError = engine.generateAntiPatterns(mockGraph, metrics, customConfigError);
+        const apError = engine.generateAntiPatterns(mockGraph, metrics, { rules: customConfigError as any });
         assert.strictEqual(apError.length, 1);
         assert.strictEqual(apError[0].severity, 'error');
     });

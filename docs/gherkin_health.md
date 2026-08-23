@@ -40,17 +40,33 @@ To prevent Quick Fixes from applying edits to stale code (e.g. if you continue t
 
 ## Configuration
 
-You can configure the Anti-pattern Detection Engine's behavior and rule severities in your workspace settings or `.gherkin-powertoolsrc.json`:
+The Anti-pattern Detection Engine's behavior can be customized in your workspace settings or `.gherkin-powertoolsrc.json`. Rules are structured into categories (Correctness, Reliability, Maintainability, Style). While Correctness rules (like syntax errors) are absolute, heuristic rules (like Oversized Scenarios) can be fine-tuned.
+
+### Object-Based Configuration
+
+You can configure rules using simple severity strings or objects to pass custom parameters like thresholds:
 
 ```json
 "gherkinPowerTools.antiPatterns.enabled": true,
 "gherkinPowerTools.rules": {
-    "oversized-scenario": "warning",
+    "oversized-scenario": {
+        "severity": "warning",
+        "maxSteps": 20
+    },
+    "oversized-feature": {
+        "severity": "info",
+        "maxSteps": 100
+    },
     "duplicated-steps": "error",
     "ambiguous-step": "error"
 }
 ```
-See the [Configuration Reference](configuration.md#unified-diagnostics-rules) for the full list of rules.
+
+### Team Profiles
+
+Gherkin PowerTools supports **Team Profiles** (`strict`, `default`, `relaxed`) to automatically scale heuristic severities based on your team's maturity without needing to configure individual rules.
+
+See the [Configuration Reference](configuration.md#unified-diagnostics-rules) for the full list of rules and Profile details.
 
 ---
 

@@ -329,7 +329,24 @@
             "inconsistent-formatting": "info",
             "poor-maintainability": "warning"
           },
-          "markdownDescription": "Configure severities for specific rules across the AST Linter and Anti-Pattern engine. Values can be `error`, `warning`, `info`, `hint`, or `off`.\n\nNote: `syntax-error` cannot be disabled."
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["error", "warning", "info", "hint", "off"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "severity": {
+                    "type": "string",
+                    "enum": ["error", "warning", "info", "hint", "off"]
+                  }
+                }
+              }
+            ]
+          },
+          "markdownDescription": "Configure severities and specific parameters for rules across the AST Linter and Anti-Pattern engine. Values can be a severity string (`error`, `warning`, `info`, `hint`, or `off`) or an object (e.g., `{ \"severity\": \"warning\", \"maxSteps\": 20 }`).\n\nNote: `syntax-error` cannot be disabled."
         }
       }
     },
