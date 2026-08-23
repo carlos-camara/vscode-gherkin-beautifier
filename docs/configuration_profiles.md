@@ -22,10 +22,7 @@ Create a `.gherkin-powertoolsrc.json` (or `.gherkin-powertoolsrc`) file in the r
   },
   "emptyLines": {
     "betweenScenarios": 1
-  },
-  "featureGlobs": [
-    "**/*.feature"
-  ]
+  }
 }
 ```
 

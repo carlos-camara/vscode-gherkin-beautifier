@@ -51,7 +51,8 @@ jobs:
         run: node scripts/verify-release-candidate.js
 
       - name: 📤 Upload Release Candidate Artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release-candidate
           path: |
@@ -66,7 +67,8 @@ jobs:
     needs: build-and-validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # environment: production # Uncomment to require manual approval in GitHub Environments
+    # environment: production
+    # Uncomment to require manual approval in GitHub Environments
     permissions:
       contents: write # Privileged job (never runs npm install or build scripts)
 
@@ -79,7 +81,8 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: 📥 Download Release Candidate
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        # v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release-candidate
           path: .
@@ -122,7 +125,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -f "skip_upload.marker" ]; then
-            echo "Skipping upload because cryptographically identical asset already exists."
+            echo "Skipping upload because identical asset already exists."
             exit 0
           fi
           TAG=$(node -p "require('./provenance.json').tag")
