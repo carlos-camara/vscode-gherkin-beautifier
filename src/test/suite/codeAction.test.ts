@@ -223,6 +223,7 @@ suite('createStepDefinition Test Suite', () => {
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => undefined });
         let errorMessage = '';
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
         discoveryService.getBestWorkspaceFolder = () => undefined;
 
@@ -235,6 +236,7 @@ suite('createStepDefinition Test Suite', () => {
     test('Shows QuickPick for ambiguous URI in multi-root workspace and aborts if cancelled', async () => {
         let quickPickShown = false;
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => [{ uri: vscode.Uri.file('/folder1'), name: 'folder1', index: 0 }, { uri: vscode.Uri.file('/folder2'), name: 'folder2', index: 1 }] });
         discoveryService.getBestWorkspaceFolder = () => undefined;
 
@@ -252,6 +254,7 @@ suite('createStepDefinition Test Suite', () => {
         let quickPickShown = false;
         let infoMessage = '';
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
 
         const folder1 = { uri: vscode.Uri.file('/folder1'), name: 'folder1', index: 0 };
         const folder2 = { uri: vscode.Uri.file('/folder2'), name: 'folder2', index: 1 };
@@ -279,6 +282,8 @@ suite('createStepDefinition Test Suite', () => {
         let editApplied = false;
 
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showInformationMessage = async (msg: string, action: string) => {
             infoMessage = msg;
             return action;
@@ -287,7 +292,8 @@ suite('createStepDefinition Test Suite', () => {
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             createDirectory: async () => { directoryCreated = true; },
-            readFile: async () => { throw new Error('Not found'); }
+            readFile: async () => { throw new Error('Not found'); },
+            stat: async () => { throw new Error('Not found'); }
         })});
 
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
@@ -308,9 +314,11 @@ suite('createStepDefinition Test Suite', () => {
         let editApplied = false;
 
         discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
-            readFile: async () => Buffer.from("def i_test_collision(context):\n    pass\n")
+            readFile: async () => Buffer.from("def i_test_collision(context):\n    pass\n"),
+            stat: async () => { throw new Error('Not found'); }
         })});
 
         let insertedText = '';
@@ -385,7 +393,8 @@ suite('createStepDefinition Test Suite', () => {
 
     test('Cancels step creation if user cancels creation prompt', async () => {
         let editApplied = false;
-        discoveryService.getStepFiles = async () => []; // No files
+        discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py']; // No files
         (vscode.window as any).showInformationMessage = async () => undefined; // Cancel prompt
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
         discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
@@ -409,7 +418,7 @@ suite('createStepDefinition Test Suite', () => {
         Object.defineProperty(vscode.workspace, 'fs', {
             get: () => ({
                 readFile: async () => { throw new Error('Permission denied'); },
-                stat: originalFs.stat,
+                stat: async () => { throw new Error('Not found'); },
                 readDirectory: originalFs.readDirectory,
                 writeFile: originalFs.writeFile,
                 createDirectory: originalFs.createDirectory,
@@ -449,7 +458,7 @@ suite('createStepDefinition Test Suite', () => {
         Object.defineProperty(vscode.workspace, 'fs', {
             get: () => ({
                 readFile: async () => { throw new Error('Should not be called because open doc exists'); },
-                stat: originalFs.stat,
+                stat: async () => ({}),
                 readDirectory: originalFs.readDirectory,
                 writeFile: originalFs.writeFile,
                 createDirectory: originalFs.createDirectory,
@@ -530,7 +539,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => originalWorkspaceFolders });
         Object.defineProperty(vscode.workspace, 'fs', { get: () => originalFs });
         (vscode.workspace as any).applyEdit = originalApplyEdit;
-        (vscode.window as any).showTextDocument = originalShowTextDocument;
+        (vscode.workspace as any).showTextDocument = originalShowTextDocument;
         (vscode.workspace as any).openTextDocument = originalOpenTextDocument;
     });
 
@@ -544,6 +553,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         const { batchCreateStepDefinitions } = require('../../codeAction');
         let errorMessage = '';
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
         discoveryService.getBestWorkspaceFolder = () => undefined;
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => undefined });
@@ -556,6 +566,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         const { batchCreateStepDefinitions } = require('../../codeAction');
         let editApplied = false;
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showInformationMessage = async () => undefined;
         discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
@@ -585,10 +596,12 @@ suite('batchCreateStepDefinitions Test Suite', () => {
             vscode.Uri.file('/tmp/file1.py'),
             vscode.Uri.file('/tmp/file2.py')
         ];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showQuickPick = async (items: any[]) => items[0]; // Select first file
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
-            readFile: async () => Buffer.from("def dummy():\n    pass\n")
+            readFile: async () => Buffer.from("def dummy():\n    pass\n"),
+            stat: async () => ({})
         })});
 
         let insertedText = '';
@@ -626,6 +639,8 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         let insertedText = '';
 
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showInformationMessage = async (_msg: string, action: string) => {
             if (action) return action; // Return the create action
             return undefined;
@@ -634,7 +649,8 @@ suite('batchCreateStepDefinitions Test Suite', () => {
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             createDirectory: async () => { directoryCreated = true; },
-            readFile: async () => { throw new Error('Not found'); }
+            readFile: async () => { throw new Error('Not found'); },
+            stat: async () => { throw new Error('Not found'); }
         })});
 
         (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {

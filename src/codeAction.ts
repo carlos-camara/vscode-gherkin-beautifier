@@ -240,6 +240,137 @@ export function generateStepFunctionName(text: string): string {
 }
 
 /**
+ * Resolves the destination for a newly generated step definition file,
+ * respecting stepGlobs and workspace architecture.
+ */
+async function resolveNewStepDestination(documentUri: vscode.Uri | undefined, promptMessage: string): Promise<{ targetUri: vscode.Uri, isNewFile: boolean } | undefined> {
+    let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
+
+    if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        if (vscode.workspace.workspaceFolders.length === 1) {
+            workspaceFolder = vscode.workspace.workspaceFolders[0];
+        } else {
+            const items = vscode.workspace.workspaceFolders.map(folder => ({
+                label: folder.name,
+                description: folder.uri.fsPath,
+                folder: folder
+            }));
+            const selection = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select a workspace folder to create step definitions in'
+            });
+            if (selection) {
+                workspaceFolder = selection.folder;
+            } else {
+                return undefined;
+            }
+        }
+    }
+
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage("Open a workspace to create step definitions.");
+        return undefined;
+    }
+
+    const stepGlobs = discoveryService.getStepGlobs(workspaceFolder.uri);
+    
+    // Parse globs into concrete relative directories
+    const concreteDirs = new Set<string>();
+    for (let glob of stepGlobs) {
+        let prefix = glob;
+        if (prefix.startsWith('**/')) {
+            prefix = prefix.substring(3);
+        }
+        
+        const wildcardIndex = prefix.indexOf('*');
+        if (wildcardIndex !== -1) {
+            prefix = prefix.substring(0, wildcardIndex);
+        }
+        
+        if (prefix.endsWith('/')) {
+            prefix = prefix.substring(0, prefix.length - 1);
+        }
+        
+        if (prefix.trim().length > 0) {
+            concreteDirs.add(prefix);
+        }
+    }
+    
+    let possibleDirs = Array.from(concreteDirs);
+    if (possibleDirs.length === 0) {
+        possibleDirs = ['features/steps'];
+    }
+
+    let selectedDir = possibleDirs[0];
+
+    if (possibleDirs.length > 1) {
+        const items: vscode.QuickPickItem[] = [];
+        for (const dir of possibleDirs) {
+            const dirUri = vscode.Uri.joinPath(workspaceFolder.uri, dir);
+            let exists = false;
+            try {
+                const stat = await vscode.workspace.fs.stat(dirUri);
+                if (stat.type === vscode.FileType.Directory) {
+                    exists = true;
+                }
+            } catch (e) {
+                // Doesn't exist
+            }
+            
+            items.push({
+                label: exists ? `$(folder) ${dir} (Recommended)` : `$(folder) ${dir}`,
+                description: exists ? 'Existing directory matches configuration' : 'Will be created',
+                dir: dir,
+                exists: exists
+            } as any);
+        }
+        
+        // Sort so existing (recommended) are at the top
+        items.sort((a: any, b: any) => {
+            if (a.exists === b.exists) return 0;
+            return a.exists ? -1 : 1;
+        });
+
+        const selection = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select destination directory for new step definitions'
+        });
+
+        if (selection) {
+            selectedDir = (selection as any).dir;
+        } else {
+            return undefined;
+        }
+    }
+
+    const stepsDirUri = vscode.Uri.joinPath(workspaceFolder.uri, selectedDir);
+    const targetUri = vscode.Uri.joinPath(stepsDirUri, 'step_definitions.py');
+    
+    let isNewFile = false;
+    try {
+        await vscode.workspace.fs.stat(targetUri);
+    } catch {
+        isNewFile = true;
+        
+        const createAction = `Create ${selectedDir}/step_definitions.py`;
+        const selection = await vscode.window.showInformationMessage(
+            promptMessage,
+            createAction
+        );
+
+        if (selection === createAction) {
+            try {
+                await vscode.workspace.fs.stat(stepsDirUri);
+            } catch {
+                await vscode.workspace.fs.createDirectory(stepsDirUri);
+            }
+        } else {
+            return undefined;
+        }
+    }
+
+    return { targetUri, isNewFile };
+}
+
+/**
  * Handles the creation of a new Python step definition.
  */
 export async function createStepDefinition(stepText: string, keyword: string, documentUri?: vscode.Uri): Promise<vscode.Uri | undefined> {
@@ -256,50 +387,12 @@ export async function createStepDefinition(stepText: string, keyword: string, do
     let isNewFile = false;
 
     if (pyFiles.length === 0) {
-        // Find workspace folder
-        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
-
-        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            if (vscode.workspace.workspaceFolders.length === 1) {
-                workspaceFolder = vscode.workspace.workspaceFolders[0];
-            } else {
-                const items = vscode.workspace.workspaceFolders.map(folder => ({
-                    label: folder.name,
-                    description: folder.uri.fsPath,
-                    folder: folder
-                }));
-                const selection = await vscode.window.showQuickPick(items, {
-                    placeHolder: 'Select a workspace folder to create step definitions in'
-                });
-                if (selection) {
-                    workspaceFolder = selection.folder;
-                } else {
-                    return undefined;
-                }
-            }
-        }
-
-        if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
+        const resolution = await resolveNewStepDestination(documentUri, "No Python step files found. Would you like to create one?");
+        if (!resolution) {
             return undefined;
         }
-
-        const defaultStepsDir = vscode.Uri.joinPath(workspaceFolder.uri, 'features', 'steps');
-        targetUri = vscode.Uri.joinPath(defaultStepsDir, 'step_definitions.py');
-
-        const createAction = "Create features/steps/step_definitions.py";
-        const selection = await vscode.window.showInformationMessage(
-            "No Python step files found. Would you like to create one?",
-            createAction
-        );
-
-        if (selection === createAction) {
-            await vscode.workspace.fs.createDirectory(defaultStepsDir);
-            // We'll write the initial content below using WorkspaceEdit
-            isNewFile = true;
-        } else {
-            return;
-        }
+        targetUri = resolution.targetUri;
+        isNewFile = resolution.isNewFile;
     } else if (pyFiles.length === 1) {
         targetUri = pyFiles[0];
     } else {
@@ -397,46 +490,12 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
     let isNewFile = false;
 
     if (pyFiles.length === 0) {
-        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
-        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            if (vscode.workspace.workspaceFolders.length === 1) {
-                workspaceFolder = vscode.workspace.workspaceFolders[0];
-            } else {
-                const items = vscode.workspace.workspaceFolders.map(folder => ({
-                    label: folder.name,
-                    description: folder.uri.fsPath,
-                    folder: folder
-                }));
-                const selection = await vscode.window.showQuickPick(items, {
-                    placeHolder: 'Select a workspace folder to create step definitions in'
-                });
-                if (selection) {
-                    workspaceFolder = selection.folder;
-                } else {
-                    return undefined;
-                }
-            }
-        }
-        if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
+        const resolution = await resolveNewStepDestination(documentUri, "No Python step files found. Would you like to create one for all undefined steps?");
+        if (!resolution) {
             return undefined;
         }
-
-        const defaultStepsDir = vscode.Uri.joinPath(workspaceFolder.uri, 'features', 'steps');
-        targetUri = vscode.Uri.joinPath(defaultStepsDir, 'step_definitions.py');
-
-        const createAction = "Create features/steps/step_definitions.py";
-        const selection = await vscode.window.showInformationMessage(
-            "No Python step files found. Would you like to create one for all undefined steps?",
-            createAction
-        );
-
-        if (selection === createAction) {
-            await vscode.workspace.fs.createDirectory(defaultStepsDir);
-            isNewFile = true;
-        } else {
-            return;
-        }
+        targetUri = resolution.targetUri;
+        isNewFile = resolution.isNewFile;
     } else if (pyFiles.length === 1) {
         targetUri = pyFiles[0];
     } else {
