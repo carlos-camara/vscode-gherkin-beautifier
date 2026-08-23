@@ -26,7 +26,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
         const relevantDiagnostics = Array.from(new Set([...context.diagnostics, ...lineDiagnostics]));
 
         for (const diagnostic of relevantDiagnostics) {
-            if (diagnostic.code === 'MISSING_COLON') {
+            if (diagnostic.code === 'missing-colon') {
                 const action = new vscode.CodeAction("Insert missing ':'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
                 const replacement = diagnostic.relatedInformation?.[0]?.message || '';
@@ -36,7 +36,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     action.isPreferred = true;
                     actions.push(action);
                 }
-            } else if (diagnostic.code === 'MISSPELLED_KEYWORD') {
+            } else if (diagnostic.code === 'invalid-keyword') {
                 const replacement = diagnostic.relatedInformation?.[0]?.message || '';
                 if (replacement) {
                     const action = new vscode.CodeAction(`Replace with '${replacement}'`, vscode.CodeActionKind.QuickFix);
@@ -46,14 +46,14 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     action.isPreferred = true;
                     actions.push(action);
                 }
-            } else if (diagnostic.code === 'SCENARIO_WITH_EXAMPLES') {
+            } else if (diagnostic.code === 'scenario-with-examples') {
                 const action = new vscode.CodeAction("Convert to 'Scenario Outline'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
                 action.edit.replace(document.uri, diagnostic.range, 'Scenario Outline');
                 action.diagnostics = [diagnostic];
                 action.isPreferred = true;
                 actions.push(action);
-            } else if (diagnostic.code === 'INCONSISTENT_CELL_COUNT') {
+            } else if (diagnostic.code === 'table-inconsistency') {
                 const lineIndex = diagnostic.range.start.line;
                 const line = document.lineAt(lineIndex);
                 const lineText = line.text;
@@ -121,7 +121,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                         actions.push(action);
                     }
                 }
-            } else if (diagnostic.code === 'UNDEFINED_STEP') {
+            } else if (diagnostic.code === 'undefined-step') {
                 const action = new vscode.CodeAction('Create empty step definition', vscode.CodeActionKind.QuickFix);
 
                 // Retrieve the keyword from relatedInformation
