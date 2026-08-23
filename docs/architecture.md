@@ -231,9 +231,10 @@ Furthermore, Code Actions enforce a strict `document.version` validation check b
 
 To guarantee data integrity during code generation (such as extracting steps or generating new Python step definitions), Gherkin PowerTools implements a hardened I/O strategy:
 
-1. **In-Memory State Prioritization**: When appending code to an existing file, the extension strictly prioritizes `vscode.workspace.textDocuments` over the file system. This ensures that new step definitions are safely appended to the unsaved, in-memory state of the editor, eliminating race conditions where uncommitted changes could be overwritten.
-2. **Safe Concurrent Creation**: Code actions utilize `WorkspaceEdit.createFile` with strict `{ overwrite: false, ignoreIfExists: false }` flags. This blocks concurrent file creation collisions if multiple users or processes attempt to bootstrap a step definition file simultaneously.
-3. **Graceful Read Fallbacks**: If a target file exists but becomes unreadable (e.g., due to permission changes or remote disconnection), the generator safely aborts with a user warning instead of silently appending boilerplate.
+1. **Workspace-Aware Destination Resolution**: Rather than hardcoding generation paths (e.g., `features/steps`), the extension queries the internal `ConfigService` for `stepGlobs` to intelligently derive safe target directories based on the project's actual structure, falling back to a QuickPick menu when ambiguity exists.
+2. **In-Memory State Prioritization**: When appending code to an existing file, the extension strictly prioritizes `vscode.workspace.textDocuments` over the file system. This ensures that new step definitions are safely appended to the unsaved, in-memory state of the editor, eliminating race conditions where uncommitted changes could be overwritten.
+3. **Safe Concurrent Creation**: Code actions utilize `WorkspaceEdit.createFile` with strict `{ overwrite: false, ignoreIfExists: false }` flags. This blocks concurrent file creation collisions if multiple users or processes attempt to bootstrap a step definition file simultaneously.
+4. **Graceful Read Fallbacks**: If a target file exists but becomes unreadable (e.g., due to permission changes or remote disconnection), the generator safely aborts with a user warning instead of silently appending boilerplate.
 
 ## Real-Time Impact Analysis Engine
 

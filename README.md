@@ -58,6 +58,7 @@ A premium testing environment that eliminates the friction between plain-text `.
 
 ### 1. Missing Python Step Generation
 Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to instantly generate a valid Python stub—complete with extracted regex parameters—from any undefined Gherkin step.
+- **Workspace-Aware:** Intelligently infers the optimal destination based on your `stepGlobs` configuration, resolving ambiguity safely via QuickPick.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Generate a Python step stub from undefined Gherkin" width="600" height="340" />
