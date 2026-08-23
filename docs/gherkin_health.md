@@ -11,8 +11,8 @@ The Analytics Dashboard analyzes your workspace in real-time leveraging the in-m
 It generates deep heuristics and scores, including:
 
 - **Overall Health Score**: A unified metric indicating the general state of your test suite.
-- **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files.
-- **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
+- **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files. The dashboard uses progressive disclosure to show exactly how each metric penalizes the overall score.
+- **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files). You can expand the score card to see the precise breakdown of complexity penalties.
 - **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
   The engine uses semantic context tracking to accurately resolve `And` and `But` steps.
   It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then). The structural identity model uses nested object structures to safely index complex regular expressions containing colons or unicode, ensuring that step definitions reused across different contexts are not falsely flagged as corrupted or duplicated.
@@ -22,7 +22,6 @@ It generates deep heuristics and scores, including:
   - **Duplicated**, **Unused**, **Ambiguous**, and **Undefined** Python step definitions
   - **Excessive Tags**
   - **Inconsistent Formatting**
-  - **Poor Maintainability**
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
 **Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.

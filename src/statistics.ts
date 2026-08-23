@@ -39,6 +39,8 @@ export interface ProjectHealthMetrics {
         complexity: number;
         maintainability: number;
         health: number;
+        maintainabilityPenalties: { unused: number, duplicate: number, undefined: number };
+        complexityPenalties: { scenarioLength: number, largestScenario: number, backgroundLength: number, largestFeature: number };
     };
 }
 
@@ -215,7 +217,18 @@ export async function calculateHealthMetrics(graph: WorkspaceGraph, symbolCache:
         scores: {
             complexity: finalComplexity,
             maintainability: finalMaintainability,
-            health
+            health,
+            maintainabilityPenalties: {
+                unused: Math.round(unusedPenalty),
+                duplicate: Math.round(duplicatePenalty),
+                undefined: Math.round(undefinedPenalty)
+            },
+            complexityPenalties: {
+                scenarioLength: Math.round(Math.min((averageScenarioLength / 20) * 40, 40)),
+                largestScenario: Math.round(Math.min(((largestScenarios[0]?.size || 0) / 30) * 30, 30)),
+                backgroundLength: Math.round(Math.min((averageBackgroundLength / 5) * 10, 10)),
+                largestFeature: Math.round(Math.min(((largestFeatures[0]?.size || 0) / 100) * 20, 20))
+            }
         }
     };
 }
@@ -1065,6 +1078,15 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 ${metrics.scores.maintainability}%
             </div>
             ${renderDelta(metrics.scores.maintainability, prevSnapshot?.maintainability, prevSnapshot?.timestamp)}
+            <details style="margin-top: 12px; text-align: left; background: rgba(128,128,128,0.05); border: none; font-size: 13px; border-radius: 8px;">
+                <summary style="font-weight: 500; font-size: 12px; color: var(--text-secondary); list-style: none; text-align: center;">View Penalties</summary>
+                <div style="margin-top: 8px; color: var(--text-secondary); line-height: 1.6;">
+                    ${metrics.scores.maintainabilityPenalties.unused > 0 ? `<div>- Unused Steps: <strong>-${metrics.scores.maintainabilityPenalties.unused}</strong></div>` : ''}
+                    ${metrics.scores.maintainabilityPenalties.duplicate > 0 ? `<div>- Duplicate Steps: <strong>-${metrics.scores.maintainabilityPenalties.duplicate}</strong></div>` : ''}
+                    ${metrics.scores.maintainabilityPenalties.undefined > 0 ? `<div>- Undefined Steps: <strong>-${metrics.scores.maintainabilityPenalties.undefined}</strong></div>` : ''}
+                    ${metrics.scores.maintainability === 100 ? `<div style="color: #10b981;">Perfect Maintainability</div>` : ''}
+                </div>
+            </details>
         </div>
         <div class="score-card premium-card complex">
             <div class="score-label">Complexity</div>
@@ -1072,6 +1094,16 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 ${metrics.scores.complexity}%
             </div>
             ${renderDelta(metrics.scores.complexity, prevSnapshot?.complexity, prevSnapshot?.timestamp, true)}
+            <details style="margin-top: 12px; text-align: left; background: rgba(128,128,128,0.05); border: none; font-size: 13px; border-radius: 8px;">
+                <summary style="font-weight: 500; font-size: 12px; color: var(--text-secondary); list-style: none; text-align: center;">View Contributors</summary>
+                <div style="margin-top: 8px; color: var(--text-secondary); line-height: 1.6;">
+                    ${metrics.scores.complexityPenalties.scenarioLength > 0 ? `<div>+ Avg Scenario Length: <strong>+${metrics.scores.complexityPenalties.scenarioLength}</strong></div>` : ''}
+                    ${metrics.scores.complexityPenalties.largestScenario > 0 ? `<div>+ Largest Scenario: <strong>+${metrics.scores.complexityPenalties.largestScenario}</strong></div>` : ''}
+                    ${metrics.scores.complexityPenalties.backgroundLength > 0 ? `<div>+ Avg Background: <strong>+${metrics.scores.complexityPenalties.backgroundLength}</strong></div>` : ''}
+                    ${metrics.scores.complexityPenalties.largestFeature > 0 ? `<div>+ Largest Feature: <strong>+${metrics.scores.complexityPenalties.largestFeature}</strong></div>` : ''}
+                    ${metrics.scores.complexity === 0 ? `<div style="color: #10b981;">Perfectly Simple</div>` : ''}
+                </div>
+            </details>
         </div>
     </div>
 

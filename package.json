@@ -305,8 +305,7 @@
             "ambiguous-steps": "error",
             "undefined-steps": "error",
             "excessive-tags": "info",
-            "inconsistent-formatting": "info",
-            "poor-maintainability": "warning"
+            "inconsistent-formatting": "info"
           },
           "markdownDescription": "Configure severity overrides for specific anti-pattern rules. Values can be `error`, `warning`, `info`, `hint`, or `off`."
         },
@@ -326,8 +325,7 @@
             "duplicated-steps": "error",
             "unused-steps": "info",
             "excessive-tags": "info",
-            "inconsistent-formatting": "info",
-            "poor-maintainability": "warning"
+            "inconsistent-formatting": "info"
           },
           "additionalProperties": {
             "anyOf": [

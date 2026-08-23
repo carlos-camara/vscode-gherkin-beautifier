@@ -303,35 +303,7 @@ class ExcessiveTagsRule implements AntiPatternRule<ExcessiveTagsParams> {
     }
 }
 
-export interface PoorMaintainabilityParams { minScore: number; }
-class PoorMaintainabilityRule implements AntiPatternRule<PoorMaintainabilityParams> {
-    metadata: RuleMetadata<PoorMaintainabilityParams> = {
-        id: 'poor-maintainability',
-        title: 'Low Maintainability Score',
-        category: 'Maintainability',
-        rationale: 'A low maintainability score is an aggregated metric of technical debt in your Gherkin tests.',
-        defaultSeverity: 'warning',
-        defaultParams: { minScore: 60 }
-    };
 
-    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity, params?: PoorMaintainabilityParams): AntiPattern[] {
-        if (severity === 'off') return [];
-        const limit = params?.minScore ?? this.metadata.defaultParams!.minScore;
-        if (metrics.scores.maintainability < limit) {
-            return [{
-                id: this.metadata.id,
-                title: this.metadata.title,
-                category: this.metadata.category,
-                rationale: this.metadata.rationale,
-                explanation: `The project maintainability score is ${metrics.scores.maintainability}/100, which is below the threshold of ${limit}.`,
-                severity,
-                affectedFiles: [],
-                suggestedFix: 'Resolve unused, duplicated, and undefined step issues to improve maintainability.'
-            }];
-        }
-        return [];
-    }
-}
 
 class InconsistentFormattingRule implements AntiPatternRule {
     metadata: RuleMetadata = {
@@ -425,7 +397,7 @@ export class AntiPatternEngine {
         this.registerRule(new AmbiguousStepsRule());
         this.registerRule(new UndefinedStepsRule());
         this.registerRule(new ExcessiveTagsRule());
-        this.registerRule(new PoorMaintainabilityRule());
+
         this.registerRule(new InconsistentFormattingRule());
         this.registerRule(new SyntaxErrorsRule());
     }

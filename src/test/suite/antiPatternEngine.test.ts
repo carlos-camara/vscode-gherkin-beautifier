@@ -43,7 +43,13 @@ suite('Anti-Pattern Engine Test Suite', () => {
                 ambiguousSteps: []
             },
             parseErrors: [],
-            scores: { complexity: 0, maintainability: 100, health: 100 },
+            scores: { 
+                complexity: 0, 
+                maintainability: 100, 
+                health: 100,
+                maintainabilityPenalties: { unused: 0, duplicate: 0, undefined: 0 },
+                complexityPenalties: { scenarioLength: 0, largestScenario: 0, backgroundLength: 0, largestFeature: 0 }
+            },
             largestFeatures: [],
             largestScenarios: []
         };
@@ -160,13 +166,6 @@ suite('Anti-Pattern Engine Test Suite', () => {
         mockGraph.deleteNodeForTest('scen1');
     });
 
-    test('PoorMaintainabilityRule triggers when maintainability < 60', () => {
-        const metrics = { ...baseMetrics, scores: { complexity: 0, maintainability: 50, health: 50 }};
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
-        const maintRec = ap.find(r => r.title === 'Low Maintainability Score');
-        assert.ok(maintRec);
-        assert.strictEqual(maintRec.severity, 'warning');
-    });
 
     test('InconsistentFormattingRule triggers for steps with trailing spaces', () => {
         mockGraph.setNodeForTest({

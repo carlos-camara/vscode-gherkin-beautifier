@@ -158,18 +158,8 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         supportsQuickFix: false,
         aliases: [],
         documentationAnchor: 'inconsistent-formatting'
-    },
-    'poor-maintainability': {
-        id: 'poor-maintainability',
-        title: 'Poor Maintainability',
-        description: 'The document structure implies a low maintainability index.',
-        category: 'Anti-Pattern',
-        defaultSeverity: 'warning',
-        enabledByDefault: true,
-        supportsQuickFix: false,
-        aliases: [],
-        documentationAnchor: 'poor-maintainability'
     }
+
 };
 
 export type RuleId = keyof typeof RULES_REGISTRY;
