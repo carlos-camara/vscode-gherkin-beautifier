@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export interface Configuration {
     indentation: { steps: number; };
@@ -10,11 +8,13 @@ export interface Configuration {
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
+    rules: Record<string, string>;
     behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
     featureGlobs: string[];
 }
 
 import { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG } from './defaults';
+import { RULES_REGISTRY } from './rules';
 
 export { DEFAULT_CONFIG, DEFAULT_RULE_CONFIG };
 
@@ -59,7 +59,7 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
         return { errors, config };
     }
 
-    const validSections = ['profile', 'indentation', 'tables', 'docStrings', 'tags', 'emptyLines', 'formatter', 'linter', 'behave'];
+    const validSections = ['profile', 'indentation', 'tables', 'docStrings', 'tags', 'emptyLines', 'formatter', 'linter', 'rules', 'behave'];
 
     for (const key of Object.keys(parsed)) {
         if (!validSections.includes(key)) {
@@ -178,6 +178,19 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                     errors.push({ key: subKey, message: `Unknown property in linter: "${subKey}".` });
                 }
             }
+        } else if (key === 'rules') {
+            for (const subKey of Object.keys(section)) {
+                if (RULES_REGISTRY[subKey]) {
+                    const val = section[subKey];
+                    if (typeof val === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(val)) {
+                        config.rules[subKey] = val;
+                    } else {
+                        errors.push({ key: subKey, message: `"rules.${subKey}" must be one of: error, warning, info, hint, off.` });
+                    }
+                } else {
+                    errors.push({ key: subKey, message: `Unknown rule ID in rules: "${subKey}".` });
+                }
+            }
         } else if (key === 'behave') {
             for (const subKey of Object.keys(section)) {
                 if (subKey === 'stepGlobs' || subKey === 'ignoreGlobs' || subKey === 'additionalArguments') {
@@ -198,7 +211,7 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                         } else if (execObj.executable !== undefined) {
                             errors.push({ key: 'execution.executable', message: `"behave.execution.executable" must be a string.` });
                         }
-                        
+
                         if (Array.isArray(execObj.arguments) && execObj.arguments.every((i: any) => typeof i === 'string')) {
                             config.behave.execution.arguments = execObj.arguments;
                         } else if (execObj.arguments !== undefined) {
@@ -217,12 +230,54 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
     return { errors, config };
 }
 
+export interface ProjectConfiguration {
+    content: string;
+    parsed: any | null;
+    uri?: vscode.Uri;
+}
+
+export interface ConfigurationLoader {
+    load(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<ProjectConfiguration | null>;
+}
+
 export class ConfigurationService {
     private cache = new Map<string, Configuration>();
+    private projectConfigs = new Map<string, ProjectConfiguration>();
     private diagnosticCollection: vscode.DiagnosticCollection;
+    private loader: ConfigurationLoader;
 
-    constructor(diagnosticCollection: vscode.DiagnosticCollection) {
+    constructor(diagnosticCollection: vscode.DiagnosticCollection, loader: ConfigurationLoader) {
         this.diagnosticCollection = diagnosticCollection;
+        this.loader = loader;
+    }
+
+    public async initialize(): Promise<void> {
+        if (vscode.workspace.workspaceFolders) {
+            for (const folder of vscode.workspace.workspaceFolders) {
+                await this.loadConfiguration(folder.uri);
+            }
+        } else {
+            await this.loadConfiguration(undefined);
+        }
+    }
+
+    public async loadConfiguration(uri?: vscode.Uri): Promise<void> {
+        const workspaceFolder = uri ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
+        const folderUri = workspaceFolder ? workspaceFolder.uri.toString() : 'global';
+
+        try {
+            const projectConfig = await this.loader.load(workspaceFolder);
+            if (projectConfig) {
+                this.projectConfigs.set(folderUri, projectConfig);
+            } else {
+                this.projectConfigs.delete(folderUri);
+            }
+        } catch (e) {
+            this.projectConfigs.delete(folderUri);
+        }
+
+        // Invalidate and re-resolve
+        this.cache.set(folderUri, this.resolveConfiguration(workspaceFolder, uri));
     }
 
     public getConfiguration(uri: vscode.Uri | undefined): Configuration {
@@ -242,9 +297,12 @@ export class ConfigurationService {
         if (uri) {
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             if (workspaceFolder) {
-                this.cache.delete(workspaceFolder.uri.toString());
-                const configPath = path.join(workspaceFolder.uri.fsPath, '.gherkin-powertoolsrc.json');
-                this.diagnosticCollection.delete(vscode.Uri.file(configPath));
+                const folderUriStr = workspaceFolder.uri.toString();
+                this.cache.delete(folderUriStr);
+                const projectConfig = this.projectConfigs.get(folderUriStr);
+                if (projectConfig && projectConfig.uri) {
+                    this.diagnosticCollection.delete(projectConfig.uri);
+                }
             }
         } else {
             this.cache.clear();
@@ -253,42 +311,37 @@ export class ConfigurationService {
     }
 
     private resolveConfiguration(workspaceFolder: vscode.WorkspaceFolder | undefined, uri: vscode.Uri | undefined): Configuration {
+        const folderUriStr = workspaceFolder ? workspaceFolder.uri.toString() : 'global';
+        const projectConfig = this.projectConfigs.get(folderUriStr);
+
         let parsedProjectConfig: any = null;
         let projectProfile: string | undefined = undefined;
-        let configPath = '';
         let fileContent = '';
 
-        if (workspaceFolder) {
-            configPath = path.join(workspaceFolder.uri.fsPath, '.gherkin-powertoolsrc.json');
-            if (fs.existsSync(configPath)) {
-                try {
-                    fileContent = fs.readFileSync(configPath, 'utf8');
-                    parsedProjectConfig = JSON.parse(fileContent);
-                    if (parsedProjectConfig && typeof parsedProjectConfig.profile === 'string') {
-                        projectProfile = parsedProjectConfig.profile;
-                    }
-                } catch (e) {
-                    // Will be handled below
-                }
+        if (projectConfig) {
+            fileContent = projectConfig.content;
+            parsedProjectConfig = projectConfig.parsed;
+            if (parsedProjectConfig && typeof parsedProjectConfig.profile === 'string') {
+                projectProfile = parsedProjectConfig.profile;
             }
         }
 
         const vsCodeConfig = this.getVsCodeSettings(uri, projectProfile);
 
         if (!parsedProjectConfig) {
-            if (configPath && fs.existsSync(configPath)) {
+            if (projectConfig && projectConfig.uri && fileContent.trim() !== '') {
                 const range = new vscode.Range(0, 0, 0, 100);
                 const diag = new vscode.Diagnostic(range, `Invalid JSON`, vscode.DiagnosticSeverity.Error);
-                this.diagnosticCollection.set(vscode.Uri.file(configPath), [diag]);
-            } else if (configPath) {
-                this.diagnosticCollection.delete(vscode.Uri.file(configPath));
+                this.diagnosticCollection.set(projectConfig.uri, [diag]);
+            } else if (projectConfig && projectConfig.uri) {
+                this.diagnosticCollection.delete(projectConfig.uri);
             }
             return vsCodeConfig;
         }
 
         const { errors, config } = validateAndMergeConfig(parsedProjectConfig, vsCodeConfig);
-        
-        if (errors.length > 0) {
+
+        if (errors.length > 0 && projectConfig && projectConfig.uri) {
             const diagnostics = errors.map(err => {
                 let line = 0;
                 const lines = fileContent.split('\n');
@@ -297,11 +350,11 @@ export class ConfigurationService {
                 const range = new vscode.Range(line, 0, line, 100);
                 return new vscode.Diagnostic(range, err.message, vscode.DiagnosticSeverity.Error);
             });
-            this.diagnosticCollection.set(vscode.Uri.file(configPath), diagnostics);
-        } else {
-            this.diagnosticCollection.delete(vscode.Uri.file(configPath));
+            this.diagnosticCollection.set(projectConfig.uri, diagnostics);
+        } else if (projectConfig && projectConfig.uri) {
+            this.diagnosticCollection.delete(projectConfig.uri);
         }
-        
+
         return config;
     }
 
@@ -365,6 +418,43 @@ export class ConfigurationService {
         const validRules = ['MISSING_COLON', 'INVALID_KEYWORD', 'SEMANTIC_ERROR', 'TABLE_INCONSISTENCY', 'UNDEFINED_STEP', 'AMBIGUOUS_STEP'];
         if (linterEnabledRules !== undefined && Array.isArray(linterEnabledRules) && linterEnabledRules.every(r => validRules.includes(r))) {
             config.linter.enabledRules = linterEnabledRules;
+            // Migration: legacy array implies 'error' severity for those enabled
+            // We disable all linter rules first if enabledRules is present but empty, but wait, the default was "empty = all".
+            // In the new model, rules are configured individually.
+            // If they provided a list, we disable the old AST ones not in the list.
+            if (linterEnabledRules.length > 0) {
+                const oldASTRules = ["missing-colon", "invalid-keyword", "semantic-error", "table-inconsistency", "undefined-step", "ambiguous-step"];
+                for (const oldRule of oldASTRules) {
+                    config.rules[oldRule] = 'off';
+                }
+                for (const rule of linterEnabledRules) {
+                    const kebabRule = rule.toLowerCase().replace(/_/g, '-');
+                    if (RULES_REGISTRY[kebabRule]) {
+                        config.rules[kebabRule] = RULES_REGISTRY[kebabRule].defaultSeverity;
+                    }
+                }
+            }
+        }
+
+        // Migrate anti-patterns
+        const antiPatternsConfig = vscode.workspace.getConfiguration('gherkinPowerTools.antiPatterns', uri);
+        const oldAntiPatternRules = antiPatternsConfig.get<Record<string, string>>('rules');
+        if (oldAntiPatternRules && typeof oldAntiPatternRules === 'object') {
+            for (const [key, value] of Object.entries(oldAntiPatternRules)) {
+                if (RULES_REGISTRY[key] && typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
+                    config.rules[key] = value;
+                }
+            }
+        }
+
+        // Apply new unified rules
+        const vscodeRules = getOverride<Record<string, string>>('rules');
+        if (vscodeRules !== undefined && typeof vscodeRules === 'object' && vscodeRules !== null) {
+            for (const [key, value] of Object.entries(vscodeRules)) {
+                if (RULES_REGISTRY[key] && typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
+                    config.rules[key] = value;
+                }
+            }
         }
 
         const stepGlobs = getOverride<string[]>('behave.stepGlobs');

@@ -17,7 +17,8 @@ suite('GherkinTestController Test Suite', () => {
         (vscode.workspace as any).getWorkspaceFolder = (_uri: vscode.Uri) => { return { uri: vscode.Uri.file(tempDir), name: 'temp', index: 0 }; };
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gherkin-test-controller-'));
         const configDiagnostics = vscode.languages.createDiagnosticCollection('gherkin-configuration-test');
-        configService = new ConfigurationService(configDiagnostics);
+        const dummyLoader = { async load() { return null; } };
+        configService = new ConfigurationService(configDiagnostics, dummyLoader);
         const uniqueId = `gherkin-tests-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const mockContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
         controller = new GherkinTestController(mockContext, configService, uniqueId);

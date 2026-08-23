@@ -1,18 +1,30 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
-import { MetricsLogger } from '../../metrics';
+import { metricsLogger } from '../../metrics';
 
 suite('MetricsLogger Test Suite', () => {
-    let metricsLogger: MetricsLogger;
     let getConfigurationStub: sinon.SinonStub;
+    let configChangeCallback: (e: vscode.ConfigurationChangeEvent) => void;
 
     setup(() => {
-        metricsLogger = new MetricsLogger();
         getConfigurationStub = sinon.stub(vscode.workspace, 'getConfiguration');
+        getConfigurationStub.returns({
+            get: sinon.stub().returns(false)
+        } as any);
+        
+        sinon.stub(vscode.workspace, 'onDidChangeConfiguration').callsFake((callback) => {
+            configChangeCallback = callback;
+            return { dispose: () => {} };
+        });
+
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
     });
 
     teardown(() => {
+        metricsLogger.reset();
+        metricsLogger.dispose(); // clean up the listener created during bind
         sinon.restore();
     });
 
@@ -39,6 +51,9 @@ suite('MetricsLogger Test Suite', () => {
         getConfigurationStub.withArgs('gherkinPowerTools.diagnostics').returns({
             get: sinon.stub().withArgs('metricsEnabled', false).returns(true)
         } as any);
+        
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
 
         assert.strictEqual(metricsLogger.isEnabled(), true);
 
@@ -86,6 +101,9 @@ suite('MetricsLogger Test Suite', () => {
         getConfigurationStub.withArgs('gherkinPowerTools.diagnostics').returns({
             get: sinon.stub().withArgs('metricsEnabled', false).returns(true)
         } as any);
+        
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
 
         const outputChannelStub = {
             clear: sinon.spy(),
@@ -103,5 +121,29 @@ suite('MetricsLogger Test Suite', () => {
         
         // Assert it outputs the hit ratio
         assert.ok(outputChannelStub.appendLine.calledWith('Cache Hit Ratio:      100.00%'));
+    });
+
+    test('Reacts to runtime configuration changes', () => {
+        // Initially disabled
+        getConfigurationStub.withArgs('gherkinPowerTools.diagnostics').returns({
+            get: sinon.stub().withArgs('metricsEnabled', false).returns(false)
+        } as any);
+
+        // Re-initialize to pick up the disabled state
+        metricsLogger.bind({ subscriptions: [] } as any);
+        metricsLogger.reset();
+        assert.strictEqual(metricsLogger.isEnabled(), false);
+
+        // Change config to enabled
+        getConfigurationStub.withArgs('gherkinPowerTools.diagnostics').returns({
+            get: sinon.stub().withArgs('metricsEnabled', false).returns(true)
+        } as any);
+
+        // Trigger change event
+        configChangeCallback({
+            affectsConfiguration: (section: string) => section === 'gherkinPowerTools.diagnostics.metricsEnabled'
+        });
+
+        assert.strictEqual(metricsLogger.isEnabled(), true);
     });
 });

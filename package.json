@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -155,7 +155,7 @@
           "order": 20,
           "scope": "resource",
           "default": true,
-          "markdownDescription": "Enable or disable the real-time Gherkin linter. When `false`, no diagnostics (red/yellow underlines) will appear in `.feature` files. Useful when you rely exclusively on an external CI linter and want to reduce editor noise."
+          "markdownDescription": "Enable or disable the real-time Gherkin linter. When `false`, the linter enters a completely dormant state—suppressing AST parsing, debounce timers, and notifications to conserve system resources—and no diagnostics (red/yellow underlines) will appear in `.feature` files."
         },
         "gherkinPowerTools.diagnostics.metricsEnabled": {
           "type": "boolean",
@@ -175,6 +175,7 @@
           "type": "array",
           "order": 21,
           "scope": "resource",
+          "deprecationMessage": "Deprecated in favor of 'gherkinPowerTools.rules'.",
           "items": {
             "type": "string",
             "enum": [
@@ -294,6 +295,7 @@
           "type": "object",
           "order": 43,
           "scope": "resource",
+          "deprecationMessage": "Deprecated in favor of 'gherkinPowerTools.rules'.",
           "default": {
             "syntax-errors": "error",
             "oversized-scenario": "warning",
@@ -307,6 +309,27 @@
             "poor-maintainability": "warning"
           },
           "markdownDescription": "Configure severity overrides for specific anti-pattern rules. Values can be `error`, `warning`, `info`, `hint`, or `off`."
+        },
+        "gherkinPowerTools.rules": {
+          "type": "object",
+          "order": 44,
+          "scope": "resource",
+          "default": {
+            "missing-colon": "error",
+            "invalid-keyword": "error",
+            "scenario-with-examples": "warning",
+            "table-inconsistency": "error",
+            "undefined-step": "error",
+            "ambiguous-step": "error",
+            "oversized-scenario": "warning",
+            "oversized-feature": "info",
+            "duplicated-steps": "error",
+            "unused-steps": "info",
+            "excessive-tags": "info",
+            "inconsistent-formatting": "info",
+            "poor-maintainability": "warning"
+          },
+          "markdownDescription": "Configure severities for specific rules across the AST Linter and Anti-Pattern engine. Values can be `error`, `warning`, `info`, `hint`, or `off`.\n\nNote: `syntax-error` cannot be disabled."
         }
       }
     },

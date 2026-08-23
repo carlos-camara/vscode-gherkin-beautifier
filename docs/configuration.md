@@ -77,7 +77,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 ## Diagnostics (Linter) Settings
 
 ### `gherkinPowerTools.linter.enabled`
-- **Purpose:** Master toggle for the real-time Gherkin linter.
+- **Purpose:** Master toggle for the real-time Gherkin linter. When `false`, the linter enters a completely dormant state—suppressing AST parsing, debounce timers, and notifications to conserve system resources.
 - **Type:** `boolean`
 - **Default:** `true`
 
@@ -92,10 +92,9 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.linter.enabledRules`
-- **Purpose:** Whitelist of linting rule IDs to enforce. An empty array enables ALL rules.
+- **Purpose:** *(Deprecated)* Whitelist of linting rule IDs to enforce. Please use `gherkinPowerTools.rules` instead.
 - **Type:** `array` of strings
 - **Default:** `[]`
-- **Allowed Values:** `"MISSING_COLON"`, `"INVALID_KEYWORD"`, `"SEMANTIC_ERROR"`, `"TABLE_INCONSISTENCY"`, `"UNDEFINED_STEP"`, `"AMBIGUOUS_STEP"`
 
 ---
 
@@ -107,18 +106,30 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.antiPatterns.rules`
-- **Purpose:** Configure severity levels for individual anti-pattern rules.
+- **Purpose:** *(Deprecated)* Configure severity levels for individual anti-pattern rules. Please use `gherkinPowerTools.rules` instead.
+- **Type:** `object` (Key-value pairs of rule ID to severity level)
+
+---
+
+## Unified Diagnostics Rules
+
+### `gherkinPowerTools.rules`
+- **Purpose:** The central, authoritative configuration for diagnostic severities across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to severity levels.
 - **Type:** `object` (Key-value pairs of rule ID to severity level)
 - **Default:**
   ```json
   {
-      "syntax-errors": "error",
+      "syntax-error": "error",
+      "missing-colon": "error",
+      "invalid-keyword": "error",
+      "table-inconsistency": "error",
+      "scenario-with-examples": "warning",
+      "undefined-step": "error",
+      "ambiguous-step": "error",
       "oversized-scenario": "warning",
       "oversized-feature": "info",
       "duplicated-steps": "error",
       "unused-steps": "info",
-      "ambiguous-steps": "error",
-      "undefined-steps": "error",
       "excessive-tags": "info",
       "inconsistent-formatting": "info",
       "poor-maintainability": "warning"
@@ -129,11 +140,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
 ---
 
 ## Behave Discovery & Execution Settings
-
-### `gherkinPowerTools.featureGlobs`
-- **Purpose:** Glob patterns used to discover Gherkin feature files. These patterns drive diagnostics, health statistics, and the test explorer.
-- **Type:** `array` of strings
-- **Default:** `["**/*.feature"]`
 
 ### `gherkinPowerTools.behave.stepGlobs`
 - **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, and Linting.
@@ -159,14 +165,13 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 
 ### `gherkinPowerTools.behave.additionalArguments`
-- **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer.
+- **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer (e.g., `["--no-capture"]`).
 - **Type:** `array` of strings
 - **Default:** `[]`
-- **Example:** `["--no-capture"]`
 
 ---
 
-## Analytics Settings
+## Analytics
 
 ### `gherkinPowerTools.analytics.historicalTrends.enabled`
 - **Purpose:** Enable or disable historical trend analysis for Gherkin Health. When enabled, dashboard metrics are persisted locally to visualize project evolution over time.
@@ -174,8 +179,8 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.analytics.historicalTrends.retentionSnapshots`
-- **Purpose:** Maximum number of historical snapshots to retain for trend analysis.
-- **Type:** `number` (1–365)
+- **Purpose:** Maximum number of historical snapshots to retain for trend analysis per branch.
+- **Type:** `number`
 - **Default:** `30`
 
 ### `gherkinPowerTools.analytics.historicalTrends.maxStorageBytes`
@@ -205,8 +210,9 @@ Example:
     "formatter": {
         "enabled": true
     },
-    "linter": {
-        "enabledRules": ["MISSING_COLON", "INVALID_KEYWORD"]
+    "rules": {
+        "missing-colon": "error",
+        "invalid-keyword": "warning"
     },
     "behave": {
         "stepGlobs": [

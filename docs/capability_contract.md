@@ -17,7 +17,7 @@ This matrix details exactly which capabilities are shared, which are exclusive t
 | **Dialects** | 🟢 Shared Engine | Both interfaces support 70+ localized Gherkin dialects exactly the same way. |
 | **Anti-Pattern Analysis** | 🟢 Shared Engine | `analyze` CLI command and Gherkin Health Dashboard use the same `AntiPatternEngine`. |
 | **Project Statistics** | 🟢 Shared Engine | `stats` CLI command and Gherkin Health Dashboard calculate identical metrics. |
-| **Syntax Linting** | 🟡 VS Code UX | Real-time `MISSING_COLON` or syntax squiggle underlines as you type. |
+| **Syntax Linting** | 🟡 VS Code UX | Real-time `missing-colon` or syntax squiggle underlines as you type. |
 | **IntelliSense (Completion)** | 🟡 VS Code UX | Step suggestion and auto-completion. |
 | **Navigation (Hover / Def)** | 🟡 VS Code UX | Tooltips and Go-to-Definition. |
 | **Refactoring** | 🟡 VS Code UX | Rename Step (`F2`) and Extract Step Code Actions. |

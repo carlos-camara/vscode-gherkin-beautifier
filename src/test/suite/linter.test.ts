@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import { DEFAULT_CONFIG } from '../../configuration';
 import { GherkinLinter } from '../../linter';
 import { SymbolCache } from '../../cache';
 
@@ -26,9 +27,7 @@ suite('Linter Test Suite', () => {
         mockCache.state = 'ready';
 
         const mockConfigService = {
-            getConfiguration: () => ({
-                linter: { enabled: true, enabledRules: [] }
-            })
+            getConfiguration: () => DEFAULT_CONFIG
         } as any;
 
         linter = new GherkinLinter(mockCache, mockConfigService);
@@ -61,7 +60,7 @@ Feature: Invalid Feature
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 1);
-        assert.strictEqual(diagnostics[0].code, 'MISSPELLED_KEYWORD');
+        assert.strictEqual(diagnostics[0].code, 'invalid-keyword');
         assert.ok(diagnostics[0].message.includes("Did you mean 'Given'?"));
     });
 
@@ -76,7 +75,7 @@ Feature Invalid
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.ok(diagnostics.length >= 2);
-        assert.ok(diagnostics.some(d => d.code === 'MISSING_COLON'));
+        assert.ok(diagnostics.some(d => d.code === 'missing-colon'));
     });
     test('Missing colon in Scenario Outline should suggest Scenario Outline:', async () => {
         const text = `
@@ -88,7 +87,7 @@ Feature: Test
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const diag = diagnostics.find(d => d.code === 'MISSING_COLON');
+        const diag = diagnostics.find(d => d.code === 'missing-colon');
         assert.ok(diag, 'Should detect MISSING_COLON on Scenario Outline');
         assert.strictEqual(diag!.relatedInformation![0].message, ':');
     });
@@ -105,7 +104,7 @@ Feature: Test
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        assert.ok(diagnostics.some(d => d.code === 'UNDEFINED_STEP'));
+        assert.ok(diagnostics.some(d => d.code === 'undefined-step'));
     });
 
     test('Ambiguous step should generate a diagnostic', async () => {
@@ -128,7 +127,7 @@ Feature: Test
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const ambiguousDiag = diagnostics.find(d => d.code === 'AMBIGUOUS_STEP');
+        const ambiguousDiag = diagnostics.find(d => d.code === 'ambiguous-step');
         assert.ok(ambiguousDiag, 'Should generate AMBIGUOUS_STEP diagnostic');
         assert.ok(ambiguousDiag?.message.includes('an ambiguous (.*)'), 'Message should include first pattern');
         assert.ok(ambiguousDiag?.message.includes('an (.*) step'), 'Message should include second pattern');
@@ -149,7 +148,7 @@ Feature: Test
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        assert.ok(diagnostics.some(d => d.code === 'SCENARIO_WITH_EXAMPLES'));
+        assert.ok(diagnostics.some(d => d.code === 'scenario-with-examples'));
     });
 
     test('Inconsistent table cell count should generate a diagnostic', async () => {
@@ -166,7 +165,7 @@ Feature: Test
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        assert.ok(diagnostics.some(d => d.code === 'INCONSISTENT_CELL_COUNT'));
+        assert.ok(diagnostics.some(d => d.code === 'table-inconsistency'));
     });
 
     test('Unmapped descriptions should be ignored if empty but flagged if stray text', async () => {
@@ -195,7 +194,7 @@ Feature: Valid feature
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const diag = diagnostics.find(d => d.code === 'MISSPELLED_KEYWORD');
+        const diag = diagnostics.find(d => d.code === 'invalid-keyword');
         assert.ok(diag, 'Should generate MISSPELLED_KEYWORD');
         assert.strictEqual(diag?.message.includes("Did you mean 'Scenario:'?"), true, 'Message should suggest adding a colon for block keywords');
     });
@@ -209,7 +208,7 @@ Feature: Valid feature
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const diag = diagnostics.find(d => d.code === 'MISSING_COLON');
+        const diag = diagnostics.find(d => d.code === 'missing-colon');
         assert.ok(diag, 'Should generate MISSING_COLON for exact block keyword in description');
     });
 
@@ -223,7 +222,7 @@ Feature: Valid feature
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const diag = diagnostics.find(d => d.code === 'MISSPELLED_KEYWORD' && d.message.includes('Incorrect casing'));
+        const diag = diagnostics.find(d => d.code === 'invalid-keyword' && d.message.includes('Incorrect casing'));
         assert.ok(diag, 'Should generate MISSPELLED_KEYWORD for miscapitalized step');
     });
 
@@ -255,7 +254,7 @@ Featre: Bad
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         // Fallback should still find SCENARIO_WITH_EXAMPLES
-        assert.ok(diagnostics.some(d => d.code === 'SCENARIO_WITH_EXAMPLES'));
+        assert.ok(diagnostics.some(d => d.code === 'scenario-with-examples'));
     });
 
     test('Edge Case: Flags completely missing Feature block', async () => {
@@ -302,7 +301,7 @@ Feature: Test
 
         // Because the cache is not ready, checkSteps won't run, so we won't get UNDEFINED_STEP
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        assert.ok(!diagnostics.some(d => d.code === 'UNDEFINED_STEP'), 'Should not flag undefined step if cache is not ready');
+        assert.ok(!diagnostics.some(d => d.code === 'undefined-step'), 'Should not flag undefined step if cache is not ready');
     });
 
     test('Concurrency: Older run should not overwrite newer run diagnostics', async () => {
@@ -336,13 +335,18 @@ Feature: Test
         const text = 'Feature: Schedule\n  Scenario: Sched\n    Givn something';
         const doc = createMockDocument(text, 'file:///schedule.feature');
 
-        // Schedule it with 50ms delay
-        linter.scheduleLint(doc, 50);
+        // Schedule it
+        linter.scheduleLint(doc);
         let diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 0, 'Should not be linted immediately');
 
         // Wait for it to trigger
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const anyLinter = linter as any;
+        while (anyLinter.isFlushing) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
 
         diagnostics = vscode.languages.getDiagnostics(doc.uri);
         // Now it should have executed
@@ -353,7 +357,7 @@ Feature: Test
         const text = 'Feature: Timer\n  Scenario: Timer\n    Givn something';
         const doc = createMockDocument(text, 'file:///timer.feature');
 
-        linter.scheduleLint(doc, 500);
+        linter.scheduleLint(doc);
         linter.clear(doc);
 
         await new Promise(resolve => setTimeout(resolve, 600));
@@ -401,7 +405,7 @@ Característica: Test ES
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const scenarioWithExamples = diagnostics.find(d => d.code === 'SCENARIO_WITH_EXAMPLES');
+        const scenarioWithExamples = diagnostics.find(d => d.code === 'scenario-with-examples');
         assert.ok(scenarioWithExamples, 'Should flag SCENARIO_WITH_EXAMPLES in Spanish');
         assert.ok(scenarioWithExamples?.message.includes("'Escenario'"), 'Should use localized Scenario');
         assert.ok(scenarioWithExamples?.message.includes("'Ejemplos'"), 'Should use localized Examples');
@@ -420,7 +424,7 @@ Fonctionalité Test FR
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const typoDiag = diagnostics.find(d => d.code === 'MISSPELLED_KEYWORD' || d.code === 'MISSING_COLON');
+        const typoDiag = diagnostics.find(d => d.code === 'invalid-keyword' || d.code === 'missing-colon');
         assert.ok(typoDiag, 'Should generate a diagnostic for misspelled French keyword');
         assert.ok(typoDiag?.message.includes("Did you mean 'Fonctionnalité:'?"), 'Message should suggest correct French block keyword with colon');
     });
@@ -439,7 +443,7 @@ Funktionalitä Bad
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        assert.ok(diagnostics.some(d => d.code === 'SCENARIO_WITH_EXAMPLES'), 'Should flag SCENARIO_WITH_EXAMPLES in German via fallback scan');
+        assert.ok(diagnostics.some(d => d.code === 'scenario-with-examples'), 'Should flag SCENARIO_WITH_EXAMPLES in German via fallback scan');
     });
 
     test('Dialect non-Latin: Arabic Scenario with Examples (fallback)', async () => {
@@ -455,7 +459,7 @@ Funktionalitä Bad
         await linter.lint(doc);
 
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
-        const scenarioWithExamples = diagnostics.find(d => d.code === 'SCENARIO_WITH_EXAMPLES');
+        const scenarioWithExamples = diagnostics.find(d => d.code === 'scenario-with-examples');
         assert.ok(scenarioWithExamples, 'Should flag SCENARIO_WITH_EXAMPLES in Arabic');
     });
 
@@ -479,8 +483,133 @@ Feature: Semantic Boundary
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         // We expect an UNDEFINED_STEP for "I am an orphaned continuation"
         const undefinedStep = diagnostics.find(d =>
-            d.code === 'UNDEFINED_STEP' && d.message.includes('orphaned continuation')
+            d.code === 'undefined-step' && d.message.includes('orphaned continuation')
         );
         assert.ok(undefinedStep, 'Should flag UNDEFINED_STEP for malformed And because it resolves to "step" context');
+    });
+
+    test('Linter disabled UX: Automatic scheduleLint avoids work when disabled', async () => {
+        const anyLinter = linter as any;
+        const mockConfigService = anyLinter.configService;
+        mockConfigService.getConfiguration = () => ({ linter: { enabled: false } });
+
+        const text = 'Feature: Test\n  Scenario: Sched\n    Givn something';
+        const doc = createMockDocument(text, 'file:///schedule-disabled.feature');
+
+        let notificationCount = 0;
+        const originalShowInfo = vscode.window.showInformationMessage;
+        vscode.window.showInformationMessage = (() => { notificationCount++; return Promise.resolve(undefined); }) as any;
+
+        try {
+            linter.scheduleLint(doc);
+
+            // Wait beyond the debounce time
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Verify no pending timer was created
+            const uriStr = doc.uri.toString();
+            const pending = anyLinter.pendingRequests.get(uriStr);
+            assert.ok(!pending?.timer, 'No timer should be created when linter is disabled');
+
+            // Verify notification was not shown
+            assert.strictEqual(notificationCount, 0, 'No notification should be shown for automatic scheduleLint');
+        } finally {
+            vscode.window.showInformationMessage = originalShowInfo;
+        }
+    });
+
+    test('Linter disabled UX: immediateLint avoids work when disabled', async () => {
+        const anyLinter = linter as any;
+        const mockConfigService = anyLinter.configService;
+        mockConfigService.getConfiguration = () => ({ linter: { enabled: false } });
+
+        const text = 'Feature: Test\n  Scenario: Sched\n    Givn something';
+        const doc = createMockDocument(text, 'file:///immediate-disabled.feature');
+
+        let notificationCount = 0;
+        const originalShowInfo = vscode.window.showInformationMessage;
+        vscode.window.showInformationMessage = (() => { notificationCount++; return Promise.resolve(undefined); }) as any;
+
+        try {
+            linter.immediateLint(doc);
+
+            // Verify request was dropped immediately
+            const uriStr = doc.uri.toString();
+            const pending = anyLinter.pendingRequests.get(uriStr);
+            assert.ok(!pending, 'Request should be dropped immediately when disabled');
+
+            // Verify notification was not shown
+            assert.strictEqual(notificationCount, 0, 'No notification should be shown for automatic immediateLint');
+        } finally {
+            vscode.window.showInformationMessage = originalShowInfo;
+        }
+    });
+
+    test('Linter disabled UX: explicit lint command triggers notification when disabled', async () => {
+        const anyLinter = linter as any;
+        const mockConfigService = anyLinter.configService;
+        mockConfigService.getConfiguration = () => ({ linter: { enabled: false } });
+
+        const text = 'Feature: Test\n  Scenario: Sched\n    Givn something';
+        const doc = createMockDocument(text, 'file:///explicit-disabled.feature');
+
+        let notificationCount = 0;
+        const originalShowInfo = vscode.window.showInformationMessage;
+        vscode.window.showInformationMessage = (() => { notificationCount++; return Promise.resolve(undefined); }) as any;
+
+        try {
+            await linter.lint(doc, 1, 1, true); // true = isExplicitCommand
+
+            assert.strictEqual(notificationCount, 1, 'Notification SHOULD be shown for explicit commands');
+        } finally {
+            vscode.window.showInformationMessage = originalShowInfo;
+        }
+    });
+
+    test('Benchmark: 500-file branch-switch burst', async () => {
+        // Create 500 mock documents
+        const docs: vscode.TextDocument[] = [];
+        for (let i = 0; i < 500; i++) {
+            docs.push(createMockDocument(`Feature: F${i}\n  Scenario: S${i}\n    Given step ${i}`, `file:///burst-${i}.feature`));
+        }
+
+        // Mock workspace.textDocuments safely
+        const originalTextDocuments = Object.getOwnPropertyDescriptor(vscode.workspace, 'textDocuments');
+        Object.defineProperty(vscode.workspace, 'textDocuments', {
+            get: () => docs,
+            configurable: true
+        });
+
+        try {
+            // Start the clock
+            const startTime = Date.now();
+
+            // Simulate the burst by calling scheduleLint for all 500 files
+            for (const doc of docs) {
+                linter.scheduleLint(doc);
+            }
+
+            // Wait for the debounce
+            await new Promise(resolve => setTimeout(resolve, 300)); 
+            
+            // Wait for the async flush to finish
+            const anyLinter = linter as any;
+            while (anyLinter.isFlushing) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            const elapsed = Date.now() - startTime;
+            assert.ok(elapsed < 5000, `Should complete 500-file linting within reasonable time (took ${elapsed}ms)`);
+            
+            // Output for the report
+            process.stdout.write(`\\n--- BENCHMARK 500 FILES: ${elapsed}ms ---\\n`);
+        } finally {
+            if (originalTextDocuments) {
+                Object.defineProperty(vscode.workspace, 'textDocuments', originalTextDocuments);
+            } else {
+                // Should not happen, but safe fallback
+                delete (vscode.workspace as any).textDocuments;
+            }
+        }
     });
 });
