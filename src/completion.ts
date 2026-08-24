@@ -187,12 +187,21 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             item.insertText = new vscode.SnippetString(cleanedSnippetString);
             item.detail = `(behave) @${def.type}`;
             
+            const doc = new vscode.MarkdownString();
+            doc.appendMarkdown(`**${def.functionName || 'step_impl'}**\n\n`);
             if (def.documentation) {
-                const doc = new vscode.MarkdownString();
-                doc.appendMarkdown(`**${def.functionName || 'step_impl'}**\n\n`);
-                doc.appendMarkdown(`---\n${def.documentation}`);
-                item.documentation = doc;
+                doc.appendMarkdown(`---\n${def.documentation}\n\n`);
             }
+            doc.appendMarkdown(`---\n`);
+            
+            // Add Regex and Source File exactly as required by the test plan
+            const exactPattern = def.regex ? def.regex.toString() : def.rawPattern;
+            doc.appendMarkdown(`**Regex:** \`${exactPattern}\`\n\n`);
+            
+            const relativePath = vscode.workspace.asRelativePath(def.uri);
+            doc.appendMarkdown(`**Source:** \`${relativePath}\``);
+            
+            item.documentation = doc;
             
             // Set the range to replace the entire typed text after the keyword
             item.range = replaceRange;

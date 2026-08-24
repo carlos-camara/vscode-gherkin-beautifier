@@ -121,7 +121,7 @@ If you ever forget a command or shortcut, press <kbd>Ctrl+Shift+P</kbd> (<kbd>Cm
 This opens an interactive quick-pick menu that groups all the extension's capabilities (formatting, running tests, diagnosing workspace, viewing statistics) into one unified searchable list.
 
 **Editor Context Menus:** You can also access many of these features quickly by right-clicking anywhere in a `.feature` file to open the **Gherkin PowerTools** submenu (which includes Format, Diagnose Workspace, and Show Gherkin Health).
-Additionally, if you right-click directly on a valid Gherkin step, a dynamic **Rename Step** option will appear, allowing you to instantly rename the step across your entire workspace.
+Additionally, if you right-click directly on a valid Gherkin step, a dynamic **Rename Step** option will appear within the **Gherkin PowerTools** submenu, allowing you to instantly rename the step across your entire workspace.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/command-center.gif" alt="Command Center" width="600" height="340" />
@@ -159,7 +159,8 @@ You can always dismiss these suggestions or click "Don't show again" to permanen
 ## Next Steps
 
 Explore the full capabilities:
-- [Gherkin Editing](gherkin_editing.md) (Formatting & Linting)
+- [Gherkin Editing](gherkin_editing.md) (Formatting)
+- [Diagnostics & Quick Fixes](diagnostics_and_fixes.md) (Linter & Anti-Patterns)
 - [Python Behave](python_behave.md) (Navigation & Generation)
 - [Run and Debug](run_and_debug.md) (Test Explorer)
 - [Command Line Interface (CLI)](cli.md) (Headless Execution & CI/CD)

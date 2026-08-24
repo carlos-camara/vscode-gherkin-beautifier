@@ -11,7 +11,8 @@ function createMockDocument(text: string, uriStr: string): vscode.TextDocument {
         getText: () => text,
         lineAt: (line: number) => ({ text: lines[line] }),
         lineCount: lines.length,
-        uri: vscode.Uri.parse(uriStr)
+        uri: vscode.Uri.parse(uriStr),
+        save: async () => true
     } as any as vscode.TextDocument;
 }
 
@@ -177,6 +178,77 @@ suite('Code Action Provider Test Suite', () => {
         const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [] } as any, {} as any);
         // Should not provide actions because it is stale
         assert.strictEqual(actions.length, 0);
+    });
+});
+
+suite('Safe Batch Fix All Test Suite', () => {
+    let provider: GherkinCodeActionProvider;
+
+    setup(() => {
+        provider = new GherkinCodeActionProvider();
+        diagnosticRegistry.clear();
+    });
+
+    test('Filters out unsafe and stale diagnostics', () => {
+        const doc = createMockDocument('Feature\nScenario: Test\nThen undefined step', 'file:///fix-all-unsafe.feature');
+        (doc as any).version = 1;
+        
+        // 1. Unsafe diagnostic (Category B/C/D)
+        const d1 = new RuleDiagnostic(new vscode.Range(2,0,2,19), "Undefined step", vscode.DiagnosticSeverity.Warning, 'undefined-step', 1, { stepText: 'undefined step', stepKeyword: 'Then' });
+        // 2. Stale diagnostic
+        const d2 = new RuleDiagnostic(new vscode.Range(0,0,0,7), "Missing colon", vscode.DiagnosticSeverity.Error, 'missing-colon', 0, { replacementText: 'Feature:' }); // version 0 != 1
+        // 3. Safe diagnostic
+        const d3 = new RuleDiagnostic(new vscode.Range(1,0,1,8), "Scenario with Examples should be Scenario Outline", vscode.DiagnosticSeverity.Warning, 'scenario-with-examples', 1);
+
+        diagnosticRegistry.set(doc.uri.toString(), [d1, d2, d3]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { only: { contains: (kind: vscode.CodeActionKind) => kind === vscode.CodeActionKind.SourceFixAll }, diagnostics: [] } as any, {} as any);
+        
+        assert.ok(actions);
+        assert.strictEqual(actions.length, 1);
+        assert.strictEqual(actions[0].title, "Fix All Safe Gherkin Issues");
+        
+        // Ensure the edit only contains the safe diagnostic (d3)
+        const edits = actions[0].edit?.entries();
+        assert.strictEqual(edits?.length, 1);
+        assert.strictEqual(edits[0][1].length, 1);
+        assert.strictEqual(edits[0][1][0].newText, 'Scenario Outline');
+    });
+
+    test('Conflict resolution drops overlapping edits', () => {
+        const doc = createMockDocument('Givn missing colon', 'file:///fix-all-conflicts.feature');
+        (doc as any).version = 1;
+        
+        // Two diagnostics on the exact same line that overlap.
+        // D1: Missing colon (0,0 to 0,18 -> replacementText)
+        const d1 = new RuleDiagnostic(new vscode.Range(0,0,0,18), "Missing colon", vscode.DiagnosticSeverity.Error, 'missing-colon', 1, { replacementText: 'Given missing colon:' });
+        
+        // D2: Invalid keyword (0,0 to 0,4 -> replacementText)
+        const d2 = new RuleDiagnostic(new vscode.Range(0,0,0,4), "Misspelled keyword", vscode.DiagnosticSeverity.Error, 'invalid-keyword', 1, { replacementText: 'Given' });
+
+        diagnosticRegistry.set(doc.uri.toString(), [d1, d2]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { only: { contains: (kind: vscode.CodeActionKind) => kind === vscode.CodeActionKind.SourceFixAll }, diagnostics: [] } as any, {} as any);
+        
+        // Only one edit should survive conflict resolution since they overlap on line 0
+        const edits = actions[0].edit?.entries();
+        assert.strictEqual(edits?.[0]?.[1]?.length, 1, "Should drop overlapping edit");
+    });
+
+    test('Conflict resolution applies multiple non-overlapping edits', () => {
+        const doc = createMockDocument('Featur\nScenario: Test', 'file:///fix-all-no-conflicts.feature');
+        (doc as any).version = 1;
+        
+        // Non-overlapping edits on different lines
+        const d1 = new RuleDiagnostic(new vscode.Range(0,0,0,6), "Misspelled keyword", vscode.DiagnosticSeverity.Error, 'invalid-keyword', 1, { replacementText: 'Feature' });
+        const d2 = new RuleDiagnostic(new vscode.Range(1,0,1,8), "Scenario with Examples", vscode.DiagnosticSeverity.Warning, 'scenario-with-examples', 1);
+
+        diagnosticRegistry.set(doc.uri.toString(), [d1, d2]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { only: { contains: (kind: vscode.CodeActionKind) => kind === vscode.CodeActionKind.SourceFixAll }, diagnostics: [] } as any, {} as any);
+        
+        const edits = actions[0].edit?.entries();
+        assert.strictEqual(edits?.[0]?.[1]?.length, 2, "Should apply both non-overlapping edits");
     });
 });
 
@@ -449,7 +521,8 @@ suite('createStepDefinition Test Suite', () => {
                 uri: vscode.Uri.file('/tmp/file1.py'),
                 getText: () => 'from behave import *\n\n@given("existing")\ndef existing(context):\n    pass\n',
                 lineCount: 5,
-                lineAt: () => ({text: '    pass'})
+                lineAt: () => ({text: '    pass'}),
+                save: async () => true
             }],
             configurable: true
         });
@@ -481,7 +554,8 @@ suite('createStepDefinition Test Suite', () => {
         const originalOpenTextDocument = vscode.workspace.openTextDocument;
         (vscode.workspace as any).openTextDocument = async () => ({
             lineCount: 1,
-            lineAt: () => ({text: ''})
+            lineAt: () => ({text: ''}),
+            save: async () => true,
         });
 
         const originalShowTextDocument = vscode.window.showTextDocument;

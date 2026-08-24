@@ -28,7 +28,10 @@ Create a `.gherkin-powertoolsrc.json` (or `.gherkin-powertoolsrc`) file in the r
 
 ## Available Profiles
 
-You can specify a base `profile` to inherit a predefined set of rules:
+Gherkin PowerTools exposes profiles for Formatting (`profile`).
+
+### Formatting Profiles (`profile`)
+You can specify a base `profile` to inherit a predefined set of formatting rules:
 
 - `custom` (Default): Extension defaults — configure individual settings manually.
 - `strict`: Strict consistency: 4-space indent, alphabetical tags, 1 blank line between scenarios.

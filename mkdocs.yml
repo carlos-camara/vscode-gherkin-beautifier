@@ -67,6 +67,7 @@ nav:
   - Home: index.md
   - Getting Started: getting_started.md
   - Gherkin Editing: gherkin_editing.md
+  - Diagnostics & Quick Fixes: diagnostics_and_fixes.md
   - Python Behave: python_behave.md
   - Run and Debug: run_and_debug.md
   - Gherkin Health & Analytics: gherkin_health.md

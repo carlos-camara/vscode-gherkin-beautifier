@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export interface Configuration {
+interface Configuration {
     indentation: { steps: number; };
     tables: { alignToKeyword: boolean; };
     docStrings: { alignToKeyword: boolean; };
@@ -8,7 +8,7 @@ export interface Configuration {
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
-    rules: Record<string, string>;
+    rules: Record<string, any>;
     behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
     featureGlobs: string[];
 }
@@ -441,8 +441,12 @@ export class ConfigurationService {
         const oldAntiPatternRules = antiPatternsConfig.get<Record<string, string>>('rules');
         if (oldAntiPatternRules && typeof oldAntiPatternRules === 'object') {
             for (const [key, value] of Object.entries(oldAntiPatternRules)) {
-                if (RULES_REGISTRY[key] && typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
-                    config.rules[key] = value;
+                if (RULES_REGISTRY[key]) {
+                    if (typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
+                        config.rules[key] = value;
+                    } else if (typeof value === 'object' && value !== null) {
+                        config.rules[key] = value;
+                    }
                 }
             }
         }
@@ -451,8 +455,12 @@ export class ConfigurationService {
         const vscodeRules = getOverride<Record<string, string>>('rules');
         if (vscodeRules !== undefined && typeof vscodeRules === 'object' && vscodeRules !== null) {
             for (const [key, value] of Object.entries(vscodeRules)) {
-                if (RULES_REGISTRY[key] && typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
-                    config.rules[key] = value;
+                if (RULES_REGISTRY[key]) {
+                    if (typeof value === 'string' && ['error', 'warning', 'info', 'hint', 'off'].includes(value)) {
+                        config.rules[key] = value;
+                    } else if (typeof value === 'object' && value !== null) {
+                        config.rules[key] = value;
+                    }
                 }
             }
         }

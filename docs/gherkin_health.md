@@ -11,8 +11,8 @@ The Analytics Dashboard analyzes your workspace in real-time leveraging the in-m
 It generates deep heuristics and scores, including:
 
 - **Overall Health Score**: A unified metric indicating the general state of your test suite.
-- **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files.
-- **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files).
+- **Maintainability Score**: Penalized by technical debt such as unused step definitions, duplicated patterns, and undefined steps in feature files. The dashboard uses progressive disclosure to show exactly how each metric penalizes the overall score.
+- **Complexity Score**: An inverse metric tracking the verbosity of your suite (e.g. overly long scenarios, massive feature files). You can expand the score card to see the precise breakdown of complexity penalties.
 - **Technical Debt Breakdown**: Immediate access to unused steps, duplicated steps, ambiguous steps, and undefined steps flagged by the Anti-pattern Engine.
   The engine uses semantic context tracking to accurately resolve `And` and `But` steps.
   It also smartly extracts the core regex pattern, ignoring execution keywords (Given/When/Then). The structural identity model uses nested object structures to safely index complex regular expressions containing colons or unicode, ensuring that step definitions reused across different contexts are not falsely flagged as corrupted or duplicated.
@@ -22,7 +22,6 @@ It generates deep heuristics and scores, including:
   - **Duplicated**, **Unused**, **Ambiguous**, and **Undefined** Python step definitions
   - **Excessive Tags**
   - **Inconsistent Formatting**
-  - **Poor Maintainability**
 - **Architecture Insights**: Rankings of the top 10 largest features and scenarios by step count, and top 50 most frequent tags.
 
 **Interactive Navigation**: Every metric in the dashboard is clickable. Clicking on an oversized scenario, a duplicated step, or an unused step definition will instantly open the file and scroll to the exact line in your VS Code editor.
@@ -40,17 +39,42 @@ To prevent Quick Fixes from applying edits to stale code (e.g. if you continue t
 
 ## Configuration
 
-You can configure the Anti-pattern Detection Engine's behavior and rule severities in your workspace settings or `.gherkin-powertoolsrc.json`:
+The Anti-pattern Detection Engine's behavior can be customized in your workspace settings or `.gherkin-powertoolsrc.json`. Rules are structured into categories (Correctness, Reliability, Maintainability, Style). While Correctness rules (like syntax errors) are absolute, heuristic rules (like Oversized Scenarios) can be fine-tuned.
+
+### Object-Based Configuration
+
+You can configure rules using simple severity strings or objects to pass custom parameters like thresholds:
 
 ```json
 "gherkinPowerTools.antiPatterns.enabled": true,
 "gherkinPowerTools.rules": {
-    "oversized-scenario": "warning",
+    "oversized-scenario": {
+        "severity": "warning",
+        "maxSteps": 20
+    },
+    "oversized-feature": {
+        "severity": "info",
+        "maxSteps": 100
+    },
     "duplicated-steps": "error",
     "ambiguous-step": "error"
 }
 ```
+
 See the [Configuration Reference](configuration.md#unified-diagnostics-rules) for the full list of rules.
+
+---
+
+## Suppressing Findings
+
+If a heuristic anti-pattern finding (such as an oversized scenario or a specific duplicated step) is deliberate or unavoidable, you can suppress it.
+
+1. Place your cursor on the rule violation in your editor.
+2. Open the Quick Fix menu (<kbd>Cmd+.</kbd> or <kbd>Ctrl+.</kbd>) and select **Suppress 'rule-id'**.
+3. You will be prompted to provide a mandatory **reason** (e.g. "Approved legacy component").
+4. The suppression is recorded in an external structural ledger at the root of your workspace (`.gherkin-pt-suppressions.json`).
+
+The diagnostic is immediately removed from the editor and filtered out of the Health Dashboard. The Dashboard header will display a shield badge indicating the number of active suppressions. Core parse errors (e.g., `syntax-errors`) cannot be suppressed.
 
 ---
 

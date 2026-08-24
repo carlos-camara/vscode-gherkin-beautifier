@@ -171,25 +171,6 @@
           "default": true,
           "markdownDescription": "Enable or disable the real-time Impact Analysis engine. When `true`, CodeLenses appear above Python step definitions showing their usage blast radius (Low, Medium, High). Useful for prioritizing testing during refactoring."
         },
-        "gherkinPowerTools.linter.enabledRules": {
-          "type": "array",
-          "order": 21,
-          "scope": "resource",
-          "deprecationMessage": "Deprecated in favor of 'gherkinPowerTools.rules'.",
-          "items": {
-            "type": "string",
-            "enum": [
-              "MISSING_COLON",
-              "INVALID_KEYWORD",
-              "SEMANTIC_ERROR",
-              "TABLE_INCONSISTENCY",
-              "UNDEFINED_STEP",
-              "AMBIGUOUS_STEP"
-            ]
-          },
-          "default": [],
-          "markdownDescription": "Whitelist of linting rule IDs to enforce. An **empty array (default)** enables **all rules**. Populate this array to restrict the linter to only the specified rules — useful for enterprise teams that want to suppress certain checks while keeping structural validation.\n\n**Available rules:** `MISSING_COLON`, `INVALID_KEYWORD`, `SEMANTIC_ERROR`, `TABLE_INCONSISTENCY`, `UNDEFINED_STEP`, `AMBIGUOUS_STEP`"
-        },
         "gherkinPowerTools.behave.stepGlobs": {
           "type": "array",
           "order": 30,
@@ -291,25 +272,6 @@
           "default": true,
           "markdownDescription": "Enable the BDD Anti-pattern Detection engine to show diagnostics and health issues."
         },
-        "gherkinPowerTools.antiPatterns.rules": {
-          "type": "object",
-          "order": 43,
-          "scope": "resource",
-          "deprecationMessage": "Deprecated in favor of 'gherkinPowerTools.rules'.",
-          "default": {
-            "syntax-errors": "error",
-            "oversized-scenario": "warning",
-            "oversized-feature": "info",
-            "duplicated-steps": "error",
-            "unused-steps": "info",
-            "ambiguous-steps": "error",
-            "undefined-steps": "error",
-            "excessive-tags": "info",
-            "inconsistent-formatting": "info",
-            "poor-maintainability": "warning"
-          },
-          "markdownDescription": "Configure severity overrides for specific anti-pattern rules. Values can be `error`, `warning`, `info`, `hint`, or `off`."
-        },
         "gherkinPowerTools.rules": {
           "type": "object",
           "order": 44,
@@ -326,10 +288,38 @@
             "duplicated-steps": "error",
             "unused-steps": "info",
             "excessive-tags": "info",
-            "inconsistent-formatting": "info",
-            "poor-maintainability": "warning"
+            "inconsistent-formatting": "info"
           },
-          "markdownDescription": "Configure severities for specific rules across the AST Linter and Anti-Pattern engine. Values can be `error`, `warning`, `info`, `hint`, or `off`.\n\nNote: `syntax-error` cannot be disabled."
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning",
+                  "info",
+                  "hint",
+                  "off"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "error",
+                      "warning",
+                      "info",
+                      "hint",
+                      "off"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "markdownDescription": "Configure severities and specific parameters for rules across the AST Linter and Anti-Pattern engine. Values can be a severity string (`error`, `warning`, `info`, `hint`, or `off`) or an object (e.g., `{ \"severity\": \"warning\", \"maxSteps\": 20 }`).\n\nNote: `syntax-error` cannot be disabled."
         }
       }
     },
@@ -337,6 +327,11 @@
       {
         "command": "gherkinPowerTools.showImpactDetails",
         "title": "Show Impact Details",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.fixAllAuto",
+        "title": "Fix All Auto",
         "category": "Gherkin PowerTools"
       },
       {
@@ -368,6 +363,11 @@
       {
         "command": "gherkinPowerTools.format",
         "title": "Format Gherkin Document",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.fixAllSafe",
+        "title": "Fix All Safe Auto-Fixable Problems",
         "category": "Gherkin PowerTools"
       },
       {
@@ -454,17 +454,17 @@
           "submenu": "gherkinPowerTools.submenu",
           "when": "editorLangId == feature",
           "group": "navigation@1"
-        },
-        {
-          "command": "gherkinPowerTools.refactor.renameStep",
-          "when": "editorLangId == feature && gherkinPowerTools.isCursorOnStep",
-          "group": "navigation@2"
         }
       ],
       "gherkinPowerTools.submenu": [
         {
           "command": "gherkinPowerTools.format",
           "group": "1_modification@1"
+        },
+        {
+          "command": "gherkinPowerTools.refactor.renameStep",
+          "when": "editorLangId == feature && gherkinPowerTools.isCursorOnStep",
+          "group": "1_modification@2"
         },
         {
           "command": "gherkinPowerTools.diagnoseWorkspace",
@@ -721,6 +721,7 @@
     ]
   },
   "devDependencies": {
+    "@types/micromatch": "^4.0.10",
     "@types/mocha": "^10.0.1",
     "@types/node": "^26.2.0",
     "@types/sinon": "^22.0.0",

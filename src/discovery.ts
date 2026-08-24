@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
 
-export class BehaveFileDiscoveryService {
+class BehaveFileDiscoveryService {
     private pendingEvents = new Map<string, { type: 'create' | 'change' | 'delete', timer: NodeJS.Timeout }>();
     private activeGlobs = new Map<string, { stepGlobs: string[], ignoreGlobs: string[] }>();
     private isRebuildingWatchers = false;

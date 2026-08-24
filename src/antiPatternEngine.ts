@@ -2,66 +2,106 @@ import { WorkspaceGraph, FeatureNode, ScenarioNode, StepNode } from './graph';
 import { ProjectHealthMetrics } from './statistics';
 
 type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
+type AntiPatternCategory = 'Correctness' | 'Reliability' | 'Maintainability' | 'Style';
+
+interface RuleMetadata<T = any> {
+    id: string;
+    title: string;
+    category: AntiPatternCategory;
+    rationale: string;
+    defaultSeverity: AntiPatternSeverity;
+    defaultParams?: T;
+}
 
 export interface AntiPattern {
     id: string;
     title: string;
+    category: AntiPatternCategory;
     explanation: string;
+    rationale: string;
     severity: AntiPatternSeverity;
-    affectedFiles: string[]; // Generic fallback
-    affectedItems?: { label: string; uri: string; line?: number; description?: string; subItems?: { label: string; uri: string; line?: number }[] }[]; // Detailed actionable items
+    affectedFiles: string[];
+    affectedItems?: { label: string; uri: string; line?: number; description?: string; subItems?: { label: string; uri: string; line?: number }[]; scopeType?: 'feature' | 'scenario' | 'step'; scopeValue?: string; }[];
     suggestedFix: string;
 }
 
-interface AntiPatternRule {
-    id: string;
-    analyze(graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[];
+interface AntiPatternRule<T = any> {
+    metadata: RuleMetadata<T>;
+    analyze(graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity, params?: T): AntiPattern[];
 }
 
-class OversizedFeatureRule implements AntiPatternRule {
-    id = 'oversized-feature';
-    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
+interface OversizedFeatureParams { maxSteps: number; }
+class OversizedFeatureRule implements AntiPatternRule<OversizedFeatureParams> {
+    metadata: RuleMetadata<OversizedFeatureParams> = {
+        id: 'oversized-feature',
+        title: 'Oversized Feature',
+        category: 'Maintainability',
+        rationale: 'Large features often indicate that too many concerns are mixed into one file, making them hard to read and maintain.',
+        defaultSeverity: 'info',
+        defaultParams: { maxSteps: 50 }
+    };
+
+    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity, params?: OversizedFeatureParams): AntiPattern[] {
         if (severity === 'off') return [];
+        const limit = params?.maxSteps ?? this.metadata.defaultParams!.maxSteps;
         const antiPatterns: AntiPattern[] = [];
-        const oversized = metrics.largestFeatures.filter(f => f.size > 50);
+        const oversized = metrics.largestFeatures.filter(f => f.size > limit);
         if (oversized.length > 0) {
             antiPatterns.push({
-                id: this.id,
-                title: 'Oversized Feature',
-                explanation: `Found ${oversized.length} feature(s) containing more than 50 steps, which makes them hard to read and maintain. Large features often indicate that too many concerns are mixed into one file.`,
+                id: this.metadata.id,
+                title: this.metadata.title,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: `Found ${oversized.length} feature(s) containing more than ${limit} steps.`,
                 severity,
                 affectedFiles: oversized.map(f => f.uri),
                 affectedItems: oversized.map(f => ({
                     label: `${f.name || 'Unnamed'} (${f.size} steps)`,
-                    description: `This feature contains ${f.size} steps, which is considered too large (limit is 50).`,
+                    description: `This feature contains ${f.size} steps, exceeding the threshold of ${limit}.`,
                     uri: f.uri,
-                    line: 0
+                    line: 0,
+                    scopeType: 'feature',
+                    scopeValue: f.name || 'Unnamed'
                 })),
-                suggestedFix: 'Break down these features into multiple smaller, more focused feature files (ideally under 10-15 steps per feature).'
+                suggestedFix: 'Break down these features into multiple smaller, more focused feature files.'
             });
         }
         return antiPatterns;
     }
 }
 
-class OversizedScenarioRule implements AntiPatternRule {
-    id = 'oversized-scenario';
-    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
+interface OversizedScenarioParams { maxSteps: number; }
+class OversizedScenarioRule implements AntiPatternRule<OversizedScenarioParams> {
+    metadata: RuleMetadata<OversizedScenarioParams> = {
+        id: 'oversized-scenario',
+        title: 'Oversized Scenario',
+        category: 'Reliability',
+        rationale: 'Long scenarios test too many behaviors, making them brittle and harder to debug when they fail.',
+        defaultSeverity: 'warning',
+        defaultParams: { maxSteps: 15 }
+    };
+
+    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity, params?: OversizedScenarioParams): AntiPattern[] {
         if (severity === 'off') return [];
+        const limit = params?.maxSteps ?? this.metadata.defaultParams!.maxSteps;
         const antiPatterns: AntiPattern[] = [];
-        const oversized = metrics.largestScenarios.filter(s => s.size > 15);
+        const oversized = metrics.largestScenarios.filter(s => s.size > limit);
         if (oversized.length > 0) {
             antiPatterns.push({
-                id: this.id,
-                title: 'Oversized Scenario',
-                explanation: `Found ${oversized.length} scenario(s) containing more than 15 steps. Long scenarios are brittle, hard to debug, and usually violate the single-responsibility principle of BDD.`,
+                id: this.metadata.id,
+                title: this.metadata.title,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: `Found ${oversized.length} scenario(s) containing more than ${limit} steps.`,
                 severity,
                 affectedFiles: oversized.map(s => s.uri),
                 affectedItems: oversized.map(s => ({
                     label: `${s.name || 'Unnamed'} (${s.size} steps)`,
-                    description: `This scenario contains ${s.size} steps, which is considered too large (limit is 15).`,
+                    description: `This scenario contains ${s.size} steps, exceeding the threshold of ${limit}.`,
                     uri: s.uri,
-                    line: s.line
+                    line: s.line,
+                    scopeType: 'scenario',
+                    scopeValue: s.name || 'Unnamed'
                 })),
                 suggestedFix: 'Split the scenario into multiple independent scenarios or use a Scenario Outline if you are repeating steps with different data.'
             });
@@ -71,15 +111,24 @@ class OversizedScenarioRule implements AntiPatternRule {
 }
 
 class DuplicatedStepsRule implements AntiPatternRule {
-    id = 'duplicated-steps';
+    metadata: RuleMetadata = {
+        id: 'duplicated-steps',
+        title: 'Duplicate Step Definition',
+        category: 'Correctness',
+        rationale: 'Multiple step definitions matching the same pattern will cause ambiguous step errors during execution.',
+        defaultSeverity: 'error'
+    };
+
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
         for (const dupGroup of metrics.stepAnalysis.duplicatedSteps) {
             antiPatterns.push({
-                id: this.id,
-                title: `Duplicate Step Definition: ${dupGroup.pattern}`,
-                explanation: `The step pattern "${dupGroup.pattern}" is defined in ${dupGroup.stepDefs.length} places. This will cause ambiguous step errors during execution.`,
+                id: this.metadata.id,
+                title: `${this.metadata.title}: ${dupGroup.pattern}`,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: `The step pattern "${dupGroup.pattern}" is defined in ${dupGroup.stepDefs.length} places.`,
                 severity,
                 affectedFiles: Array.from(new Set(dupGroup.stepDefs.map(sd => sd.uri))),
                 affectedItems: dupGroup.stepDefs.map(sd => ({
@@ -96,15 +145,24 @@ class DuplicatedStepsRule implements AntiPatternRule {
 }
 
 class UnusedStepsRule implements AntiPatternRule {
-    id = 'unused-steps';
+    metadata: RuleMetadata = {
+        id: 'unused-steps',
+        title: 'Unused Step Definitions',
+        category: 'Maintainability',
+        rationale: 'Step definitions that are never used add dead code to the project and increase maintenance overhead.',
+        defaultSeverity: 'info'
+    };
+
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
         if (metrics.stepAnalysis.unusedSteps.length > 0) {
             antiPatterns.push({
-                id: this.id,
-                title: 'Unused Step Definitions',
-                explanation: `Found ${metrics.stepAnalysis.unusedSteps.length} step definitions that are never used in any feature file. This adds dead code to the project.`,
+                id: this.metadata.id,
+                title: this.metadata.title,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: `Found ${metrics.stepAnalysis.unusedSteps.length} step definition(s) that are never used in any feature file.`,
                 severity,
                 affectedFiles: Array.from(new Set(metrics.stepAnalysis.unusedSteps.map(u => u.stepDef.uri))),
                 affectedItems: metrics.stepAnalysis.unusedSteps.map(u => ({
@@ -121,19 +179,30 @@ class UnusedStepsRule implements AntiPatternRule {
 }
 
 class AmbiguousStepsRule implements AntiPatternRule {
-    id = 'ambiguous-steps';
+    metadata: RuleMetadata = {
+        id: 'ambiguous-steps',
+        title: 'Ambiguous Steps in Feature Files',
+        category: 'Correctness',
+        rationale: 'Steps matching multiple step definitions lead to unpredictable test execution.',
+        defaultSeverity: 'error'
+    };
+
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.stepAnalysis.ambiguousSteps.length === 0) return [];
         return [{
-            id: this.id,
-            title: 'Ambiguous Steps in Feature Files',
-            explanation: `Found ${metrics.stepAnalysis.ambiguousSteps.length} step(s) that match multiple step definitions. This can lead to unpredictable test execution.`,
+            id: this.metadata.id,
+            title: this.metadata.title,
+            category: this.metadata.category,
+            rationale: this.metadata.rationale,
+            explanation: `Found ${metrics.stepAnalysis.ambiguousSteps.length} step(s) that match multiple step definitions.`,
             severity,
             affectedFiles: [],
             affectedItems: metrics.stepAnalysis.ambiguousSteps.map(a => ({
                 label: `Step: ${a.step.keyword} ${a.step.text} (Matches ${a.matchingDefs.length} defs)`,
                 uri: a.step.uri,
                 line: a.step.line,
+                scopeType: 'step',
+                scopeValue: a.step.text,
                 description: 'Matches the following definitions:',
                 subItems: a.matchingDefs.map(d => ({
                     label: d.pattern,
@@ -147,66 +216,97 @@ class AmbiguousStepsRule implements AntiPatternRule {
 }
 
 class UndefinedStepsRule implements AntiPatternRule {
-    id = 'undefined-steps';
+    metadata: RuleMetadata = {
+        id: 'undefined-steps',
+        title: 'Undefined Steps',
+        category: 'Correctness',
+        rationale: 'Steps without a matching definition will fail during test execution.',
+        defaultSeverity: 'error'
+    };
+
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || metrics.undefinedSteps.length === 0) return [];
         return [{
-            id: this.id,
-            title: 'Undefined Steps',
-            explanation: `Found ${metrics.undefinedSteps.length} step(s) that do not match any step definition. These steps will fail during test execution.`,
+            id: this.metadata.id,
+            title: this.metadata.title,
+            category: this.metadata.category,
+            rationale: this.metadata.rationale,
+            explanation: `Found ${metrics.undefinedSteps.length} step(s) that do not match any step definition.`,
             severity,
             affectedFiles: Array.from(new Set(metrics.undefinedSteps.map(u => u.uri))),
             affectedItems: metrics.undefinedSteps.map(u => ({
                 label: `Step: ${u.keyword} ${u.text}`,
                 description: `This step does not match any known step definition.`,
                 uri: u.uri,
-                line: u.line
+                line: u.line,
+                scopeType: 'step',
+                scopeValue: u.text
             })),
             suggestedFix: 'Implement the missing step definitions in your step files.'
         }];
     }
 }
 
-class ExcessiveTagsRule implements AntiPatternRule {
-    id = 'excessive-tags';
-    analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
+interface ExcessiveTagsParams { maxFeatureTags: number; maxScenarioTags: number; }
+class ExcessiveTagsRule implements AntiPatternRule<ExcessiveTagsParams> {
+    metadata: RuleMetadata<ExcessiveTagsParams> = {
+        id: 'excessive-tags',
+        title: 'Excessive Tags',
+        category: 'Style',
+        rationale: 'Heavy tagging is often a sign of over-categorization, which clutters the test suite and makes execution filtering difficult.',
+        defaultSeverity: 'hint',
+        defaultParams: { maxFeatureTags: 5, maxScenarioTags: 5 }
+    };
+
+    analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity, params?: ExcessiveTagsParams): AntiPattern[] {
         if (severity === 'off') return [];
+        const limitFeature = params?.maxFeatureTags ?? this.metadata.defaultParams!.maxFeatureTags;
+        const limitScenario = params?.maxScenarioTags ?? this.metadata.defaultParams!.maxScenarioTags;
         const antiPatterns: AntiPattern[] = [];
+        
         const allNodes = graph.currentGeneration.getAllNodes();
         const features = allNodes.filter(n => n.type === 'Feature') as FeatureNode[];
         const scenarios = allNodes.filter(n => n.type === 'Scenario') as ScenarioNode[];
         
-        const heavyFeatures = features.filter(f => f.tags.length > 5);
+        const heavyFeatures = features.filter(f => f.tags.length > limitFeature);
         if (heavyFeatures.length > 0) {
             antiPatterns.push({
-                id: this.id,
+                id: this.metadata.id,
                 title: 'Excessive Tags on Feature',
-                explanation: `Found ${heavyFeatures.length} feature(s) with more than 5 tags. Heavy tagging at the feature level is often a sign of over-categorization.`,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: `Found ${heavyFeatures.length} feature(s) with more than ${limitFeature} tags.`,
                 severity,
                 affectedFiles: heavyFeatures.map(f => f.uri),
                 affectedItems: heavyFeatures.map(f => ({
                     label: `${f.name || 'Unnamed'} (${f.tags.length} tags)`,
-                    description: `This feature has ${f.tags.length} tags, which exceeds the recommended limit of 5.`,
+                    description: `This feature has ${f.tags.length} tags, exceeding the threshold of ${limitFeature}.`,
                     uri: f.uri,
-                    line: f.line
+                    line: f.line,
+                    scopeType: 'feature',
+                    scopeValue: f.name || 'Unnamed'
                 })),
-                suggestedFix: 'Review and consolidate feature tags. Consider grouping related functionality into separate files rather than using tags to differentiate them.'
+                suggestedFix: 'Review and consolidate feature tags. Consider grouping related functionality into separate files.'
             });
         }
         
-        const heavyScenarios = scenarios.filter(s => s.tags.length > 5);
+        const heavyScenarios = scenarios.filter(s => s.tags.length > limitScenario);
         if (heavyScenarios.length > 0) {
             antiPatterns.push({
-                id: this.id,
+                id: this.metadata.id,
                 title: 'Excessive Tags on Scenario',
-                explanation: `Found ${heavyScenarios.length} scenario(s) with more than 5 tags.`,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: `Found ${heavyScenarios.length} scenario(s) with more than ${limitScenario} tags.`,
                 severity,
                 affectedFiles: heavyScenarios.map(s => s.uri),
                 affectedItems: heavyScenarios.map(s => ({
                     label: `${s.name || 'Unnamed'} (${s.tags.length} tags)`,
-                    description: `This scenario has ${s.tags.length} tags, which exceeds the recommended limit of 5.`,
+                    description: `This scenario has ${s.tags.length} tags, exceeding the threshold of ${limitScenario}.`,
                     uri: s.uri,
-                    line: s.line
+                    line: s.line,
+                    scopeType: 'scenario',
+                    scopeValue: s.name || 'Unnamed'
                 })),
                 suggestedFix: 'Reduce the number of tags by utilizing Feature-level tags or unifying overlapping tags.'
             });
@@ -215,26 +315,17 @@ class ExcessiveTagsRule implements AntiPatternRule {
     }
 }
 
-class PoorMaintainabilityRule implements AntiPatternRule {
-    id = 'poor-maintainability';
-    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
-        if (severity === 'off') return [];
-        if (metrics.scores.maintainability < 60) {
-            return [{
-                id: this.id,
-                title: 'Low Maintainability Score',
-                explanation: `The project maintainability score is ${metrics.scores.maintainability}/100. This is typically caused by high numbers of unused, duplicated, or undefined steps.`,
-                severity,
-                affectedFiles: [],
-                suggestedFix: 'Resolve the unused and undefined steps issues to improve maintainability.'
-            }];
-        }
-        return [];
-    }
-}
+
 
 class InconsistentFormattingRule implements AntiPatternRule {
-    id = 'inconsistent-formatting';
+    metadata: RuleMetadata = {
+        id: 'inconsistent-formatting',
+        title: 'Inconsistent Formatting: Trailing Spaces',
+        category: 'Style',
+        rationale: 'Trailing whitespaces cause parsing issues and degrade the readability of source control diffs.',
+        defaultSeverity: 'hint'
+    };
+
     analyze(graph: WorkspaceGraph, _metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off') return [];
         const antiPatterns: AntiPattern[] = [];
@@ -245,9 +336,11 @@ class InconsistentFormattingRule implements AntiPatternRule {
         if (stepsWithTrailingSpaces.length > 0) {
             const uris = Array.from(new Set(stepsWithTrailingSpaces.map(s => s.uri)));
             antiPatterns.push({
-                id: this.id,
-                title: 'Inconsistent Formatting: Trailing Spaces',
-                explanation: `Found ${stepsWithTrailingSpaces.length} step(s) with trailing spaces. This can cause parsing issues or mismatch with step definitions.`,
+                id: this.metadata.id,
+                title: this.metadata.title,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: `Found ${stepsWithTrailingSpaces.length} step(s) with trailing spaces.`,
                 severity,
                 affectedFiles: uris,
                 suggestedFix: 'Format the Gherkin documents to remove trailing whitespaces.'
@@ -258,17 +351,25 @@ class InconsistentFormattingRule implements AntiPatternRule {
 }
 
 class SyntaxErrorsRule implements AntiPatternRule {
-    id = 'syntax-errors';
+    metadata: RuleMetadata = {
+        id: 'syntax-errors',
+        title: 'Syntax Error',
+        category: 'Correctness',
+        rationale: 'Gherkin documents with syntax errors cannot be parsed or executed by test runners.',
+        defaultSeverity: 'error'
+    };
+
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
         if (severity === 'off' || !metrics.parseErrors || metrics.parseErrors.length === 0) return [];
         
         const antiPatterns: AntiPattern[] = [];
-        
         for (const fileErrors of metrics.parseErrors) {
             if (fileErrors.errors.length > 0) {
                 antiPatterns.push({
-                    id: this.id,
-                    title: `Syntax Error`,
+                    id: this.metadata.id,
+                    title: this.metadata.title,
+                    category: this.metadata.category,
+                    rationale: this.metadata.rationale,
                     explanation: `Found ${fileErrors.errors.length} parsing error(s). Gherkin structure is compromised.`,
                     severity,
                     affectedFiles: [fileErrors.uri],
@@ -281,9 +382,20 @@ class SyntaxErrorsRule implements AntiPatternRule {
                 });
             }
         }
-        
         return antiPatterns;
     }
+}
+
+type TeamProfile = 'default' | 'strict' | 'relaxed';
+
+interface AntiPatternRuleConfig {
+    severity?: AntiPatternSeverity;
+    params?: any;
+}
+
+interface AntiPatternConfiguration {
+    profile?: TeamProfile;
+    rules?: Record<string, AntiPatternRuleConfig | AntiPatternSeverity>;
 }
 
 export class AntiPatternEngine {
@@ -297,7 +409,7 @@ export class AntiPatternEngine {
         this.registerRule(new AmbiguousStepsRule());
         this.registerRule(new UndefinedStepsRule());
         this.registerRule(new ExcessiveTagsRule());
-        this.registerRule(new PoorMaintainabilityRule());
+
         this.registerRule(new InconsistentFormattingRule());
         this.registerRule(new SyntaxErrorsRule());
     }
@@ -306,11 +418,37 @@ export class AntiPatternEngine {
         this.rules.push(rule);
     }
 
-    generateAntiPatterns(graph: WorkspaceGraph, metrics: ProjectHealthMetrics, ruleConfig: Record<string, string>): AntiPattern[] {
+    private resolveProfileSeverity(category: AntiPatternCategory, profile: TeamProfile, defaultSeverity: AntiPatternSeverity): AntiPatternSeverity {
+        if (profile === 'relaxed') {
+            if (category === 'Style' || category === 'Maintainability') return 'off';
+            if (category === 'Reliability') return 'info';
+        } else if (profile === 'strict') {
+            if (category === 'Maintainability') return 'warning';
+            if (category === 'Style') return 'warning';
+        }
+        return defaultSeverity;
+    }
+
+    generateAntiPatterns(graph: WorkspaceGraph, metrics: ProjectHealthMetrics, config: AntiPatternConfiguration): AntiPattern[] {
         const antiPatterns: AntiPattern[] = [];
+        const profile = config.profile || 'default';
+        const rulesConfig = config.rules || {};
+
         for (const rule of this.rules) {
-            const configuredSeverity = (ruleConfig[rule.id] as AntiPatternSeverity) || 'warning';
-            antiPatterns.push(...rule.analyze(graph, metrics, configuredSeverity));
+            let severity: AntiPatternSeverity = this.resolveProfileSeverity(rule.metadata.category, profile, rule.metadata.defaultSeverity);
+            let params: any = rule.metadata.defaultParams;
+
+            const ruleOverride = rulesConfig[rule.metadata.id];
+            if (ruleOverride) {
+                if (typeof ruleOverride === 'string') {
+                    severity = ruleOverride as AntiPatternSeverity;
+                } else {
+                    if (ruleOverride.severity !== undefined) severity = ruleOverride.severity;
+                    if (ruleOverride.params !== undefined) params = { ...params, ...ruleOverride.params };
+                }
+            }
+
+            antiPatterns.push(...rule.analyze(graph, metrics, severity, params));
         }
         
         const severityOrder = { 'error': 4, 'warning': 3, 'info': 2, 'hint': 1, 'off': 0 };

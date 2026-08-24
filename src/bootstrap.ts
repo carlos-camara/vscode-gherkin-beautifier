@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { logger } from './logger';
 
-export type CapabilityState = 'pending' | 'running' | 'ready' | 'failed' | 'cancelled';
-export type CapabilityCriticality = 'essential' | 'optional' | 'dependent';
+type CapabilityState = 'pending' | 'running' | 'ready' | 'failed' | 'cancelled';
+type CapabilityCriticality = 'essential' | 'optional' | 'dependent';
 
 export interface CapabilityStatus {
     id: string;

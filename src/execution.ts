@@ -39,7 +39,7 @@ function getExecutionSignature(uri: vscode.Uri, line: number | undefined): strin
     return `${uri.toString()}#${line ?? 'all'}`;
 }
 
-export interface ExecutionDetails {
+interface ExecutionDetails {
     executable: string;
     args: string[];
 }

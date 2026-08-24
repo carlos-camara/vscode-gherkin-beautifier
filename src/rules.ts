@@ -13,6 +13,7 @@ export interface RuleDefinition {
     supportsQuickFix: boolean;
     aliases: string[];
     documentationAnchor: string;
+    safeFix?: boolean;
 }
 
 export const RULES_REGISTRY: Record<string, RuleDefinition> = {
@@ -35,6 +36,7 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         defaultSeverity: 'error',
         enabledByDefault: true,
         supportsQuickFix: true,
+        safeFix: true,
         aliases: ['MISSING_COLON'],
         documentationAnchor: 'missing-colon'
     },
@@ -46,6 +48,7 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         defaultSeverity: 'error',
         enabledByDefault: true,
         supportsQuickFix: true,
+        safeFix: true,
         aliases: ['MISSPELLED_KEYWORD', 'INVALID_KEYWORD'],
         documentationAnchor: 'invalid-keyword'
     },
@@ -57,6 +60,7 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         defaultSeverity: 'warning',
         enabledByDefault: true,
         supportsQuickFix: true,
+        safeFix: true,
         aliases: ['SCENARIO_WITH_EXAMPLES'],
         documentationAnchor: 'scenario-with-examples'
     },
@@ -158,37 +162,13 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         supportsQuickFix: false,
         aliases: [],
         documentationAnchor: 'inconsistent-formatting'
-    },
-    'poor-maintainability': {
-        id: 'poor-maintainability',
-        title: 'Poor Maintainability',
-        description: 'The document structure implies a low maintainability index.',
-        category: 'Anti-Pattern',
-        defaultSeverity: 'warning',
-        enabledByDefault: true,
-        supportsQuickFix: false,
-        aliases: [],
-        documentationAnchor: 'poor-maintainability'
     }
+
 };
 
 export type RuleId = keyof typeof RULES_REGISTRY;
 
-/**
- * Normalizes a rule ID by checking aliases.
- * Returns the stable ID if valid, or null if totally unknown.
- */
-export function normalizeRuleId(id: string): string | null {
-    if (RULES_REGISTRY[id]) {
-        return id;
-    }
-    for (const [stableId, rule] of Object.entries(RULES_REGISTRY)) {
-        if (rule.aliases.includes(id)) {
-            return stableId;
-        }
-    }
-    return null;
-}
+
 
 export function isValidRule(id: string): id is RuleId {
     return id in RULES_REGISTRY;
@@ -202,6 +182,8 @@ export interface CodeActionPayload {
     replacementText?: string;
     stepText?: string;
     stepKeyword?: string;
+    scopeType?: string;
+    scopeValue?: string;
 }
 
 export class RuleDiagnostic extends vscode.Diagnostic {
@@ -223,3 +205,4 @@ export class RuleDiagnostic extends vscode.Diagnostic {
  * instances that are otherwise stripped by VS Code's DiagnosticCollection.
  */
 export const diagnosticRegistry = new Map<string, RuleDiagnostic[]>();
+export const antiPatternRegistry = new Map<string, RuleDiagnostic[]>();

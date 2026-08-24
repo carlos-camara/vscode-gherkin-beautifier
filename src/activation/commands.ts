@@ -8,7 +8,7 @@ import { runBehave, runBehaveWithPrompt, debugBehave } from '../execution';
 import { createStepDefinition } from '../codeAction';
 import { ImpactReport } from '../impactAnalysis';
 
-export interface CommandServices {
+interface CommandServices {
     configService: ConfigurationService;
     refactoringService: StepRefactoringService;
     symbolCache: SymbolCache;

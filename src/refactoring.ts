@@ -35,10 +35,9 @@ export class StepRefactoringService {
         } else if (uriStr.endsWith('.py')) {
             const allDefs = this.graph.currentGeneration.getAllStepDefNodes().filter(n => n.uri === uriStr);
             targetDefNode = allDefs.find(n => position.line === n.line || position.line === n.line + 1); // rough check
-            // For exact check, we should query SymbolCache
             if (!targetDefNode) {
                 const cachedDefs = await this.symbolCache.getAllStepDefinitions();
-                const matched = cachedDefs.find(d => d.uri.toString() === uriStr && 
+                const matched = cachedDefs.find(d => ResourceIdentity.getCanonicalUriString(d.uri) === uriStr && 
                     (d.decoratorRange.contains(position) || (d.functionRange && d.functionRange.contains(position)))
                 );
                 if (matched) {
@@ -53,19 +52,22 @@ export class StepRefactoringService {
 
         // 1. Update Python Definition
         const cachedDefs = await this.symbolCache.getAllStepDefinitions();
-        const defDetails = cachedDefs.find(d => `${d.uri.toString()}:${d.decoratorRange.start.line}` === targetDefNode!.id);
+        const defDetails = cachedDefs.find(d => `${ResourceIdentity.getCanonicalUriString(d.uri)}:${d.decoratorRange.start.line}` === targetDefNode!.id);
         
         if (defDetails) {
             // Find the string inside the decorator
             const doc = await vscode.workspace.openTextDocument(defDetails.uri);
             const decoratorLineText = doc.lineAt(defDetails.decoratorRange.start.line).text;
             
+            const leadingWhitespaceMatch = decoratorLineText.match(/^([ \t]*)/);
+            const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[1] : '';
+            
             // Reconstruct decorator with new name
             let newDecorator = decoratorLineText;
             if (defDetails.matcherType === 're') {
-                newDecorator = `@${defDetails.type}(re.compile(r'${newName}'))`;
+                newDecorator = `${leadingWhitespace}@${defDetails.type}(re.compile(r'${newName}'))`;
             } else {
-                newDecorator = `@${defDetails.type}('${newName}')`;
+                newDecorator = `${leadingWhitespace}@${defDetails.type}('${newName}')`;
             }
 
             edit.replace(defDetails.uri, new vscode.Range(defDetails.decoratorRange.start.line, 0, defDetails.decoratorRange.start.line, decoratorLineText.length), newDecorator);
@@ -79,13 +81,17 @@ export class StepRefactoringService {
             const lineIdx = usage.line - 1;
             const lineText = usageDoc.lineAt(lineIdx).text;
             
-            // Replace the text after the keyword
-            // Keyword could be Given, When, Then, And, But (with possible spaces)
-            const match = lineText.match(/^(\s*(?:Given|When|Then|And|But|\*)\s+)(.*)$/i);
-            if (match) {
-                const prefix = match[1];
-                const newText = prefix + newName;
-                edit.replace(usageUri, new vscode.Range(lineIdx, 0, lineIdx, lineText.length), newText);
+            // Replace the text after the keyword, respecting any dialect
+            const stepText = usage.text;
+            const keyword = usage.keyword.trim();
+            
+            // Find the keyword in the line, and start searching for stepText after it
+            const keywordIdx = lineText.indexOf(keyword);
+            const searchStartIdx = keywordIdx !== -1 ? keywordIdx + keyword.length : 0;
+            const textStartIdx = lineText.indexOf(stepText, searchStartIdx);
+            
+            if (textStartIdx !== -1) {
+                edit.replace(usageUri, new vscode.Range(lineIdx, textStartIdx, lineIdx, textStartIdx + stepText.length), newName);
             }
         }
 

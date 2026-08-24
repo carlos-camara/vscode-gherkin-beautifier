@@ -91,10 +91,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
-### `gherkinPowerTools.linter.enabledRules`
-- **Purpose:** *(Deprecated)* Whitelist of linting rule IDs to enforce. Please use `gherkinPowerTools.rules` instead.
-- **Type:** `array` of strings
-- **Default:** `[]`
 
 ---
 
@@ -105,37 +101,72 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
-### `gherkinPowerTools.antiPatterns.rules`
-- **Purpose:** *(Deprecated)* Configure severity levels for individual anti-pattern rules. Please use `gherkinPowerTools.rules` instead.
-- **Type:** `object` (Key-value pairs of rule ID to severity level)
+
 
 ---
 
 ## Unified Diagnostics Rules
 
 ### `gherkinPowerTools.rules`
-- **Purpose:** The central, authoritative configuration for diagnostic severities across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to severity levels.
-- **Type:** `object` (Key-value pairs of rule ID to severity level)
-- **Default:**
+- **Purpose:** The central, authoritative configuration for diagnostic severities and heuristic parameters across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to either a severity string or a configuration object.
+- **Type:** `object` (Key-value pairs of rule ID to severity level or configuration object)
+- **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+- **Available Rules (Default Severity):**
+  - `missing-colon` (error)
+  - `invalid-keyword` (error)
+  - `scenario-with-examples` (warning)
+  - `table-inconsistency` (error)
+  - `undefined-step` (error)
+  - `ambiguous-step` (error)
+  - `oversized-scenario` (warning)
+  - `oversized-feature` (info)
+  - `duplicated-steps` (error)
+  - `unused-steps` (info)
+  - `excessive-tags` (info)
+  - `inconsistent-formatting` (info)
+
+- **Example:**
   ```json
   {
       "syntax-error": "error",
-      "missing-colon": "error",
-      "invalid-keyword": "error",
-      "table-inconsistency": "error",
-      "scenario-with-examples": "warning",
-      "undefined-step": "error",
       "ambiguous-step": "error",
-      "oversized-scenario": "warning",
-      "oversized-feature": "info",
-      "duplicated-steps": "error",
-      "unused-steps": "info",
-      "excessive-tags": "info",
-      "inconsistent-formatting": "info",
-      "poor-maintainability": "warning"
+      "oversized-scenario": {
+          "severity": "warning",
+          "maxSteps": 20
+      },
+      "oversized-feature": {
+          "severity": "info",
+          "maxSteps": 100
+      }
   }
   ```
-- **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+
+---
+
+## Suppressing Findings
+
+You can suppress heuristic rules directly from the editor using the **Suppress finding** Quick Fix. This creates an entry in an external structural ledger (`.gherkin-pt-suppressions.json`) at the root of your workspace. Any manual edits made to this file are detected instantly and will update your editor diagnostics in real-time.
+
+Example `.gherkin-pt-suppressions.json`:
+```json
+{
+    "$schema": "https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/schemas/suppressions.schema.json",
+    "suppressions": [
+        {
+            "ruleId": "oversized-scenario",
+            "uri": "features/legacy_checkout.feature",
+            "scopeType": "scenario",
+            "scopeValue": "Legacy fallback checkout flow",
+            "reason": "Approved exception for legacy component",
+            "timestamp": "2026-08-24T12:00:00.000Z",
+            "by": "carlos"
+        }
+    ]
+}
+```
+
+The extension and the standalone CLI will both automatically detect and respect this file.
+Core syntax errors cannot be suppressed.
 
 ---
 

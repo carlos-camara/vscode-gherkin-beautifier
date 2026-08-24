@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
 
-export interface FeatureFileDiagnostics {
+interface FeatureFileDiagnostics {
     includedCount: number;
     ignoredCount: number;
     staleCount: number;

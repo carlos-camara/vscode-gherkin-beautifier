@@ -14,6 +14,26 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Fix All Safe Auto-Fixable Problems
+- **Identifier**: `gherkinPowerTools.fixAllSafe`
+- **Where it appears**: Command Palette.
+- **Required context**: An active `.feature` file.
+- **Input**: None.
+- **Result**: Automatically applies all non-overlapping, deterministic (semantics-preserving) Quick Fixes (e.g. missing colons, exact spelling corrections, and table alignments) across the entire active document without breaking undo history.
+- **Default shortcut**: Depends on VS Code's `editor.action.fixAll` shortcut.
+
+---
+
+## Suppress Gherkin Rule Finding
+- **Identifier**: `gherkinPowerTools.suppressFinding`
+- **Where it appears**: Internal Code Action (hidden from Command Palette).
+- **Required context**: Activated via the "Suppress finding" Quick Fix inside the editor.
+- **Input**: The rule ID, file URI, and line range (passed internally by the Code Action). Prompts the user for an optional/required reason.
+- **Result**: Adds an entry to `.gherkin-pt-suppressions.json` for the given rule and document line.
+- **Default shortcut**: None.
+
+---
+
 ## Format Gherkin Document
 - **Identifier**: `gherkinPowerTools.format`
 - **Where it appears**: Command Palette, Editor Context Menu (Gherkin PowerTools submenu).
@@ -150,7 +170,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Rename Step
 - **Identifier**: `gherkinPowerTools.refactor.renameStep`
-- **Where it appears**: Editor Context Menu (Dynamic, only when cursor is on a valid Gherkin step).
+- **Where it appears**: Gherkin PowerTools Submenu (Dynamic, only when cursor is on a valid Gherkin step).
 - **Required context**: A Gherkin step in a `.feature` file or a Python step decorator string.
 - **Input**: Prompts for the new step name.
 - **Result**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
