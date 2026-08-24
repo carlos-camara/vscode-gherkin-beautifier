@@ -6,7 +6,7 @@ Gherkin PowerTools features two sophisticated engines to ensure your Behavior-Dr
 
 ## 1. Real-Time AST Linter
 
-The real-time AST linter parses your `.feature` files as you type. It immediately flags structural errors and resolves step definitions across your workspace. 
+The real-time AST linter parses your `.feature` files as you type. It immediately flags structural errors and resolves step definitions across your workspace.
 
 ### Instant Diagnostics
 - **Syntax Errors (`syntax-error`)**: The document contains invalid Gherkin syntax that prevents parsing.
@@ -49,7 +49,7 @@ These rules evaluate the design of your test suite. Their severity and threshold
 
 ## Configuring Rules
 
-You can customize the severity of every rule (except `syntax-error`, which is always an error) across both the Linter and the Anti-Pattern Engine. 
+You can customize the severity of every rule (except `syntax-error`, which is always an error) across both the Linter and the Anti-Pattern Engine.
 
 Configure `gherkinPowerTools.rules` in your workspace settings or your `.gherkin-powertoolsrc.json` team configuration.
 

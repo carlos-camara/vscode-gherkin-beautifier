@@ -37,7 +37,8 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: .vscode-test
-          key: ${{ runner.os }}-${{ runner.arch }}-vscode-test-${{ hashFiles('package-lock.json') }}
+          key: >-
+            ${{ runner.os }}-${{ runner.arch }}-vscode-test-${{ hashFiles('package-lock.json') }}
 
       - name: 🎭 Run End-to-End Tests (Linux)
         if: runner.os == 'Linux'
