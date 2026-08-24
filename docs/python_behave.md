@@ -53,6 +53,9 @@ Suggestions are not simply sorted alphabetically or purely by popularity. Gherki
 - **Tier 4 (Context Affinity)**: Using the mathematically robust `WorkspaceGraph`, the extension checks which steps are used in your current `.feature` file or are frequently found alongside your scenario's tags (e.g., `@ui`).
 - **Tier 5 (Learned Signals)**: Your recently accepted completions (LRU cache) and global workspace usage counts act as the final tiebreakers.
 
+#### Stable Step Definition Identity
+To ensure accurate usage tracking and completion ranking, the engine uses a deterministic **Step Definition Identity** (`StepDefinitionId`). Unlike simpler tools that only index the raw regex pattern, Gherkin PowerTools calculates a unique canonical identity for every step based on its semantic type, matcher type, normalized pattern, file location, and function name. This guarantees that duplicate patterns across different files do not collide, providing 100% accurate blast-radius impact analysis and autocomplete ranking even during major refactors.
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" height="340" />
 </div>

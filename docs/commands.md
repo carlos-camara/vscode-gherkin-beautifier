@@ -24,6 +24,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Fix All Auto
+- **Identifier**: `gherkinPowerTools.fixAllAuto`
+- **Where it appears**: Command Palette.
+- **Required context**: An active `.feature` file.
+- **Input**: None.
+- **Result**: Automatically applies all safe formatting and fixes.
+- **Default shortcut**: None.
+
+---
+
 ## Suppress Gherkin Rule Finding
 - **Identifier**: `gherkinPowerTools.suppressFinding`
 - **Where it appears**: Internal Code Action (hidden from Command Palette).

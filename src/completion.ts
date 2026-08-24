@@ -153,12 +153,13 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             }
 
             const pattern = def.rawPattern;
+            const defId = def.id;
 
             // Avoid duplicates
-            if (seenPatterns.has(pattern)) {
+            if (seenPatterns.has(defId)) {
                 continue;
             }
-            seenPatterns.add(pattern);
+            seenPatterns.add(defId);
 
             let kind = vscode.CompletionItemKind.Function;
             if (def.type === 'given') kind = vscode.CompletionItemKind.Event;
@@ -217,7 +218,7 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             item.command = {
                 title: 'Record Completion',
                 command: 'gherkinPowerTools.internal.recordCompletion',
-                arguments: [pattern]
+                arguments: [defId]
             };
             
             completionItems.push(item);

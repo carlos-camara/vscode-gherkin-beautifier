@@ -93,7 +93,7 @@ Gherkin PowerTools acts in two tiers depending on your project:
 - **Gherkin Health Dashboard:** Interactive modern webview to analyze oversized features, tag usage, and architectural anti-patterns with built-in DOM node limits for massive workspaces.
 
 ### Exclusive to Python Behave
-- **Context-Aware IntelliSense:** Autocomplete powered by a robust transactional snapshot model for recent-usage ranking and tag affinity.
+- **Context-Aware IntelliSense:** Autocomplete powered by a robust transactional snapshot model, deterministic Step Definition Identity, recent-usage ranking, and tag affinity.
 - **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
 - **Test Explorer Integration:** Run and debug features with line-by-line execution tracking and pristine Markdown-formatted error traces, ordered strictly chronologically as written in your code.
 - **BDD Anti-pattern Detection Engine:** Instant technical debt diagnostics for unused, ambiguous, or duplicated step definitions. Features Object-based Configuration to dynamically scale heuristic severities (e.g. adjust max sizes per rule).

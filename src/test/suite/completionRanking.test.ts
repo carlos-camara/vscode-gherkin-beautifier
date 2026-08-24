@@ -19,6 +19,7 @@ suite('Completion Ranking Service Test Suite', () => {
 
     function createDef(pattern: string, type: 'given' | 'when' | 'then' | 'step'): StepDefinition {
         return {
+            id: `test:${type}:${pattern}`,
             type,
             rawPattern: pattern,
             matcherType: 'parse',
@@ -75,7 +76,7 @@ suite('Completion Ranking Service Test Suite', () => {
 
         // Make the popular item extremely popular (recent + global usage)
         for (let i = 0; i < 20; i++) {
-            service.recordCompletion(defPopular.rawPattern);
+            service.recordCompletion(defPopular.id);
         }
         mockGraph.currentGeneration.getNode = (id: string) => {
             if (id.includes('test.py') && id.includes(defPopular.rawPattern)) {
@@ -111,4 +112,48 @@ suite('Completion Ranking Service Test Suite', () => {
         assert.ok(str1 < str2, 'Tier 1 must dominate Tier 5');
     });
 
+    test('Identity Generation resolves collisions robustly', () => {
+        const { generateStepDefId } = require('../../utils/stepIdentity');
+        
+        // Exact same pattern, different semantic types
+        const id1 = generateStepDefId('given', 'parse', 'I log in', vscode.Uri.file('/foo.py'), 'login_step');
+        const id2 = generateStepDefId('when', 'parse', 'I log in', vscode.Uri.file('/foo.py'), 'login_step');
+        assert.notStrictEqual(id1, id2, 'IDs should differ by semantic type');
+        
+        // Exact same pattern, different files
+        const id3 = generateStepDefId('given', 'parse', 'I log in', vscode.Uri.file('/bar.py'), 'login_step');
+        assert.notStrictEqual(id1, id3, 'IDs should differ by file');
+        
+        // Ensure colons inside the pattern don't break string splitting parsing
+        const id4 = generateStepDefId('given', 'parse', 'I log in: {count:d}', vscode.Uri.file('/foo.py'), 'login_step');
+        const { parseStepDefId } = require('../../utils/stepIdentity');
+        const parsed = parseStepDefId(id4);
+        assert.strictEqual(parsed.rawPattern, 'I log in: {count:d}', 'Parsed pattern should match exactly including colons');
+    });
+
+    test('Migration gracefully handles old rawPattern histories', () => {
+        let storedData: string[] = ['I log in', 'I log out', 'test:given:I am an already migrated ID:foo.py:step'];
+        
+        const mockMemento: any = {
+            get: () => storedData,
+            update: (_key: string, data: any) => { storedData = data; }
+        };
+        
+        mockGraph.currentGeneration.getAllStepDefNodes = () => [
+            { id: 'new:given:I log in:foo.py:step', pattern: 'I log in' },
+            // I log out is ambiguous (two definitions)
+            { id: 'new:given:I log out:bar.py:step1', pattern: 'I log out' },
+            { id: 'new:when:I log out:bar.py:step2', pattern: 'I log out' },
+        ];
+        
+        // Re-initialize service with memento
+        service = new CompletionRankingService(mockGraph, mockMemento);
+        
+        // I log in -> unambiguous, migrated.
+        // I log out -> ambiguous, dropped.
+        // test:given... -> already migrated, preserved.
+        assert.strictEqual(storedData.length, 2, 'Ambiguous items should be dropped');
+        assert.strictEqual(storedData[1], 'test:given:I am an already migrated ID:foo.py:step');
+        assert.strictEqual(storedData[0], 'new:given:I log in:foo.py:step');
+    });
 });

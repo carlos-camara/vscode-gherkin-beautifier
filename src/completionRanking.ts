@@ -34,17 +34,54 @@ export interface RankingScore {
     tieBreaker: string;
 }
 
+import * as vscode from 'vscode';
 export class CompletionRankingService {
     private recentlyUsed: string[] = [];
     private readonly MAX_RECENT = 20;
+    private readonly STORAGE_KEY = 'gherkin-powertools.recentCompletions';
     
-    constructor(private workspaceGraph: WorkspaceGraph) {}
+    constructor(
+        private workspaceGraph: WorkspaceGraph,
+        private memento?: vscode.Memento
+    ) {
+        if (this.memento) {
+            const stored = this.memento.get<string[]>(this.STORAGE_KEY, []) || [];
+            this.recentlyUsed = this.migrateStoredPatterns(stored);
+            if (this.recentlyUsed.length !== stored.length) {
+                this.memento.update(this.STORAGE_KEY, this.recentlyUsed);
+            }
+        }
+    }
 
-    public recordCompletion(pattern: string) {
-        this.recentlyUsed = this.recentlyUsed.filter(p => p !== pattern);
-        this.recentlyUsed.unshift(pattern);
+    private migrateStoredPatterns(stored: string[]): string[] {
+        const migrated: string[] = [];
+        for (const item of stored) {
+            // Check if it's already a new StepDefinitionId (contains colons)
+            if (item.includes(':')) {
+                migrated.push(item);
+                continue;
+            }
+            
+            // Old rawPattern: try to migrate by querying the graph
+            // Best effort: find definitions with this pattern
+            const matches = this.workspaceGraph.currentGeneration.getAllStepDefNodes().filter((n: any) => n.pattern === item);
+            
+            // If exactly one match, safely migrate. If ambiguous (multiple) or orphaned (0), discard.
+            if (matches.length === 1) {
+                migrated.push(matches[0].id);
+            }
+        }
+        return migrated;
+    }
+
+    public recordCompletion(id: string) {
+        this.recentlyUsed = this.recentlyUsed.filter(p => p !== id);
+        this.recentlyUsed.unshift(id);
         if (this.recentlyUsed.length > this.MAX_RECENT) {
             this.recentlyUsed.pop();
+        }
+        if (this.memento) {
+            this.memento.update(this.STORAGE_KEY, this.recentlyUsed);
         }
     }
 
@@ -129,7 +166,8 @@ export class CompletionRankingService {
 
         // Tier 5 - Learned Signals (Recent Use, Global Frequency, Tag Affinity)
         let learnedSignals = 0;
-        const recentIndex = this.recentlyUsed.indexOf(pattern);
+        // Recent usage
+        const recentIndex = this.recentlyUsed.indexOf(def.id);
         if (recentIndex !== -1) {
             learnedSignals += Math.max(1, 30 - recentIndex * 2);
         }

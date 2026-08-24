@@ -26,7 +26,7 @@ When the linter detects issues, a lightbulb icon (💡) appears, offering instan
 - **Fix Table Inconsistency**: Adds empty cells or removes overflowing cells to align the table width.
 
 #### Batch Quick Fixes
-Run the **Gherkin PowerTools: Fix All Safe Auto-Fixable Problems** command to automatically correct all non-overlapping, deterministic (semantics-preserving) Quick Fixes across the entire active document without breaking undo history.
+Run the **Gherkin PowerTools: Fix All Safe Auto-Fixable Problems** command to automatically correct all non-overlapping, deterministic (semantics-preserving) Quick Fixes across the entire active document without breaking undo history. Alternatively, run **Gherkin PowerTools: Fix All Auto** to apply all safe formatting and fixes.
 
 ---
 
