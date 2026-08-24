@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export class MetricsLogger implements vscode.Disposable {
+class MetricsLogger implements vscode.Disposable {
     private isMetricsEnabled: boolean = false;
     private configListener?: vscode.Disposable;
     private parseRequests = 0;

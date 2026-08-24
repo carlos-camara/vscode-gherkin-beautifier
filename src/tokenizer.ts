@@ -179,7 +179,7 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
     }
 }
 
-export interface TokenizedExecuteStep {
+interface TokenizedExecuteStep {
     keyword: string;
     text: string;
     line: number;

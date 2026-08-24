@@ -13,6 +13,7 @@ export interface RuleDefinition {
     supportsQuickFix: boolean;
     aliases: string[];
     documentationAnchor: string;
+    safeFix?: boolean;
 }
 
 export const RULES_REGISTRY: Record<string, RuleDefinition> = {
@@ -35,6 +36,7 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         defaultSeverity: 'error',
         enabledByDefault: true,
         supportsQuickFix: true,
+        safeFix: true,
         aliases: ['MISSING_COLON'],
         documentationAnchor: 'missing-colon'
     },
@@ -46,6 +48,7 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         defaultSeverity: 'error',
         enabledByDefault: true,
         supportsQuickFix: true,
+        safeFix: true,
         aliases: ['MISSPELLED_KEYWORD', 'INVALID_KEYWORD'],
         documentationAnchor: 'invalid-keyword'
     },
@@ -57,6 +60,7 @@ export const RULES_REGISTRY: Record<string, RuleDefinition> = {
         defaultSeverity: 'warning',
         enabledByDefault: true,
         supportsQuickFix: true,
+        safeFix: true,
         aliases: ['SCENARIO_WITH_EXAMPLES'],
         documentationAnchor: 'scenario-with-examples'
     },
@@ -178,6 +182,8 @@ export interface CodeActionPayload {
     replacementText?: string;
     stepText?: string;
     stepKeyword?: string;
+    scopeType?: string;
+    scopeValue?: string;
 }
 
 export class RuleDiagnostic extends vscode.Diagnostic {
@@ -199,3 +205,4 @@ export class RuleDiagnostic extends vscode.Diagnostic {
  * instances that are otherwise stripped by VS Code's DiagnosticCollection.
  */
 export const diagnosticRegistry = new Map<string, RuleDiagnostic[]>();
+export const antiPatternRegistry = new Map<string, RuleDiagnostic[]>();

@@ -32,10 +32,16 @@ suite('Step Refactoring Engine Test Suite', () => {
             } else if (uri && typeof uri !== 'string' && uri.toString().endsWith('.feature')) {
                 return {
                     uri,
-                    lineAt: (line: number) => ({
-                        range: new vscode.Range(line, 0, line, 20),
-                        text: line === 2 ? 'Given step a' : 'And step b'
-                    })
+                    lineAt: (line: number) => {
+                        let text = line === 2 ? 'Given step a' : 'And step b';
+                        if (uri.toString().includes('test.feature') && line === 2) {
+                            text = 'Given old step name';
+                        }
+                        return {
+                            range: new vscode.Range(line, 0, line, 20),
+                            text
+                        };
+                    }
                 } as any;
             }
             return {} as any;
@@ -87,8 +93,8 @@ suite('Step Refactoring Engine Test Suite', () => {
             id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
             line: 3,
-            text: 'Given old step name',
-            keyword: 'Given',
+            text: 'old step name',
+            keyword: 'Given ',
             definitionId: `${pythonUri.toString()}:5`
         } as any]);
 
@@ -96,8 +102,8 @@ suite('Step Refactoring Engine Test Suite', () => {
             id: `${featureUri.toString()}:3`,
             uri: featureUri.toString(),
             line: 3,
-            text: 'Given old step name',
-            keyword: 'Given',
+            text: 'old step name',
+            keyword: 'Given ',
             definitionId: `${pythonUri.toString()}:5`
         } as any]);
 
@@ -122,7 +128,7 @@ suite('Step Refactoring Engine Test Suite', () => {
 
         const featureEdits = edit.entries().find(e => e[0] && e[0].toString() === featureUri.toString());
         assert.ok(featureEdits);
-        assert.strictEqual(featureEdits[1][0].newText, 'Given new step name');
+        assert.strictEqual(featureEdits[1][0].newText, 'new step name');
 
         const pythonEdits = edit.entries().find(e => e[0] && e[0].toString() === pythonUri.toString());
         assert.ok(pythonEdits);

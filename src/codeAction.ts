@@ -2,26 +2,41 @@ import * as vscode from 'vscode';
 
 import { dialectService } from './dialect';
 import { discoveryService } from './discovery';
-import { diagnosticRegistry } from './rules';
+import { diagnosticRegistry, antiPatternRegistry, RULES_REGISTRY, RuleDiagnostic } from './rules';
 
 export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
     public static readonly providedCodeActionKinds = [
         vscode.CodeActionKind.QuickFix,
-        vscode.CodeActionKind.RefactorExtract
+        vscode.CodeActionKind.RefactorExtract,
+        vscode.CodeActionKind.SourceFixAll
     ];
 
     public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, _context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
         const actions: vscode.CodeAction[] = [];
 
-        const allRichDiagnostics = diagnosticRegistry.get(document.uri.toString()) || [];
-        
-        // Fetch all rich diagnostics for the file and include any that are on the same line.
-        // This ensures the lightbulb appears anywhere on the line.
-        const relevantDiagnostics = allRichDiagnostics.filter(d => 
+        // 1. Handle rich diagnostics from Linter (has actionPayload)
+        const allRichDiagnostics = [
+            ...(diagnosticRegistry.get(document.uri.toString()) || []),
+            ...(antiPatternRegistry.get(document.uri.toString()) || [])
+        ];
+
+        // Fix All
+        if (_context.only && _context.only.contains(vscode.CodeActionKind.SourceFixAll)) {
+            const fixAllEdit = generateSafeFixAllEdit(document, allRichDiagnostics);
+            if (fixAllEdit && fixAllEdit.size > 0) {
+                const action = new vscode.CodeAction("Fix All Safe Gherkin Issues", vscode.CodeActionKind.SourceFixAll);
+                action.edit = fixAllEdit;
+                action.isPreferred = true;
+                actions.push(action);
+            }
+            return actions;
+        }
+
+        const relevantRichDiagnostics = allRichDiagnostics.filter(d =>
             d.range.start.line <= _range.end.line && d.range.end.line >= _range.start.line
         );
 
-        for (const diagnostic of relevantDiagnostics) {
+        for (const diagnostic of relevantRichDiagnostics) {
             // Prevent applying Code Actions for stale diagnostics where line ranges or text may have shifted.
             if (diagnostic.documentVersion !== document.version) {
                 continue;
@@ -73,7 +88,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     const headerText = document.lineAt(headerLineIndex).text;
                     const expectedCells = (headerText.match(/\|/g) || []).length;
                     const currentCells = (lineText.match(/\|/g) || []).length;
-                    
+
                     if (currentCells > expectedCells) {
                         // Extra columns: find the Nth pipe and truncate
                         let pipeCount = 0;
@@ -87,7 +102,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                                 }
                             }
                         }
-                        
+
                         if (truncateIndex !== -1) {
                             const action = new vscode.CodeAction("Remove extra cells", vscode.CodeActionKind.QuickFix);
                             action.edit = new vscode.WorkspaceEdit();
@@ -101,10 +116,10 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                         // Missing columns
                         const action = new vscode.CodeAction("Add missing cells", vscode.CodeActionKind.QuickFix);
                         action.edit = new vscode.WorkspaceEdit();
-                        
+
                         const missingPipes = expectedCells - currentCells;
                         let fixedText = lineText;
-                        
+
                         if (!fixedText.trim().endsWith('|')) {
                             fixedText += ' |';
                             for (let i = 0; i < missingPipes - 1; i++) {
@@ -115,7 +130,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                                 fixedText += '   |';
                             }
                         }
-                        
+
                         action.edit.replace(document.uri, line.range, fixedText);
                         action.diagnostics = [diagnostic];
                         action.isPreferred = true;
@@ -165,6 +180,40 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
             }
         }
 
+        // 2. Handle ALL diagnostics in context (including AntiPatterns) for Suppression
+        for (const diagnostic of _context.diagnostics) {
+            const ruleId = typeof diagnostic.code === 'object' ? diagnostic.code.value : diagnostic.code;
+            if (ruleId && typeof ruleId === 'string' && !['syntax-errors', 'missing-colon', 'invalid-keyword'].includes(ruleId)) {
+                // Determine scope if possible. We don't have payload here, so scope is undefined.
+                // That's fine, the command handles undefined scope (file-level suppression or generic line match)
+                // Actually, wait, if it's a rich diagnostic we might have scope.
+                const richDiag = relevantRichDiagnostics.find(d => d.ruleId === ruleId && d.range.start.line === diagnostic.range.start.line);
+                const scopeType = richDiag?.actionPayload?.scopeType;
+                const scopeValue = richDiag?.actionPayload?.scopeValue;
+
+                let title = `Suppress '${ruleId}'`;
+                if (scopeType === 'scenario') {
+                    title += ` for this Scenario`;
+                } else if (scopeType === 'feature') {
+                    title += ` for this Feature`;
+                } else if (scopeType === 'step') {
+                    title += ` for this Step`;
+                }
+
+                // Also check if we already pushed a suppress action for this ruleId
+                if (!actions.some(a => a.command?.command === 'gherkinPowerTools.suppressFinding' && a.command.arguments?.[0] === ruleId)) {
+                    const suppressAction = new vscode.CodeAction(title, vscode.CodeActionKind.QuickFix);
+                    suppressAction.command = {
+                        command: 'gherkinPowerTools.suppressFinding',
+                        title: 'Suppress finding',
+                        arguments: [ruleId, document.uri.toString(), scopeType, scopeValue]
+                    };
+                    suppressAction.diagnostics = [diagnostic];
+                    actions.push(suppressAction);
+                }
+            }
+        }
+
         // Add Refactoring actions if the user selects multiple lines in a feature file
         if (!_range.isEmpty && _range.start.line !== _range.end.line && document.uri.toString().endsWith('.feature')) {
             const extractAction = new vscode.CodeAction('Extract Steps to new definition', vscode.CodeActionKind.RefactorExtract);
@@ -180,6 +229,62 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
 
         return actions;
     }
+}
+
+/**
+ * Generates a WorkspaceEdit that fixes all safe, deterministic issues in the document.
+ * Includes conflict resolution to prevent overlapping edits.
+ */
+export function generateSafeFixAllEdit(document: vscode.TextDocument, diagnostics: RuleDiagnostic[]): vscode.WorkspaceEdit | undefined {
+    // 1. Filter for safe rules and current document version
+    const safeDiagnostics = diagnostics.filter(d => {
+        if (d.documentVersion !== document.version) return false;
+        const ruleDef = RULES_REGISTRY[d.ruleId];
+        return ruleDef && ruleDef.safeFix === true;
+    });
+
+    if (safeDiagnostics.length === 0) {
+        return undefined;
+    }
+
+    // 2. Sort from bottom to top (by start line, descending) to handle overlaps
+    safeDiagnostics.sort((a, b) => b.range.start.line - a.range.start.line);
+
+    const edit = new vscode.WorkspaceEdit();
+    let lastProcessedStartLine = Number.MAX_SAFE_INTEGER;
+
+    for (const diagnostic of safeDiagnostics) {
+        // 3. Detect overlapping edits
+        // Since we go bottom-to-top, this diagnostic's END line must be BEFORE the last processed START line
+        if (diagnostic.range.end.line >= lastProcessedStartLine) {
+            continue; // Overlaps or conflicts, skip it
+        }
+
+        let applied = false;
+        
+        if (diagnostic.ruleId === 'missing-colon') {
+            const replacement = diagnostic.actionPayload?.replacementText;
+            if (replacement) {
+                edit.replace(document.uri, diagnostic.range, replacement);
+                applied = true;
+            }
+        } else if (diagnostic.ruleId === 'invalid-keyword') {
+            const replacement = diagnostic.actionPayload?.replacementText;
+            if (replacement) {
+                edit.replace(document.uri, diagnostic.range, replacement);
+                applied = true;
+            }
+        } else if (diagnostic.ruleId === 'scenario-with-examples') {
+            edit.replace(document.uri, diagnostic.range, 'Scenario Outline');
+            applied = true;
+        }
+        
+        if (applied) {
+            lastProcessedStartLine = diagnostic.range.start.line;
+        }
+    }
+
+    return edit;
 }
 
 /**
@@ -272,7 +377,7 @@ async function resolveNewStepDestination(documentUri: vscode.Uri | undefined, pr
     }
 
     const stepGlobs = discoveryService.getStepGlobs(workspaceFolder.uri);
-    
+
     // Parse globs into concrete relative directories
     const concreteDirs = new Set<string>();
     for (let glob of stepGlobs) {
@@ -280,21 +385,21 @@ async function resolveNewStepDestination(documentUri: vscode.Uri | undefined, pr
         if (prefix.startsWith('**/')) {
             prefix = prefix.substring(3);
         }
-        
+
         const wildcardIndex = prefix.indexOf('*');
         if (wildcardIndex !== -1) {
             prefix = prefix.substring(0, wildcardIndex);
         }
-        
+
         if (prefix.endsWith('/')) {
             prefix = prefix.substring(0, prefix.length - 1);
         }
-        
+
         if (prefix.trim().length > 0) {
             concreteDirs.add(prefix);
         }
     }
-    
+
     let possibleDirs = Array.from(concreteDirs);
     if (possibleDirs.length === 0) {
         possibleDirs = ['features/steps'];
@@ -315,7 +420,7 @@ async function resolveNewStepDestination(documentUri: vscode.Uri | undefined, pr
             } catch (e) {
                 // Doesn't exist
             }
-            
+
             items.push({
                 label: exists ? `$(folder) ${dir} (Recommended)` : `$(folder) ${dir}`,
                 description: exists ? 'Existing directory matches configuration' : 'Will be created',
@@ -323,7 +428,7 @@ async function resolveNewStepDestination(documentUri: vscode.Uri | undefined, pr
                 exists: exists
             } as any);
         }
-        
+
         // Sort so existing (recommended) are at the top
         items.sort((a: any, b: any) => {
             if (a.exists === b.exists) return 0;
@@ -343,13 +448,13 @@ async function resolveNewStepDestination(documentUri: vscode.Uri | undefined, pr
 
     const stepsDirUri = vscode.Uri.joinPath(workspaceFolder.uri, selectedDir);
     const targetUri = vscode.Uri.joinPath(stepsDirUri, 'step_definitions.py');
-    
+
     let isNewFile = false;
     try {
         await vscode.workspace.fs.stat(targetUri);
     } catch {
         isNewFile = true;
-        
+
         const createAction = `Create ${selectedDir}/step_definitions.py`;
         const selection = await vscode.window.showInformationMessage(
             promptMessage,
@@ -465,9 +570,9 @@ export async function createStepDefinition(stepText: string, keyword: string, do
 
         await vscode.workspace.applyEdit(edit);
 
-        // Intentionally DO NOT auto-save here (per user request).
-        // Let the user review the unsaved file.
         const document = await vscode.workspace.openTextDocument(targetUri);
+        await document.save();
+        
         const editor = await vscode.window.showTextDocument(document);
 
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
@@ -595,6 +700,8 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
         await vscode.workspace.applyEdit(edit);
 
         const document = await vscode.workspace.openTextDocument(targetUri);
+        await document.save();
+        
         const editor = await vscode.window.showTextDocument(document);
 
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);

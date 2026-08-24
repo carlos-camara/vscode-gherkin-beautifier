@@ -1,10 +1,10 @@
 import { WorkspaceGraph, FeatureNode, ScenarioNode, StepNode } from './graph';
 import { ProjectHealthMetrics } from './statistics';
 
-export type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
-export type AntiPatternCategory = 'Correctness' | 'Reliability' | 'Maintainability' | 'Style';
+type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
+type AntiPatternCategory = 'Correctness' | 'Reliability' | 'Maintainability' | 'Style';
 
-export interface RuleMetadata<T = any> {
+interface RuleMetadata<T = any> {
     id: string;
     title: string;
     category: AntiPatternCategory;
@@ -21,16 +21,16 @@ export interface AntiPattern {
     rationale: string;
     severity: AntiPatternSeverity;
     affectedFiles: string[];
-    affectedItems?: { label: string; uri: string; line?: number; description?: string; subItems?: { label: string; uri: string; line?: number }[] }[];
+    affectedItems?: { label: string; uri: string; line?: number; description?: string; subItems?: { label: string; uri: string; line?: number }[]; scopeType?: 'feature' | 'scenario' | 'step'; scopeValue?: string; }[];
     suggestedFix: string;
 }
 
-export interface AntiPatternRule<T = any> {
+interface AntiPatternRule<T = any> {
     metadata: RuleMetadata<T>;
     analyze(graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity, params?: T): AntiPattern[];
 }
 
-export interface OversizedFeatureParams { maxSteps: number; }
+interface OversizedFeatureParams { maxSteps: number; }
 class OversizedFeatureRule implements AntiPatternRule<OversizedFeatureParams> {
     metadata: RuleMetadata<OversizedFeatureParams> = {
         id: 'oversized-feature',
@@ -59,7 +59,9 @@ class OversizedFeatureRule implements AntiPatternRule<OversizedFeatureParams> {
                     label: `${f.name || 'Unnamed'} (${f.size} steps)`,
                     description: `This feature contains ${f.size} steps, exceeding the threshold of ${limit}.`,
                     uri: f.uri,
-                    line: 0
+                    line: 0,
+                    scopeType: 'feature',
+                    scopeValue: f.name || 'Unnamed'
                 })),
                 suggestedFix: 'Break down these features into multiple smaller, more focused feature files.'
             });
@@ -68,7 +70,7 @@ class OversizedFeatureRule implements AntiPatternRule<OversizedFeatureParams> {
     }
 }
 
-export interface OversizedScenarioParams { maxSteps: number; }
+interface OversizedScenarioParams { maxSteps: number; }
 class OversizedScenarioRule implements AntiPatternRule<OversizedScenarioParams> {
     metadata: RuleMetadata<OversizedScenarioParams> = {
         id: 'oversized-scenario',
@@ -97,7 +99,9 @@ class OversizedScenarioRule implements AntiPatternRule<OversizedScenarioParams> 
                     label: `${s.name || 'Unnamed'} (${s.size} steps)`,
                     description: `This scenario contains ${s.size} steps, exceeding the threshold of ${limit}.`,
                     uri: s.uri,
-                    line: s.line
+                    line: s.line,
+                    scopeType: 'scenario',
+                    scopeValue: s.name || 'Unnamed'
                 })),
                 suggestedFix: 'Split the scenario into multiple independent scenarios or use a Scenario Outline if you are repeating steps with different data.'
             });
@@ -197,6 +201,8 @@ class AmbiguousStepsRule implements AntiPatternRule {
                 label: `Step: ${a.step.keyword} ${a.step.text} (Matches ${a.matchingDefs.length} defs)`,
                 uri: a.step.uri,
                 line: a.step.line,
+                scopeType: 'step',
+                scopeValue: a.step.text,
                 description: 'Matches the following definitions:',
                 subItems: a.matchingDefs.map(d => ({
                     label: d.pattern,
@@ -232,14 +238,16 @@ class UndefinedStepsRule implements AntiPatternRule {
                 label: `Step: ${u.keyword} ${u.text}`,
                 description: `This step does not match any known step definition.`,
                 uri: u.uri,
-                line: u.line
+                line: u.line,
+                scopeType: 'step',
+                scopeValue: u.text
             })),
             suggestedFix: 'Implement the missing step definitions in your step files.'
         }];
     }
 }
 
-export interface ExcessiveTagsParams { maxFeatureTags: number; maxScenarioTags: number; }
+interface ExcessiveTagsParams { maxFeatureTags: number; maxScenarioTags: number; }
 class ExcessiveTagsRule implements AntiPatternRule<ExcessiveTagsParams> {
     metadata: RuleMetadata<ExcessiveTagsParams> = {
         id: 'excessive-tags',
@@ -274,7 +282,9 @@ class ExcessiveTagsRule implements AntiPatternRule<ExcessiveTagsParams> {
                     label: `${f.name || 'Unnamed'} (${f.tags.length} tags)`,
                     description: `This feature has ${f.tags.length} tags, exceeding the threshold of ${limitFeature}.`,
                     uri: f.uri,
-                    line: f.line
+                    line: f.line,
+                    scopeType: 'feature',
+                    scopeValue: f.name || 'Unnamed'
                 })),
                 suggestedFix: 'Review and consolidate feature tags. Consider grouping related functionality into separate files.'
             });
@@ -294,7 +304,9 @@ class ExcessiveTagsRule implements AntiPatternRule<ExcessiveTagsParams> {
                     label: `${s.name || 'Unnamed'} (${s.tags.length} tags)`,
                     description: `This scenario has ${s.tags.length} tags, exceeding the threshold of ${limitScenario}.`,
                     uri: s.uri,
-                    line: s.line
+                    line: s.line,
+                    scopeType: 'scenario',
+                    scopeValue: s.name || 'Unnamed'
                 })),
                 suggestedFix: 'Reduce the number of tags by utilizing Feature-level tags or unifying overlapping tags.'
             });
@@ -374,14 +386,14 @@ class SyntaxErrorsRule implements AntiPatternRule {
     }
 }
 
-export type TeamProfile = 'default' | 'strict' | 'relaxed';
+type TeamProfile = 'default' | 'strict' | 'relaxed';
 
-export interface AntiPatternRuleConfig {
+interface AntiPatternRuleConfig {
     severity?: AntiPatternSeverity;
     params?: any;
 }
 
-export interface AntiPatternConfiguration {
+interface AntiPatternConfiguration {
     profile?: TeamProfile;
     rules?: Record<string, AntiPatternRuleConfig | AntiPatternSeverity>;
 }

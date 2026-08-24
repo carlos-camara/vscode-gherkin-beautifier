@@ -9,9 +9,9 @@ import { DialectService } from './dialect';
 import type { Tag, Step } from '@cucumber/messages';
 import { parseExecuteSteps } from './tokenizer';
 
-export type NodeType = 'Feature' | 'Rule' | 'Background' | 'Scenario' | 'Step' | 'Example' | 'Tag' | 'StepDefinition' | 'PythonFile';
+type NodeType = 'Feature' | 'Rule' | 'Background' | 'Scenario' | 'Step' | 'Example' | 'Tag' | 'StepDefinition' | 'PythonFile';
 
-export interface GraphNode {
+interface GraphNode {
     readonly id: string;
     readonly type: NodeType;
     readonly uri: string;
@@ -19,16 +19,16 @@ export interface GraphNode {
 }
 
 export interface FeatureNode extends GraphNode { readonly type: 'Feature'; children: string[]; tags: string[]; readonly name: string; }
-export interface RuleNode extends GraphNode { readonly type: 'Rule'; children: string[]; tags: string[]; readonly parent: string; readonly name: string; }
+interface RuleNode extends GraphNode { readonly type: 'Rule'; children: string[]; tags: string[]; readonly parent: string; readonly name: string; }
 export interface ScenarioNode extends GraphNode { readonly type: 'Scenario'; steps: string[]; examples: string[]; tags: string[]; readonly parent: string; readonly name: string; }
 export interface BackgroundNode extends GraphNode { readonly type: 'Background'; steps: string[]; readonly parent: string; }
 export interface StepNode extends GraphNode { readonly type: 'Step'; readonly text: string; readonly definitionId?: string; readonly parent: string; readonly keyword: string; readonly semanticType?: 'given' | 'when' | 'then' | 'step'; }
-export interface ExampleNode extends GraphNode { readonly type: 'Example'; tags: string[]; readonly parent: string; readonly name: string; }
+interface ExampleNode extends GraphNode { readonly type: 'Example'; tags: string[]; readonly parent: string; readonly name: string; }
 export interface TagNode extends GraphNode { readonly type: 'Tag'; readonly name: string; targets: string[]; }
 export interface StepDefNode extends GraphNode { readonly type: 'StepDefinition'; readonly pattern: string; readonly matcherType: string; readonly semanticType?: 'given' | 'when' | 'then' | 'step'; readonly pythonFile: string; usages: string[]; }
-export interface PythonFileNode extends GraphNode { readonly type: 'PythonFile'; definitions: string[]; }
+interface PythonFileNode extends GraphNode { readonly type: 'PythonFile'; definitions: string[]; }
 
-export class WorkspaceGraphGeneration {
+class WorkspaceGraphGeneration {
     constructor(
         public readonly version: number,
         public readonly nodes: ReadonlyMap<string, GraphNode>,
@@ -94,7 +94,7 @@ export class WorkspaceGraphGeneration {
     }
 }
 
-export class GraphTransaction {
+class GraphTransaction {
     public readonly baseGeneration: WorkspaceGraphGeneration;
     public readonly nodes: Map<string, GraphNode>;
     public readonly uriToNodes: Map<string, Set<string>>;

@@ -153,7 +153,8 @@ suite('Architecture Validation Test Suite', () => {
             // Ignore aliases, internal commands, and test commands
             if (registeredCommand === 'gherkin-powertools.showImpactDetails' ||
                 registeredCommand.includes('.internal.') ||
-                registeredCommand === 'gherkinPowerTools.createStepDefinition') {
+                registeredCommand === 'gherkinPowerTools.createStepDefinition' ||
+                registeredCommand === 'gherkinPowerTools.suppressFinding') {
                 continue;
             }
 

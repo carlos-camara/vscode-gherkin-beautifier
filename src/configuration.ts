@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export interface Configuration {
+interface Configuration {
     indentation: { steps: number; };
     tables: { alignToKeyword: boolean; };
     docStrings: { alignToKeyword: boolean; };

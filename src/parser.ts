@@ -5,7 +5,7 @@ import { performance } from 'perf_hooks';
 
 import { logger } from './logger';
 
-export interface GherkinParseError {
+interface GherkinParseError {
     code: string;
     message: string;
     source: 'parser' | 'ast-builder' | 'module-loader' | 'unknown';
@@ -23,7 +23,7 @@ export interface ParseResult {
     isPartial: boolean;
 }
 
-export type CucumberModules = {
+type CucumberModules = {
     gherkin: typeof import('@cucumber/gherkin');
     messages: typeof import('@cucumber/messages');
 };

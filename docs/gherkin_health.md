@@ -65,6 +65,19 @@ See the [Configuration Reference](configuration.md#unified-diagnostics-rules) fo
 
 ---
 
+## Suppressing Findings
+
+If a heuristic anti-pattern finding (such as an oversized scenario or a specific duplicated step) is deliberate or unavoidable, you can suppress it.
+
+1. Place your cursor on the rule violation in your editor.
+2. Open the Quick Fix menu (<kbd>Cmd+.</kbd> or <kbd>Ctrl+.</kbd>) and select **Suppress 'rule-id'**.
+3. You will be prompted to provide a mandatory **reason** (e.g. "Approved legacy component").
+4. The suppression is recorded in an external structural ledger at the root of your workspace (`.gherkin-pt-suppressions.json`).
+
+The diagnostic is immediately removed from the editor and filtered out of the Health Dashboard. The Dashboard header will display a shield badge indicating the number of active suppressions. Core parse errors (e.g., `syntax-errors`) cannot be suppressed.
+
+---
+
 ## How to View the Dashboard
 
 To generate the dashboard:

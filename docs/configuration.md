@@ -91,10 +91,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
-### `gherkinPowerTools.linter.enabledRules`
-- **Purpose:** *(Deprecated)* Whitelist of linting rule IDs to enforce. Please use `gherkinPowerTools.rules` instead. Legacy values are automatically migrated at runtime.
-- **Type:** `array` of strings
-- **Default:** `[]`
 
 ---
 
@@ -105,9 +101,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
-### `gherkinPowerTools.antiPatterns.rules`
-- **Purpose:** *(Deprecated)* Configure severity levels for individual anti-pattern rules. Please use `gherkinPowerTools.rules` instead. Legacy values are automatically migrated at runtime.
-- **Type:** `object` (Key-value pairs of rule ID to severity level)
+
 
 ---
 
@@ -132,6 +126,33 @@ Individual settings (like `indentation.steps`) always override the profile defau
       }
   }
   ```
+
+---
+
+## Suppressing Findings
+
+You can suppress heuristic rules directly from the editor using the **Suppress finding** Quick Fix. This creates an entry in an external structural ledger (`.gherkin-pt-suppressions.json`) at the root of your workspace. Any manual edits made to this file are detected instantly and will update your editor diagnostics in real-time.
+
+Example `.gherkin-pt-suppressions.json`:
+```json
+{
+    "$schema": "https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/schemas/suppressions.schema.json",
+    "suppressions": [
+        {
+            "ruleId": "oversized-scenario",
+            "uri": "features/legacy_checkout.feature",
+            "scopeType": "scenario",
+            "scopeValue": "Legacy fallback checkout flow",
+            "reason": "Approved exception for legacy component",
+            "timestamp": "2026-08-24T12:00:00.000Z",
+            "by": "carlos"
+        }
+    ]
+}
+```
+
+The extension and the standalone CLI will both automatically detect and respect this file.
+Core syntax errors cannot be suppressed.
 
 ---
 

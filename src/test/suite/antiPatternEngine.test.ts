@@ -17,8 +17,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
         "ambiguous-steps": "error",
         "undefined-steps": "error",
         "excessive-tags": "info",
-        "inconsistent-formatting": "info",
-        "poor-maintainability": "warning"
+        "inconsistent-formatting": "info"
     };
 
     setup(() => {

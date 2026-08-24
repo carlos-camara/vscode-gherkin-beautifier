@@ -1,6 +1,6 @@
 
 
-export const CommandCategory = "Gherkin PowerTools";
+const CommandCategory = "Gherkin PowerTools";
 
 
 export const GherkinPowerToolsCommands = {

@@ -8,7 +8,7 @@ import { featureDiscoveryService } from './featureDiscovery';
 import { ConfigurationService } from './configuration';
 import { DeferredBootstrap, CapabilityStatus } from './bootstrap';
 
-export interface DiagnosticReport {
+interface DiagnosticReport {
     extensionVersion: string;
     vscodeVersion: string;
     operatingSystem: string;

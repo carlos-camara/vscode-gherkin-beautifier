@@ -1,6 +1,6 @@
 import { WorkspaceGraph, ScenarioNode } from './graph';
 
-export type ImpactSeverity = 'Low' | 'Medium' | 'High';
+type ImpactSeverity = 'Low' | 'Medium' | 'High';
 
 export interface ImpactReport {
     affectedFeatures: number;

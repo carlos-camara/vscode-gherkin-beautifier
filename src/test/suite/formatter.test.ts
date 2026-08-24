@@ -53,7 +53,7 @@ async function runRangeFormat(formatter: GherkinFormattingEditProvider, unformat
     return result;
 }
 
-export function applyTextEdits(source: string, edits: vscode.TextEdit[]): string {
+function applyTextEdits(source: string, edits: vscode.TextEdit[]): string {
     const sortedEdits = [...edits].sort((a, b) => {
         if (a.range.start.line !== b.range.start.line) {
             return b.range.start.line - a.range.start.line;

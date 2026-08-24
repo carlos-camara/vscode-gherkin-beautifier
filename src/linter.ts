@@ -8,13 +8,13 @@ import { WorkspaceEventBus } from './eventBus';
 import { WorkspaceGraph } from './graph';
 import { RuleDiagnostic, diagnosticRegistry } from './rules';
 
-export type InvalidationReason = 
+type InvalidationReason = 
     | { type: 'documentOpened', document: vscode.TextDocument }
     | { type: 'documentChanged', document: vscode.TextDocument }
     | { type: 'configurationChanged', affectsLinter: boolean }
     | { type: 'stepDefinitionsUpdated', affectedFeatureUris?: vscode.Uri[] };
 
-export interface LinterMetrics {
+interface LinterMetrics {
     candidateDocs: number;
     lintedDocs: number;
     skippedDocs: number;
