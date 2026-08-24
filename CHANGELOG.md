@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
-## [1.8.5] - Unreleased
+## [1.8.6] - Unreleased
+
+### 🚀 Added
+- *(Draft for 1.8.6 changes)*
+
+## [1.8.5] - 2026-08-24
 
 ### 🚀 Added
 - **Anti-Pattern Engine Redesign**: Completely overhauled the BDD Anti-Pattern detection engine with a structured rule contract separating objective Correctness errors from subjective Reliability, Maintainability, and Style heuristics.
