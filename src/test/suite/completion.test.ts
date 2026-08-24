@@ -33,6 +33,7 @@ suite('Completion Test Suite', () => {
         // Mock the cache with some step definitions
         const steps: StepDefinition[] = [
             {
+                id: 'mock:given:I have {count:d} apples:mock.py:step1',
                 type: 'given',
                 rawPattern: 'I have {count:d} apples',
                 regex: /I have {count:d} apples/,
@@ -40,6 +41,7 @@ suite('Completion Test Suite', () => {
                 uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
+                id: 'mock:when:I eat (?P<amount>\\d+) apples:mock.py:step2',
                 type: 'when',
                 rawPattern: 'I eat (?P<amount>\\d+) apples',
                 regex: /dummy/,
@@ -47,6 +49,7 @@ suite('Completion Test Suite', () => {
                 uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
+                id: 'mock:then:I should have {count} apples:mock.py:step3',
                 type: 'then',
                 rawPattern: 'I should have {count} apples',
                 regex: /dummy/,
@@ -54,6 +57,7 @@ suite('Completion Test Suite', () => {
                 uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
+                id: 'mock:step:generic step:mock.py:step4',
                 type: 'step', // generic step
                 rawPattern: 'generic step',
                 regex: /dummy/,
@@ -61,6 +65,7 @@ suite('Completion Test Suite', () => {
                 uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
+                id: 'mock:given:duplicate pattern:mock.py:step5',
                 type: 'given',
                 rawPattern: 'duplicate pattern',
                 regex: /dummy/,
@@ -68,7 +73,8 @@ suite('Completion Test Suite', () => {
                 uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
-                type: 'given', // deliberate duplicate to test filtering
+                id: 'mock:given:duplicate pattern:mock.py:step6',
+                type: 'given', // deliberate duplicate to test ambiguity visibility
                 rawPattern: 'duplicate pattern',
                 regex: /dummy/,
                 decoratorRange: new vscode.Range(5, 0, 5, 0),
@@ -86,8 +92,9 @@ suite('Completion Test Suite', () => {
                 getNode: (_id: string) => undefined
             }
         };
-        const rankingService = new CompletionRankingService(mockGraph as any);
-        provider = new GherkinCompletionProvider(mockCache, rankingService);
+        
+        const mockRanking = new CompletionRankingService(mockGraph as any);
+        provider = new GherkinCompletionProvider(mockCache, mockRanking);
     });
 
     test('Provides Given completions and generic steps, but not When/Then', async () => {
@@ -101,12 +108,14 @@ Feature: Test
         const completions = await provider.provideCompletionItems(doc, pos, {} as vscode.CancellationToken, {} as vscode.CompletionContext) as vscode.CompletionItem[];
         
         assert.ok(completions);
-        // Should return "I have {count:d} apples", "generic step", "duplicate pattern" (only one)
-        assert.strictEqual(completions.length, 3);
+        // Should return "I have {count:d} apples", "generic step", and TWO instances of "duplicate pattern"
+        // because ambiguity remains visible rather than silently flattened.
+        assert.strictEqual(completions.length, 4);
         
         const labels = completions.map(c => c.filterText);
         assert.ok(labels.includes('generic step'));
         assert.ok(labels.includes('I have <count> apples'));
+        assert.ok(labels.filter(l => l === 'duplicate pattern').length === 2);
         
         const item1 = completions.find(c => c.filterText === 'I have <count> apples');
         assert.ok(item1?.insertText instanceof vscode.SnippetString);

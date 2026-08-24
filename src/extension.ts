@@ -126,7 +126,7 @@ export async function activate(context: vscode.ExtensionContext) {
     workspaceGraph.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
 
-    const rankingService = new CompletionRankingService(workspaceGraph);
+    const rankingService = new CompletionRankingService(workspaceGraph, context.workspaceState);
 
     const antiPatternDiagnostics = new AntiPatternDiagnosticsManager(workspaceGraph, symbolCache, eventBus);
     context.subscriptions.push(antiPatternDiagnostics);

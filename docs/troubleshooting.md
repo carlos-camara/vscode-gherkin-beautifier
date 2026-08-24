@@ -29,6 +29,11 @@ This guide addresses common problems organized by observable symptoms.
 **Likely Causes:** The Gherkin file contains structural syntax errors.
 **Resolution:** Automatic formatting (like Format on Save) is intentionally designed to be **silent** when syntax errors are present. This prevents intrusive warning popups from interrupting you while you type an incomplete document. Fix the syntax errors (indicated by the red squiggly lines) and the formatter will resume working automatically.
 
+## Autocomplete suggestions are not sorted by popularity
+**Symptom:** You use a step frequently, but it does not appear at the very top of the IntelliSense list.
+**Likely Causes:** Gherkin PowerTools intentionally overrides raw popularity in favor of semantic relevance.
+**Resolution:** The extension uses a strict **5-tier Lexicographical Ranking model**. Exact text matches (Tier 1) and semantic keyword matches (Tier 2 - e.g. `Given` vs `When`) will strictly outrank steps that you simply use more often (Tier 5). This guarantees that autocomplete suggests the technically correct step over a popular but semantically incorrect one.
+
 ## Python steps are not found (Go to Definition / Autocomplete fail)
 **Symptom:** You use Python Behave, but steps show as "Undefined" in the Linter, and Go to Definition does not work.
 **Likely Causes:** The extension is looking in the wrong directory, or your virtual environment is causing performance timeouts.

@@ -550,7 +550,7 @@ export class WorkspaceGraph {
                 };
 
                 for (const def of fileDefs) {
-                    const defId = `${uriStr}:${def.decoratorRange.start.line}`;
+                    const defId = def.id;
                     const defNode: StepDefNode = {
                         id: defId, type: 'StepDefinition', uri: uriStr, line: def.decoratorRange.start.line,
                         pattern: def.rawPattern, matcherType: def.matcherType, semanticType: def.type, pythonFile: uriStr, usages: []

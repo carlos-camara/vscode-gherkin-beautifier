@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🚀 Added
 - **Completion Intelligence Redesign**: Replaced the legacy `UsageIndexer` additive string-parsing model with a strict **5-tier Lexicographical Ranking model** backed by the `WorkspaceGraph`. Autocomplete suggestions are now deterministically ranked such that semantic text matching strictly outranks raw popularity, usage counts, and tag affinities.
 - **Architectural Reliability**: The removal of `UsageIndexer` completely eliminates in-memory string parsing for feature files, deferring to the authoritative `WorkspaceGraph` state. This creates a mathematically robust, snapshot-driven model that correctly decrements metrics on deletion.
+- **Stable Step Definition Identity**: Introduced `StepDefinitionId` to provide a mathematically sound, canonical identity for every parsed Python step. This guarantees perfect ambiguity resolution, impact analysis, and usage tracking across complex workspaces even when files are renamed or regex patterns overlap.
 
 ## [1.8.5] - 2026-08-24
 

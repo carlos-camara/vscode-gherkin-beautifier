@@ -213,6 +213,10 @@ class TextDocument {
 export const workspace = {
     workspaceFolders: [{ uri: Uri.file(process.cwd()), name: path.basename(process.cwd()), index: 0 }],
     getWorkspaceFolder: (_uri: Uri) => ({ uri: Uri.file(process.cwd()), name: path.basename(process.cwd()), index: 0 }),
+    asRelativePath: (pathOrUri: string | Uri, _includeWorkspaceFolder?: boolean) => {
+        const p = typeof pathOrUri === 'string' ? pathOrUri : pathOrUri.fsPath;
+        return path.relative(process.cwd(), p);
+    },
     fs: new FileSystem(),
     textDocuments: [],
     getConfiguration: (_section?: string) => new WorkspaceConfiguration(),
