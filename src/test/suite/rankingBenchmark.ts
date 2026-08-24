@@ -1,7 +1,6 @@
 import { CompletionRankingService, RankingContext } from '../../completionRanking';
 import { StepDefinition } from '../../cache';
 import * as vscode from 'vscode';
-import { WorkspaceGraph } from '../../graph';
 
 async function runBenchmark() {
     console.log('Starting Ranking Benchmark...');
