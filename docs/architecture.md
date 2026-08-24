@@ -55,7 +55,13 @@ As the custom formatter receives step events, it emits a `step_start` payload pr
 To provide intelligent Behave step autocomplete locally and deterministically, the extension implements a local `CompletionRankingService` backed by the `WorkspaceGraph`.
 1. **WorkspaceGraph (Transactional Snapshot Model)**: Hooked into the `WorkspaceEventBus`, the graph lazily maps Gherkin steps to their Python `StepDefinition` implementations. It uses a **FeatureSnapshot** model that accurately maps resolved definition frequency and tag affinity on a per-resource basis. When a file is modified or deleted, the graph applies an atomic mathematical subtraction of the previous snapshot before adding the new state, guaranteeing that global frequency counters never leak memory or become corrupted over time.
 2. **LRU Cache Tracking**: When a user accepts a completion, an internal command (`gherkinPowerTools.internal.recordCompletion`) is fired, updating a Least Recently Used (LRU) cache to ensure recently used steps get a high priority boost.
-3. **Deterministic Ranking**: When the user requests autocomplete, the `CompletionRankingService` calculates a score based on LRU presence, active feature context, tag affinity, and semantic string matching against the Python definition. The highest scores are assigned a lexicographical `sortText` (e.g., `000_`) to force VS Code's IntelliSense to present the most relevant steps at the top.
+3. **Deterministic Lexicographical Ranking**: When the user requests autocomplete, the `CompletionRankingService` applies a strict 5-tier Lexicographical Ranking model rather than an additive score. This ensures semantic relevance never gets outweighed by raw popularity:
+   - **Tier 1 (Text Compatibility)**: Exact matches, token prefixes, or fuzzy compatibility with the typed text.
+   - **Tier 2 (Semantic Compatibility)**: Evaluates strict Given/When/Then compatibility vs. generic `@step`.
+   - **Tier 3 (Matcher Specificity)**: Penalizes highly greedy regex patterns compared to specific matchers.
+   - **Tier 4 (Context Affinity)**: Rewards steps heavily used in the current `.feature` file or neighboring scenarios.
+   - **Tier 5 (Learned Signals)**: Evaluates global usage counts across the workspace and LRU (Least Recently Used) cache presence.
+   The resulting tier mapping (e.g., `00-00-01-02-99-pattern`) is assigned to the `sortText` property, forcing VS Code's IntelliSense to present the most relevant steps at the top without floating-point arithmetic conflicts.
 
 ### Lifecycle & Disposal
 Every service that calls `eventBus.onEvent()` tracks its subscription with an `eventBusDisposable`. When a service is disposed, it automatically unregisters itself from the Event Bus. When the extension deactivates, the Event Bus itself is disposed, severing all active subscriptions and preventing memory leaks.

@@ -11,6 +11,29 @@ export interface RankingContext {
 
 import { WorkspaceGraph, StepDefNode, ScenarioNode } from './graph';
 
+export enum TextMatchQuality {
+    EXACT = 5,
+    EXACT_PREFIX = 4,
+    TOKEN_PREFIX = 3,
+    PARTIAL = 2,
+    UNRELATED = 1,
+}
+
+export enum SemanticMatchQuality {
+    EXACT = 3,
+    GENERIC = 2,
+    INCOMPATIBLE = 1,
+}
+
+export interface RankingScore {
+    textMatch: TextMatchQuality;
+    semanticMatch: SemanticMatchQuality;
+    matcherQuality: number;
+    localContext: number;
+    learnedSignals: number;
+    tieBreaker: string;
+}
+
 export class CompletionRankingService {
     private recentlyUsed: string[] = [];
     private readonly MAX_RECENT = 20;
@@ -18,42 +41,78 @@ export class CompletionRankingService {
     constructor(private workspaceGraph: WorkspaceGraph) {}
 
     public recordCompletion(pattern: string) {
-        // Remove if it exists
         this.recentlyUsed = this.recentlyUsed.filter(p => p !== pattern);
-        // Add to front
         this.recentlyUsed.unshift(pattern);
         if (this.recentlyUsed.length > this.MAX_RECENT) {
             this.recentlyUsed.pop();
         }
     }
 
-    public scoreItem(def: StepDefinition, context: RankingContext): number {
-        let score = 0;
+    private normalizeText(text: string): string {
+        return text.trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    private calculateTextMatch(typedText: string, pattern: string): TextMatchQuality {
+        if (!typedText) return TextMatchQuality.UNRELATED;
+
+        const normTyped = this.normalizeText(typedText);
+        const normPattern = this.normalizeText(pattern);
+
+        if (normTyped === normPattern) {
+            return TextMatchQuality.EXACT;
+        }
+
+        if (normPattern.startsWith(normTyped)) {
+            // Check if it's a token boundary or just a substring prefix
+            // If the next character in pattern after the match is a space or end of string, it's a token prefix
+            // Otherwise it's an exact prefix but maybe mid-word.
+            // Actually, EXACT_PREFIX could mean it starts with it precisely. TOKEN_PREFIX could mean partial word.
+            // Let's simplify:
+            if (normPattern.charAt(normTyped.length) === ' ' || normPattern.charAt(normTyped.length) === '') {
+                return TextMatchQuality.EXACT_PREFIX;
+            }
+            return TextMatchQuality.TOKEN_PREFIX;
+        }
+
+        // Partial means it contains the text but not as a prefix
+        if (normPattern.includes(normTyped)) {
+            return TextMatchQuality.PARTIAL;
+        }
+
+        return TextMatchQuality.UNRELATED;
+    }
+
+    public scoreItem(def: StepDefinition, context: RankingContext): RankingScore {
         const pattern = def.rawPattern;
-
-        // 1. Textual Match (15 points if exactly typed prefix)
-        if (context.typedText && pattern.startsWith(context.typedText)) {
-            score += 15;
-        }
-
-        // 2. Semantic Category Match (10 points)
-        if (def.type === context.semanticType) {
-            score += 10;
-        }
-
-        // 3. Recent Usage (Up to 30 points)
-        const recentIndex = this.recentlyUsed.indexOf(pattern);
-        if (recentIndex !== -1) {
-            // 30 for most recent, decreasing
-            score += Math.max(1, 30 - recentIndex * 2);
-        }
-
-        // To match against the current document steps, we need to strip regex groups from the raw pattern.
-        // A simple approximation is just checking if any step text matches the pattern's regex.
-        let isUsedInFeature = false;
         
+        // Tier 1 - Textual Match
+        const textMatch = this.calculateTextMatch(context.typedText, pattern);
+
+        // Tier 2 - Semantic Category Match
+        let semanticMatch = SemanticMatchQuality.INCOMPATIBLE;
+        if (def.type === context.semanticType) {
+            semanticMatch = SemanticMatchQuality.EXACT;
+        } else if (def.type === 'step') { // generic @step
+            semanticMatch = SemanticMatchQuality.GENERIC;
+        }
+
+        // Tier 3 - Matcher Quality
+        // E.g., plaintext > simple regex > complex regex
+        // We'll give higher points to simple strings.
+        // A simple proxy is whether it has regex groups or not.
+        let matcherQuality = 0;
+        if (!pattern.includes('{') && !pattern.includes('(')) {
+            matcherQuality = 2; // Plain text
+        } else if (pattern.includes('{')) {
+            matcherQuality = 1; // Parse expressions
+        } else {
+            matcherQuality = 0; // Raw regex
+        }
+
+        // Tier 4 - Local Project Context
+        let localContext = 0;
+        let isUsedInFeature = false;
         if (def.regex) {
-            // Check Current Feature (20 points)
             for (const text of context.currentFeatureStepTexts) {
                 if (def.regex.test(text)) {
                     isUsedInFeature = true;
@@ -61,24 +120,29 @@ export class CompletionRankingService {
                 }
             }
         }
-
         if (isUsedInFeature) {
-            score += 20;
+            localContext = 2; // High relevance if already used in this feature
+        } else {
+            // Check folder? For now we just use current feature
+            localContext = 0;
         }
 
-        // Calculate global frequency and tag affinity dynamically from the graph
-        let globalFrequency = 0;
-        let tagAffinity = 0;
+        // Tier 5 - Learned Signals (Recent Use, Global Frequency, Tag Affinity)
+        let learnedSignals = 0;
+        const recentIndex = this.recentlyUsed.indexOf(pattern);
+        if (recentIndex !== -1) {
+            learnedSignals += Math.max(1, 30 - recentIndex * 2);
+        }
 
         const defUriStr = ResourceIdentity.getCanonicalUriString(def.uri);
         const defId = `${defUriStr}:${def.decoratorRange.start.line}`;
         const defNode = this.workspaceGraph.currentGeneration.getNode(defId) as StepDefNode | undefined;
 
         if (defNode) {
-            globalFrequency = defNode.usages.length;
-
+            learnedSignals += Math.min(10, defNode.usages.length * 2);
+            
             if (context.currentTags.length > 0) {
-                // To calculate tag affinity, we evaluate the scenario tags for every usage
+                let tagAffinity = 0;
                 const activeTagsSet = new Set(context.currentTags);
                 for (const usageId of defNode.usages) {
                     let currentId: string | undefined = usageId;
@@ -94,7 +158,6 @@ export class CompletionRankingService {
                                     matches = true;
                                 }
                             }
-                            // Only count each usage once towards affinity, even if multiple tags match
                             if (matches) break;
                         } else if (node.type === 'Background') {
                             currentId = (node as any).parent;
@@ -103,32 +166,32 @@ export class CompletionRankingService {
                         currentId = (node as any).parent;
                     }
                 }
+                learnedSignals += Math.min(15, tagAffinity * 5);
             }
         }
 
-        // Global Frequency (up to 10 points)
-        // Normalizing arbitrarily (e.g. 5+ uses gives 10 points)
-        if (globalFrequency > 0) {
-            score += Math.min(10, globalFrequency * 2);
-        }
-
-        if (tagAffinity > 0) {
-            score += Math.min(15, tagAffinity * 5);
-        }
-
-        return score;
+        return {
+            textMatch,
+            semanticMatch,
+            matcherQuality,
+            localContext,
+            learnedSignals,
+            tieBreaker: pattern
+        };
     }
 
-    /**
-     * Converts a numerical score (higher is better) into a lexicographical string (lower is better for VS Code).
-     * e.g., score 100 -> "000_pattern"
-     *       score 50  -> "050_pattern"
-     */
-    public getSortText(score: number, pattern: string): string {
-        // Invert the score (assuming max realistic score is ~100)
-        // We use 999 - score so higher scores get lower numbers.
-        const inverted = Math.max(0, 999 - score);
-        const prefix = inverted.toString().padStart(3, '0');
-        return `${prefix}_${pattern}`;
+    public getSortText(score: RankingScore): string {
+        // We invert the numbers so higher quality -> smaller string lexicographically (VS Code sorts A-Z).
+        // e.g. textMatch: 5 -> "0", textMatch: 1 -> "4"
+        const invert = (val: number, max: number) => Math.max(0, max - val).toString().padStart(2, '0');
+        
+        return [
+            invert(score.textMatch, 5),
+            invert(score.semanticMatch, 3),
+            invert(score.matcherQuality, 2),
+            invert(score.localContext, 2),
+            invert(score.learnedSignals, 99),
+            score.tieBreaker
+        ].join('-');
     }
 }
