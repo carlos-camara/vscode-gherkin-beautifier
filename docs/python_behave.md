@@ -46,11 +46,12 @@ When navigating the Autocomplete suggestion list, the details panel (hover) will
 - The **Source** file path where the definition is located.
 
 ### Smart Context-Aware Ranking
-Suggestions are not simply sorted alphabetically. Gherkin PowerTools uses an intelligent, deterministic ranking algorithm to prioritize the steps you are most likely to need:
-- **Recent Usage**: Steps you have recently accepted are boosted via an internal LRU (Least Recently Used) cache.
-- **Tag Affinity**: The background WorkspaceGraph (using a mathematically robust snapshot model) tracks which steps are frequently used alongside specific tags. If you are inside a `@ui` feature, UI-related steps will float to the top.
-- **Feature Context**: Steps heavily used in the current `.feature` file or neighboring scenarios are ranked higher, and metrics correctly roll back if a file is deleted.
-- **Semantic Matching**: Partial matches against the Python definition receive a score boost.
+Suggestions are not simply sorted alphabetically or purely by popularity. Gherkin PowerTools uses a strict **5-tier Lexicographical Ranking model** to guarantee semantic relevance always outranks popularity:
+- **Tier 1 (Text Compatibility)**: Exact text matches or token prefixes to what you've typed are strictly prioritized.
+- **Tier 2 (Semantic Compatibility)**: Steps that precisely match your Gherkin keyword (`Given`/`When`/`Then`) are prioritized over generic `@step` definitions.
+- **Tier 3 (Matcher Specificity)**: Punishes highly permissive or overly broad regex matchers.
+- **Tier 4 (Context Affinity)**: Using the mathematically robust `WorkspaceGraph`, the extension checks which steps are used in your current `.feature` file or are frequently found alongside your scenario's tags (e.g., `@ui`).
+- **Tier 5 (Learned Signals)**: Your recently accepted completions (LRU cache) and global workspace usage counts act as the final tiebreakers.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/completion.gif" alt="IntelliSense - type-ahead suggestions from your Python step library" width="600" height="340" />

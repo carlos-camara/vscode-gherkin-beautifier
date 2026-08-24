@@ -211,7 +211,7 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             
             // Apply contextual ranking
             const score = this.rankingService.scoreItem(def, rankingContext);
-            item.sortText = this.rankingService.getSortText(score, pattern);
+            item.sortText = this.rankingService.getSortText(score);
             
             // Attach internal command to track when this completion is accepted
             item.command = {
