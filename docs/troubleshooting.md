@@ -199,9 +199,9 @@ If you need to point to a specific local Python virtual environment via an absol
 **Resolution:** Verify `stepGlobs` covers all relevant step files. If a capability failed, you can restart the extension Host. The graph is rebuilt automatically when files are saved.
 
 ## Rename Step is not visible in the Context Menu
-**Symptom:** You right-click in the editor, but "Rename Step" does not appear in the context menu.
-**Likely Causes:** To reduce clutter, the "Rename Step" command dynamically appears only when your cursor is positioned directly on a valid step line.
-**Resolution:** Ensure your text cursor is placed on a line starting with `Given`, `When`, `Then`, `And`, or `But`, then right-click again.
+**Symptom:** You right-click in the editor, but "Rename Step" does not appear in the Gherkin PowerTools context submenu.
+**Likely Causes:** To reduce clutter, the "Rename Step" command dynamically appears in the submenu only when your cursor is positioned directly on a valid step line.
+**Resolution:** Ensure your text cursor is placed on a line starting with `Given`, `When`, `Then`, `And`, or `But`, then right-click and check the Gherkin PowerTools submenu again.
 
 ## Extract Step does not produce a Python stub
 **Symptom:** You select multiple steps and invoke the Code Action, but no stub appears in the target file.

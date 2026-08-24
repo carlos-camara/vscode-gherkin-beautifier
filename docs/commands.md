@@ -170,7 +170,7 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ## Rename Step
 - **Identifier**: `gherkinPowerTools.refactor.renameStep`
-- **Where it appears**: Editor Context Menu (Dynamic, only when cursor is on a valid Gherkin step).
+- **Where it appears**: Gherkin PowerTools Submenu (Dynamic, only when cursor is on a valid Gherkin step).
 - **Required context**: A Gherkin step in a `.feature` file or a Python step decorator string.
 - **Input**: Prompts for the new step name.
 - **Result**: Renames the step text and updates all usages across `.feature` files and the Python decorator.
