@@ -111,6 +111,20 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Purpose:** The central, authoritative configuration for diagnostic severities and heuristic parameters across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to either a severity string or a configuration object.
 - **Type:** `object` (Key-value pairs of rule ID to severity level or configuration object)
 - **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+- **Available Rules (Default Severity):**
+  - `missing-colon` (error)
+  - `invalid-keyword` (error)
+  - `scenario-with-examples` (warning)
+  - `table-inconsistency` (error)
+  - `undefined-step` (error)
+  - `ambiguous-step` (error)
+  - `oversized-scenario` (warning)
+  - `oversized-feature` (info)
+  - `duplicated-steps` (error)
+  - `unused-steps` (info)
+  - `excessive-tags` (info)
+  - `inconsistent-formatting` (info)
+
 - **Example:**
   ```json
   {

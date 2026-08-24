@@ -117,7 +117,7 @@ Clicking the CodeLens opens an interactive menu listing every specific scenario 
 
 The realtime Linter actively validates your steps against the Python backend:
 
-- **Undefined Steps:** If a step has no matching Python decorator, it is underlined with a warning.
+- **Undefined Steps:** If a step has no matching Python decorator, it is underlined with an error (configurable via `gherkinPowerTools.rules`).
 - **Ambiguous Steps:** If a step matches multiple regular expressions in your Python files (e.g., overlapping wildcards), it is flagged so you can tighten your patterns.
 - **Semantic And/But Matching:** Steps using the `And` or `But` keywords inherit the semantic context of their preceding step (`Given`, `When`, or `Then`). This ensures precise pattern matching, preventing false positives for "Unused Steps" and accurately disambiguating steps that share the same regex but have different keyword decorators.
 
@@ -129,7 +129,7 @@ The realtime Linter actively validates your steps against the Python backend:
 
 ## BDD Anti-pattern Detection
 
-Gherkin PowerTools includes a comprehensive **BDD Anti-pattern Detection Engine** that inspects your entire workspace to ensure your `.feature` files and Python step definitions are healthy and maintainable.
+Gherkin PowerTools includes a comprehensive **BDD Anti-pattern Detection Engine** that inspects your entire workspace to ensure your `.feature` files and Python step definitions are healthy and maintainable. 
 
 **Proactive Indexing**: When you run the analysis, the extension proactively scans and parses all `.feature` and `.py` files across your entire workspace, ensuring 100% accuracy even if you haven't opened those files in your current session.
 
@@ -137,7 +137,6 @@ You can generate this report by running the **Gherkin PowerTools: Show Gherkin H
 
 - **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace, nor invoked programmatically via `context.execute_steps()` in other Python files. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
 - **Duplicated Implementations:** Finds identical step definitions (same matcher type, keyword, and regex pattern) across different files which will cause a runtime failure in Behave. Semantic analysis ensures identical patterns with different keywords (e.g. `@given` vs `@then`) are correctly allowed. The structural identity engine robustly handles patterns containing complex regular expressions, unicode characters, and colons without false positives.
-- **Ambiguous Step Usages:** Identifies specific steps in your feature files that match multiple definitions, helping you pinpoint exactly where Behave will fail.
 - **Oversized Scenarios & Excessive Tags:** Flags overly complex features that degrade test maintainability.
 
 **Interactive Navigation**: Every file reference in the dashboard is an interactive link. Click any file path to instantly open that file in VS Code at the exact line number.

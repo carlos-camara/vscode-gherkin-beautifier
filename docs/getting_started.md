@@ -159,7 +159,8 @@ You can always dismiss these suggestions or click "Don't show again" to permanen
 ## Next Steps
 
 Explore the full capabilities:
-- [Gherkin Editing](gherkin_editing.md) (Formatting & Linting)
+- [Gherkin Editing](gherkin_editing.md) (Formatting)
+- [Diagnostics & Quick Fixes](diagnostics_and_fixes.md) (Linter & Anti-Patterns)
 - [Python Behave](python_behave.md) (Navigation & Generation)
 - [Run and Debug](run_and_debug.md) (Test Explorer)
 - [Command Line Interface (CLI)](cli.md) (Headless Execution & CI/CD)

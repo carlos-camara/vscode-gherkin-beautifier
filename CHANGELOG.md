@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 - **Structural Step Identity Validation**: Fixed a bug where step definition patterns containing colons (`:`) or complex regex characters were incorrectly parsed by the Anti-Pattern Engine. The structural identity model now leverages nested object structures instead of string-based delimiter serialization, fully eliminating false-positive "Duplicated Steps" warnings and data corruption on valid Python expressions.
 
+### 📚 Documentation
+- **Comprehensive Documentation Audit**: Performed a repository-wide documentation audit for the 1.8.5 release. Verified that the new Anti-Pattern Engine rules (Correctness, Maintainability, Style), the centralized `gherkinPowerTools.rules` configuration, the batch quick fix workflow (`Fix All Safe Gherkin Issues in File`), and the diagnostic suppression ledger (`.gherkin-pt-suppressions.json`) are thoroughly and accurately documented across all MKDocs pages and the README.
+
 ## [1.8.4] - 2026-08-22
 
 ### 💅 User Experience & Polish

@@ -14,12 +14,12 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
-## Fix All Safe Gherkin Issues in File
+## Fix All Safe Auto-Fixable Problems
 - **Identifier**: `gherkinPowerTools.fixAllSafe`
 - **Where it appears**: Command Palette.
 - **Required context**: An active `.feature` file.
 - **Input**: None.
-- **Result**: Automatically applies all non-overlapping, deterministic (semantics-preserving) Quick Fixes (e.g. missing colons, exact spelling corrections) across the entire active document without breaking undo history.
+- **Result**: Automatically applies all non-overlapping, deterministic (semantics-preserving) Quick Fixes (e.g. missing colons, exact spelling corrections, and table alignments) across the entire active document without breaking undo history.
 - **Default shortcut**: Depends on VS Code's `editor.action.fixAll` shortcut.
 
 ---

@@ -47,6 +47,9 @@ The real-time AST linter validates your Gherkin structure **as you type**. It gr
 ### Quick Fixes
 For common structural errors (like a missing colon or misspelled keyword), place your cursor anywhere on the line with the underlined text and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) or click the lightbulb to apply a Quick Fix.
 
+#### Batch Quick Fixes
+Run the **Gherkin PowerTools: Fix All Safe Auto-Fixable Problems** command to automatically correct all non-overlapping, deterministic (semantics-preserving) Quick Fixes across the entire active document without breaking undo history.
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/auto-corrections.gif" alt="Quick Fix - correct keyword typos with one keypress" width="600" height="340" />
 </div>
