@@ -38,7 +38,7 @@ jobs:
         with:
           path: .vscode-test
           key: >-
-            ${{ runner.os }}-${{ runner.arch }}-vscode-test-${{ hashFiles('package-lock.json') }} # yamllint disable-line rule:line-length
+            ${{ runner.os }}-${{ runner.arch }}-vscode-test-${{ hashFiles('package-lock.json') }}
 
       - name: 🎭 Run End-to-End Tests (Linux)
         if: runner.os == 'Linux'
