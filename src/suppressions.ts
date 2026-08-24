@@ -24,8 +24,16 @@ export class SuppressionEngine {
         }
     }
 
-    public isSuppressed(ruleId: string, uri: vscode.Uri, scopeType?: string, scopeValue?: string): boolean {
+    public reload() {
+        this.load();
+    }
+
+    public isSuppressed(_ruleId: string, _uri: vscode.Uri | string, _scopeType?: string, _scopeValue?: string): boolean {
         return false; // Stub
+    }
+
+    public addSuppression(_suppression: any) {
+        // Stub for adding suppression
     }
 
     public getSuppressedCount(): number {
