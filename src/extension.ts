@@ -119,15 +119,14 @@ export async function activate(context: vscode.ExtensionContext) {
     const featureCache = new FeatureCache();
     featureCache.setEventBus(eventBus);
 
-    const rankingService = new CompletionRankingService();
-    rankingService.usageIndexer.setEventBus(eventBus);
-
     astRepository.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => astRepository.dispose() });
 
     const workspaceGraph = new WorkspaceGraph(symbolCache);
     workspaceGraph.setEventBus(eventBus);
     context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
+
+    const rankingService = new CompletionRankingService(workspaceGraph);
 
     const antiPatternDiagnostics = new AntiPatternDiagnosticsManager(workspaceGraph, symbolCache, eventBus);
     context.subscriptions.push(antiPatternDiagnostics);
@@ -146,7 +145,6 @@ export async function activate(context: vscode.ExtensionContext) {
     const bootstrap = new DeferredBootstrap({
         symbolCache,
         featureCache,
-        usageIndexer: rankingService.usageIndexer,
         workspaceGraph,
         impactCodeLensProvider,
         eventBus,

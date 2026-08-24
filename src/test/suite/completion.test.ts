@@ -25,7 +25,7 @@ function createMockDocument(text: string, lineIndex: number): [vscode.TextDocume
 suite('Completion Test Suite', () => {
     let provider: GherkinCompletionProvider;
     let mockCache: SymbolCache;
-    let rankingService: CompletionRankingService;
+
 
     setup(() => {
         mockCache = new SymbolCache();
@@ -36,37 +36,43 @@ suite('Completion Test Suite', () => {
                 type: 'given',
                 rawPattern: 'I have {count:d} apples',
                 regex: /I have {count:d} apples/,
-                decoratorRange: new vscode.Range(0, 0, 0, 0)
+                decoratorRange: new vscode.Range(0, 0, 0, 0),
+                uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
                 type: 'when',
                 rawPattern: 'I eat (?P<amount>\\d+) apples',
                 regex: /dummy/,
-                decoratorRange: new vscode.Range(1, 0, 1, 0)
+                decoratorRange: new vscode.Range(1, 0, 1, 0),
+                uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
                 type: 'then',
                 rawPattern: 'I should have {count} apples',
                 regex: /dummy/,
-                decoratorRange: new vscode.Range(2, 0, 2, 0)
+                decoratorRange: new vscode.Range(2, 0, 2, 0),
+                uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
                 type: 'step', // generic step
                 rawPattern: 'generic step',
                 regex: /dummy/,
-                decoratorRange: new vscode.Range(3, 0, 3, 0)
+                decoratorRange: new vscode.Range(3, 0, 3, 0),
+                uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
                 type: 'given',
                 rawPattern: 'duplicate pattern',
                 regex: /dummy/,
-                decoratorRange: new vscode.Range(4, 0, 4, 0)
+                decoratorRange: new vscode.Range(4, 0, 4, 0),
+                uri: vscode.Uri.parse('file:///mock.py')
             } as any,
             {
                 type: 'given', // deliberate duplicate to test filtering
                 rawPattern: 'duplicate pattern',
                 regex: /dummy/,
-                decoratorRange: new vscode.Range(5, 0, 5, 0)
+                decoratorRange: new vscode.Range(5, 0, 5, 0),
+                uri: vscode.Uri.parse('file:///mock.py')
             } as any
         ];
         
@@ -75,8 +81,12 @@ suite('Completion Test Suite', () => {
             if (!semanticType || semanticType === 'step') return Promise.resolve(steps);
             return Promise.resolve(steps.filter(s => s.type === semanticType || s.type === 'step'));
         };
-        
-        rankingService = new CompletionRankingService();
+        const mockGraph = {
+            currentGeneration: {
+                getNode: (_id: string) => undefined
+            }
+        };
+        const rankingService = new CompletionRankingService(mockGraph as any);
         provider = new GherkinCompletionProvider(mockCache, rankingService);
     });
 

@@ -22,7 +22,7 @@ export interface FeatureNode extends GraphNode { readonly type: 'Feature'; child
 interface RuleNode extends GraphNode { readonly type: 'Rule'; children: string[]; tags: string[]; readonly parent: string; readonly name: string; }
 export interface ScenarioNode extends GraphNode { readonly type: 'Scenario'; steps: string[]; examples: string[]; tags: string[]; readonly parent: string; readonly name: string; }
 export interface BackgroundNode extends GraphNode { readonly type: 'Background'; steps: string[]; readonly parent: string; }
-export interface StepNode extends GraphNode { readonly type: 'Step'; readonly text: string; readonly definitionId?: string; readonly parent: string; readonly keyword: string; readonly semanticType?: 'given' | 'when' | 'then' | 'step'; }
+export interface StepNode extends GraphNode { readonly type: 'Step'; readonly text: string; readonly definitionId?: string; readonly ambiguousCandidates?: string[]; readonly parent: string; readonly keyword: string; readonly semanticType?: 'given' | 'when' | 'then' | 'step'; }
 interface ExampleNode extends GraphNode { readonly type: 'Example'; tags: string[]; readonly parent: string; readonly name: string; }
 export interface TagNode extends GraphNode { readonly type: 'Tag'; readonly name: string; targets: string[]; }
 export interface StepDefNode extends GraphNode { readonly type: 'StepDefinition'; readonly pattern: string; readonly matcherType: string; readonly semanticType?: 'given' | 'when' | 'then' | 'step'; readonly pythonFile: string; usages: string[]; }
@@ -127,6 +127,7 @@ class GraphTransaction {
             if (cloned.examples) cloned.examples = [...cloned.examples];
             if (cloned.steps) cloned.steps = [...cloned.steps];
             if (cloned.definitions) cloned.definitions = [...cloned.definitions];
+            if (cloned.ambiguousCandidates) cloned.ambiguousCandidates = [...cloned.ambiguousCandidates];
 
             this.nodes.set(id, cloned as T);
             this.modified.add(id);
@@ -642,7 +643,8 @@ export class WorkspaceGraph {
     private async resolveStepDefinitionTx(tx: GraphTransaction, stepNode: StepNode) {
         if (!stepNode.text) return;
         const defs = await this.symbolCache.getStepDefinitions(stepNode.text, stepNode.semanticType);
-        if (defs.length > 0) {
+        
+        if (defs.length === 1) {
             const def = defs[0];
             const defUriStr = this.getCanonicalUri(def.uri);
             const defId = `${defUriStr}:${def.decoratorRange.start.line}`;
@@ -650,6 +652,7 @@ export class WorkspaceGraph {
             const stepMut = tx.getNodeForMutation<StepNode>(stepNode.id);
             if (stepMut) {
                 (stepMut as any).definitionId = defId;
+                (stepMut as any).ambiguousCandidates = undefined;
                 tx.setNode(stepMut); // Triggers unresolvedSteps.delete(stepNode.id)
             }
 
@@ -657,6 +660,13 @@ export class WorkspaceGraph {
             if (defNode && !defNode.usages.includes(stepNode.id)) {
                 defNode.usages.push(stepNode.id);
                 tx.setNode(defNode);
+            }
+        } else if (defs.length > 1) {
+            const stepMut = tx.getNodeForMutation<StepNode>(stepNode.id);
+            if (stepMut) {
+                (stepMut as any).definitionId = undefined;
+                (stepMut as any).ambiguousCandidates = defs.map(d => `${this.getCanonicalUri(d.uri)}:${d.decoratorRange.start.line}`);
+                tx.setNode(stepMut); // Triggers unresolvedSteps.add(stepNode.id)
             }
         }
     }

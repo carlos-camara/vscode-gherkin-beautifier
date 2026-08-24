@@ -48,7 +48,7 @@ When navigating the Autocomplete suggestion list, the details panel (hover) will
 ### Smart Context-Aware Ranking
 Suggestions are not simply sorted alphabetically. Gherkin PowerTools uses an intelligent, deterministic ranking algorithm to prioritize the steps you are most likely to need:
 - **Recent Usage**: Steps you have recently accepted are boosted via an internal LRU (Least Recently Used) cache.
-- **Tag Affinity**: The background indexer (using a mathematically robust snapshot model) tracks which steps are frequently used alongside specific tags. If you are inside a `@ui` feature, UI-related steps will float to the top.
+- **Tag Affinity**: The background WorkspaceGraph (using a mathematically robust snapshot model) tracks which steps are frequently used alongside specific tags. If you are inside a `@ui` feature, UI-related steps will float to the top.
 - **Feature Context**: Steps heavily used in the current `.feature` file or neighboring scenarios are ranked higher, and metrics correctly roll back if a file is deleted.
 - **Semantic Matching**: Partial matches against the Python definition receive a score boost.
 

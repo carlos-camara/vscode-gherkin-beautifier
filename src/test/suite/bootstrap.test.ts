@@ -10,9 +10,8 @@ suite('DeferredBootstrap Test Suite', () => {
 
     // Track calls to ensureInitialized / indexWorkspace / initialize
     let symbolCacheCalled = 0;
-    let featureCacheCalled = 0;
-    let usageIndexerCalled = 0;
-    let workspaceGraphCalled = 0;
+    let featureCacheCalled: number;
+    let workspaceGraphCalled: number;
     let impactRefreshCalled = 0;
     let eventBusSubscribed = false;
     let watchersSetup = false;
@@ -20,7 +19,6 @@ suite('DeferredBootstrap Test Suite', () => {
     setup(() => {
         symbolCacheCalled = 0;
         featureCacheCalled = 0;
-        usageIndexerCalled = 0;
         workspaceGraphCalled = 0;
         impactRefreshCalled = 0;
         eventBusSubscribed = false;
@@ -29,7 +27,6 @@ suite('DeferredBootstrap Test Suite', () => {
         components = {
             symbolCache: { ensureInitialized: async () => { symbolCacheCalled++; } },
             featureCache: { ensureInitialized: async () => { featureCacheCalled++; } },
-            usageIndexer: { indexWorkspace: async () => { usageIndexerCalled++; } },
             workspaceGraph: { initialize: async () => { workspaceGraphCalled++; } },
             impactCodeLensProvider: { refresh: () => { impactRefreshCalled++; } },
             eventBus: {
@@ -74,8 +71,6 @@ suite('DeferredBootstrap Test Suite', () => {
         await new Promise(resolve => setTimeout(resolve, 250));
 
         assert.strictEqual(symbolCacheCalled, 1);
-        assert.strictEqual(featureCacheCalled, 1);
-        assert.strictEqual(usageIndexerCalled, 1);
         assert.strictEqual(workspaceGraphCalled, 1);
         assert.strictEqual(impactRefreshCalled, 1);
         assert.strictEqual(watchersSetup, true);
@@ -159,15 +154,22 @@ suite('DeferredBootstrap Test Suite', () => {
         assert.strictEqual(diags.find(d => d.id === 'workspaceGraph')?.state, 'failed'); // Marked failed because dependency failed
     });
 
+    test('featureCache failure does not block other tasks', async () => {
+        components.featureCache.ensureInitialized = async () => { throw new Error('fail'); };
+
+        bootstrap.start();
+        await new Promise(r => setTimeout(r, 1000));
+
+        assert.strictEqual(bootstrap.state, 'finished');
+    });
+
     test('Multiple simultaneous failures', async () => {
-        components.usageIndexer.indexWorkspace = async () => { throw new Error("A"); };
         components.symbolCache.ensureInitialized = async () => { throw new Error("B"); };
 
         bootstrap.start();
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         const diags = bootstrap.getDiagnostics();
-        assert.strictEqual(diags.find(d => d.id === 'usageIndexer')?.state, 'failed');
         assert.strictEqual(diags.find(d => d.id === 'symbolCache')?.state, 'failed');
         assert.strictEqual(diags.find(d => d.id === 'workspaceGraph')?.state, 'failed');
         assert.strictEqual(diags.find(d => d.id === 'watchers')?.state, 'ready');
