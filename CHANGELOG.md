@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Finding Suppression System**: You can now safely suppress deliberate or unavoidable anti-patterns using a Quick Fix (`Cmd+.`). Suppressions are stored in a centralized, machine-readable `.gherkin-pt-suppressions.json` ledger, keeping your editor clean without losing track of technical debt. Manual edits to this file update your diagnostics in real-time.
 - **Batch Fix Workflow**: Introduced the `Fix All Safe Gherkin Issues in File` command. Utilizing VS Code's `SourceFixAll` API, it deterministically resolves non-overlapping structural errors (like missing colons or exact keyword corrections) across an entire document in one safe atomic operation.
 - **Object-based Rule Configuration**: `gherkinPowerTools.rules` now accepts configuration objects (e.g., `{ "severity": "error", "maxSteps": 20 }`), allowing teams to easily tweak subjective thresholds like `maxSteps` without being overwhelmed by low-value settings.
-- **Workspace-Aware Step Destination**: Redesigned step definition generation to intelligently infer the optimal destination directory based on the project's `stepGlobs` configuration. 
-  The extension now respects your workspace architecture instead of blindly writing to `features/steps`, falling back to a clean QuickPick menu to resolve ambiguity. 
+- **Workspace-Aware Step Destination**: Redesigned step definition generation to intelligently infer the optimal destination directory based on the project's `stepGlobs` configuration.
+  The extension now respects your workspace architecture instead of blindly writing to `features/steps`, falling back to a clean QuickPick menu to resolve ambiguity.
   Generated files are automatically saved, instantly clearing undefined step diagnostics without requiring manual intervention.
 - **Safe Concurrent Code Generation**: Step definition generation (Quick Fix) now enforces strict `{ overwrite: false }` bounds and prioritizes in-memory document state to definitively eliminate silent overwrites and race conditions when bootstrapping new features.
 - **Range Formatting Safe-Unit Model**: Redesigned range formatting expansion to significantly reduce unintended formatting blast radius. The algorithm now groups non-splittable elements (Data Tables, DocStrings, and Tag Blocks) into isolated safe units, ensuring a selection of two independent steps no longer formats the entire encompassing Scenario.
@@ -38,12 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Parser Reliability**: Fixed an issue where a temporarily failed module load would permanently break the parser by caching the rejected promise. The cache is now correctly evicted on failure, allowing seamless automatic recovery on subsequent parses.
 
 ### 🐛 Fixed
-- **Structural Step Identity Validation**: Fixed a bug where step definition patterns containing colons (`:`) or complex regex characters were incorrectly parsed by the Anti-Pattern Engine. 
+- **Structural Step Identity Validation**: Fixed a bug where step definition patterns containing colons (`:`) or complex regex characters were incorrectly parsed by the Anti-Pattern Engine.
   The structural identity model now leverages nested object structures instead of string-based delimiter serialization, fully eliminating false-positive "Duplicated Steps" warnings and data corruption on valid Python expressions.
 
 ### 📚 Documentation
-- **Comprehensive Documentation Audit**: Performed a repository-wide documentation audit for the 1.8.5 release. 
-  Verified that the new Anti-Pattern Engine rules (Correctness, Maintainability, Style), the centralized `gherkinPowerTools.rules` configuration, 
+- **Comprehensive Documentation Audit**: Performed a repository-wide documentation audit for the 1.8.5 release.
+  Verified that the new Anti-Pattern Engine rules (Correctness, Maintainability, Style), the centralized `gherkinPowerTools.rules` configuration,
   the batch quick fix workflow (`Fix All Safe Gherkin Issues in File`), and the diagnostic suppression ledger (`.gherkin-pt-suppressions.json`) are thoroughly and accurately documented across all MKDocs pages and the README.
 
 ## [1.8.4] - 2026-08-22
