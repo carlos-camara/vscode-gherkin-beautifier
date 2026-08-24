@@ -454,17 +454,17 @@
           "submenu": "gherkinPowerTools.submenu",
           "when": "editorLangId == feature",
           "group": "navigation@1"
-        },
-        {
-          "command": "gherkinPowerTools.refactor.renameStep",
-          "when": "editorLangId == feature && gherkinPowerTools.isCursorOnStep",
-          "group": "navigation@2"
         }
       ],
       "gherkinPowerTools.submenu": [
         {
           "command": "gherkinPowerTools.format",
           "group": "1_modification@1"
+        },
+        {
+          "command": "gherkinPowerTools.refactor.renameStep",
+          "when": "editorLangId == feature && gherkinPowerTools.isCursorOnStep",
+          "group": "1_modification@2"
         },
         {
           "command": "gherkinPowerTools.diagnoseWorkspace",
