@@ -53,7 +53,7 @@ As the custom formatter receives step events, it emits a `step_start` payload pr
 
 ### Context-Aware Completion Ranking
 To provide intelligent Behave step autocomplete locally and deterministically, the extension implements a local `CompletionRankingService` backed by a background `UsageIndexer`.
-1. **UsageIndexer**: Hooked into the `WorkspaceEventBus`, this indexer lazily scans `.feature` files in the background to build a tag affinity matrix (which steps are used with which tags) and track term frequency.
+1. **UsageIndexer (Transactional Snapshot Model)**: Hooked into the `WorkspaceEventBus`, this indexer lazily scans `.feature` files in the background. It utilizes a **FeatureSnapshot** model that maps term frequency and tag affinity on a per-resource basis. When a file is modified or deleted, the indexer applies an atomic mathematical subtraction of the previous snapshot before adding the new state, guaranteeing that global frequency counters never leak memory or become corrupted over time.
 2. **LRU Cache Tracking**: When a user accepts a completion, an internal command (`gherkinPowerTools.internal.recordCompletion`) is fired, updating a Least Recently Used (LRU) cache to ensure recently used steps get a high priority boost.
 3. **Deterministic Ranking**: When the user requests autocomplete, the `CompletionRankingService` calculates a score based on LRU presence, active feature context, tag affinity, and semantic string matching. The highest scores are assigned a lexicographical `sortText` (e.g., `000_`) to force VS Code's IntelliSense to present the most relevant steps at the top.
 

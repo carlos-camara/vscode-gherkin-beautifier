@@ -154,44 +154,150 @@ suite('Completion Ranking Service Test Suite', () => {
         assert.strictEqual(scoreBoosted - scoreBase, 10, 'Affinity 2 should give 10 points');
     });
 
-    test('UsageIndexer tallies step frequency and tag affinity', async () => {
-        const featureContent = `
-@ui @login
-Feature: Test Feature
-    Background:
-        Given I am on the login page
-    
-    @fast
-    Scenario: Valid login
-        When I enter valid credentials
-        Then I am logged in
+    suite('UsageIndexer incremental snapshot model', () => {
+        let indexer: any;
+        let baseUri: vscode.Uri;
         
-    Scenario: Invalid login
-        When I enter invalid credentials
-        Then I am not logged in
-        And I am on the login page
-        `;
-        
-        const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'temp_ranking_test.feature');
-        await vscode.workspace.fs.writeFile(uri, Buffer.from(featureContent, 'utf8'));
-        
-        try {
-            const indexer = service.usageIndexer;
-            
-            // Invoke the private indexFile method
-            await (indexer as any).indexFile(uri);
-            
-            // Background is parsed once as child of feature.
-            assert.strictEqual(indexer.getFrequency('I am on the login page'), 2);
-            assert.strictEqual(indexer.getFrequency('I enter valid credentials'), 1);
-            
-            assert.strictEqual(indexer.getTagAffinity('I enter valid credentials', ['@fast']), 1);
-            assert.strictEqual(indexer.getTagAffinity('I enter valid credentials', ['@ui', '@login']), 2);
-            assert.strictEqual(indexer.getTagAffinity('I enter valid credentials', ['@backend']), 0);
-        } finally {
+        setup(() => {
+            indexer = service.usageIndexer as any;
+            baseUri = vscode.workspace.workspaceFolders![0].uri;
+        });
+
+        async function writeAndIndex(filename: string, content: string) {
+            const uri = vscode.Uri.joinPath(baseUri, filename);
+            await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf8'));
+            await indexer.indexFile(uri);
+            return uri;
+        }
+
+        async function removeFile(uri: vscode.Uri) {
+            const { ResourceIdentity } = require('../../utils/resourceIdentity');
+            indexer.removeSnapshot(ResourceIdentity.getCanonicalUriString(uri));
             try {
                 await vscode.workspace.fs.delete(uri);
             } catch (e) {}
         }
+
+        test('create, change, no-op change, delete, and invariant', async () => {
+            const filename = 'incremental.feature';
+            
+            // 1. Create
+            const contentV1 = `
+@ui
+Feature: V1
+    Scenario: one
+        Given I do A
+        When I do B
+            `;
+            const uri = await writeAndIndex(filename, contentV1);
+            
+            assert.strictEqual(indexer.getFrequency('I do A'), 1);
+            assert.strictEqual(indexer.getFrequency('I do B'), 1);
+            assert.strictEqual(indexer.getTagAffinity('I do A', ['@ui']), 1);
+
+            // 2. Change (Add step, change tag)
+            const contentV2 = `
+@api
+Feature: V2
+    Scenario: one
+        Given I do A
+        When I do B
+        Then I do C
+            `;
+            await writeAndIndex(filename, contentV2);
+            
+            // Frequencies updated, B and A stay 1, C becomes 1
+            assert.strictEqual(indexer.getFrequency('I do A'), 1);
+            assert.strictEqual(indexer.getFrequency('I do C'), 1);
+            // Tags updated, no longer @ui
+            assert.strictEqual(indexer.getTagAffinity('I do A', ['@ui']), 0);
+            assert.strictEqual(indexer.getTagAffinity('I do A', ['@api']), 1);
+
+            // 3. No-op change (Frequencies should not duplicate)
+            await writeAndIndex(filename, contentV2);
+            assert.strictEqual(indexer.getFrequency('I do A'), 1, 'Frequency should remain 1 after no-op save');
+
+            // 4. Scenario removal & Tag removal
+            const contentV3 = `
+Feature: V3
+    Scenario: one
+        Given I do A
+            `;
+            await writeAndIndex(filename, contentV3);
+            
+            assert.strictEqual(indexer.getFrequency('I do A'), 1);
+            assert.strictEqual(indexer.getFrequency('I do B'), 0, 'B should be gone');
+            assert.strictEqual(indexer.getFrequency('I do C'), 0, 'C should be gone');
+            assert.strictEqual(indexer.getTagAffinity('I do A', ['@api']), 0, 'Tag affinity removed');
+
+            // 5. Delete
+            await removeFile(uri);
+            assert.strictEqual(indexer.getFrequency('I do A'), 0, 'All frequencies should be 0 after delete');
+
+            // 6. Invariant test: incremental result == clean full rebuild result
+            const contentFinal1 = `Feature: F1\nScenario: S1\nGiven I do A`;
+            const contentFinal2 = `Feature: F2\nScenario: S2\nGiven I do A\nWhen I do B`;
+            
+            // Run messy incremental operations
+            const uri1 = await writeAndIndex('f1.feature', contentFinal1);
+            const uri2 = await writeAndIndex('f2.feature', contentFinal2);
+            await writeAndIndex('f1.feature', contentFinal1 + '\nAnd I do X');
+            await writeAndIndex('f1.feature', contentFinal1); // Back to final
+            await removeFile(uri2);
+            const uri2_new = await writeAndIndex('f2_renamed.feature', contentFinal2); // Rename
+            
+            const incFreqA = indexer.getFrequency('I do A');
+            const incFreqB = indexer.getFrequency('I do B');
+            
+            // Clean rebuild
+            await indexer.reindexAll();
+            const cleanFreqA = indexer.getFrequency('I do A');
+            const cleanFreqB = indexer.getFrequency('I do B');
+            
+            assert.strictEqual(incFreqA, cleanFreqA, 'Invariant failed for A');
+            assert.strictEqual(incFreqB, cleanFreqB, 'Invariant failed for B');
+
+            await removeFile(uri1);
+            await removeFile(uri2_new);
+        });
+
+        test('malformed edit followed by repair', async () => {
+            const filename = 'malformed.feature';
+            const uri = await writeAndIndex(filename, `Feature: OK\nScenario: S\nGiven valid step`);
+            
+            assert.strictEqual(indexer.getFrequency('valid step'), 1);
+
+            // Malformed edit (Parsing failure must not silently double-count data, and keeps last known-good)
+            await writeAndIndex(filename, `Feature OK Scenario S Given valid step`); // invalid Gherkin
+            
+            assert.strictEqual(indexer.getFrequency('valid step'), 1, 'Should retain last known good snapshot');
+
+            // Repair
+            await writeAndIndex(filename, `Feature: OK\nScenario: S\nGiven valid step repaired`);
+            assert.strictEqual(indexer.getFrequency('valid step'), 0);
+            assert.strictEqual(indexer.getFrequency('valid step repaired'), 1);
+
+            await removeFile(uri);
+        });
+
+        test('branch-switch event burst', async () => {
+            // Simulates multiple rapid changes to multiple files
+            const uri1 = await writeAndIndex('burst1.feature', `Feature: B1\nScenario: S\nGiven step one`);
+            const uri2 = await writeAndIndex('burst2.feature', `Feature: B2\nScenario: S\nGiven step two`);
+            
+            // Burst of events (same files rewritten)
+            const p1 = indexer.indexFile(uri1);
+            const p2 = indexer.indexFile(uri2);
+            const p3 = indexer.indexFile(uri1);
+            const p4 = indexer.indexFile(uri2);
+            
+            await Promise.all([p1, p2, p3, p4]);
+
+            assert.strictEqual(indexer.getFrequency('step one'), 1, 'Burst should not duplicate counts');
+            assert.strictEqual(indexer.getFrequency('step two'), 1, 'Burst should not duplicate counts');
+
+            await removeFile(uri1);
+            await removeFile(uri2);
+        });
     });
 });

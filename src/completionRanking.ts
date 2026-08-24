@@ -5,6 +5,8 @@ import type { Step } from '@cucumber/messages';
 import { WorkspaceEventBus } from './eventBus';
 import { featureDiscoveryService } from './featureDiscovery';
 
+import { ResourceIdentity } from './utils/resourceIdentity';
+
 export interface RankingContext {
     semanticType: 'given' | 'when' | 'then' | 'step';
     typedText: string;
@@ -12,9 +14,17 @@ export interface RankingContext {
     currentFeatureStepTexts: string[];
 }
 
-class UsageIndexer {
-    private stepFrequencies = new Map<string, number>();
-    private stepTagAffinities = new Map<string, Set<string>>();
+export interface FeatureSnapshot {
+    uri: string;
+    status: 'success' | 'failure';
+    stepFrequencies: Map<string, number>;
+    stepTagAffinities: Map<string, Set<string>>;
+}
+
+export class UsageIndexer {
+    private globalStepFrequencies = new Map<string, number>();
+    private globalStepTagAffinities = new Map<string, Map<string, number>>();
+    private snapshots = new Map<string, FeatureSnapshot>();
     private isIndexed = false;
     private eventBusDisposable?: vscode.Disposable;
 
@@ -23,8 +33,20 @@ class UsageIndexer {
         this.eventBusDisposable = eventBus.onEvent(e => {
             if (e.type === 'featureFileChanged' || e.type === 'featureFileCreated') {
                 this.indexFile(e.uri);
+            } else if (e.type === 'featureFileDeleted') {
+                this.removeSnapshot(ResourceIdentity.getCanonicalUriString(e.uri));
+            } else if (e.type === 'configurationChanged') {
+                this.reindexAll();
             }
         });
+    }
+
+    private async reindexAll() {
+        this.snapshots.clear();
+        this.globalStepFrequencies.clear();
+        this.globalStepTagAffinities.clear();
+        this.isIndexed = false;
+        await this.indexWorkspace();
     }
 
     public async indexWorkspace() {
@@ -39,25 +61,105 @@ class UsageIndexer {
         }
     }
 
-    private async indexFile(uri: vscode.Uri) {
+    private removeSnapshot(canonicalUri: string) {
+        const oldSnapshot = this.snapshots.get(canonicalUri);
+        if (!oldSnapshot) return;
+
+        // Subtract frequencies
+        for (const [text, freq] of oldSnapshot.stepFrequencies.entries()) {
+            const current = this.globalStepFrequencies.get(text) || 0;
+            const next = current - freq;
+            if (next <= 0) {
+                this.globalStepFrequencies.delete(text);
+            } else {
+                this.globalStepFrequencies.set(text, next);
+            }
+        }
+
+        // Subtract tag affinities
+        for (const [text, tags] of oldSnapshot.stepTagAffinities.entries()) {
+            const tagMap = this.globalStepTagAffinities.get(text);
+            if (tagMap) {
+                for (const tag of tags) {
+                    const currentCount = tagMap.get(tag) || 0;
+                    const nextCount = currentCount - 1;
+                    if (nextCount <= 0) {
+                        tagMap.delete(tag);
+                    } else {
+                        tagMap.set(tag, nextCount);
+                    }
+                }
+                if (tagMap.size === 0) {
+                    this.globalStepTagAffinities.delete(text);
+                }
+            }
+        }
+
+        this.snapshots.delete(canonicalUri);
+    }
+
+    private applySnapshot(newSnapshot: FeatureSnapshot) {
+        this.removeSnapshot(newSnapshot.uri);
+
+        // Add frequencies
+        for (const [text, freq] of newSnapshot.stepFrequencies.entries()) {
+            const current = this.globalStepFrequencies.get(text) || 0;
+            this.globalStepFrequencies.set(text, current + freq);
+        }
+
+        // Add tag affinities
+        for (const [text, tags] of newSnapshot.stepTagAffinities.entries()) {
+            let tagMap = this.globalStepTagAffinities.get(text);
+            if (!tagMap) {
+                tagMap = new Map<string, number>();
+                this.globalStepTagAffinities.set(text, tagMap);
+            }
+            for (const tag of tags) {
+                const currentCount = tagMap.get(tag) || 0;
+                tagMap.set(tag, currentCount + 1);
+            }
+        }
+
+        this.snapshots.set(newSnapshot.uri, newSnapshot);
+    }
+
+    // Exported for invariant testing
+    public async indexFile(uri: vscode.Uri) {
+        const canonicalUri = ResourceIdentity.getCanonicalUriString(uri);
+        
         try {
-            const rawBytes = await vscode.workspace.fs.readFile(uri);
-            const content = new TextDecoder('utf8').decode(rawBytes);
+            let content = '';
+            const openDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+            if (openDoc) {
+                content = openDoc.getText();
+            } else {
+                const rawBytes = await vscode.workspace.fs.readFile(uri);
+                content = new TextDecoder('utf8').decode(rawBytes);
+            }
+
             const { document } = await parseGherkin(content);
 
-            if (!document || !document.feature) return;
+            if (!document || !document.feature) {
+                return; // Parsing failure: keep last known good snapshot
+            }
             
             const featureTags = document.feature.tags.map(t => t.name);
+            const snapshot: FeatureSnapshot = {
+                uri: canonicalUri,
+                status: 'success',
+                stepFrequencies: new Map(),
+                stepTagAffinities: new Map()
+            };
 
             const processSteps = (steps: readonly Step[], tags: string[]) => {
                 for (const step of steps) {
                     const text = step.text.trim();
-                    this.stepFrequencies.set(text, (this.stepFrequencies.get(text) || 0) + 1);
+                    snapshot.stepFrequencies.set(text, (snapshot.stepFrequencies.get(text) || 0) + 1);
                     
-                    if (!this.stepTagAffinities.has(text)) {
-                        this.stepTagAffinities.set(text, new Set());
+                    if (!snapshot.stepTagAffinities.has(text)) {
+                        snapshot.stepTagAffinities.set(text, new Set());
                     }
-                    const affinitySet = this.stepTagAffinities.get(text)!;
+                    const affinitySet = snapshot.stepTagAffinities.get(text)!;
                     for (const t of tags) {
                         affinitySet.add(t);
                     }
@@ -82,22 +184,24 @@ class UsageIndexer {
                     }
                 }
             }
+
+            this.applySnapshot(snapshot);
         } catch (e) {
-            // ignore indexing failures for single files
+            // ignore indexing failures
         }
     }
 
     public getFrequency(stepText: string): number {
-        return this.stepFrequencies.get(stepText) || 0;
+        return this.globalStepFrequencies.get(stepText) || 0;
     }
 
     public getTagAffinity(stepText: string, activeTags: string[]): number {
-        const affinities = this.stepTagAffinities.get(stepText);
-        if (!affinities || activeTags.length === 0) return 0;
+        const tagMap = this.globalStepTagAffinities.get(stepText);
+        if (!tagMap || activeTags.length === 0) return 0;
         
         let matchCount = 0;
         for (const tag of activeTags) {
-            if (affinities.has(tag)) matchCount++;
+            if (tagMap.has(tag)) matchCount++;
         }
         return matchCount;
     }
