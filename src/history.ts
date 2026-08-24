@@ -11,7 +11,7 @@ export interface VersionedSnapshot {
     metricsAlgorithmVersion: string;
 }
 
-export interface HistorySchemaV1 {
+interface HistorySchemaV1 {
     schemaVersion: 1;
     workspaceName: string;
     branches: {

@@ -25,6 +25,16 @@ suite('GherkinRenameProvider Test Suite', () => {
         sinon.restore();
     });
 
+    test('prepareRename throws error in untrusted workspace', async () => {
+        sinon.stub(vscode.workspace, 'isTrusted').value(false);
+        const featureUri = vscode.Uri.file('/fake/test.feature');
+        const mockDoc = { uri: featureUri, lineAt: () => ({ text: '' }) } as any;
+        await assert.rejects(
+            renameProvider.prepareRename(mockDoc, new vscode.Position(0, 0), {} as any),
+            /Renaming steps modifies Python code and requires Workspace Trust/
+        );
+    });
+
     test('prepareRename throws error for invalid element', async () => {
         const featureUri = vscode.Uri.file('/fake/test.feature');
         const mockDoc = {

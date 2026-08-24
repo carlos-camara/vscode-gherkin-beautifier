@@ -36,6 +36,15 @@ To maintain compatibility and prevent side effects in users' workspaces, develop
 - **Test Controller Coexistence**: The extension must safely coexist with other extensions that provide their own Test Controllers and Profiles (like Python `pytest` or `Coverage`). Our Test Controller should not assume it is the only one in the workspace. Any E2E UI test must instantiate Mock controllers with unique IDs to avoid ID collisions with the real extension background processes.
 - **Transactional Graph State**: The `WorkspaceGraph` coordinates the semantic index. Any mutation of the graph state *must* occur inside the `graph.executeTransaction()` wrapper to guarantee atomic commits and failure isolation.
   Services requiring graph reads must query the immutable `graph.currentGeneration` object. Tests needing to inject state outside of the transaction queue should exclusively use the test-only helper `graph.setNodeForTest()`.
+- **Lifecycle and Disposal Rules**: When implementing global singletons or event-driven services (e.g., `MetricsLogger`), event listeners (such as `onDidChangeConfiguration`) must not be hidden inside class constructors. Instead, they must be explicitly bound and tracked via the `ExtensionContext.subscriptions` in the activation phase to prevent memory leaks.
+- **Testing Requirements**: Any global state used by singletons must be explicitly cleared using dedicated `reset()` methods during the test `teardown()` phase to prevent cross-test pollution and state leaking.
+
+### Contributors Deep-Dive: Implementing a new Anti-Pattern Rule
+
+When contributing a new rule to the `AntiPatternEngine`, you must implement the `AntiPatternRule<T>` interface located in `src/antiPatternEngine.ts`.
+1. **Rule Classification**: You must categorize your rule appropriately (Correctness, Reliability, Maintainability, Style) via `RuleMetadata`. Do not treat subjective heuristics (Maintainability) as objective Correctness errors.
+2. **Object Configuration**: If your rule relies on numeric thresholds (e.g., maximum steps), you must declare a generic configuration interface `<T>` (e.g., `OversizedScenarioParams`) and provide sensible defaults in `defaultParams`. The engine will automatically pass the resolved configuration object to your `analyze()` method.
+3. **Immutability**: Analyze the `WorkspaceGraph` strictly in a read-only manner. Do not mutate nodes during analysis.
 
 ### Contributors Deep-Dive: Implementing a new LanguageService Provider
 

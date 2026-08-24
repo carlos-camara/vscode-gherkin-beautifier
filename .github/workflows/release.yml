@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: 🔍 Checkout Code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -51,7 +51,8 @@ jobs:
         run: node scripts/verify-release-candidate.js
 
       - name: 📤 Upload Release Candidate Artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-candidate
           path: |
@@ -66,20 +67,22 @@ jobs:
     needs: build-and-validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # environment: production # Uncomment to require manual approval in GitHub Environments
+    # environment: production
+    # Uncomment to require manual approval in GitHub Environments
     permissions:
       contents: write # Privileged job (never runs npm install or build scripts)
 
     steps:
       - name: 🔍 Checkout Scripts Only
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
             scripts/verify-publish-artifact.js
           sparse-checkout-cone-mode: false
 
       - name: 📥 Download Release Candidate
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        # v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release-candidate
           path: .
@@ -122,7 +125,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -f "skip_upload.marker" ]; then
-            echo "Skipping upload because cryptographically identical asset already exists."
+            echo "Skipping upload because identical asset already exists."
             exit 0
           fi
           TAG=$(node -p "require('./provenance.json').tag")

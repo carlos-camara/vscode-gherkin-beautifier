@@ -153,7 +153,8 @@ suite('Architecture Validation Test Suite', () => {
             // Ignore aliases, internal commands, and test commands
             if (registeredCommand === 'gherkin-powertools.showImpactDetails' ||
                 registeredCommand.includes('.internal.') ||
-                registeredCommand === 'gherkinPowerTools.createStepDefinition') {
+                registeredCommand === 'gherkinPowerTools.createStepDefinition' ||
+                registeredCommand === 'gherkinPowerTools.suppressFinding') {
                 continue;
             }
 
@@ -209,16 +210,17 @@ suite('Architecture Validation Test Suite', () => {
         const editorContext = packageJson.contributes.menus['editor/context'];
         assert.ok(editorContext, 'package.json should define editor/context menus');
         
-        const renameCommand = editorContext.find((m: any) => m.command === 'gherkinPowerTools.refactor.renameStep');
-        assert.ok(renameCommand, 'Rename Step should be in editor/context');
-        assert.ok(renameCommand.when.includes('gherkinPowerTools.isCursorOnStep'), 'Rename Step should only be visible when cursor is on a step');
-
         const gptSubmenu = editorContext.find((m: any) => m.submenu === 'gherkinPowerTools.submenu');
         assert.ok(gptSubmenu, 'Gherkin PowerTools submenu should be linked in editor/context');
 
         // Validate submenu contents
         const submenuContents = packageJson.contributes.menus['gherkinPowerTools.submenu'];
         assert.ok(submenuContents, 'package.json should define contents for gherkinPowerTools.submenu');
+        
+        const renameCommand = submenuContents.find((m: any) => m.command === 'gherkinPowerTools.refactor.renameStep');
+        assert.ok(renameCommand, 'Rename Step should be in gherkinPowerTools.submenu');
+        assert.ok(renameCommand.when.includes('gherkinPowerTools.isCursorOnStep'), 'Rename Step should only be visible when cursor is on a step');
+
         assert.ok(submenuContents.find((m: any) => m.command === 'gherkinPowerTools.format'), 'Format Document should be in the submenu');
         assert.ok(submenuContents.find((m: any) => m.command === 'gherkinPowerTools.diagnoseWorkspace'), 'Diagnose Workspace should be in the submenu');
         assert.ok(submenuContents.find((m: any) => m.command === 'gherkinPowerTools.showGherkinHealth'), 'Show Gherkin Health should be in the submenu');

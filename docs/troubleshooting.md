@@ -18,6 +18,17 @@ This guide addresses common problems organized by observable symptoms.
 2. Check your settings for `"gherkinPowerTools.formatter.enabled": false`.
 **Resolution:** Ensure the file extension is `.feature`. Remove the disabling setting.
 
+## Diagnostics do not appear
+**Symptom:** You type invalid Gherkin, but no red or yellow squiggly lines appear in the editor.
+**Likely Causes:** The real-time linter has been disabled in the settings.
+**Diagnostic Steps:** Check your settings for `"gherkinPowerTools.linter.enabled": false`. When disabled, the linter enters a completely dormant state to conserve system resources.
+**Resolution:** Remove the setting or set `"gherkinPowerTools.linter.enabled": true`.
+
+## Format on Save does not work on some files
+**Symptom:** You have Format on Save enabled, but the file doesn't format when saving. However, manually formatting it shows a warning.
+**Likely Causes:** The Gherkin file contains structural syntax errors.
+**Resolution:** Automatic formatting (like Format on Save) is intentionally designed to be **silent** when syntax errors are present. This prevents intrusive warning popups from interrupting you while you type an incomplete document. Fix the syntax errors (indicated by the red squiggly lines) and the formatter will resume working automatically.
+
 ## Python steps are not found (Go to Definition / Autocomplete fail)
 **Symptom:** You use Python Behave, but steps show as "Undefined" in the Linter, and Go to Definition does not work.
 **Likely Causes:** The extension is looking in the wrong directory, or your virtual environment is causing performance timeouts.
@@ -42,11 +53,29 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Symptom:** Your feature file displays two overlapping underlines (e.g., one yellow, one red) for the same undefined step, ambiguous step, or syntax error (such as a misspelled keyword). The generic `Syntax Error` might also mask the Quick Fix bulb.
 **Likely Causes:** Both the realtime Linter and the BDD Anti-pattern Detection Engine are configured to report on the same file, but the filtering mechanism failed or configuration is conflicting.
 **Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps`, `ambiguous-steps`, and `syntax-errors` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the highly-granular Quick Fixes).
-**Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.antiPatterns.rules`.
+**Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.rules`.
+
+## Rule Configuration (like maxSteps) is ignored
+**Symptom:** You configured a rule like `oversized-scenario` to use a custom threshold (e.g. `maxSteps: 20`), but the engine still uses the default threshold.
+**Likely Causes:** You might have used the legacy string-based format or incorrectly nested the object.
+**Resolution:** Ensure you are using the Object-based configuration correctly in `gherkinPowerTools.rules`. It must look like this:
+```json
+"gherkinPowerTools.rules": {
+    "oversized-scenario": {
+        "severity": "warning",
+        "maxSteps": 20
+    }
+}
+```
 
 ## Yellow line (diagnostics) doesn't appear immediately on file open
 **Symptom:** You open a feature file and the yellow squiggly lines for undefined or ambiguous steps do not appear until you type a character or switch files back and forth.
 **Resolution:** This behavior was fixed in v1.8.4. The real-time Linter now triggers `immediateLint` directly on file load, bypassing standard debounce delays. Ensure you are on the latest version of the extension.
+
+## Quick Fix (Lightbulb) does not apply or fails silently
+**Symptom:** You click a Quick Fix (e.g. to generate an undefined step or fix a misspelled keyword) and nothing happens.
+**Likely Causes:** You continued typing in the `.feature` file *after* the diagnostic appeared but *before* you clicked the lightbulb.
+**Resolution:** To protect against code corruption, Gherkin PowerTools strictly validates the document version. If the document has changed since the diagnostic was generated, the Code Action is aborted to prevent applying a stale edit. Wait a half-second for the linter to re-evaluate the file and generate a fresh Quick Fix lightbulb, then click it.
 
 ## Impact Analysis CodeLenses are not appearing
 **Symptom:** You open a Python step definition file, but you do not see the CodeLenses displaying the number of affected scenarios.
@@ -59,6 +88,12 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Likely Causes:** The extension tries to append the new step to the most recently modified `.py` file within your `stepGlobs` paths. If you have no step files, it will create one based on standard conventions.
 If you are in a **Multi-Root Workspace**, and the feature file being edited does not clearly belong to one of the roots, it will explicitly prompt you to select the correct target folder to prevent accidental cross-project modifications.
 **Resolution:** Open the specific `steps.py` file you want to use, save it, and try generating the step again. The extension will pick up that file as the active target. If prompted for a folder, explicitly choose the intended project root.
+
+**Symptom:** Step definition generation aborts safely and shows an error message like "Cannot read target file" instead of inserting the new step.
+**Likely Causes:** The target Python file exists but is unreadable (e.g., due to strict filesystem permissions or a temporarily disconnected remote filesystem like SSH/WSL).
+**Resolution:** This is a deliberate safety mechanism to prevent the extension from assuming the file is empty and injecting conflicting boilerplate. Verify your file permissions and remote connection status, then try generating the step again.
+
+## Test Explorer and Debugging
 
 ## Test Explorer is empty
 **Symptom:** You open the Testing sidebar, but no feature files or scenarios appear.
@@ -134,10 +169,10 @@ If you need to point to a specific local Python virtual environment via an absol
 
 ## Large workspace performance is poor
 **Symptom:** VS Code feels slow when typing in `.feature` files.
-**Likely Causes:** The extension is scanning too many files (e.g., inside `.venv` or `node_modules`), or parsing a massive file is bottlenecking the AST.
+**Likely Causes:** The extension is scanning too many files (e.g., inside `.venv` or `node_modules`), or the AST Cache memory budget is constantly thrashing on massive files.
 **Resolution:**
 1. Ensure `gherkinPowerTools.behave.ignoreGlobs` correctly ignores all dependency directories.
-2. Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run the **Show Developer Metrics** command to identify if specific files have high parsing durations or poor cache hit ratios.
+2. Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run the **Show Developer Metrics** command to identify if specific files have high parsing durations, poor cache hit ratios, or if **Cache Evictions** are rapidly exhausting the 50MB memory budget.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/metrics-snapshot.gif" alt="Output Channel showing AST Parser and Cache performance metrics" width="600" height="340" />
@@ -164,9 +199,9 @@ If you need to point to a specific local Python virtual environment via an absol
 **Resolution:** Verify `stepGlobs` covers all relevant step files. If a capability failed, you can restart the extension Host. The graph is rebuilt automatically when files are saved.
 
 ## Rename Step is not visible in the Context Menu
-**Symptom:** You right-click in the editor, but "Rename Step" does not appear in the context menu.
-**Likely Causes:** To reduce clutter, the "Rename Step" command dynamically appears only when your cursor is positioned directly on a valid step line.
-**Resolution:** Ensure your text cursor is placed on a line starting with `Given`, `When`, `Then`, `And`, or `But`, then right-click again.
+**Symptom:** You right-click in the editor, but "Rename Step" does not appear in the Gherkin PowerTools context submenu.
+**Likely Causes:** To reduce clutter, the "Rename Step" command dynamically appears in the submenu only when your cursor is positioned directly on a valid step line.
+**Resolution:** Ensure your text cursor is placed on a line starting with `Given`, `When`, `Then`, `And`, or `But`, then right-click and check the Gherkin PowerTools submenu again.
 
 ## Extract Step does not produce a Python stub
 **Symptom:** You select multiple steps and invoke the Code Action, but no stub appears in the target file.
@@ -175,6 +210,17 @@ If you need to point to a specific local Python virtual environment via an absol
 1. Ensure you have selected at least two step lines (the selection must include both start and end lines).
 2. Confirm that at least one Python step file exists within your `stepGlobs`.
 **Resolution:** If no Python files appear in the file picker, add the correct glob to `gherkinPowerTools.behave.stepGlobs`.
+
+## VS Code Freezes or Stutters on Massive Feature Files
+
+**Symptom:** Opening or pasting a massive `.feature` file (e.g., > 1MB of pure scenarios, such as > 10,000 scenarios generated automatically) causes VS Code to freeze or stutter for a brief moment, and the Extension Host might report unresponsiveness.
+
+**Why it happens:** The native `@cucumber/gherkin` parser runs synchronously on the Extension Host main thread. For a typical file (under 1,000 scenarios), this takes `< 20ms` and is unnoticeable. For pathologically large files (> 10,000 scenarios), parsing can block the event loop for `> 75ms`.
+
+**Resolution:**
+- Break generated `.feature` files into smaller files (< 1,000 scenarios each).
+- The extension employs *debouncing* to avoid running the parser on every keystroke, but initial loads or large pastes will block the thread until parsing finishes.
+- A hard document-size guard (e.g., 2MB) may be implemented in future versions if abuse is widespread.
 
 ## Files are missed or falsely flagged as duplicates (macOS/Windows)
 **Symptom:** When scanning large workspaces, some `.feature` or `.py` files are ignored, or Behave step definitions are falsely reported as duplicated.
@@ -190,6 +236,11 @@ If you need to point to a specific local Python virtual environment via an absol
 **Symptom:** Running `npx @carlos-camara/gherkin-pt analyze` fails with a "Cannot find module '@cucumber/gherkin'" error.
 **Likely Causes:** The CLI was installed globally or npm cached an outdated, non-scoped version of the CLI package.
 **Resolution:** Ensure you are using the explicitly scoped package (`@carlos-camara/gherkin-pt`) and force a cache clear by running `npx --yes --clear-cache @carlos-camara/gherkin-pt`.
+
+## Formatter or Parser fails to load entirely
+**Symptom:** Formatting, diagnostics, and step generation suddenly stop working, and the VS Code Output Channel (Gherkin PowerTools) displays "Failed to load Cucumber modules after 3 retries".
+**Likely Causes:** Extremely slow Extension Host initialization or temporary filesystem locks preventing the loading of `@cucumber/gherkin` and `@cucumber/messages` modules.
+**Resolution:** The parser attempts to heal itself by retrying up to 3 times. If all retries are exhausted, you can manually force a reload of the VS Code window (`Developer: Reload Window`). This is exceedingly rare in production builds (VSIX) but can happen during local development.
 
 ## How to Report a Bug
 If none of these steps resolve your issue, please run **Gherkin PowerTools: Diagnose Workspace**, copy the output, and [Report an Issue on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/issues).

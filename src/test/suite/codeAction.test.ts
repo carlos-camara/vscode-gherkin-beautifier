@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { GherkinCodeActionProvider, createStepDefinition, serializeToPythonString, generateStepFunctionName } from '../../codeAction';
 import { discoveryService } from '../../discovery';
+import { RuleDiagnostic, diagnosticRegistry } from '../../rules';
 
 function createMockDocument(text: string, uriStr: string): vscode.TextDocument {
     const lines = text.split('\n');
@@ -10,7 +11,8 @@ function createMockDocument(text: string, uriStr: string): vscode.TextDocument {
         getText: () => text,
         lineAt: (line: number) => ({ text: lines[line] }),
         lineCount: lines.length,
-        uri: vscode.Uri.parse(uriStr)
+        uri: vscode.Uri.parse(uriStr),
+        save: async () => true
     } as any as vscode.TextDocument;
 }
 
@@ -42,21 +44,23 @@ suite('Code Action Provider Test Suite', () => {
 
     setup(() => {
         provider = new GherkinCodeActionProvider();
+        diagnosticRegistry.clear();
     });
 
     test('Provides Code Actions for misspelled keywords', () => {
         const doc = createMockDocument('Givn misspelled', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0,0,0,4),
             "Misspelled keyword",
-            vscode.DiagnosticSeverity.Error
+            vscode.DiagnosticSeverity.Error,
+            'invalid-keyword',
+            1,
+            { replacementText: 'Given' }
         );
-        diagnostic.code = 'MISSPELLED_KEYWORD';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0,0,0,4)), 'Given')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Replace with 'Given'");
@@ -64,17 +68,18 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for undefined steps', () => {
         const doc = createMockDocument('Then undefined step', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0,0,0,19),
             "Undefined step: \"undefined step\"",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'undefined-step',
+            1,
+            { stepText: 'undefined step', stepKeyword: 'Then' }
         );
-        diagnostic.code = 'UNDEFINED_STEP';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0,0,0,19)), 'Then')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Create empty step definition");
@@ -84,17 +89,18 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Resolves previous keyword for And/But steps', () => {
         const doc = createMockDocument('Given some setup\nAnd undefined step', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(1,0,1,18),
             "Undefined step: \"undefined step\"",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'undefined-step',
+            1,
+            { stepText: 'undefined step', stepKeyword: 'And' }
         );
-        diagnostic.code = 'UNDEFINED_STEP';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(1,0,1,18)), 'And')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(1,0,1,0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(1,0,1,0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         // It should resolve 'And' to 'given' because line 0 starts with 'Given'
@@ -103,17 +109,18 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for MISSING_COLON', () => {
         const doc = createMockDocument('Feature Feature name', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0, 0, 0, 7),
             "Missing colon",
-            vscode.DiagnosticSeverity.Error
+            vscode.DiagnosticSeverity.Error,
+            'missing-colon',
+            1,
+            { replacementText: 'Feature:' }
         );
-        diagnostic.code = 'MISSING_COLON';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0, 0, 0, 8)), 'Feature:')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Insert missing ':'");
@@ -121,14 +128,17 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for SCENARIO_WITH_EXAMPLES', () => {
         const doc = createMockDocument('Scenario: Test', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0, 0, 0, 8),
             "Scenario with Examples should be Scenario Outline",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'scenario-with-examples',
+            1
         );
-        diagnostic.code = 'SCENARIO_WITH_EXAMPLES';
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 1);
         assert.strictEqual(actions[0].title, "Convert to 'Scenario Outline'");
@@ -136,19 +146,109 @@ suite('Code Action Provider Test Suite', () => {
 
     test('Provides Code Actions for INCONSISTENT_CELL_COUNT', () => {
         const doc = createMockDocument('| col1 | col2', 'file:///code-actions.feature');
-        const diagnostic = new vscode.Diagnostic(
+        (doc as any).version = 1;
+        const diagnostic = new RuleDiagnostic(
             new vscode.Range(0, 0, 0, 11),
             "Inconsistent cell count",
-            vscode.DiagnosticSeverity.Warning
+            vscode.DiagnosticSeverity.Warning,
+            'table-inconsistency',
+            1
         );
-        diagnostic.code = 'INCONSISTENT_CELL_COUNT';
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(doc.uri, new vscode.Range(0, 0, 0, 12)), '| col1 | col2 |')
-        ];
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
 
-        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [diagnostic] } as any, {} as any);
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0, 0, 0, 0), { diagnostics: [] } as any, {} as any);
         assert.ok(actions);
         assert.strictEqual(actions.length, 0);
+    });
+
+    test('Ignores stale diagnostics when document version changed', () => {
+        const doc = createMockDocument('Givn misspelled', 'file:///code-actions-stale.feature');
+        (doc as any).version = 2; // Document is newer!
+        
+        const diagnostic = new RuleDiagnostic(
+            new vscode.Range(0,0,0,4),
+            "Misspelled keyword",
+            vscode.DiagnosticSeverity.Error,
+            'invalid-keyword',
+            1, // Stale diagnostic version!
+            { replacementText: 'Given' }
+        );
+        diagnosticRegistry.set(doc.uri.toString(), [diagnostic]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { diagnostics: [] } as any, {} as any);
+        // Should not provide actions because it is stale
+        assert.strictEqual(actions.length, 0);
+    });
+});
+
+suite('Safe Batch Fix All Test Suite', () => {
+    let provider: GherkinCodeActionProvider;
+
+    setup(() => {
+        provider = new GherkinCodeActionProvider();
+        diagnosticRegistry.clear();
+    });
+
+    test('Filters out unsafe and stale diagnostics', () => {
+        const doc = createMockDocument('Feature\nScenario: Test\nThen undefined step', 'file:///fix-all-unsafe.feature');
+        (doc as any).version = 1;
+        
+        // 1. Unsafe diagnostic (Category B/C/D)
+        const d1 = new RuleDiagnostic(new vscode.Range(2,0,2,19), "Undefined step", vscode.DiagnosticSeverity.Warning, 'undefined-step', 1, { stepText: 'undefined step', stepKeyword: 'Then' });
+        // 2. Stale diagnostic
+        const d2 = new RuleDiagnostic(new vscode.Range(0,0,0,7), "Missing colon", vscode.DiagnosticSeverity.Error, 'missing-colon', 0, { replacementText: 'Feature:' }); // version 0 != 1
+        // 3. Safe diagnostic
+        const d3 = new RuleDiagnostic(new vscode.Range(1,0,1,8), "Scenario with Examples should be Scenario Outline", vscode.DiagnosticSeverity.Warning, 'scenario-with-examples', 1);
+
+        diagnosticRegistry.set(doc.uri.toString(), [d1, d2, d3]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { only: { contains: (kind: vscode.CodeActionKind) => kind === vscode.CodeActionKind.SourceFixAll }, diagnostics: [] } as any, {} as any);
+        
+        assert.ok(actions);
+        assert.strictEqual(actions.length, 1);
+        assert.strictEqual(actions[0].title, "Fix All Safe Gherkin Issues");
+        
+        // Ensure the edit only contains the safe diagnostic (d3)
+        const edits = actions[0].edit?.entries();
+        assert.strictEqual(edits?.length, 1);
+        assert.strictEqual(edits[0][1].length, 1);
+        assert.strictEqual(edits[0][1][0].newText, 'Scenario Outline');
+    });
+
+    test('Conflict resolution drops overlapping edits', () => {
+        const doc = createMockDocument('Givn missing colon', 'file:///fix-all-conflicts.feature');
+        (doc as any).version = 1;
+        
+        // Two diagnostics on the exact same line that overlap.
+        // D1: Missing colon (0,0 to 0,18 -> replacementText)
+        const d1 = new RuleDiagnostic(new vscode.Range(0,0,0,18), "Missing colon", vscode.DiagnosticSeverity.Error, 'missing-colon', 1, { replacementText: 'Given missing colon:' });
+        
+        // D2: Invalid keyword (0,0 to 0,4 -> replacementText)
+        const d2 = new RuleDiagnostic(new vscode.Range(0,0,0,4), "Misspelled keyword", vscode.DiagnosticSeverity.Error, 'invalid-keyword', 1, { replacementText: 'Given' });
+
+        diagnosticRegistry.set(doc.uri.toString(), [d1, d2]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { only: { contains: (kind: vscode.CodeActionKind) => kind === vscode.CodeActionKind.SourceFixAll }, diagnostics: [] } as any, {} as any);
+        
+        // Only one edit should survive conflict resolution since they overlap on line 0
+        const edits = actions[0].edit?.entries();
+        assert.strictEqual(edits?.[0]?.[1]?.length, 1, "Should drop overlapping edit");
+    });
+
+    test('Conflict resolution applies multiple non-overlapping edits', () => {
+        const doc = createMockDocument('Featur\nScenario: Test', 'file:///fix-all-no-conflicts.feature');
+        (doc as any).version = 1;
+        
+        // Non-overlapping edits on different lines
+        const d1 = new RuleDiagnostic(new vscode.Range(0,0,0,6), "Misspelled keyword", vscode.DiagnosticSeverity.Error, 'invalid-keyword', 1, { replacementText: 'Feature' });
+        const d2 = new RuleDiagnostic(new vscode.Range(1,0,1,8), "Scenario with Examples", vscode.DiagnosticSeverity.Warning, 'scenario-with-examples', 1);
+
+        diagnosticRegistry.set(doc.uri.toString(), [d1, d2]);
+
+        const actions = provider.provideCodeActions(doc, new vscode.Range(0,0,0,0), { only: { contains: (kind: vscode.CodeActionKind) => kind === vscode.CodeActionKind.SourceFixAll }, diagnostics: [] } as any, {} as any);
+        
+        const edits = actions[0].edit?.entries();
+        assert.strictEqual(edits?.[0]?.[1]?.length, 2, "Should apply both non-overlapping edits");
     });
 });
 
@@ -195,6 +295,7 @@ suite('createStepDefinition Test Suite', () => {
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => undefined });
         let errorMessage = '';
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
         discoveryService.getBestWorkspaceFolder = () => undefined;
 
@@ -207,6 +308,7 @@ suite('createStepDefinition Test Suite', () => {
     test('Shows QuickPick for ambiguous URI in multi-root workspace and aborts if cancelled', async () => {
         let quickPickShown = false;
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => [{ uri: vscode.Uri.file('/folder1'), name: 'folder1', index: 0 }, { uri: vscode.Uri.file('/folder2'), name: 'folder2', index: 1 }] });
         discoveryService.getBestWorkspaceFolder = () => undefined;
 
@@ -224,6 +326,7 @@ suite('createStepDefinition Test Suite', () => {
         let quickPickShown = false;
         let infoMessage = '';
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
 
         const folder1 = { uri: vscode.Uri.file('/folder1'), name: 'folder1', index: 0 };
         const folder2 = { uri: vscode.Uri.file('/folder2'), name: 'folder2', index: 1 };
@@ -251,6 +354,8 @@ suite('createStepDefinition Test Suite', () => {
         let editApplied = false;
 
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showInformationMessage = async (msg: string, action: string) => {
             infoMessage = msg;
             return action;
@@ -259,7 +364,8 @@ suite('createStepDefinition Test Suite', () => {
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             createDirectory: async () => { directoryCreated = true; },
-            readFile: async () => { throw new Error('Not found'); }
+            readFile: async () => { throw new Error('Not found'); },
+            stat: async () => { throw new Error('Not found'); }
         })});
 
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
@@ -280,9 +386,11 @@ suite('createStepDefinition Test Suite', () => {
         let editApplied = false;
 
         discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
-            readFile: async () => Buffer.from("def i_test_collision(context):\n    pass\n")
+            readFile: async () => Buffer.from("def i_test_collision(context):\n    pass\n"),
+            stat: async () => { throw new Error('Not found'); }
         })});
 
         let insertedText = '';
@@ -357,7 +465,8 @@ suite('createStepDefinition Test Suite', () => {
 
     test('Cancels step creation if user cancels creation prompt', async () => {
         let editApplied = false;
-        discoveryService.getStepFiles = async () => []; // No files
+        discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py']; // No files
         (vscode.window as any).showInformationMessage = async () => undefined; // Cancel prompt
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
         discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
@@ -367,42 +476,105 @@ suite('createStepDefinition Test Suite', () => {
         assert.strictEqual(editApplied, false);
     });
 
-    test('Uses fileContent fallback if openTextDocument throws', async () => {
-        let editApplied = false;
+
+
+    test('createStepDefinition aborts safely if target is unreadable', async () => {
         discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
+        let errorShown = false;
+        const originalShowErrorMessage = (vscode.window as any).showErrorMessage;
+        (vscode.window as any).showErrorMessage = async () => {
+            errorShown = true;
+        };
 
-        Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
-            readFile: async () => Buffer.from("def dummy():\n    pass\n")
-        })});
+        const originalFs = vscode.workspace.fs;
+        Object.defineProperty(vscode.workspace, 'fs', {
+            get: () => ({
+                readFile: async () => { throw new Error('Permission denied'); },
+                stat: async () => { throw new Error('Not found'); },
+                readDirectory: originalFs.readDirectory,
+                writeFile: originalFs.writeFile,
+                createDirectory: originalFs.createDirectory,
+                delete: originalFs.delete,
+                rename: originalFs.rename,
+                copy: originalFs.copy
+            }),
+            configurable: true
+        });
 
+        const result = await createStepDefinition('I test unreadable file', 'Given');
+
+        Object.defineProperty(vscode.workspace, 'fs', { get: () => originalFs, configurable: true });
+        (vscode.window as any).showErrorMessage = originalShowErrorMessage;
+
+        assert.strictEqual(result, undefined, 'Should return undefined if read fails');
+        assert.ok(errorShown, 'Should display an error message');
+    });
+
+    test('createStepDefinition prioritizes unsaved editor content over disk', async () => {
+        discoveryService.getStepFiles = async () => [vscode.Uri.file('/tmp/file1.py')];
+        let editApplied = false;
         let insertedText = '';
+
+        const originalTextDocuments = vscode.workspace.textDocuments;
+        Object.defineProperty(vscode.workspace, 'textDocuments', {
+            get: () => [{
+                uri: vscode.Uri.file('/tmp/file1.py'),
+                getText: () => 'from behave import *\n\n@given("existing")\ndef existing(context):\n    pass\n',
+                lineCount: 5,
+                lineAt: () => ({text: '    pass'}),
+                save: async () => true
+            }],
+            configurable: true
+        });
+
+        const originalFs = vscode.workspace.fs;
+        Object.defineProperty(vscode.workspace, 'fs', {
+            get: () => ({
+                readFile: async () => { throw new Error('Should not be called because open doc exists'); },
+                stat: async () => ({}),
+                readDirectory: originalFs.readDirectory,
+                writeFile: originalFs.writeFile,
+                createDirectory: originalFs.createDirectory,
+                delete: originalFs.delete,
+                rename: originalFs.rename,
+                copy: originalFs.copy
+            }),
+            configurable: true
+        });
+
+        const originalApplyEdit = vscode.workspace.applyEdit;
         (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {
             editApplied = true;
-            insertedText = edit.entries()[0][1][0].newText;
+            for (const [, edits] of (edit as any).entries()) {
+                insertedText = edits[0].newText;
+            }
             return true;
         };
 
-        let openCallCount = 0;
-        (vscode.workspace as any).openTextDocument = async () => {
-            openCallCount++;
-            if (openCallCount === 1) {
-                // First call throws (simulating failure to get line count from open doc)
-                throw new Error("Cannot open doc");
-            } else {
-                // Second call (for revealing) succeeds
-                return createMockDocument('', 'file:///tmp/file1.py');
-            }
-        };
+        const originalOpenTextDocument = vscode.workspace.openTextDocument;
+        (vscode.workspace as any).openTextDocument = async () => ({
+            lineCount: 1,
+            lineAt: () => ({text: ''}),
+            save: async () => true,
+        });
 
+        const originalShowTextDocument = vscode.window.showTextDocument;
         (vscode.window as any).showTextDocument = async () => ({
             document: { lineCount: 1, lineAt: () => ({text: ''}) },
             revealRange: () => {}
-        } as any);
+        });
 
-        await createStepDefinition('I test fallback doc', 'Given');
+        await createStepDefinition('I test unsaved content', 'Given');
+
+        Object.defineProperty(vscode.workspace, 'textDocuments', { get: () => originalTextDocuments, configurable: true });
+        Object.defineProperty(vscode.workspace, 'fs', { get: () => originalFs, configurable: true });
+        (vscode.workspace as any).applyEdit = originalApplyEdit;
+        (vscode.workspace as any).openTextDocument = originalOpenTextDocument;
+        (vscode.window as any).showTextDocument = originalShowTextDocument;
 
         assert.ok(editApplied);
-        assert.ok(insertedText.includes('def i_test_fallback_doc(context):'));
+        assert.ok(insertedText.includes('def i_test_unsaved_content(context):'));
+        assert.strictEqual(insertedText.startsWith('\n@given('), true, 'Should append with correct newline based on open document text');
     });
 });
 
@@ -441,7 +613,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => originalWorkspaceFolders });
         Object.defineProperty(vscode.workspace, 'fs', { get: () => originalFs });
         (vscode.workspace as any).applyEdit = originalApplyEdit;
-        (vscode.window as any).showTextDocument = originalShowTextDocument;
+        (vscode.workspace as any).showTextDocument = originalShowTextDocument;
         (vscode.workspace as any).openTextDocument = originalOpenTextDocument;
     });
 
@@ -455,6 +627,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         const { batchCreateStepDefinitions } = require('../../codeAction');
         let errorMessage = '';
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showErrorMessage = async (msg: string) => { errorMessage = msg; };
         discoveryService.getBestWorkspaceFolder = () => undefined;
         Object.defineProperty(vscode.workspace, 'workspaceFolders', { get: () => undefined });
@@ -467,6 +640,7 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         const { batchCreateStepDefinitions } = require('../../codeAction');
         let editApplied = false;
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showInformationMessage = async () => undefined;
         discoveryService.getBestWorkspaceFolder = () => ({ uri: vscode.Uri.file('/tmp'), name: 'tmp', index: 0 });
         (vscode.workspace as any).applyEdit = async () => { editApplied = true; return true; };
@@ -496,10 +670,12 @@ suite('batchCreateStepDefinitions Test Suite', () => {
             vscode.Uri.file('/tmp/file1.py'),
             vscode.Uri.file('/tmp/file2.py')
         ];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showQuickPick = async (items: any[]) => items[0]; // Select first file
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
-            readFile: async () => Buffer.from("def dummy():\n    pass\n")
+            readFile: async () => Buffer.from("def dummy():\n    pass\n"),
+            stat: async () => ({})
         })});
 
         let insertedText = '';
@@ -537,6 +713,8 @@ suite('batchCreateStepDefinitions Test Suite', () => {
         let insertedText = '';
 
         discoveryService.getStepFiles = async () => [];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
+        discoveryService.getStepGlobs = () => ['**/features/steps/**/*.py'];
         (vscode.window as any).showInformationMessage = async (_msg: string, action: string) => {
             if (action) return action; // Return the create action
             return undefined;
@@ -545,7 +723,8 @@ suite('batchCreateStepDefinitions Test Suite', () => {
 
         Object.defineProperty(vscode.workspace, 'fs', { get: () => ({
             createDirectory: async () => { directoryCreated = true; },
-            readFile: async () => { throw new Error('Not found'); }
+            readFile: async () => { throw new Error('Not found'); },
+            stat: async () => { throw new Error('Not found'); }
         })});
 
         (vscode.workspace as any).applyEdit = async (edit: vscode.WorkspaceEdit) => {

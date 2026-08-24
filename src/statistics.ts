@@ -3,6 +3,7 @@ import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, Ta
 import { SymbolCache } from './cache';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
 import { AntiPattern, AntiPatternEngine } from './antiPatternEngine';
+import { SuppressionEngine } from './suppressions';
 import { MetricsHistory, VersionedSnapshot } from './history';
 import { batchCreateStepDefinitions } from './codeAction';
 
@@ -39,6 +40,8 @@ export interface ProjectHealthMetrics {
         complexity: number;
         maintainability: number;
         health: number;
+        maintainabilityPenalties: { unused: number, duplicate: number, undefined: number };
+        complexityPenalties: { scenarioLength: number, largestScenario: number, backgroundLength: number, largestFeature: number };
     };
 }
 
@@ -64,7 +67,7 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
     panel.webview.html = getLoadingHtml();
 
     try {
-        const { metrics, recommendations, snapshots } = await vscode.window.withProgress({
+        const { metrics, recommendations, snapshots, suppressedCount } = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: "Calculating Gherkin Health & Anti-patterns",
             cancellable: false
@@ -75,15 +78,36 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
             const rawConfig = vscode.workspace.getConfiguration('gherkinPowerTools.antiPatterns').get('rules') || {};
             const ruleConfig = rawConfig as Record<string, string>;
             const recommendations = engine.generateAntiPatterns(graph, metrics, ruleConfig);
-            
+
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            const workspaceRoot = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : undefined;
+            const suppressionEngine = new SuppressionEngine(workspaceRoot);
+            const suppressedCount = suppressionEngine.getSuppressedCount();
+
+            // Filter out suppressed recommendations from the dashboard view
+            const activeRecommendations = recommendations.filter(rec => {
+                if (rec.affectedItems && rec.affectedItems.length > 0) {
+                    rec.affectedItems = rec.affectedItems.filter(item =>
+                        !suppressionEngine.isSuppressed(rec.id, item.uri, item.scopeType, item.scopeValue)
+                    );
+                    return rec.affectedItems.length > 0;
+                } else if (rec.affectedFiles && rec.affectedFiles.length > 0) {
+                    rec.affectedFiles = rec.affectedFiles.filter(uri =>
+                        !suppressionEngine.isSuppressed(rec.id, uri)
+                    );
+                    return rec.affectedFiles.length > 0;
+                }
+                return true;
+            });
+
             const history = new MetricsHistory(context);
             const snapshots = history.addSnapshot(metrics);
 
-            return { metrics, recommendations, snapshots };
+            return { metrics, recommendations: activeRecommendations, snapshots, suppressedCount };
         });
 
         const version = context.extension.packageJSON?.version || '1.8.0';
-        panel.webview.html = getDashboardHtml(metrics, recommendations, version, snapshots);
+        panel.webview.html = getDashboardHtml(metrics, recommendations, version, snapshots, suppressedCount);
 
         panel.webview.onDidReceiveMessage(async message => {
             if (message.command === 'openFile') {
@@ -99,6 +123,14 @@ export async function showProjectHealthDashboard(context: vscode.ExtensionContex
                     vscode.window.showErrorMessage(`Could not open file: ${e}`);
                 }
             } else if (message.command === 'autoFix') {
+                if (!vscode.workspace.isTrusted) {
+                    vscode.window.showWarningMessage("Execution disabled in untrusted workspace.", "Manage Workspace Trust").then(res => {
+                        if (res === "Manage Workspace Trust") {
+                            vscode.commands.executeCommand("workbench.trust.manage");
+                        }
+                    });
+                    return;
+                }
                 if (message.ruleId === 'undefined-steps') {
                     if (metrics.undefinedSteps && metrics.undefinedSteps.length > 0) {
                         let stepsToFix = metrics.undefinedSteps;
@@ -156,8 +188,8 @@ export async function calculateHealthMetrics(graph: WorkspaceGraph, symbolCache:
 
     const undefinedSteps = steps.filter(s => !s.definitionId);
 
-    const tagFrequencies = tags.map(t => ({ 
-        name: t.name, 
+    const tagFrequencies = tags.map(t => ({
+        name: t.name,
         count: t.targets.length,
         files: Array.from(new Set(t.targets.map(id => {
             const parts = id.split(':');
@@ -207,7 +239,18 @@ export async function calculateHealthMetrics(graph: WorkspaceGraph, symbolCache:
         scores: {
             complexity: finalComplexity,
             maintainability: finalMaintainability,
-            health
+            health,
+            maintainabilityPenalties: {
+                unused: Math.round(unusedPenalty),
+                duplicate: Math.round(duplicatePenalty),
+                undefined: Math.round(undefinedPenalty)
+            },
+            complexityPenalties: {
+                scenarioLength: Math.round(Math.min((averageScenarioLength / 20) * 40, 40)),
+                largestScenario: Math.round(Math.min(((largestScenarios[0]?.size || 0) / 30) * 30, 30)),
+                backgroundLength: Math.round(Math.min((averageBackgroundLength / 5) * 10, 10)),
+                largestFeature: Math.round(Math.min(((largestFeatures[0]?.size || 0) / 100) * 20, 20))
+            }
         }
     };
 }
@@ -216,7 +259,7 @@ export function getLoadingHtml() {
     return `<!DOCTYPE html><html><body style="padding:20px;font-family:sans-serif;"><h2>Analyzing Project Health...</h2><p>Scanning project...</p></body></html>`;
 }
 
-export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: AntiPattern[], version: string, snapshots: VersionedSnapshot[] = []): string {
+export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations: AntiPattern[], version: string, snapshots: VersionedSnapshot[] = [], suppressedCount: number = 0): string {
     const renderLink = (uri: string, line: number, text: string) => {
         return `<a href="javascript:void(0)" class="file-link" onclick="openFile('${escapeHtml(uri)}', ${line})">${escapeHtml(text)}</a>`;
     };
@@ -248,12 +291,12 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         if (previous === undefined) return '';
         const diff = current - previous;
         if (diff === 0) return '<div style="font-size: 14px; opacity: 0.5; margin-top: 4px; font-weight: normal; letter-spacing: normal;">= Sin cambios</div>';
-        
+
         let isGood = inverse ? diff < 0 : diff > 0;
         const color = isGood ? '#10b981' : '#ef4444';
         const arrow = diff > 0 ? '↑' : '↓';
         const agoText = timestamp ? timeAgo(timestamp) : 'el último análisis';
-        
+
         return `<div style="font-size: 14px; margin-top: 4px; font-weight: 500; letter-spacing: normal; display: flex; align-items: center; justify-content: center; gap: 6px;">
             <span style="color: ${color}; background: ${color}15; padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid ${color}30;">${diff > 0 ? '+' : ''}${diff}% ${arrow}</span>
             <span style="opacity: 0.8; color: var(--vscode-descriptionForeground);">desde ${agoText}</span>
@@ -326,7 +369,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         .header .badge {
             font-size: 13px; padding: 4px 12px; background: rgba(128,128,128,0.1); border-radius: 12px; font-weight: 500;
         }
-        
+
         .refresh-btn {
             background: rgba(128,128,128,0.05);
             border: 1px solid var(--glass-border);
@@ -340,18 +383,18 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        
+
         .refresh-btn:hover {
             background: rgba(128,128,128,0.12);
             transform: scale(1.05);
         }
-        
+
         .search-container {
             position: relative;
             margin-bottom: 48px;
             animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.05s;
         }
-        
+
         .spotlight-search {
             width: 100%;
             padding: 16px 20px;
@@ -368,12 +411,12 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
         }
-        
+
         .spotlight-search::placeholder {
             color: var(--text-secondary);
             opacity: 0.8;
         }
-        
+
         .spotlight-search:focus {
             background: var(--bg-surface);
             border-color: var(--vscode-focusBorder, rgba(0,122,255,0.5));
@@ -485,7 +528,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             margin-bottom: 48px;
             animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 0.25s;
         }
-        
+
         .rec-card {
             padding: 24px;
             display: flex;
@@ -563,7 +606,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             opacity: 1;
             overflow-y: auto;
         }
-        
+
         /* Leaderboard Item */
         .leaderboard-item {
             display: flex;
@@ -573,10 +616,10 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             border-bottom: 1px solid var(--glass-border);
         }
         .leaderboard-item:last-child { border-bottom: none; }
-        .leaderboard-rank { 
-            font-size: 0.9rem; font-weight: 600; width: 24px; height: 24px; 
-            background: rgba(128,128,128,0.08); border-radius: 6px; 
-            display: flex; align-items: center; justify-content: center; 
+        .leaderboard-rank {
+            font-size: 0.9rem; font-weight: 600; width: 24px; height: 24px;
+            background: rgba(128,128,128,0.08); border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
             color: var(--text-secondary);
         }
         .leaderboard-content { flex-grow: 1; min-width: 0; }
@@ -588,10 +631,10 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             opacity: 0.8;
             transition: width 0.8s ease;
         }
-        
+
         .list-item { padding: 10px 12px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
         .list-item:last-child { border-bottom: none; }
-        
+
         /* Bento Box Grid */
         .bento-grid {
             display: grid;
@@ -612,7 +655,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             transition: all 0.2s ease;
             aspect-ratio: 1;
         }
-        .bento-card:hover { 
+        .bento-card:hover {
             background: rgba(128,128,128,0.05);
         }
         .bento-value {
@@ -662,7 +705,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             color: var(--vscode-textLink-foreground);
         }
         details > ul { margin-top: 12px; margin-bottom: 4px; padding-left: 20px; }
-        
+
         .step-def {
             margin-top: 4px;
             font-size: 12px;
@@ -692,7 +735,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             margin-bottom: 8px;
         }
         .stat-pill strong { color: var(--text-primary); font-weight: 600; opacity: 0.9; }
-        
+
         .load-more-btn {
             background: none; border: none;
             color: var(--vscode-textLink-foreground);
@@ -705,7 +748,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     </style>
     <script>
         const vscode = acquireVsCodeApi();
-        
+
         // Auto-scroll details elements when they open
         document.querySelectorAll('details').forEach(detail => {
             detail.addEventListener('toggle', (e) => {
@@ -725,10 +768,10 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
             const featureFilter = document.getElementById('feature-filter');
             const uri = featureFilter ? featureFilter.value : '';
-            
+
             const cards = document.querySelectorAll('.rec-card');
             const hideOnSearch = document.querySelectorAll('.hide-on-search');
-            
+
             if (query.length > 0) {
                 hideOnSearch.forEach(el => el.style.display = 'none');
                 document.querySelectorAll('.inner-item').forEach(el => el.style.display = 'flex');
@@ -736,7 +779,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             } else {
                 hideOnSearch.forEach(el => el.style.display = '');
             }
-            
+
             let isTagSearch = query.startsWith('@');
             let tagFiles = [];
             if (isTagSearch) {
@@ -753,28 +796,28 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             } else {
                 renderTopTags(null); // Do not filter top tags by text query
             }
-            
+
             const typeCounts = {};
-            
+
             cards.forEach(card => {
                 const title = card.querySelector('.rec-title').textContent.toLowerCase();
                 const explanation = card.querySelector('.rec-explanation').textContent.toLowerCase();
                 const cardSearchMatches = !isTagSearch && (title.includes(query) || explanation.includes(query));
-                
+
                 let hasVisibleItems = false;
                 let totalCardItems = 0;
                 const containers = card.querySelectorAll('[data-visible]');
-                
+
                 if (containers.length > 0) {
                     containers.forEach(container => {
                         const items = Array.from(container.querySelectorAll('.filterable-item'));
                         let matchCount = 0;
                         let itemTotal = 0;
-                        
+
                         items.forEach(item => {
                             const fileAttr = item.getAttribute('data-file');
                             const itemText = item.textContent.toLowerCase();
-                            
+
                             let searchMatches = false;
                             if (isTagSearch) {
                                 if (fileAttr) {
@@ -783,9 +826,9 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                             } else {
                                 searchMatches = query.length === 0 || cardSearchMatches || itemText.includes(query) || (fileAttr && fileAttr.toLowerCase().includes(query));
                             }
-                            
+
                             const uriMatches = !uri || (fileAttr === uri);
-                            
+
                             if (searchMatches && uriMatches) {
                                 if (matchCount < 10) {
                                     item.style.display = '';
@@ -794,7 +837,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                 }
                                 item.classList.add('is-match');
                                 matchCount++;
-                                
+
                                 const innerItems = item.querySelectorAll('.inner-item');
                                 if (innerItems.length > 0) {
                                     itemTotal += innerItems.length;
@@ -806,7 +849,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                 item.classList.remove('is-match');
                             }
                         });
-                        
+
                         container.setAttribute('data-visible', Math.min(matchCount, 10).toString());
                         const btn = container.nextElementSibling;
                         if (btn && btn.classList.contains('load-more-btn')) {
@@ -818,16 +861,16 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                 btn.style.display = 'none';
                             }
                         }
-                        
+
                         if (matchCount > 0) hasVisibleItems = true;
                         totalCardItems += itemTotal;
-                        
+
                         const details = container.closest('details');
                         if (details) {
                             if ((uri || query.length > 0) && matchCount > 0) details.open = true;
                         }
                     });
-                    
+
                     card.style.display = hasVisibleItems ? '' : 'none';
                 } else {
                     card.style.display = (query.length === 0 || cardSearchMatches) ? '' : 'none';
@@ -835,12 +878,12 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         totalCardItems = 1;
                     }
                 }
-                
+
                 const summaryCount = card.querySelector('.summary-count');
                 if (summaryCount) {
                     summaryCount.textContent = totalCardItems.toString();
                 }
-                
+
                 const explanationEl = card.querySelector('.rec-explanation');
                 if (explanationEl) {
                     const originalText = explanationEl.getAttribute('data-original-text');
@@ -852,7 +895,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                         explanationEl.textContent = originalText;
                     }
                 }
-                
+
                 if (card.style.display !== 'none') {
                     const cardType = card.getAttribute('data-type');
                     if (cardType) {
@@ -860,7 +903,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                     }
                 }
             });
-            
+
             document.querySelectorAll('.anti-pattern-badge').forEach(badge => {
                 const type = badge.getAttribute('data-type');
                 const countSpan = badge.querySelector('.badge-count');
@@ -877,32 +920,32 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         }
 
         function filterFeatures(uri) { applyFilters(); }
-        
+
         const tagsData = ${JSON.stringify(metrics.tagFrequencies)};
-        
+
         function renderTopTags(fileFilter) {
             const container = document.getElementById('tags-leaderboard-container');
             if (!container) return;
-            
+
             let filteredTags = tagsData;
             if (fileFilter && fileFilter.length > 0) {
                 const lowerFilter = fileFilter.toLowerCase();
                 filteredTags = tagsData.filter(t => t.files.some(f => f.toLowerCase().includes(lowerFilter)));
             }
-            
+
             filteredTags = [...filteredTags].sort((a, b) => b.count - a.count).slice(0, 10);
-            
+
             if (filteredTags.length === 0) {
                 container.innerHTML = '<div class="empty-state"><span class="emoji">🎉</span><span>No tags match.</span></div>';
                 return;
             }
-            
+
             const max = Math.max(...filteredTags.map(t => t.count), 1);
-            
+
             container.innerHTML = filteredTags.map((t, i) => {
                 const rank = (i + 1) + '.';
                 const barWidth = (t.count / max) * 100;
-                
+
                 return '<div class="leaderboard-item">' +
                     '<div class="leaderboard-rank">' + rank + '</div>' +
                     '<div class="leaderboard-content">' +
@@ -915,20 +958,20 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 '</div>';
             }).join('');
         }
-        
+
         function filterByTag(tagName) {
             const input = document.querySelector('.spotlight-search');
             if (input) {
                 const searchContainer = document.querySelector('.search-container');
                 const scrollBefore = searchContainer ? searchContainer.getBoundingClientRect().top : 0;
-                
+
                 if (input.value === tagName) {
                     input.value = ''; // Toggle off
                 } else {
                     input.value = tagName; // Toggle on
                 }
                 applyFilters();
-                
+
                 if (searchContainer) {
                     const scrollAfter = searchContainer.getBoundingClientRect().top;
                     window.scrollBy(0, scrollAfter - scrollBefore);
@@ -940,15 +983,15 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             let visible = parseInt(container.getAttribute('data-visible') || '10', 10);
             const items = Array.from(container.querySelectorAll('.filterable-item.is-match'));
             const activeItems = items.length > 0 ? items : Array.from(container.querySelectorAll('.filterable-item'));
-            
+
             const newVisible = visible + 10;
-            
+
             for (let i = visible; i < newVisible && i < activeItems.length; i++) {
                 activeItems[i].style.display = '';
             }
-            
+
             container.setAttribute('data-visible', newVisible.toString());
-            
+
             const remaining = activeItems.length - newVisible;
             if (remaining > 0) {
                 btn.textContent = 'Show more (' + remaining + ' remaining)';
@@ -961,14 +1004,14 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             const container = btn.previousElementSibling;
             let visible = parseInt(container.getAttribute('data-visible') || '10', 10);
             const items = Array.from(container.querySelectorAll('.inner-item'));
-            
+
             const newVisible = visible + 10;
             for (let i = visible; i < newVisible && i < items.length; i++) {
                 items[i].style.display = 'flex';
             }
-            
+
             container.setAttribute('data-visible', newVisible.toString());
-            
+
             const remaining = items.length - newVisible;
             if (remaining > 0) {
                 btn.textContent = 'Show more (' + remaining + ' hidden)';
@@ -976,14 +1019,14 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 btn.style.display = 'none';
             }
         }
-        
+
         function filterByType(type, el) {
             const searchInput = document.getElementById('search-input');
             if (!searchInput) return;
-            
+
             const searchContainer = document.getElementById('antipatterns-header') || document.querySelector('.search-container');
             const scrollBefore = searchContainer ? searchContainer.getBoundingClientRect().top : 0;
-            
+
             if (searchInput.value === type) {
                 searchInput.value = '';
                 applyFilters();
@@ -1005,7 +1048,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 el.style.background = 'var(--vscode-button-background)';
                 el.style.color = 'var(--vscode-button-foreground)';
             }
-            
+
             if (searchContainer) {
                 const scrollAfter = searchContainer.getBoundingClientRect().top;
                 window.scrollBy(0, scrollAfter - scrollBefore);
@@ -1017,7 +1060,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         function initDashboard() {
             renderTopTags('');
         }
-        
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initDashboard);
         } else {
@@ -1029,6 +1072,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     <div class="header">
         <h1>Gherkin Health</h1>
         <div style="display: flex; align-items: center; gap: 12px;">
+            ${suppressedCount > 0 ? `<span class="badge" style="background:var(--vscode-charts-yellow); color:#000; padding: 6px 14px; font-size:12px; cursor: help;" title="See .gherkin-pt-suppressions.json for details">🛡️ ${suppressedCount} Suppressed</span>` : ''}
             <button onclick="refreshDashboard()" class="refresh-btn" title="Refresh Dashboard">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l5.67-5.67"/>
@@ -1037,7 +1081,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             <span class="badge" style="font-size: 14px; padding: 6px 14px;">v${version}</span>
         </div>
     </div>
-    
+
     <div class="search-container">
         <input type="text" id="search-input" class="spotlight-search" placeholder="🔍 Search features, files, or anti-patterns..." oninput="filterDashboard(this.value)">
     </div>
@@ -1057,6 +1101,15 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 ${metrics.scores.maintainability}%
             </div>
             ${renderDelta(metrics.scores.maintainability, prevSnapshot?.maintainability, prevSnapshot?.timestamp)}
+            <details style="margin-top: 12px; text-align: left; background: rgba(128,128,128,0.05); border: none; font-size: 13px; border-radius: 8px;">
+                <summary style="font-weight: 500; font-size: 12px; color: var(--text-secondary); list-style: none; text-align: center;">View Penalties</summary>
+                <div style="margin-top: 8px; color: var(--text-secondary); line-height: 1.6;">
+                    ${metrics.scores.maintainabilityPenalties.unused > 0 ? `<div>- Unused Steps: <strong>-${metrics.scores.maintainabilityPenalties.unused}</strong></div>` : ''}
+                    ${metrics.scores.maintainabilityPenalties.duplicate > 0 ? `<div>- Duplicate Steps: <strong>-${metrics.scores.maintainabilityPenalties.duplicate}</strong></div>` : ''}
+                    ${metrics.scores.maintainabilityPenalties.undefined > 0 ? `<div>- Undefined Steps: <strong>-${metrics.scores.maintainabilityPenalties.undefined}</strong></div>` : ''}
+                    ${metrics.scores.maintainability === 100 ? `<div style="color: #10b981;">Perfect Maintainability</div>` : ''}
+                </div>
+            </details>
         </div>
         <div class="score-card premium-card complex">
             <div class="score-label">Complexity</div>
@@ -1064,6 +1117,16 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 ${metrics.scores.complexity}%
             </div>
             ${renderDelta(metrics.scores.complexity, prevSnapshot?.complexity, prevSnapshot?.timestamp, true)}
+            <details style="margin-top: 12px; text-align: left; background: rgba(128,128,128,0.05); border: none; font-size: 13px; border-radius: 8px;">
+                <summary style="font-weight: 500; font-size: 12px; color: var(--text-secondary); list-style: none; text-align: center;">View Contributors</summary>
+                <div style="margin-top: 8px; color: var(--text-secondary); line-height: 1.6;">
+                    ${metrics.scores.complexityPenalties.scenarioLength > 0 ? `<div>+ Avg Scenario Length: <strong>+${metrics.scores.complexityPenalties.scenarioLength}</strong></div>` : ''}
+                    ${metrics.scores.complexityPenalties.largestScenario > 0 ? `<div>+ Largest Scenario: <strong>+${metrics.scores.complexityPenalties.largestScenario}</strong></div>` : ''}
+                    ${metrics.scores.complexityPenalties.backgroundLength > 0 ? `<div>+ Avg Background: <strong>+${metrics.scores.complexityPenalties.backgroundLength}</strong></div>` : ''}
+                    ${metrics.scores.complexityPenalties.largestFeature > 0 ? `<div>+ Largest Feature: <strong>+${metrics.scores.complexityPenalties.largestFeature}</strong></div>` : ''}
+                    ${metrics.scores.complexity === 0 ? `<div style="color: #10b981;">Perfectly Simple</div>` : ''}
+                </div>
+            </details>
         </div>
     </div>
 
@@ -1079,7 +1142,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
     </div> <!-- end hide-on-search -->
     <h2 class="section-title" id="antipatterns-header">Actionable Anti-patterns</h2>
     <p style="color: var(--vscode-descriptionForeground); margin-bottom: 16px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.4s;">Prioritized anti-patterns affecting the health, maintenance, and reliability of your Gherkin tests.</p>
-    
+
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; opacity: 0; animation: fadeInUp 0.6s ease-out forwards 0.45s;">
         ${(() => {
             const aggregated: Record<string, number> = {};
@@ -1108,7 +1171,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
             }).join('');
         })()}
     </div>
-    
+
     ${uniqueFiles.length > 0 ? `
     <div style="margin-bottom: 20px; animation: fadeInUp 0.6s ease-out forwards 0.5s;">
         <label for="feature-filter" style="font-weight: 600; margin-right: 8px;">Filter by File:</label>
@@ -1216,7 +1279,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                                 const renderedFiles = rec.affectedFiles.slice(0, MAX_FILES);
                                 return renderedFiles.map((uri, i) => `
                                     <li data-file="${escapeHtml(uri)}" class="filterable-item" style="${i >= 10 ? 'display: none;' : ''}"><a href="javascript:void(0)" class="file-link" onclick="openFile('${escapeHtml(uri)}', 0)">${escapeHtml(uri.split('/').pop() || uri)}</a></li>
-                                `).join('') + 
+                                `).join('') +
                                 (renderedFiles.length > 10 ? `<button class="load-more-btn" onclick="showMoreItems(this)">Show more (${renderedFiles.length - 10} hidden)</button>` : '') +
                                 (rec.affectedFiles.length > MAX_FILES ? `<div style="margin-top: 12px; font-size: 0.9em; opacity: 0.7; font-style: italic;">...and ${rec.affectedFiles.length - MAX_FILES} more files not shown</div>` : '');
                             })()}
@@ -1367,17 +1430,17 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         const snapshots = ${JSON.stringify(snapshots)};
         const recs = ${JSON.stringify(recommendations)};
         const metrics = ${JSON.stringify(metrics)};
-        
+
         const header = document.getElementById('antipatterns-header');
         if (header) header.innerHTML = \`Actionable Anti-patterns (\${recs.length})\`;
-        
+
         const style = getComputedStyle(document.body);
         const textColor = style.getPropertyValue('--vscode-foreground') || '#cccccc';
         const gridColor = style.getPropertyValue('--vscode-editorWidget-border') || 'rgba(128,128,128,0.2)';
 
         Chart.defaults.color = textColor;
         Chart.defaults.font.family = style.getPropertyValue('--apple-font') || 'sans-serif';
-        
+
 
 
         // 3. Historical Trends (if available)
@@ -1410,7 +1473,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 }
             });
         }
-        
+
         document.querySelectorAll('.metric-header').forEach(el => {
             el.addEventListener('click', function() {
                 const panel = this.closest('.metric-panel');
@@ -1434,7 +1497,7 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
                 }
             });
         });
-        
+
         filterFeatures('');
     </script>
 </body>

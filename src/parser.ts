@@ -3,7 +3,9 @@ import type { GherkinDocument } from '@cucumber/messages';
 import { metricsLogger } from './metrics';
 import { performance } from 'perf_hooks';
 
-export interface GherkinParseError {
+import { logger } from './logger';
+
+interface GherkinParseError {
     code: string;
     message: string;
     source: 'parser' | 'ast-builder' | 'module-loader' | 'unknown';
@@ -21,11 +23,19 @@ export interface ParseResult {
     isPartial: boolean;
 }
 
-let cucumberModulesPromise: Promise<any> | null = null;
+type CucumberModules = {
+    gherkin: typeof import('@cucumber/gherkin');
+    messages: typeof import('@cucumber/messages');
+};
 
-async function getCucumberModules() {
+let cucumberModulesPromise: Promise<CucumberModules> | null = null;
+let loadAttempts = 0;
+const MAX_RETRIES = 3;
+
+async function getCucumberModules(): Promise<CucumberModules> {
     if (!cucumberModulesPromise) {
         cucumberModulesPromise = (async () => {
+            loadAttempts++;
             try {
                 // When bundled for production, esbuild correctly resolves require() and converts ESM to CJS
                 const gherkin = require('@cucumber/gherkin');
@@ -35,14 +45,30 @@ async function getCucumberModules() {
                 // During local tests (tsc output), require() throws ERR_REQUIRE_ESM for these packages.
                 // Fallback to native Node.js dynamic import.
                 if (e.code === 'ERR_REQUIRE_ESM') {
-                    const dynamicImport = new Function('specifier', 'return import(specifier)');
-                    const gherkin = await dynamicImport('@cucumber/gherkin');
-                    const messages = await dynamicImport('@cucumber/messages');
-                    return { gherkin, messages };
+                    try {
+                        const dynamicImport = new Function('specifier', 'return import(specifier)');
+                        const gherkin = await dynamicImport('@cucumber/gherkin');
+                        const messages = await dynamicImport('@cucumber/messages');
+                        return { gherkin, messages };
+                    } catch (esmError: any) {
+                        throw esmError;
+                    }
                 }
                 throw e;
             }
-        })();
+        })().catch(err => {
+            // Clear the cache so future calls can retry
+            cucumberModulesPromise = null;
+
+            const errMsg = err instanceof Error ? err.message : String(err);
+            logger.error(`[Parser] Failed to load Cucumber modules (Attempt ${loadAttempts}/${MAX_RETRIES}): ${errMsg}`);
+
+            if (loadAttempts >= MAX_RETRIES) {
+                logger.error('[Parser] Exhausted all retries for loading Cucumber modules. Parsing will fail.');
+            }
+
+            throw err;
+        });
     }
     return cucumberModulesPromise;
 }

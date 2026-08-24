@@ -63,8 +63,7 @@ suite('CLI Parity & Conformance Test Suite', () => {
             "ambiguous-steps": "error",
             "undefined-steps": "error",
             "excessive-tags": "info",
-            "inconsistent-formatting": "info",
-            "poor-maintainability": "warning"
+            "inconsistent-formatting": "info"
         };
         const antiPatterns = engine.generateAntiPatterns(graph, metrics, ruleConfig as any);
 

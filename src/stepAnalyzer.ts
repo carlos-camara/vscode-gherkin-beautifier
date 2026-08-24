@@ -36,17 +36,36 @@ export class StepAnalyzer {
         const unusedSteps = stepDefs.filter(d => d.usages.length === 0).map(d => ({ stepDef: d }));
 
         // 2. Duplicated steps
-        const groupedByPattern = new Map<string, StepDefNode[]>();
+        const groupedByMatcher = new Map<string, Map<string, Map<string, StepDefNode[]>>>();
+
         for (const def of stepDefs) {
-            const key = `${def.matcherType}:${def.pattern}:${def.semanticType || ''}`;
-            if (!groupedByPattern.has(key)) groupedByPattern.set(key, []);
-            groupedByPattern.get(key)!.push(def);
+            const matcherType = def.matcherType;
+            const pattern = def.pattern;
+            const semanticType = def.semanticType || '';
+
+            if (!groupedByMatcher.has(matcherType)) groupedByMatcher.set(matcherType, new Map());
+            const byPattern = groupedByMatcher.get(matcherType)!;
+
+            if (!byPattern.has(pattern)) byPattern.set(pattern, new Map());
+            const bySemanticType = byPattern.get(pattern)!;
+
+            if (!bySemanticType.has(semanticType)) bySemanticType.set(semanticType, []);
+            bySemanticType.get(semanticType)!.push(def);
         }
+
         const duplicatedSteps: DuplicatedStep[] = [];
-        for (const [key, defs] of groupedByPattern.entries()) {
-            if (defs.length > 1) {
-                const parts = key.split(':', 3);
-                duplicatedSteps.push({ matcherType: parts[0], pattern: parts[1], semanticType: parts[2] as any, stepDefs: defs });
+        for (const [matcherType, byPattern] of groupedByMatcher.entries()) {
+            for (const [pattern, bySemanticType] of byPattern.entries()) {
+                for (const [semanticType, defs] of bySemanticType.entries()) {
+                    if (defs.length > 1) {
+                        duplicatedSteps.push({
+                            matcherType,
+                            pattern,
+                            semanticType: semanticType ? (semanticType as 'given' | 'when' | 'then' | 'step') : undefined,
+                            stepDefs: defs
+                        });
+                    }
+                }
             }
         }
 

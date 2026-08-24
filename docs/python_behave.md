@@ -40,6 +40,11 @@ As you type in a `.feature` file, the extension offers context-aware autocomplet
 
 It natively understands the state of your scenario. A `@when` step will only be suggested if you type `When` or a continuation keyword (`And`, `But`) that resolves semantically to a `When`.
 
+When navigating the Autocomplete suggestion list, the details panel (hover) will explicitly display:
+- The underlying Python function name and its docstring.
+- The **exact Regex** (or raw pattern) the parser generated.
+- The **Source** file path where the definition is located.
+
 ### Smart Context-Aware Ranking
 Suggestions are not simply sorted alphabetically. Gherkin PowerTools uses an intelligent, deterministic ranking algorithm to prioritize the steps you are most likely to need:
 - **Recent Usage**: Steps you have recently accepted are boosted via an internal LRU (Least Recently Used) cache.
@@ -112,7 +117,7 @@ Clicking the CodeLens opens an interactive menu listing every specific scenario 
 
 The realtime Linter actively validates your steps against the Python backend:
 
-- **Undefined Steps:** If a step has no matching Python decorator, it is underlined with a warning.
+- **Undefined Steps:** If a step has no matching Python decorator, it is underlined with an error (configurable via `gherkinPowerTools.rules`).
 - **Ambiguous Steps:** If a step matches multiple regular expressions in your Python files (e.g., overlapping wildcards), it is flagged so you can tighten your patterns.
 - **Semantic And/But Matching:** Steps using the `And` or `But` keywords inherit the semantic context of their preceding step (`Given`, `When`, or `Then`). This ensures precise pattern matching, preventing false positives for "Unused Steps" and accurately disambiguating steps that share the same regex but have different keyword decorators.
 
@@ -131,8 +136,9 @@ Gherkin PowerTools includes a comprehensive **BDD Anti-pattern Detection Engine*
 You can generate this report by running the **Gherkin PowerTools: Show Gherkin Health** command from the Command Palette. It opens an interactive **Dashboard Webview** displaying actionable Anti-patterns:
 
 - **Unused Steps:** Detects step definitions that are never referenced by any parsed `.feature` file in your workspace, nor invoked programmatically via `context.execute_steps()` in other Python files. Unused steps are grouped by their parent Python file for easy bulk-cleaning.
-- **Duplicated Implementations:** Finds identical step definitions (same matcher type, keyword, and regex pattern) across different files which will cause a runtime failure in Behave. Semantic analysis ensures identical patterns with different keywords (e.g. `@given` vs `@then`) are correctly allowed.
-- **Ambiguous Step Usages:** Identifies specific steps in your feature files that match multiple definitions, helping you pinpoint exactly where Behave will fail.
+- **Duplicated Implementations:** Finds identical step definitions (same matcher type, keyword, and regex pattern) across different files which will cause a runtime failure in Behave.
+  Semantic analysis ensures identical patterns with different keywords (e.g. `@given` vs `@then`) are correctly allowed.
+  The structural identity engine robustly handles patterns containing complex regular expressions, unicode characters, and colons without false positives.
 - **Oversized Scenarios & Excessive Tags:** Flags overly complex features that degrade test maintainability.
 
 **Interactive Navigation**: Every file reference in the dashboard is an interactive link. Click any file path to instantly open that file in VS Code at the exact line number.
@@ -178,7 +184,13 @@ If you write a step in your `.feature` file that doesn't exist yet, Gherkin Powe
 1. Write the undefined step.
 2. Place your cursor on the underlined step and press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS).
 3. Select **Generate Python Step Definition**.
-4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and insert the stub into your most recently modified `steps.py` file.
+4. The extension will automatically extract string and integer parameters into variables, create the correct `@given/@when/@then` decorator, and determine the safest destination for the stub:
+   - **Workspace Aware Destination**: Instead of blindly generating files in `features/steps`, the engine inspects your `gherkinPowerTools.behave.stepGlobs` configuration to understand your specific project architecture.
+   - **Intelligent Inference**: If there is a clear, standard destination (e.g. an existing step file next to your feature, or a single configured step directory), the engine will automatically select or create the correct `steps.py` file there.
+   - **Missing Files**: If no matching Python files are found (or the project is empty), you will be prompted to create one first.
+   - **Ambiguity Resolution**: If your configuration allows multiple valid destinations, a clean QuickPick menu will appear, ensuring you retain control over where code is generated.
+   - **Auto-Save & Background Reactivity**: Upon generation, the target Python file is automatically saved. The extension instantly detects this file-system change in the background, rebuilds the internal step registry, and clears the original "Undefined Step" error squiggle in real-time.
+   - **Safety First**: The generation logic prioritizes reading the in-memory, unsaved state of your open editors instead of the disk state. This strictly prevents concurrent file modification race conditions, guaranteeing your unsaved work is never accidentally overwritten when appending new steps.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Quick Fix - generate a Python stub for an undefined step" width="600" height="340" />

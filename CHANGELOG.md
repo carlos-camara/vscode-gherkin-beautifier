@@ -6,6 +6,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.5] - Unreleased
+
+### 🚀 Added
+- **Anti-Pattern Engine Redesign**: Completely overhauled the BDD Anti-Pattern detection engine with a structured rule contract separating objective Correctness errors from subjective Reliability, Maintainability, and Style heuristics.
+- **Finding Suppression System**: You can now safely suppress deliberate or unavoidable anti-patterns using a Quick Fix (`Cmd+.`). Suppressions are stored in a centralized, machine-readable `.gherkin-pt-suppressions.json` ledger, keeping your editor clean without losing track of technical debt. Manual edits to this file update your diagnostics in real-time.
+- **Batch Fix Workflow**: Introduced the `Fix All Safe Gherkin Issues in File` command. Utilizing VS Code's `SourceFixAll` API, it deterministically resolves non-overlapping structural errors (like missing colons or exact keyword corrections) across an entire document in one safe atomic operation.
+- **Object-based Rule Configuration**: `gherkinPowerTools.rules` now accepts configuration objects (e.g., `{ "severity": "error", "maxSteps": 20 }`), allowing teams to easily tweak subjective thresholds like `maxSteps` without being overwhelmed by low-value settings.
+- **Workspace-Aware Step Destination**: Redesigned step definition generation to intelligently infer the optimal destination directory based on the project's `stepGlobs` configuration.
+  The extension now respects your workspace architecture instead of blindly writing to `features/steps`, falling back to a clean QuickPick menu to resolve ambiguity.
+  Generated files are automatically saved, instantly clearing undefined step diagnostics without requiring manual intervention.
+- **Safe Concurrent Code Generation**: Step definition generation (Quick Fix) now enforces strict `{ overwrite: false }` bounds and prioritizes in-memory document state to definitively eliminate silent overwrites and race conditions when bootstrapping new features.
+- **Range Formatting Safe-Unit Model**: Redesigned range formatting expansion to significantly reduce unintended formatting blast radius. The algorithm now groups non-splittable elements (Data Tables, DocStrings, and Tag Blocks) into isolated safe units, ensuring a selection of two independent steps no longer formats the entire encompassing Scenario.
+- **Range Formatting Integrity**: Strengthened the VS Code range formatting API by enforcing strict idempotency guarantees and AST boundary reparsing to prevent syntax corruption during partial formatting.
+- **AST Caching Redesign**: Replaced the rigid count-based AST cache with a dynamic **Weighted LRU Cache** enforcing a 50MB soft memory budget.
+  This allows the extension to safely scale across massive enterprise workspaces (>10,000 files) by estimating AST byte sizes and shedding oldest documents only when real memory pressure demands it, drastically improving hit ratios without exhausting the VS Code Extension Host.
+- **Robust Parser Loader**: Audited and redesigned the dynamic loader for `@cucumber/gherkin` and `@cucumber/messages` to include a bounded retry strategy. This improves extension resilience during transient filesystem errors or Extension Host initialization failures.
+- **Concurrent Loader Deduplication**: Prevented multiple concurrent parser triggers from creating duplicate loader instances.
+- **Unified Diagnostics Model**: Replaced divergent `linter.enabledRules` and `antiPatterns.rules` configuration objects with a single, authoritative `gherkinPowerTools.rules` dictionary. All diagnostic identifiers have been standardized to `kebab-case` across the AST linter and Anti-Pattern Engine. Legacy settings are automatically migrated at runtime.
+
+### ✨ Improved
+- **Code Action Reliability**: Completely redesigned how the Linter transmits machine data to Quick Fixes.
+  By leveraging a strict internal `diagnosticRegistry` and validating document versions, the extension now guarantees that generating an undefined step or fixing a typo will never silently apply a stale payload or corrupt your document if you continue typing before clicking the lightbulb.
+- **Linter Invalidation Redesign**: Replaced instantaneous file-event handlers with a centralized `invalidationQueue`.
+  The Linter now intelligently batches multiple file events (e.g., rapid document saves or `stepDefinitionsUpdated`) and executes AST parsing concurrently with a strict concurrency limit (maximum 5 documents).
+  This completely eliminates CPU starvation and Extension Host freezing during massive branch switches or global dependency updates.
+- **Disabled Linter Lifecycle**: When `gherkinPowerTools.linter.enabled` is set to `false`, the extension now natively suppresses debounce timers, avoids `AstRepository` parsing, and silences all background notification popups. This guarantees true zero-overhead on CPU and memory when you rely exclusively on external linters.
+- **Formatter Error UX Separation**: Automatic formatting (like Format on Save) is now strictly silent when a Gherkin document contains structural syntax errors, preventing intrusive warning popups from interrupting typing. Manual formatting commands via the Command Palette proactively display one concise, actionable warning when syntax errors block formatting.
+- **MetricsLogger Optimization**: The Developer Metrics engine now queries the `metricsEnabled` setting via an event-driven configuration listener instead of polling VS Code on every log event. This eliminates synchronous IPC overhead, improving hot path performance during massive AST parsing by over 2.4x while keeping disabled log events strictly allocation-light.
+- **Parser Metrics**: Added `Cache Evictions` and `Cache Est. Memory (MB)` to the Developer Metrics output to provide observability into the new memory budgeting logic.
+- **Parser Reliability**: Fixed an issue where a temporarily failed module load would permanently break the parser by caching the rejected promise. The cache is now correctly evicted on failure, allowing seamless automatic recovery on subsequent parses.
+
+### 🐛 Fixed
+- **Structural Step Identity Validation**: Fixed a bug where step definition patterns containing colons (`:`) or complex regex characters were incorrectly parsed by the Anti-Pattern Engine.
+  The structural identity model now leverages nested object structures instead of string-based delimiter serialization, fully eliminating false-positive "Duplicated Steps" warnings and data corruption on valid Python expressions.
+
+### 📚 Documentation
+- **Comprehensive Documentation Audit**: Performed a repository-wide documentation audit for the 1.8.5 release.
+  Verified that the new Anti-Pattern Engine rules (Correctness, Maintainability, Style), the centralized `gherkinPowerTools.rules` configuration,
+  the batch quick fix workflow (`Fix All Safe Gherkin Issues in File`), and the diagnostic suppression ledger (`.gherkin-pt-suppressions.json`) are thoroughly and accurately documented across all MKDocs pages and the README.
+
 ## [1.8.4] - 2026-08-22
 
 ### 💅 User Experience & Polish
@@ -320,6 +360,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 - **Hover Provider (Documentation Preview)**:
   - Displays the Python function signature and docstring in a rich tooltip when hovering over a Gherkin step.
+  - The Autocomplete suggestion details panel now correctly injects the exact raw Pattern/Regex and the Source file path where the definition is located.
   - Automatically parses multiline function definitions and docstrings in Python to provide accurate context without switching files.
 - **Smart Autocompletion Provider (IntelliSense)**:
   - Dynamically extracts string patterns from Python step definitions (`@given`, `@when`, etc.).

@@ -36,7 +36,7 @@
 ## ⚡ Quick Start
 
 1. **Install** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=carloscamara.vscode-gherkin-powertools).
-2. **Open** any `.feature` file to instantly activate formatting and linting.
+2. **Open** any `.feature` file to rapidly activate formatting and linting.
 3. *(Behave only)* Gherkin PowerTools automatically discovers your project and offers a guided Walkthrough.
 
 ---
@@ -58,6 +58,7 @@ A premium testing environment that eliminates the friction between plain-text `.
 
 ### 1. Missing Python Step Generation
 Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to instantly generate a valid Python stub—complete with extracted regex parameters—from any undefined Gherkin step.
+- **Workspace-Aware:** Intelligently infers the optimal destination based on your `stepGlobs` configuration, resolving ambiguity safely via QuickPick.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/create-step.gif" alt="Generate a Python step stub from undefined Gherkin" width="600" height="340" />
@@ -65,6 +66,8 @@ Press <kbd>Ctrl+.</kbd> (<kbd>Cmd+.</kbd> on macOS) to instantly generate a vali
 
 ### 2. Gherkin Health Dashboard & Anti-pattern Engine
 Powered by the new **BDD Anti-pattern Detection Engine**, you can now visually identify unused, duplicated, ambiguous, or highly complex step definitions and scenarios. Gherkin PowerTools calculates Technical Debt and Maintainability, persisting branch-isolated historical snapshots to securely visualize your project's evolution over time in a premium, interactive dashboard.
+- **Finding Suppression:** Safely suppress deliberate anti-patterns using Quick Fixes, with all suppressions persisted to a centralized ledger (`.gherkin-pt-suppressions.json`).
+- **Batch Fix Workflow:** Run the `Fix All Safe Auto-Fixable Problems` command to automatically correct semantics-preserving errors across a whole document.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/dashboard.gif" alt="Interactive BDD source analytics and project health dashboard" width="600" height="340" />
@@ -84,7 +87,7 @@ A Blast Radius CodeLens appears above every Python step definition. View exactly
 Gherkin PowerTools acts in two tiers depending on your project:
 
 ### Generic BDD Frameworks (Cucumber, SpecFlow, Playwright)
-- **AST-Powered Formatting:** Instantly align tables, tags, and indentation (<kbd>Shift+Alt+F</kbd> or Editor Context Menu).
+- **AST-Powered Formatting:** Rapidly align tables, tags, and indentation (`Shift+Alt+F` or Editor Context Menu).
 - **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
 - **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
 - **Gherkin Health Dashboard:** Interactive modern webview to analyze oversized features, tag usage, and architectural anti-patterns with built-in DOM node limits for massive workspaces.
@@ -93,7 +96,7 @@ Gherkin PowerTools acts in two tiers depending on your project:
 - **Context-Aware IntelliSense:** Autocomplete powered by recent-usage ranking and tag affinity.
 - **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
 - **Test Explorer Integration:** Run and debug features with line-by-line execution tracking and pristine Markdown-formatted error traces, ordered strictly chronologically as written in your code.
-- **BDD Anti-pattern Detection Engine:** Instant technical debt diagnostics for unused, ambiguous, or duplicated step definitions across the workspace.
+- **BDD Anti-pattern Detection Engine:** Instant technical debt diagnostics for unused, ambiguous, or duplicated step definitions. Features Object-based Configuration to dynamically scale heuristic severities (e.g. adjust max sizes per rule).
 - **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines.
   The CLI uses the exact same parsing, formatting, and BDD Anti-pattern engine as the VS Code extension. [View the Capability Contract](https://carlos-camara.github.io/vscode-gherkin-powertools/capability_contract/). *(Note: In Remote Development environments like WSL or SSH, run the CLI from the VS Code Integrated Terminal, not your local OS terminal).*
 
@@ -101,12 +104,12 @@ Gherkin PowerTools acts in two tiers depending on your project:
 
 ## ⚙️ Essential Configuration
 
-Share team formatting rules by committing a `.gherkin-powertoolsrc.json` to your project root.
+Share team formatting and diagnostic rules by committing a `.gherkin-powertoolsrc.json` to your project root.
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | `gherkinPowerTools.profile` | `"custom"` | Formatting baseline: `strict`, `team`, `minimal`, `legacy`, or `custom`. |
-| `gherkinPowerTools.featureGlobs` | `["**/*.feature"]` | Paths to feature files to include in discovery and analysis. |
+| `gherkinPowerTools.rules` | `{...}` | Diagnostic rule overrides. Accepts string severities (`"error"`) or configuration objects (`{ "severity": "warning", "maxSteps": 20 }`). |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", ...]` | Paths to Python step definitions. |
 | `gherkinPowerTools.behave.execution` | `{"executable": "behave", "arguments": []}` | Secure Test Explorer execution command (e.g., `{"executable": "poetry", "arguments": ["run", "behave"]}`). |
 | `gherkinPowerTools.behave.localExecutable` | *None* | Machine-specific override for the Behave executable absolute path. |

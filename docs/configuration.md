@@ -77,7 +77,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
 ## Diagnostics (Linter) Settings
 
 ### `gherkinPowerTools.linter.enabled`
-- **Purpose:** Master toggle for the real-time Gherkin linter.
+- **Purpose:** Master toggle for the real-time Gherkin linter. When `false`, the linter enters a completely dormant state—suppressing AST parsing, debounce timers, and notifications to conserve system resources.
 - **Type:** `boolean`
 - **Default:** `true`
 
@@ -91,11 +91,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
-### `gherkinPowerTools.linter.enabledRules`
-- **Purpose:** Whitelist of linting rule IDs to enforce. An empty array enables ALL rules.
-- **Type:** `array` of strings
-- **Default:** `[]`
-- **Allowed Values:** `"MISSING_COLON"`, `"INVALID_KEYWORD"`, `"SEMANTIC_ERROR"`, `"TABLE_INCONSISTENCY"`, `"UNDEFINED_STEP"`, `"AMBIGUOUS_STEP"`
 
 ---
 
@@ -106,37 +101,79 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
-### `gherkinPowerTools.antiPatterns.rules`
-- **Purpose:** Configure severity levels for individual anti-pattern rules.
-- **Type:** `object` (Key-value pairs of rule ID to severity level)
-- **Default:**
+
+
+---
+
+## Unified Diagnostics Rules
+
+### `gherkinPowerTools.rules`
+- **Purpose:** The central, authoritative configuration for diagnostic severities and heuristic parameters across the Linter and Anti-Pattern Engine. Maps `kebab-case` rule IDs to either a severity string or a configuration object.
+- **Type:** `object` (Key-value pairs of rule ID to severity level or configuration object)
+- **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+- **Available Rules (Default Severity):**
+  - `missing-colon` (error)
+  - `invalid-keyword` (error)
+  - `scenario-with-examples` (warning)
+  - `table-inconsistency` (error)
+  - `undefined-step` (error)
+  - `ambiguous-step` (error)
+  - `oversized-scenario` (warning)
+  - `oversized-feature` (info)
+  - `duplicated-steps` (error)
+  - `unused-steps` (info)
+  - `excessive-tags` (info)
+  - `inconsistent-formatting` (info)
+
+- **Example:**
   ```json
   {
-      "syntax-errors": "error",
-      "oversized-scenario": "warning",
-      "oversized-feature": "info",
-      "duplicated-steps": "error",
-      "unused-steps": "info",
-      "ambiguous-steps": "error",
-      "undefined-steps": "error",
-      "excessive-tags": "info",
-      "inconsistent-formatting": "info",
-      "poor-maintainability": "warning"
+      "syntax-error": "error",
+      "ambiguous-step": "error",
+      "oversized-scenario": {
+          "severity": "warning",
+          "maxSteps": 20
+      },
+      "oversized-feature": {
+          "severity": "info",
+          "maxSteps": 100
+      }
   }
   ```
-- **Allowed Severity Values:** `"error"`, `"warning"`, `"info"`, `"hint"`, `"off"`
+
+---
+
+## Suppressing Findings
+
+You can suppress heuristic rules directly from the editor using the **Suppress finding** Quick Fix. This creates an entry in an external structural ledger (`.gherkin-pt-suppressions.json`) at the root of your workspace. Any manual edits made to this file are detected instantly and will update your editor diagnostics in real-time.
+
+Example `.gherkin-pt-suppressions.json`:
+```json
+{
+    "$schema": "https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/schemas/suppressions.schema.json",
+    "suppressions": [
+        {
+            "ruleId": "oversized-scenario",
+            "uri": "features/legacy_checkout.feature",
+            "scopeType": "scenario",
+            "scopeValue": "Legacy fallback checkout flow",
+            "reason": "Approved exception for legacy component",
+            "timestamp": "2026-08-24T12:00:00.000Z",
+            "by": "carlos"
+        }
+    ]
+}
+```
+
+The extension and the standalone CLI will both automatically detect and respect this file.
+Core syntax errors cannot be suppressed.
 
 ---
 
 ## Behave Discovery & Execution Settings
 
-### `gherkinPowerTools.featureGlobs`
-- **Purpose:** Glob patterns used to discover Gherkin feature files. These patterns drive diagnostics, health statistics, and the test explorer.
-- **Type:** `array` of strings
-- **Default:** `["**/*.feature"]`
-
 ### `gherkinPowerTools.behave.stepGlobs`
-- **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, and Linting.
+- **Purpose:** Glob patterns to discover Python step definitions for IntelliSense, Navigation, Linting, and to intelligently resolve destinations when generating new step definitions.
 - **Type:** `array` of strings
 - **Default:** `["**/steps/**/*.py", "**/features/steps/**/*.py"]`
 
@@ -159,14 +196,13 @@ Individual settings (like `indentation.steps`) always override the profile defau
 
 
 ### `gherkinPowerTools.behave.additionalArguments`
-- **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer.
+- **Purpose:** Extra flags appended to every Behave invocation from the Test Explorer (e.g., `["--no-capture"]`).
 - **Type:** `array` of strings
 - **Default:** `[]`
-- **Example:** `["--no-capture"]`
 
 ---
 
-## Analytics Settings
+## Analytics
 
 ### `gherkinPowerTools.analytics.historicalTrends.enabled`
 - **Purpose:** Enable or disable historical trend analysis for Gherkin Health. When enabled, dashboard metrics are persisted locally to visualize project evolution over time.
@@ -174,8 +210,8 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 ### `gherkinPowerTools.analytics.historicalTrends.retentionSnapshots`
-- **Purpose:** Maximum number of historical snapshots to retain for trend analysis.
-- **Type:** `number` (1–365)
+- **Purpose:** Maximum number of historical snapshots to retain for trend analysis per branch.
+- **Type:** `number`
 - **Default:** `30`
 
 ### `gherkinPowerTools.analytics.historicalTrends.maxStorageBytes`
@@ -205,8 +241,9 @@ Example:
     "formatter": {
         "enabled": true
     },
-    "linter": {
-        "enabledRules": ["MISSING_COLON", "INVALID_KEYWORD"]
+    "rules": {
+        "missing-colon": "error",
+        "invalid-keyword": "warning"
     },
     "behave": {
         "stepGlobs": [

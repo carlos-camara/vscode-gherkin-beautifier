@@ -2,42 +2,58 @@ import * as vscode from 'vscode';
 
 import { dialectService } from './dialect';
 import { discoveryService } from './discovery';
+import { diagnosticRegistry, antiPatternRegistry, RULES_REGISTRY, RuleDiagnostic } from './rules';
 
 export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
     public static readonly providedCodeActionKinds = [
         vscode.CodeActionKind.QuickFix,
-        vscode.CodeActionKind.RefactorExtract
+        vscode.CodeActionKind.RefactorExtract,
+        vscode.CodeActionKind.SourceFixAll
     ];
 
-    public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
+    public provideCodeActions(document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, _context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
         const actions: vscode.CodeAction[] = [];
 
-        // Instead of only using context.diagnostics (which strictly intersect the cursor),
-        // fetch all diagnostics for the file and include any that are on the same line.
-        // This ensures the lightbulb appears anywhere on the line, even if a whole-line 
-        // diagnostic (like Syntax Error) shadows a more precise word-level diagnostic.
-        const allDiagnostics = vscode.languages.getDiagnostics(document.uri);
-        const lineDiagnostics = allDiagnostics.filter(d => 
+        // 1. Handle rich diagnostics from Linter (has actionPayload)
+        const allRichDiagnostics = [
+            ...(diagnosticRegistry.get(document.uri.toString()) || []),
+            ...(antiPatternRegistry.get(document.uri.toString()) || [])
+        ];
+
+        // Fix All
+        if (_context.only && _context.only.contains(vscode.CodeActionKind.SourceFixAll)) {
+            const fixAllEdit = generateSafeFixAllEdit(document, allRichDiagnostics);
+            if (fixAllEdit && fixAllEdit.size > 0) {
+                const action = new vscode.CodeAction("Fix All Safe Gherkin Issues", vscode.CodeActionKind.SourceFixAll);
+                action.edit = fixAllEdit;
+                action.isPreferred = true;
+                actions.push(action);
+            }
+            return actions;
+        }
+
+        const relevantRichDiagnostics = allRichDiagnostics.filter(d =>
             d.range.start.line <= _range.end.line && d.range.end.line >= _range.start.line
         );
-        
-        // Merge context diagnostics with line diagnostics to ensure we don't miss any,
-        // then deduplicate by object reference.
-        const relevantDiagnostics = Array.from(new Set([...context.diagnostics, ...lineDiagnostics]));
 
-        for (const diagnostic of relevantDiagnostics) {
-            if (diagnostic.code === 'MISSING_COLON') {
+        for (const diagnostic of relevantRichDiagnostics) {
+            // Prevent applying Code Actions for stale diagnostics where line ranges or text may have shifted.
+            if (diagnostic.documentVersion !== document.version) {
+                continue;
+            }
+
+            if (diagnostic.ruleId === 'missing-colon') {
                 const action = new vscode.CodeAction("Insert missing ':'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
-                const replacement = diagnostic.relatedInformation?.[0]?.message || '';
+                const replacement = diagnostic.actionPayload?.replacementText || '';
                 if (replacement) {
                     action.edit.replace(document.uri, diagnostic.range, replacement);
                     action.diagnostics = [diagnostic];
                     action.isPreferred = true;
                     actions.push(action);
                 }
-            } else if (diagnostic.code === 'MISSPELLED_KEYWORD') {
-                const replacement = diagnostic.relatedInformation?.[0]?.message || '';
+            } else if (diagnostic.ruleId === 'invalid-keyword') {
+                const replacement = diagnostic.actionPayload?.replacementText || '';
                 if (replacement) {
                     const action = new vscode.CodeAction(`Replace with '${replacement}'`, vscode.CodeActionKind.QuickFix);
                     action.edit = new vscode.WorkspaceEdit();
@@ -46,14 +62,14 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     action.isPreferred = true;
                     actions.push(action);
                 }
-            } else if (diagnostic.code === 'SCENARIO_WITH_EXAMPLES') {
+            } else if (diagnostic.ruleId === 'scenario-with-examples') {
                 const action = new vscode.CodeAction("Convert to 'Scenario Outline'", vscode.CodeActionKind.QuickFix);
                 action.edit = new vscode.WorkspaceEdit();
                 action.edit.replace(document.uri, diagnostic.range, 'Scenario Outline');
                 action.diagnostics = [diagnostic];
                 action.isPreferred = true;
                 actions.push(action);
-            } else if (diagnostic.code === 'INCONSISTENT_CELL_COUNT') {
+            } else if (diagnostic.ruleId === 'table-inconsistency') {
                 const lineIndex = diagnostic.range.start.line;
                 const line = document.lineAt(lineIndex);
                 const lineText = line.text;
@@ -72,7 +88,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     const headerText = document.lineAt(headerLineIndex).text;
                     const expectedCells = (headerText.match(/\|/g) || []).length;
                     const currentCells = (lineText.match(/\|/g) || []).length;
-                    
+
                     if (currentCells > expectedCells) {
                         // Extra columns: find the Nth pipe and truncate
                         let pipeCount = 0;
@@ -86,7 +102,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                                 }
                             }
                         }
-                        
+
                         if (truncateIndex !== -1) {
                             const action = new vscode.CodeAction("Remove extra cells", vscode.CodeActionKind.QuickFix);
                             action.edit = new vscode.WorkspaceEdit();
@@ -100,10 +116,10 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                         // Missing columns
                         const action = new vscode.CodeAction("Add missing cells", vscode.CodeActionKind.QuickFix);
                         action.edit = new vscode.WorkspaceEdit();
-                        
+
                         const missingPipes = expectedCells - currentCells;
                         let fixedText = lineText;
-                        
+
                         if (!fixedText.trim().endsWith('|')) {
                             fixedText += ' |';
                             for (let i = 0; i < missingPipes - 1; i++) {
@@ -114,20 +130,18 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                                 fixedText += '   |';
                             }
                         }
-                        
+
                         action.edit.replace(document.uri, line.range, fixedText);
                         action.diagnostics = [diagnostic];
                         action.isPreferred = true;
                         actions.push(action);
                     }
                 }
-            } else if (diagnostic.code === 'UNDEFINED_STEP') {
+            } else if (diagnostic.ruleId === 'undefined-step') {
                 const action = new vscode.CodeAction('Create empty step definition', vscode.CodeActionKind.QuickFix);
 
-                // Retrieve the keyword from relatedInformation
-                const keyword = diagnostic.relatedInformation && diagnostic.relatedInformation.length > 0
-                    ? diagnostic.relatedInformation[0].message
-                    : 'step';
+                // Retrieve the keyword from the typed payload
+                const keyword = diagnostic.actionPayload?.stepKeyword || 'step';
 
                 let pyKeyword = keyword.toLowerCase().trim();
                 const dialect = dialectService.getDialect(document);
@@ -149,18 +163,54 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                     else pyKeyword = 'step';
                 }
 
-                // Extract step text
-                const stepTextMatch = diagnostic.message.match(/Undefined step: "(.*)"/);
-                const stepText = stepTextMatch ? stepTextMatch[1] : '';
+                // Extract step text securely without parsing the human-readable message
+                const stepText = diagnostic.actionPayload?.stepText || '';
 
                 action.command = {
                     command: 'gherkinPowerTools.createStepDefinition',
                     title: 'Create empty step definition',
                     arguments: [stepText, pyKeyword, document.uri]
                 };
+                if (!vscode.workspace.isTrusted) {
+                    action.disabled = { reason: 'Workspace Trust is required to modify Python code' };
+                }
                 action.diagnostics = [diagnostic];
                 action.isPreferred = true;
                 actions.push(action);
+            }
+        }
+
+        // 2. Handle ALL diagnostics in context (including AntiPatterns) for Suppression
+        for (const diagnostic of _context.diagnostics) {
+            const ruleId = typeof diagnostic.code === 'object' ? diagnostic.code.value : diagnostic.code;
+            if (ruleId && typeof ruleId === 'string' && !['syntax-errors', 'missing-colon', 'invalid-keyword'].includes(ruleId)) {
+                // Determine scope if possible. We don't have payload here, so scope is undefined.
+                // That's fine, the command handles undefined scope (file-level suppression or generic line match)
+                // Actually, wait, if it's a rich diagnostic we might have scope.
+                const richDiag = relevantRichDiagnostics.find(d => d.ruleId === ruleId && d.range.start.line === diagnostic.range.start.line);
+                const scopeType = richDiag?.actionPayload?.scopeType;
+                const scopeValue = richDiag?.actionPayload?.scopeValue;
+
+                let title = `Suppress '${ruleId}'`;
+                if (scopeType === 'scenario') {
+                    title += ` for this Scenario`;
+                } else if (scopeType === 'feature') {
+                    title += ` for this Feature`;
+                } else if (scopeType === 'step') {
+                    title += ` for this Step`;
+                }
+
+                // Also check if we already pushed a suppress action for this ruleId
+                if (!actions.some(a => a.command?.command === 'gherkinPowerTools.suppressFinding' && a.command.arguments?.[0] === ruleId)) {
+                    const suppressAction = new vscode.CodeAction(title, vscode.CodeActionKind.QuickFix);
+                    suppressAction.command = {
+                        command: 'gherkinPowerTools.suppressFinding',
+                        title: 'Suppress finding',
+                        arguments: [ruleId, document.uri.toString(), scopeType, scopeValue]
+                    };
+                    suppressAction.diagnostics = [diagnostic];
+                    actions.push(suppressAction);
+                }
             }
         }
 
@@ -171,11 +221,70 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 command: 'gherkinPowerTools.refactor.extractStep',
                 title: 'Extract Step'
             };
+            if (!vscode.workspace.isTrusted) {
+                extractAction.disabled = { reason: 'Workspace Trust is required to modify Python code' };
+            }
             actions.push(extractAction);
         }
 
         return actions;
     }
+}
+
+/**
+ * Generates a WorkspaceEdit that fixes all safe, deterministic issues in the document.
+ * Includes conflict resolution to prevent overlapping edits.
+ */
+export function generateSafeFixAllEdit(document: vscode.TextDocument, diagnostics: RuleDiagnostic[]): vscode.WorkspaceEdit | undefined {
+    // 1. Filter for safe rules and current document version
+    const safeDiagnostics = diagnostics.filter(d => {
+        if (d.documentVersion !== document.version) return false;
+        const ruleDef = RULES_REGISTRY[d.ruleId];
+        return ruleDef && ruleDef.safeFix === true;
+    });
+
+    if (safeDiagnostics.length === 0) {
+        return undefined;
+    }
+
+    // 2. Sort from bottom to top (by start line, descending) to handle overlaps
+    safeDiagnostics.sort((a, b) => b.range.start.line - a.range.start.line);
+
+    const edit = new vscode.WorkspaceEdit();
+    let lastProcessedStartLine = Number.MAX_SAFE_INTEGER;
+
+    for (const diagnostic of safeDiagnostics) {
+        // 3. Detect overlapping edits
+        // Since we go bottom-to-top, this diagnostic's END line must be BEFORE the last processed START line
+        if (diagnostic.range.end.line >= lastProcessedStartLine) {
+            continue; // Overlaps or conflicts, skip it
+        }
+
+        let applied = false;
+        
+        if (diagnostic.ruleId === 'missing-colon') {
+            const replacement = diagnostic.actionPayload?.replacementText;
+            if (replacement) {
+                edit.replace(document.uri, diagnostic.range, replacement);
+                applied = true;
+            }
+        } else if (diagnostic.ruleId === 'invalid-keyword') {
+            const replacement = diagnostic.actionPayload?.replacementText;
+            if (replacement) {
+                edit.replace(document.uri, diagnostic.range, replacement);
+                applied = true;
+            }
+        } else if (diagnostic.ruleId === 'scenario-with-examples') {
+            edit.replace(document.uri, diagnostic.range, 'Scenario Outline');
+            applied = true;
+        }
+        
+        if (applied) {
+            lastProcessedStartLine = diagnostic.range.start.line;
+        }
+    }
+
+    return edit;
 }
 
 /**
@@ -236,6 +345,137 @@ export function generateStepFunctionName(text: string): string {
 }
 
 /**
+ * Resolves the destination for a newly generated step definition file,
+ * respecting stepGlobs and workspace architecture.
+ */
+async function resolveNewStepDestination(documentUri: vscode.Uri | undefined, promptMessage: string): Promise<{ targetUri: vscode.Uri, isNewFile: boolean } | undefined> {
+    let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
+
+    if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        if (vscode.workspace.workspaceFolders.length === 1) {
+            workspaceFolder = vscode.workspace.workspaceFolders[0];
+        } else {
+            const items = vscode.workspace.workspaceFolders.map(folder => ({
+                label: folder.name,
+                description: folder.uri.fsPath,
+                folder: folder
+            }));
+            const selection = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select a workspace folder to create step definitions in'
+            });
+            if (selection) {
+                workspaceFolder = selection.folder;
+            } else {
+                return undefined;
+            }
+        }
+    }
+
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage("Open a workspace to create step definitions.");
+        return undefined;
+    }
+
+    const stepGlobs = discoveryService.getStepGlobs(workspaceFolder.uri);
+
+    // Parse globs into concrete relative directories
+    const concreteDirs = new Set<string>();
+    for (let glob of stepGlobs) {
+        let prefix = glob;
+        if (prefix.startsWith('**/')) {
+            prefix = prefix.substring(3);
+        }
+
+        const wildcardIndex = prefix.indexOf('*');
+        if (wildcardIndex !== -1) {
+            prefix = prefix.substring(0, wildcardIndex);
+        }
+
+        if (prefix.endsWith('/')) {
+            prefix = prefix.substring(0, prefix.length - 1);
+        }
+
+        if (prefix.trim().length > 0) {
+            concreteDirs.add(prefix);
+        }
+    }
+
+    let possibleDirs = Array.from(concreteDirs);
+    if (possibleDirs.length === 0) {
+        possibleDirs = ['features/steps'];
+    }
+
+    let selectedDir = possibleDirs[0];
+
+    if (possibleDirs.length > 1) {
+        const items: vscode.QuickPickItem[] = [];
+        for (const dir of possibleDirs) {
+            const dirUri = vscode.Uri.joinPath(workspaceFolder.uri, dir);
+            let exists = false;
+            try {
+                const stat = await vscode.workspace.fs.stat(dirUri);
+                if (stat.type === vscode.FileType.Directory) {
+                    exists = true;
+                }
+            } catch (e) {
+                // Doesn't exist
+            }
+
+            items.push({
+                label: exists ? `$(folder) ${dir} (Recommended)` : `$(folder) ${dir}`,
+                description: exists ? 'Existing directory matches configuration' : 'Will be created',
+                dir: dir,
+                exists: exists
+            } as any);
+        }
+
+        // Sort so existing (recommended) are at the top
+        items.sort((a: any, b: any) => {
+            if (a.exists === b.exists) return 0;
+            return a.exists ? -1 : 1;
+        });
+
+        const selection = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select destination directory for new step definitions'
+        });
+
+        if (selection) {
+            selectedDir = (selection as any).dir;
+        } else {
+            return undefined;
+        }
+    }
+
+    const stepsDirUri = vscode.Uri.joinPath(workspaceFolder.uri, selectedDir);
+    const targetUri = vscode.Uri.joinPath(stepsDirUri, 'step_definitions.py');
+
+    let isNewFile = false;
+    try {
+        await vscode.workspace.fs.stat(targetUri);
+    } catch {
+        isNewFile = true;
+
+        const createAction = `Create ${selectedDir}/step_definitions.py`;
+        const selection = await vscode.window.showInformationMessage(
+            promptMessage,
+            createAction
+        );
+
+        if (selection === createAction) {
+            try {
+                await vscode.workspace.fs.stat(stepsDirUri);
+            } catch {
+                await vscode.workspace.fs.createDirectory(stepsDirUri);
+            }
+        } else {
+            return undefined;
+        }
+    }
+
+    return { targetUri, isNewFile };
+}
+
+/**
  * Handles the creation of a new Python step definition.
  */
 export async function createStepDefinition(stepText: string, keyword: string, documentUri?: vscode.Uri): Promise<vscode.Uri | undefined> {
@@ -252,50 +492,12 @@ export async function createStepDefinition(stepText: string, keyword: string, do
     let isNewFile = false;
 
     if (pyFiles.length === 0) {
-        // Find workspace folder
-        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
-
-        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            if (vscode.workspace.workspaceFolders.length === 1) {
-                workspaceFolder = vscode.workspace.workspaceFolders[0];
-            } else {
-                const items = vscode.workspace.workspaceFolders.map(folder => ({
-                    label: folder.name,
-                    description: folder.uri.fsPath,
-                    folder: folder
-                }));
-                const selection = await vscode.window.showQuickPick(items, {
-                    placeHolder: 'Select a workspace folder to create step definitions in'
-                });
-                if (selection) {
-                    workspaceFolder = selection.folder;
-                } else {
-                    return undefined;
-                }
-            }
-        }
-
-        if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
+        const resolution = await resolveNewStepDestination(documentUri, "No Python step files found. Would you like to create one?");
+        if (!resolution) {
             return undefined;
         }
-
-        const defaultStepsDir = vscode.Uri.joinPath(workspaceFolder.uri, 'features', 'steps');
-        targetUri = vscode.Uri.joinPath(defaultStepsDir, 'step_definitions.py');
-
-        const createAction = "Create features/steps/step_definitions.py";
-        const selection = await vscode.window.showInformationMessage(
-            "No Python step files found. Would you like to create one?",
-            createAction
-        );
-
-        if (selection === createAction) {
-            await vscode.workspace.fs.createDirectory(defaultStepsDir);
-            // We'll write the initial content below using WorkspaceEdit
-            isNewFile = true;
-        } else {
-            return;
-        }
+        targetUri = resolution.targetUri;
+        isNewFile = resolution.isNewFile;
     } else if (pyFiles.length === 1) {
         targetUri = pyFiles[0];
     } else {
@@ -318,10 +520,18 @@ export async function createStepDefinition(stepText: string, keyword: string, do
     if (targetUri) {
         let fileContent = '';
         if (!isNewFile) {
-            try {
-                const data = await vscode.workspace.fs.readFile(targetUri);
-                fileContent = Buffer.from(data).toString('utf8');
-            } catch(e) {}
+            const openDocument = vscode.workspace.textDocuments.find(d => d.uri.toString() === targetUri!.toString());
+            if (openDocument) {
+                fileContent = openDocument.getText();
+            } else {
+                try {
+                    const data = await vscode.workspace.fs.readFile(targetUri);
+                    fileContent = Buffer.from(data).toString('utf8');
+                } catch (e) {
+                    vscode.window.showErrorMessage(`Failed to read target file for step generation: ${vscode.workspace.asRelativePath(targetUri)}`);
+                    return undefined;
+                }
+            }
         }
 
         const { pattern, funcArgs } = extractStepParameters(stepText);
@@ -347,21 +557,12 @@ export async function createStepDefinition(stepText: string, keyword: string, do
 
         const edit = new vscode.WorkspaceEdit();
         if (isNewFile) {
-            edit.createFile(targetUri, { ignoreIfExists: true });
+            edit.createFile(targetUri, { overwrite: false, ignoreIfExists: false });
             edit.insert(targetUri, new vscode.Position(0, 0), snippet);
         } else {
-            // Document might be open, calculate end position
-            let lineCount = 0;
-            let lastLineLength = 0;
-            try {
-                const openDoc = await vscode.workspace.openTextDocument(targetUri);
-                lineCount = openDoc.lineCount;
-                lastLineLength = lineCount > 0 ? openDoc.lineAt(lineCount - 1).text.length : 0;
-            } catch(e) {
-                const lines = fileContent.split('\n');
-                lineCount = lines.length;
-                lastLineLength = lines[lines.length - 1].length;
-            }
+            const lines = fileContent.split('\n');
+            const lineCount = lines.length;
+            const lastLineLength = lineCount > 0 ? lines[lineCount - 1].length : 0;
             const lastLine = lineCount > 0 ? lineCount - 1 : 0;
             const endPos = new vscode.Position(lastLine, lastLineLength);
             edit.insert(targetUri, endPos, snippet);
@@ -369,9 +570,9 @@ export async function createStepDefinition(stepText: string, keyword: string, do
 
         await vscode.workspace.applyEdit(edit);
 
-        // Intentionally DO NOT auto-save here (per user request).
-        // Let the user review the unsaved file.
         const document = await vscode.workspace.openTextDocument(targetUri);
+        await document.save();
+        
         const editor = await vscode.window.showTextDocument(document);
 
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
@@ -394,46 +595,12 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
     let isNewFile = false;
 
     if (pyFiles.length === 0) {
-        let workspaceFolder = documentUri ? discoveryService.getBestWorkspaceFolder(documentUri) : undefined;
-        if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            if (vscode.workspace.workspaceFolders.length === 1) {
-                workspaceFolder = vscode.workspace.workspaceFolders[0];
-            } else {
-                const items = vscode.workspace.workspaceFolders.map(folder => ({
-                    label: folder.name,
-                    description: folder.uri.fsPath,
-                    folder: folder
-                }));
-                const selection = await vscode.window.showQuickPick(items, {
-                    placeHolder: 'Select a workspace folder to create step definitions in'
-                });
-                if (selection) {
-                    workspaceFolder = selection.folder;
-                } else {
-                    return undefined;
-                }
-            }
-        }
-        if (!workspaceFolder) {
-            vscode.window.showErrorMessage("Open a workspace to create step definitions.");
+        const resolution = await resolveNewStepDestination(documentUri, "No Python step files found. Would you like to create one for all undefined steps?");
+        if (!resolution) {
             return undefined;
         }
-
-        const defaultStepsDir = vscode.Uri.joinPath(workspaceFolder.uri, 'features', 'steps');
-        targetUri = vscode.Uri.joinPath(defaultStepsDir, 'step_definitions.py');
-
-        const createAction = "Create features/steps/step_definitions.py";
-        const selection = await vscode.window.showInformationMessage(
-            "No Python step files found. Would you like to create one for all undefined steps?",
-            createAction
-        );
-
-        if (selection === createAction) {
-            await vscode.workspace.fs.createDirectory(defaultStepsDir);
-            isNewFile = true;
-        } else {
-            return;
-        }
+        targetUri = resolution.targetUri;
+        isNewFile = resolution.isNewFile;
     } else if (pyFiles.length === 1) {
         targetUri = pyFiles[0];
     } else {
@@ -456,10 +623,18 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
     if (targetUri) {
         let fileContent = '';
         if (!isNewFile) {
-            try {
-                const data = await vscode.workspace.fs.readFile(targetUri);
-                fileContent = Buffer.from(data).toString('utf8');
-            } catch(e) {}
+            const openDocument = vscode.workspace.textDocuments.find(d => d.uri.toString() === targetUri!.toString());
+            if (openDocument) {
+                fileContent = openDocument.getText();
+            } else {
+                try {
+                    const data = await vscode.workspace.fs.readFile(targetUri);
+                    fileContent = Buffer.from(data).toString('utf8');
+                } catch (e) {
+                    vscode.window.showErrorMessage(`Failed to read target file for batch step generation: ${vscode.workspace.asRelativePath(targetUri)}`);
+                    return undefined;
+                }
+            }
         }
 
         let snippet = '';
@@ -511,20 +686,12 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
 
         const edit = new vscode.WorkspaceEdit();
         if (isNewFile) {
-            edit.createFile(targetUri, { ignoreIfExists: true });
+            edit.createFile(targetUri, { overwrite: false, ignoreIfExists: false });
             edit.insert(targetUri, new vscode.Position(0, 0), snippet.trimEnd() + '\n');
         } else {
-            let lineCount = 0;
-            let lastLineLength = 0;
-            try {
-                const openDoc = await vscode.workspace.openTextDocument(targetUri);
-                lineCount = openDoc.lineCount;
-                lastLineLength = lineCount > 0 ? openDoc.lineAt(lineCount - 1).text.length : 0;
-            } catch(e) {
-                const lines = fileContent.split('\n');
-                lineCount = lines.length;
-                lastLineLength = lines[lines.length - 1].length;
-            }
+            const lines = fileContent.split('\n');
+            const lineCount = lines.length;
+            const lastLineLength = lineCount > 0 ? lines[lineCount - 1].length : 0;
             const lastLine = lineCount > 0 ? lineCount - 1 : 0;
             const endPos = new vscode.Position(lastLine, lastLineLength);
             edit.insert(targetUri, endPos, snippet.trimEnd() + '\n');
@@ -533,6 +700,8 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
         await vscode.workspace.applyEdit(edit);
 
         const document = await vscode.workspace.openTextDocument(targetUri);
+        await document.save();
+        
         const editor = await vscode.window.showTextDocument(document);
 
         const newEndPos = new vscode.Position(editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);

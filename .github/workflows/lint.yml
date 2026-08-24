@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 🔍 Checkout Code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -36,7 +36,8 @@ jobs:
         run: npx vsce ls
 
       - name: 🧹 Lint Codebase (Markdown, YAML, Actions)
-        uses: super-linter/super-linter@34dfdddf86c8da9508e3c52eb27bd8ac98d5d8a6 # v7
+        # v7
+        uses: super-linter/super-linter@34dfdddf86c8da9508e3c52eb27bd8ac98d5d8a6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: main

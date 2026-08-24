@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
 
-export class BehaveFileDiscoveryService {
+class BehaveFileDiscoveryService {
     private pendingEvents = new Map<string, { type: 'create' | 'change' | 'delete', timer: NodeJS.Timeout }>();
     private activeGlobs = new Map<string, { stepGlobs: string[], ignoreGlobs: string[] }>();
     private isRebuildingWatchers = false;
@@ -45,7 +45,7 @@ export class BehaveFileDiscoveryService {
     }
 
     public getStepGlobs(uri?: vscode.Uri): string[] {
-        const globs = this.configService?.getConfiguration(uri).behave.stepGlobs;
+        const globs = this.configService?.getConfiguration(uri)?.behave?.stepGlobs;
         if (globs && globs.length > 0) {
             return globs;
         }
@@ -54,7 +54,7 @@ export class BehaveFileDiscoveryService {
 
     public getIgnoreGlobs(uri?: vscode.Uri): string[] {
         if (this.configService) {
-            return this.configService.getConfiguration(uri).behave.ignoreGlobs;
+            return this.configService.getConfiguration(uri)?.behave?.ignoreGlobs || ['**/node_modules/**', '**/.venv/**', '**/venv/**', '**/env/**'];
         }
         return ['**/node_modules/**', '**/.venv/**', '**/venv/**', '**/env/**'];
     }

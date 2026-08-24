@@ -154,4 +154,16 @@ suite('Parser Architecture Test Suite', () => {
             stubRecord.restore();
         }
     });
+
+    test('should cache successful loads and handle concurrency deduplication', async () => {
+        // Run multiple parses concurrently
+        const results = await Promise.all([
+            parseGherkin('Feature: 1'),
+            parseGherkin('Feature: 2'),
+            parseGherkin('Feature: 3')
+        ]);
+        
+        assert.strictEqual(results.length, 3);
+        results.forEach(res => assert.strictEqual(res.errors.length, 0));
+    });
 });

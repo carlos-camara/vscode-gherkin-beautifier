@@ -8,7 +8,7 @@ import { runBehave, runBehaveWithPrompt, debugBehave } from '../execution';
 import { createStepDefinition } from '../codeAction';
 import { ImpactReport } from '../impactAnalysis';
 
-export interface CommandServices {
+interface CommandServices {
     configService: ConfigurationService;
     refactoringService: StepRefactoringService;
     symbolCache: SymbolCache;
@@ -20,7 +20,11 @@ export interface CommandServices {
  */
 function checkWorkspaceTrust(): boolean {
     if (!vscode.workspace.isTrusted) {
-        vscode.window.showWarningMessage("Execution disabled in untrusted workspace.");
+        vscode.window.showWarningMessage("Execution disabled in untrusted workspace.", "Manage Workspace Trust").then(res => {
+            if (res === "Manage Workspace Trust") {
+                vscode.commands.executeCommand("workbench.trust.manage");
+            }
+        });
         return false;
     }
     return true;
@@ -72,6 +76,7 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
 
         // Custom command for creating step definitions
         vscode.commands.registerCommand('gherkinPowerTools.createStepDefinition', async (...args) => {
+            if (!checkWorkspaceTrust()) return;
             const uri = await createStepDefinition(...args as [string, string, vscode.Uri?]);
             if (uri) {
                 await symbolCache.updateFile(uri);
@@ -142,6 +147,7 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
 
         // Refactoring commands
         vscode.commands.registerCommand('gherkinPowerTools.refactor.extractStep', async () => {
+            if (!checkWorkspaceTrust()) return;
             const editor = vscode.window.activeTextEditor;
             if (!editor) return;
             // Provide a basic UX via prompts, real implementations would use QuickPicks or input boxes.

@@ -80,7 +80,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
         // Trigger event
         const mockDoc = { uri: vscode.Uri.parse('file:///test.feature') } as unknown as vscode.TextDocument;
         eventBus.publish({ type: 'textDocumentOpened', document: mockDoc });
-        
+
         // Wait for debounce (500ms in implementation) + some buffer
         await new Promise(resolve => setTimeout(resolve, 600));
 
@@ -89,10 +89,10 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
 
     test('Handles errors from generateAntiPatterns gracefully', async () => {
         (manager as any).engine.generateAntiPatterns = () => { throw new Error('Engine crash'); };
-        
+
         const mockDoc = { uri: vscode.Uri.parse('file:///test.feature') } as unknown as vscode.TextDocument;
         eventBus.publish({ type: 'textDocumentOpened', document: mockDoc });
-        
+
         // Should not throw unhandled exception
         await new Promise(resolve => setTimeout(resolve, 600));
         assert.ok(true);
@@ -101,6 +101,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
     test('Maps severities correctly and handles affectedItems and affectedFiles', async () => {
         (manager as any).engine.generateAntiPatterns = () => [
             {
+                id: 'item-error',
                 title: 'Item Error',
                 explanation: 'Err',
                 suggestedFix: 'Fix',
@@ -108,6 +109,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
                 affectedItems: [{ uri: 'file:///test1.feature', line: 10 }]
             },
             {
+                id: 'item-warning',
                 title: 'Item Warning No Line',
                 explanation: 'Warn',
                 suggestedFix: 'Fix',
@@ -115,6 +117,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
                 affectedItems: [{ uri: 'file:///test2.feature', type: 'scenario', id: 'sc1' }] // missing line
             },
             {
+                id: 'file-info',
                 title: 'File Info',
                 explanation: 'Info',
                 suggestedFix: 'Fix',
@@ -122,6 +125,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
                 affectedFiles: ['file:///test3.feature']
             },
             {
+                id: 'project-hint',
                 title: 'Project Hint',
                 explanation: 'Hint',
                 suggestedFix: 'Fix',
@@ -129,6 +133,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
                 // no files or items
             },
             {
+                id: 'off-pattern',
                 title: 'Off Pattern',
                 explanation: 'Off',
                 suggestedFix: 'Fix',
@@ -136,6 +141,7 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
                 affectedItems: [{ uri: 'file:///test4.feature', line: 1 }]
             },
             {
+                id: 'default-severity',
                 title: 'Default Severity',
                 explanation: 'Default',
                 suggestedFix: 'Fix',
@@ -152,39 +158,42 @@ suite('AntiPatternDiagnosticsManager Test Suite', function() {
         assert.strictEqual(diags1?.length, 1);
         assert.strictEqual(diags1[0].severity, vscode.DiagnosticSeverity.Error);
         assert.strictEqual(diags1[0].range.start.line, 9); // 0-indexed line 10 directly
-        assert.strictEqual(diags1[0].message, 'Item Error: Err\n💡 Fix: Fix');
+        assert.strictEqual(diags1[0].message, '\u00A0\n📊 Item Error (undefined)\n\nErr\n\n📖 Rationale:\nundefined\n\n💡 Fix:\nFix\n\u00A0');
 
         // Warning with item no line
         const diags2 = mockCollection.get(vscode.Uri.parse('file:///test2.feature'));
+        console.log('DIAGS2:', diags2);
+        console.log('DIAGNOSTICS MAP KEYS:', Array.from(mockCollection.items.keys()));
         assert.strictEqual(diags2?.length, 1);
         assert.strictEqual(diags2[0].severity, vscode.DiagnosticSeverity.Warning);
         assert.strictEqual(diags2[0].range.start.line, 0); // fallback to line 0
-        assert.strictEqual(diags2[0].message, 'Item Warning No Line: Warn\n💡 Fix: Fix');
+        assert.strictEqual(diags2[0].message, '\u00A0\n📊 Item Warning No Line (undefined)\n\nWarn\n\n📖 Rationale:\nundefined\n\n💡 Fix:\nFix\n\u00A0');
 
         // Info with affectedFiles
         const diags3 = mockCollection.get(vscode.Uri.parse('file:///test3.feature'));
         assert.strictEqual(diags3?.length, 1);
         assert.strictEqual(diags3[0].severity, vscode.DiagnosticSeverity.Information);
         assert.strictEqual(diags3[0].range.end.character, 100);
-        assert.strictEqual(diags3[0].message, 'File Info: Info\n💡 Fix: Fix');
+        assert.strictEqual(diags3[0].message, '\u00A0\n📊 File Info (undefined)\n\nInfo\n\n📖 Rationale:\nundefined\n\n💡 Fix:\nFix\n\u00A0');
 
         // Off (should not be mapped)
         const diags4 = mockCollection.get(vscode.Uri.parse('file:///test4.feature'));
         assert.strictEqual(diags4, undefined); // Or empty, but mockCollection returns undefined if not set
 
-        // Unknown severity fallback
+        // Unknown severity fallback defaults to Warning
         const diags5 = mockCollection.get(vscode.Uri.parse('file:///test5.feature'));
         assert.strictEqual(diags5?.length, 1);
         assert.strictEqual(diags5[0].severity, vscode.DiagnosticSeverity.Warning);
+        assert.strictEqual(diags5[0].code, 'default-severity');
     });
 
     test('Dispose cancels pending timeout', () => {
         const mockDoc = { uri: vscode.Uri.parse('file:///test.feature') } as unknown as vscode.TextDocument;
         eventBus.publish({ type: 'textDocumentOpened', document: mockDoc });
-        
+
         // Timeout is set but we dispose immediately
         manager.dispose();
-        
+
         // There's no easy assert, but coverage will show lines 135-139 are hit
         assert.ok(true);
     });

@@ -13,6 +13,9 @@ export class GherkinRenameProvider implements vscode.RenameProvider {
     }
 
     public async prepareRename(document: vscode.TextDocument, position: vscode.Position, _token: vscode.CancellationToken): Promise<vscode.Range | { range: vscode.Range; placeholder: string } | undefined> {
+        if (!vscode.workspace.isTrusted) {
+            throw new Error('Renaming steps modifies Python code and requires Workspace Trust.');
+        }
         await this.graph.initialize();
         const uriStr = ResourceIdentity.getCanonicalUriString(document.uri);
         

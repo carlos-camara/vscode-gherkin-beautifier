@@ -1,3 +1,14 @@
+import { RULES_REGISTRY } from './rules';
+
+const defaultRules: Record<string, any> = {};
+for (const [key, rule] of Object.entries(RULES_REGISTRY)) {
+    if (rule.enabledByDefault) {
+        defaultRules[key] = rule.defaultSeverity;
+    } else {
+        defaultRules[key] = 'off';
+    }
+}
+
 export const DEFAULT_CONFIG = {
     indentation: { steps: 4 },
     tables: { alignToKeyword: true },
@@ -6,6 +17,7 @@ export const DEFAULT_CONFIG = {
     emptyLines: { betweenScenarios: 1 },
     formatter: { enabled: true },
     linter: { enabled: true, enabledRules: [] },
+    rules: defaultRules,
     behave: {
         stepGlobs: ["**/steps/**/*.py", "**/features/steps/**/*.py"],
         ignoreGlobs: ["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"],
@@ -18,14 +30,4 @@ export const DEFAULT_CONFIG = {
     featureGlobs: ["**/*.feature"]
 };
 
-export const DEFAULT_RULE_CONFIG: Record<string, string> = {
-    "oversized-scenario": "warning",
-    "oversized-feature": "info",
-    "duplicated-steps": "error",
-    "unused-steps": "info",
-    "ambiguous-steps": "error",
-    "undefined-steps": "error",
-    "excessive-tags": "info",
-    "inconsistent-formatting": "info",
-    "poor-maintainability": "warning"
-};
+export const DEFAULT_RULE_CONFIG: Record<string, any> = defaultRules;

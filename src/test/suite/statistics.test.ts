@@ -52,7 +52,9 @@ suite('Project Health Dashboard Test Suite', () => {
             scores: {
                 complexity: 20,
                 maintainability: 95,
-                health: 88
+                health: 88,
+                maintainabilityPenalties: { unused: 0, duplicate: 0, undefined: 0 },
+                complexityPenalties: { scenarioLength: 0, largestScenario: 0, backgroundLength: 0, largestFeature: 0 }
             }
         };
 
@@ -175,5 +177,56 @@ suite('Project Health Dashboard Test Suite', () => {
 
         // Health = (50 * 0.6) + ((100 - 9) * 0.4) = 30 + 36.4 = 66.4 => 66
         assert.strictEqual(metrics.scores.health, 66, 'Health score should be weighted correctly');
+    });
+
+    test('calculateHealthMetrics: Enforces maximum penalty caps for maintainability', async () => {
+        // To test penalty caps, we need 100% unused, 100% duplicate, 100% undefined.
+        // Maintainability should drop by 30 (unused) + 40 (duplicate) + 30 (undefined) = 100 points -> score 0.
+        const mockGraph: any = {
+            currentGeneration: {
+                getAllNodes: () => [
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'Given' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'When' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'Then' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'Given' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'When' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'Then' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'Given' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'When' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'Then' } ] },
+                    { type: 'Scenario', steps: [ { definitionId: undefined, keyword: 'Given' } ] },
+                    ...new Array(10).fill({ type: 'Step', definitionId: undefined })
+                ],
+                getAllStepDefNodes: () => [],
+                getAllStepNodes: () => [],
+                parseErrors: new Map()
+            }
+        };
+
+        const mockSymbolCache: any = { getStepDefinitions: async () => [] };
+        
+        // Mock the StepAnalyzer to return catastrophic results
+        const originalAnalyzer = require('../../stepAnalyzer').StepAnalyzer;
+        require('../../stepAnalyzer').StepAnalyzer = class {
+            constructor() {}
+            async analyze() {
+                return {
+                    totalStepDefs: 10,
+                    unusedSteps: new Array(10), // 100% unused -> 30 penalty
+                    duplicatedSteps: new Array(10), // 100% duplicate -> 40 penalty
+                    ambiguousSteps: []
+                };
+            }
+        };
+
+        // Mock steps for 100% undefined -> 30 penalty
+        mockGraph.currentGeneration.getAllStepNodes = () => new Array(10).fill({ type: 'Step', definitionId: undefined });
+
+        try {
+            const metrics = await calculateHealthMetrics(mockGraph as WorkspaceGraph, mockSymbolCache as SymbolCache);
+            assert.strictEqual(metrics.scores.maintainability, 0, `Maintainability should hit 0, but was ${metrics.scores.maintainability}. Penalties: ${JSON.stringify(metrics.scores.maintainabilityPenalties)}`);
+        } finally {
+            require('../../stepAnalyzer').StepAnalyzer = originalAnalyzer;
+        }
     });
 });

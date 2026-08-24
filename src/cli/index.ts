@@ -11,7 +11,37 @@ import { WorkspaceGraph } from '../graph';
 import { AntiPatternEngine } from '../antiPatternEngine';
 import { calculateHealthMetrics } from '../statistics';
 import { GherkinFormattingEditProvider } from '../formatter';
-import { ConfigurationService, DEFAULT_RULE_CONFIG } from '../configuration';
+import { ConfigurationService, DEFAULT_RULE_CONFIG, ConfigurationLoader, ProjectConfiguration } from '../configuration';
+import * as fs from 'fs';
+
+class NodeConfigurationLoader implements ConfigurationLoader {
+    async load(workspaceFolder: vscode.WorkspaceFolder | undefined): Promise<ProjectConfiguration | null> {
+        if (!workspaceFolder) return null;
+        
+        try {
+            const configPath = path.join(workspaceFolder.uri.fsPath, '.gherkin-powertoolsrc.json');
+            if (!fs.existsSync(configPath)) {
+                return null;
+            }
+            
+            const content = await fs.promises.readFile(configPath, 'utf8');
+            let parsed = null;
+            try {
+                parsed = JSON.parse(content);
+            } catch (e) {
+                // Return content anyway for diagnostics
+            }
+            
+            return {
+                content,
+                parsed,
+                uri: vscode.Uri.file(configPath)
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+}
 
 const program = new Command();
 
@@ -42,7 +72,7 @@ program.command('analyze')
             
             const metrics = await calculateHealthMetrics(graph, symbolCache);
             const engine = new AntiPatternEngine();
-            const antiPatterns = engine.generateAntiPatterns(graph, metrics, DEFAULT_RULE_CONFIG);
+            const antiPatterns = engine.generateAntiPatterns(graph, metrics, { rules: DEFAULT_RULE_CONFIG });
 
             if (options.json) {
                 console.log(JSON.stringify(antiPatterns, null, 2));
@@ -50,11 +80,15 @@ program.command('analyze')
             } else {
                 console.log(`\nFound ${antiPatterns.length} anti-pattern(s):\n`);
                 antiPatterns.forEach(r => {
-                    console.log(`[${r.severity.toUpperCase()}] ${r.title}`);
-                    console.log(`  ${r.explanation}`);
-                    console.log(`  Fix: ${r.suggestedFix}`);
-                    if (r.affectedFiles) {
-                        console.log(`  Files:`);
+                    console.log(`[${r.severity.toUpperCase()}] ${r.title} (${r.category})`);
+                    console.log(`  What: ${r.explanation}`);
+                    console.log(`  Why:  ${r.rationale}`);
+                    console.log(`  Fix:  ${r.suggestedFix}`);
+                    if (r.affectedItems && r.affectedItems.length > 0) {
+                        console.log(`  Where:`);
+                        r.affectedItems.forEach(i => console.log(`   - ${i.label} (${i.uri}:${(i.line || 0) + 1})`));
+                    } else if (r.affectedFiles && r.affectedFiles.length > 0) {
+                        console.log(`  Where:`);
                         r.affectedFiles.forEach(f => console.log(`   - ${f}`));
                     }
                     console.log('');
@@ -105,7 +139,9 @@ program.command('format')
     .action(async (files: string[], options) => {
         try {
             const diagCollection = vscode.languages.createDiagnosticCollection('gherkin-pt');
-            const configService = new ConfigurationService(diagCollection);
+            const configLoader = new NodeConfigurationLoader();
+            const configService = new ConfigurationService(diagCollection, configLoader);
+            await configService.initialize();
             const formatter = new GherkinFormattingEditProvider(configService);
             
             let targetFiles: vscode.Uri[] = [];

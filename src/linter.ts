@@ -5,7 +5,21 @@ import { astRepository } from './ast';
 import type { Step } from '@cucumber/messages';
 import { ConfigurationService } from './configuration';
 import { WorkspaceEventBus } from './eventBus';
+import { WorkspaceGraph } from './graph';
+import { RuleDiagnostic, diagnosticRegistry } from './rules';
 
+type InvalidationReason = 
+    | { type: 'documentOpened', document: vscode.TextDocument }
+    | { type: 'documentChanged', document: vscode.TextDocument }
+    | { type: 'configurationChanged', affectsLinter: boolean }
+    | { type: 'stepDefinitionsUpdated', affectedFeatureUris?: vscode.Uri[] };
+
+interface LinterMetrics {
+    candidateDocs: number;
+    lintedDocs: number;
+    skippedDocs: number;
+    elapsedTimeMs: number;
+}
 /**
  * Diagnostic Provider that acts as a realtime Linter for Gherkin files.
  * It uses the official @cucumber/gherkin AST parser to catch syntax errors instantly.
@@ -17,69 +31,144 @@ export class GherkinLinter {
     private nextRequestId: number = 0;
     private eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
+    private workspaceGraph?: WorkspaceGraph;
+    
+    private invalidationQueue: Map<string, InvalidationReason> = new Map();
+    private flushDebounceTimer?: NodeJS.Timeout;
+    private isFlushing = false;
 
     constructor(symbolCache: SymbolCache, private configService: ConfigurationService) {
-        // Ensure only one debounced call happens at a time
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('gherkin');
         this.symbolCache = symbolCache;
     }
 
-    /**
-     * Subscribes to the Workspace Event Bus to receive file system and editor changes.
-     * This service relies on the Event Bus for lifecycle updates rather than direct API calls.
-     */
+    public setWorkspaceGraph(graph: WorkspaceGraph) {
+        this.workspaceGraph = graph;
+    }
+
     public setEventBus(eventBus: WorkspaceEventBus) {
         this.eventBus = eventBus;
         this.eventBusDisposable?.dispose();
         this.eventBusDisposable = this.eventBus.onEvent(e => {
-            if (e.type === 'textDocumentOpened' || e.type === 'textDocumentChanged') {
-                const doc = e.type === 'textDocumentOpened' ? e.document : e.event.document;
-                if (e.type === 'textDocumentOpened') {
-                    process.stdout.write(`\n--- LINTER EVENT: textDocumentOpened ${doc.uri.toString()} ---\n`);
-                    this.immediateLint(doc);
-                } else {
-                    process.stdout.write(`\n--- LINTER EVENT: textDocumentChanged ${doc.uri.toString()} ---\n`);
-                    this.scheduleLint(doc);
+            if (e.type === 'textDocumentOpened') {
+                this.immediateInvalidation({ type: 'documentOpened', document: e.document });
+            } else if (e.type === 'textDocumentChanged') {
+                this.queueInvalidation({ type: 'documentChanged', document: e.event.document });
+            } else if (e.type === 'configurationChanged') {
+                // A quick check if it affects linter could be done here, but for simplicity we assume it might.
+                this.queueInvalidation({ type: 'configurationChanged', affectsLinter: true });
+            } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted') {
+                let affected: vscode.Uri[] | undefined = undefined;
+                if (this.workspaceGraph) {
+                    // Correctness-first: if definitions change, any unresolved step might now be resolved, 
+                    // and any resolved step might become ambiguous.
+                    // For now, we consider all open feature files as candidates to be safe, but we let the queue batch it.
+                    affected = vscode.workspace.textDocuments.map(d => d.uri);
                 }
-            } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted' || e.type === 'configurationChanged') {
-                vscode.workspace.textDocuments.forEach(doc => {
-                    this.immediateLint(doc);
-                });
+                this.queueInvalidation({ type: 'stepDefinitionsUpdated', affectedFeatureUris: affected });
             }
         });
     }
 
-    /**
-     * Schedules a debounced linting request for a document.
-     */
-    public scheduleLint(document: vscode.TextDocument, delayMs: number = 250) {
-        const uriStr = document.uri.toString();
-        const existing = this.pendingRequests.get(uriStr);
-        if (existing?.timer) {
-            clearTimeout(existing.timer);
+    private queueInvalidation(reason: InvalidationReason) {
+        if (reason.type === 'documentOpened' || reason.type === 'documentChanged') {
+            this.invalidationQueue.set(reason.document.uri.toString(), reason);
+        } else if (reason.type === 'configurationChanged') {
+            this.invalidationQueue.set(`config:global`, reason);
+        } else if (reason.type === 'stepDefinitionsUpdated') {
+            this.invalidationQueue.set('stepDefs', reason);
         }
-
-        const requestId = ++this.nextRequestId;
-        const timer = setTimeout(() => {
-            this.lint(document, requestId, document.version);
-        }, delayMs);
-
-        this.pendingRequests.set(uriStr, { timer, requestId });
+        
+        if (this.flushDebounceTimer) {
+            clearTimeout(this.flushDebounceTimer);
+        }
+        this.flushDebounceTimer = setTimeout(() => this.flush(), 250);
+    }
+    
+    private immediateInvalidation(reason: InvalidationReason) {
+        this.queueInvalidation(reason);
+        if (this.flushDebounceTimer) clearTimeout(this.flushDebounceTimer);
+        this.flush();
+    }
+    
+    private async flush(): Promise<LinterMetrics | undefined> {
+        if (this.isFlushing || this.invalidationQueue.size === 0) return;
+        this.isFlushing = true;
+        const startTime = Date.now();
+        
+        const reasons = Array.from(this.invalidationQueue.values());
+        this.invalidationQueue.clear();
+        
+        let candidates = new Map<string, vscode.TextDocument>();
+        let globalConfigChanged = false;
+        let stepDefsChanged = false;
+        
+        for (const reason of reasons) {
+            if (reason.type === 'documentOpened' || reason.type === 'documentChanged') {
+                candidates.set(reason.document.uri.toString(), reason.document);
+            } else if (reason.type === 'configurationChanged') {
+                globalConfigChanged = true;
+            } else if (reason.type === 'stepDefinitionsUpdated') {
+                stepDefsChanged = true;
+            }
+        }
+        
+        if (globalConfigChanged || stepDefsChanged) {
+            // Add all open feature documents as candidates
+            vscode.workspace.textDocuments.forEach(doc => {
+                if (doc.languageId === 'feature' || doc.languageId === 'gherkin') {
+                    candidates.set(doc.uri.toString(), doc);
+                }
+            });
+        }
+        
+        const metrics: LinterMetrics = {
+            candidateDocs: candidates.size,
+            lintedDocs: 0,
+            skippedDocs: 0,
+            elapsedTimeMs: 0
+        };
+        
+        // Limit concurrency to 5
+        const limit = 5;
+        const activePromises = new Set<Promise<void>>();
+        
+        for (const doc of candidates.values()) {
+            const config = this.configService.getConfiguration(doc.uri);
+            if (!config.linter.enabled) {
+                this.clear(doc);
+                metrics.skippedDocs++;
+                continue;
+            }
+            
+            const p = this.lint(doc, ++this.nextRequestId, doc.version).then(() => {
+                metrics.lintedDocs++;
+            }).finally(() => {
+                activePromises.delete(p);
+            });
+            activePromises.add(p);
+            
+            if (activePromises.size >= limit) {
+                await Promise.race(activePromises);
+            }
+        }
+        
+        await Promise.all(activePromises);
+        
+        metrics.elapsedTimeMs = Date.now() - startTime;
+        this.isFlushing = false;
+        
+        // Output metrics for observability
+        process.stdout.write(`\n--- LINTER FLUSH METRICS: candidates=${metrics.candidateDocs}, linted=${metrics.lintedDocs}, skipped=${metrics.skippedDocs}, time=${metrics.elapsedTimeMs}ms ---\n`);
+        return metrics;
     }
 
-    /**
-     * Immediately lints a document, bypassing any active debounce.
-     */
-    public immediateLint(document: vscode.TextDocument) {
-        const uriStr = document.uri.toString();
-        const existing = this.pendingRequests.get(uriStr);
-        if (existing?.timer) {
-            clearTimeout(existing.timer);
-        }
+    public scheduleLint(document: vscode.TextDocument) {
+        this.queueInvalidation({ type: 'documentChanged', document });
+    }
 
-        const requestId = ++this.nextRequestId;
-        this.pendingRequests.set(uriStr, { requestId });
-        this.lint(document, requestId, document.version);
+    public immediateLint(document: vscode.TextDocument) {
+        this.immediateInvalidation({ type: 'documentChanged', document });
     }
 
     /**
@@ -88,15 +177,17 @@ export class GherkinLinter {
      * @param requestId The execution request ID to track stale runs.
      * @param version The document version at the time of the request.
      */
-    public async lint(document: vscode.TextDocument, requestId: number = ++this.nextRequestId, version: number = document.version) {
+    public async lint(document: vscode.TextDocument, requestId: number = ++this.nextRequestId, version: number = document.version, isExplicitCommand: boolean = false) {
         if (document.languageId !== 'feature' && document.languageId !== 'gherkin') {
             return;
         }
 
         const config = this.configService.getConfiguration(document.uri);
         if (!config.linter.enabled) {
-            vscode.window.showInformationMessage("Linter is disabled in settings.");
-            this.diagnosticCollection.delete(document.uri);
+            this.clear(document);
+            if (isExplicitCommand) {
+                vscode.window.showInformationMessage("Linter is currently DISABLED by configuration.");
+            }
             return;
         }
 
@@ -115,31 +206,31 @@ export class GherkinLinter {
                 // AST locations are 1-indexed, VS Code positions are 0-indexed
                 const lineIndex = Math.min(Math.max(0, error.line - 1), document.lineCount > 0 ? document.lineCount - 1 : 0);
                 const lineText = document.lineCount > 0 ? document.lineAt(lineIndex).text : '';
-                
+
                 // Column from AST is 1-indexed. If not present or 0, default to first non-whitespace char.
                 let startChar = error.column ? Math.max(0, error.column - 1) : 0;
                 if (startChar === 0) {
                     const firstWordMatch = lineText.match(/\S+/);
                     startChar = firstWordMatch ? lineText.indexOf(firstWordMatch[0]) : 0;
                 }
-                    
+
                     // Highlight the whole line to ensure the lightbulb is easily accessible
                     let endChar = lineText.length;
-                    
+
                     // Format the error message cleanly
                     let message = error.message;
-                    let code = 'SYNTAX_ERROR';
+                    let code = 'syntax-error';
                     let suggestedEdit = '';
 
                     const gotMatch = message.match(/got '(.*?)'/);
                     if (gotMatch) {
                         const gotText = gotMatch[1];
-                        
+
                         // Suppress cascading errors from broken AST state
                         const bKeywords = dialectService.getBlockKeywords(dialect).map(k => k.trim());
                         const sKeywords = dialectService.getStepKeywords(dialect).map(k => k.trim());
                         let isLocallyValid = false;
-                        
+
                         if (bKeywords.some(kw => gotText.startsWith(kw + ':'))) {
                             isLocallyValid = true;
                         } else if (sKeywords.some(kw => gotText.startsWith(kw + ' ') || gotText === kw)) {
@@ -147,7 +238,7 @@ export class GherkinLinter {
                         } else if (gotText.trim().startsWith('|') || gotText.trim().startsWith('"""') || gotText.trim().startsWith("'''") || gotText.trim().startsWith('@') || gotText.trim().startsWith('#')) {
                             isLocallyValid = true;
                         }
-                        
+
                         if (hasFatalSyntaxError && isLocallyValid) {
                             continue;
                         }
@@ -156,9 +247,9 @@ export class GherkinLinter {
                         const startsWithBlockKeyword = [...blockKeywords]
                             .sort((a, b) => b.length - a.length)
                             .find(k => gotText.startsWith(k));
-                        
+
                         if (startsWithBlockKeyword && !gotText.startsWith(startsWithBlockKeyword + ':')) {
-                            code = 'MISSING_COLON';
+                            code = 'missing-colon';
                             message = `Missing colon (':') after ${startsWithBlockKeyword}`;
                             suggestedEdit = ':';
                             // Point diagnostic exactly at the end of the keyword where colon is missing
@@ -168,16 +259,16 @@ export class GherkinLinter {
                             const firstWord = gotText.split(/\s+/)[0];
                             const stepKeywords = dialectService.getStepKeywords(dialect);
                             const validKeywords = [...blockKeywords, ...stepKeywords];
-                            
+
                             let bestMatch = '';
                             let lowestDistance = 999;
                             const normalizedFirst = firstWord.toLowerCase();
-                            
+
                             let prefixMatch = '';
 
                             for (const kw of validKeywords) {
                                 const normalizedKw = kw.toLowerCase();
-                                
+
                                 // Direct prefix match (e.g. 'whe' -> 'When', 'give' -> 'Given')
                                 if (normalizedFirst.length >= 2 && normalizedKw.startsWith(normalizedFirst)) {
                                     if (!prefixMatch || kw.length < prefixMatch.length) {
@@ -194,16 +285,16 @@ export class GherkinLinter {
                                     bestMatch = kw;
                                 }
                             }
-                            
+
                             if (prefixMatch) {
                                 bestMatch = prefixMatch;
                             }
-                            
+
                             if (bestMatch) {
-                                code = 'MISSPELLED_KEYWORD';
-                                
+                                code = 'invalid-keyword';
+
                                 const isBlockKeyword = blockKeywords.includes(bestMatch);
-                                
+
                                 if (isBlockKeyword) {
                                     message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
                                     suggestedEdit = bestMatch + ':';
@@ -222,7 +313,7 @@ export class GherkinLinter {
                             }
                         }
                     } else if (message.includes('inconsistent cell count')) {
-                        code = 'INCONSISTENT_CELL_COUNT';
+                        code = 'table-inconsistency';
                         const tLine = document.lineAt(lineIndex).text.trim();
                         if (tLine.startsWith('|') && !tLine.endsWith('|')) {
                             message = "Table row is missing a closing pipe ('|'). All rows must begin and end with a pipe.";
@@ -246,26 +337,19 @@ export class GherkinLinter {
                     endChar = Math.max(startChar, Math.min(endChar, lineText.length));
                     const range = new vscode.Range(lineIndex, startChar, lineIndex, endChar);
 
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         message,
-                        severity
+                        severity,
+                        code as any,
+                        document.version,
+                        suggestedEdit ? { replacementText: suggestedEdit } : undefined
                     );
                     diagnostic.source = 'Gherkin Parser';
-                    diagnostic.code = code;
-                    
-                    if (suggestedEdit) {
-                        diagnostic.relatedInformation = [
-                            new vscode.DiagnosticRelatedInformation(
-                                new vscode.Location(document.uri, range),
-                                suggestedEdit
-                            )
-                        ];
-                    }
-                    
+
                     diagnostics.push(diagnostic);
-                    
-                    if (code !== 'INCONSISTENT_CELL_COUNT') {
+
+                    if (code !== 'table-inconsistency') {
                         hasFatalSyntaxError = true;
                     }
                 }
@@ -279,7 +363,7 @@ export class GherkinLinter {
                 ...dialect.feature, ...dialect.background, ...dialect.rule, ...dialect.scenario, ...dialect.scenarioOutline,
                 ...dialect.given, ...dialect.when, ...dialect.then, ...dialect.and, ...dialect.but, ...dialect.examples
             ].map(k => k.trim())));
-            
+
             const blockKeywords = dialectService.getBlockKeywords(dialect);
 
             this.checkDescription(gherkinDocument.feature, diagnostics, document, allExpectedKeywords, blockKeywords);
@@ -309,7 +393,7 @@ export class GherkinLinter {
             }
         } else {
             // If the document failed to parse (e.g. because of a syntax error like 'Whe'),
-            // the AST is null and we can't detect SCENARIO_WITH_EXAMPLES via AST.
+            // the AST is null and we can't detect scenario-with-examples via AST.
             // Let's do a fallback text scan just for this specific semantic error.
             this.fallbackCheckScenarioExamples(document, diagnostics, dialect);
         }
@@ -331,22 +415,43 @@ export class GherkinLinter {
             process.stdout.write(`\n--- LINTER ABORT: pending request mismatch. doc=${document.uri.toString()} ---\n`);
             return;
         }
-        let finalDiagnostics = diagnostics;
-        if (config.linter.enabledRules && config.linter.enabledRules.length > 0) {
-            const coreRules = ['SYNTAX_ERROR', 'MISSPELLED_KEYWORD', 'UNDEFINED_STEP', 'MISSING_COLON', 'INCONSISTENT_CELL_COUNT', 'SCENARIO_WITH_EXAMPLES', 'AMBIGUOUS_STEP'];
-            finalDiagnostics = diagnostics.filter(d => 
-                typeof d.code === 'string' && 
-                (coreRules.includes(d.code) || config.linter.enabledRules.includes(d.code))
-            );
+        let finalDiagnostics: vscode.Diagnostic[] = [];
+
+        for (const d of diagnostics) {
+            const ruleCode = d.code as string;
+
+            // syntax-error is always an error, cannot be disabled
+            if (ruleCode === 'syntax-error') {
+                finalDiagnostics.push(d);
+                continue;
+            }
+
+            const severityStr = config.rules[ruleCode];
+            if (severityStr === 'off') {
+                continue;
+            }
+
+            if (severityStr === 'warning') {
+                d.severity = vscode.DiagnosticSeverity.Warning;
+            } else if (severityStr === 'info') {
+                d.severity = vscode.DiagnosticSeverity.Information;
+            } else if (severityStr === 'hint') {
+                d.severity = vscode.DiagnosticSeverity.Hint;
+            } else {
+                d.severity = vscode.DiagnosticSeverity.Error;
+            }
+
+            finalDiagnostics.push(d);
         }
 
+        diagnosticRegistry.set(document.uri.toString(), finalDiagnostics as RuleDiagnostic[]);
         this.diagnosticCollection.set(document.uri, finalDiagnostics);
     }
 
     private fallbackCheckScenarioExamples(document: vscode.TextDocument, diagnostics: vscode.Diagnostic[], dialect: any) {
         let currentScenarioLine = -1;
         let currentScenarioStartChar = -1;
-        
+
         const scenarioKeywords = dialect.scenario.map((k: string) => k.trim());
         const scenarioOutlineKeywords = dialect.scenarioOutline.map((k: string) => k.trim());
         const examplesKeywords = dialect.examples.map((k: string) => k.trim());
@@ -355,21 +460,21 @@ export class GherkinLinter {
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i).text;
             const trimmed = line.trim();
-            
+
             if (trimmed.startsWith('#')) continue;
-            
+
             // Check if line starts with any Scenario keyword + ':'
             const isScenario = scenarioKeywords.some((k: string) => trimmed.startsWith(k + ':'));
             const isScenarioOutline = scenarioOutlineKeywords.some((k: string) => trimmed.startsWith(k + ':'));
             const isExamples = examplesKeywords.some((k: string) => trimmed.startsWith(k + ':'));
             const isOtherBlock = otherBlockKeywords.some((k: string) => trimmed.startsWith(k + ':'));
-            
+
             if (isScenario) {
                 currentScenarioLine = i;
                 const matchKeyword = scenarioKeywords.find((k: string) => trimmed.startsWith(k + ':')) || 'Scenario';
                 currentScenarioStartChar = line.indexOf(matchKeyword + ':');
             } else if (isScenarioOutline) {
-                currentScenarioLine = -1; 
+                currentScenarioLine = -1;
             } else if (isOtherBlock) {
                 currentScenarioLine = -1;
             } else if (isExamples) {
@@ -377,22 +482,23 @@ export class GherkinLinter {
                     const matchKeyword = scenarioKeywords.find((k: string) => document.lineAt(currentScenarioLine).text.trim().startsWith(k + ':')) || scenarioKeywords[0] || 'Scenario';
                     const examplesKeyword = examplesKeywords.find((k: string) => trimmed.startsWith(k + ':')) || examplesKeywords[0] || 'Examples';
                     const outlineKeyword = scenarioOutlineKeywords[0] || 'Scenario Outline';
-                    
+
                     const range = new vscode.Range(
                         currentScenarioLine,
                         currentScenarioStartChar,
                         currentScenarioLine,
                         currentScenarioStartChar + matchKeyword.length
                     );
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         `A '${matchKeyword}' cannot have '${examplesKeyword}'. Use '${outlineKeyword}' instead.`,
-                        vscode.DiagnosticSeverity.Error
+                        vscode.DiagnosticSeverity.Error,
+                        'scenario-with-examples',
+                        document.version
                     );
                     diagnostic.source = 'Gherkin Semantic';
-                    diagnostic.code = 'SCENARIO_WITH_EXAMPLES';
                     diagnostics.push(diagnostic);
-                    
+
                     currentScenarioLine = -1;
                 }
             }
@@ -402,15 +508,15 @@ export class GherkinLinter {
     private fallbackCheckMisspelledKeywords(document: vscode.TextDocument, diagnostics: vscode.Diagnostic[], dialect: any) {
         const expectedKeywords = [...dialect.given, ...dialect.when, ...dialect.then, ...dialect.and, ...dialect.but, ...dialect.examples, ...dialect.scenario, ...dialect.scenarioOutline, ...dialect.background, ...dialect.feature, ...dialect.rule].map((k: string) => k.trim());
         const blockKeywords = dialectService.getBlockKeywords(dialect);
-        
+
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i).text;
             const trimmed = line.trim();
             if (!trimmed || trimmed.startsWith('#')) continue;
             if (trimmed.startsWith('|') || trimmed.startsWith('@') || trimmed.startsWith('"""') || trimmed.startsWith("'''")) continue;
-            
+
             const firstWord = trimmed.split(/\s+/)[0];
-            
+
             // If it already exactly matches a valid keyword (with or without colon for blocks), it's either correct or will be flagged by syntax parser.
             if (expectedKeywords.includes(firstWord) || expectedKeywords.some((k: string) => firstWord === k + ':')) {
                 continue;
@@ -429,7 +535,7 @@ export class GherkinLinter {
                     break;
                 }
             }
-            
+
             if (!bestMatch) {
                 let prefixMatch = '';
                 for (const kw of sortedKeywords) {
@@ -446,7 +552,7 @@ export class GherkinLinter {
                         bestMatch = kw;
                     }
                 }
-                
+
                 if (prefixMatch) {
                     bestMatch = prefixMatch;
                 }
@@ -458,16 +564,16 @@ export class GherkinLinter {
                 const endChar = startChar + firstWord.length;
                 const range = new vscode.Range(i, startChar, i, endChar);
                 const isBlockKeyword = blockKeywords.includes(bestMatch);
-                
-                let code = 'MISSPELLED_KEYWORD';
+
+                let code = 'invalid-keyword';
                 let message = '';
                 let suggestedEdit = '';
-                
+
                 const isExactMatch = normalizedTrimmed.startsWith(bestMatch.toLowerCase());
 
                 if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                     if (isBlockKeyword) {
-                        code = 'MISSING_COLON';
+                        code = 'missing-colon';
                         message = `Missing colon (':') after ${bestMatch}`;
                         suggestedEdit = bestMatch + ':';
                     } else {
@@ -487,12 +593,15 @@ export class GherkinLinter {
                 // Check if the syntax error loop ALREADY added an error overlapping this exact range
                 const alreadyHasError = diagnostics.some((d: vscode.Diagnostic) => d.range.intersection(range));
                 if (!alreadyHasError) {
-                    const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
+                    const diagnostic = new RuleDiagnostic(
+                        range,
+                        message,
+                        vscode.DiagnosticSeverity.Error,
+                        code as any,
+                        document.version,
+                        suggestedEdit ? { replacementText: suggestedEdit } : undefined
+                    );
                     diagnostic.source = 'Gherkin Semantic';
-                    diagnostic.code = code;
-                    diagnostic.relatedInformation = [
-                        new vscode.DiagnosticRelatedInformation(new vscode.Location(document.uri, range), suggestedEdit)
-                    ];
                     diagnostics.push(diagnostic);
                 }
             }
@@ -501,11 +610,11 @@ export class GherkinLinter {
 
     private checkDescription(node: any, diagnostics: vscode.Diagnostic[], document: vscode.TextDocument, expectedKeywords: string[], blockKeywords: string[]) {
         if (!node || !node.description) return;
-        
+
         const descLines = node.description.split('\n');
         // node.location.line is 1-indexed. The description usually starts on the next line (0-indexed).
-        let currentLineIdx = node.location.line; 
-        
+        let currentLineIdx = node.location.line;
+
         for (const line of descLines) {
             const trimmed = line.trim();
             if (trimmed) {
@@ -516,13 +625,13 @@ export class GherkinLinter {
                     }
                     currentLineIdx++;
                 }
-                
+
                 if (currentLineIdx >= document.lineCount) {
                     break; // Failsafe
                 }
 
                 const firstWord = trimmed.split(/\s+/)[0];
-                
+
                 let bestMatch = '';
                 let lowestDistance = 999;
                 const normalizedFirst = firstWord.toLowerCase();
@@ -560,17 +669,17 @@ export class GherkinLinter {
                     const firstNonWhitespace = documentLineText.search(/\S/);
                     let startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
                     let endChar = startChar + firstWord.length;
-                    
-                    let code = 'MISSPELLED_KEYWORD';
+
+                    let code = 'invalid-keyword';
                     let message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
                     let suggestedEdit = bestMatch;
-                    
+
                     const isExactMatch = normalizedTrimmed.startsWith(bestMatch.toLowerCase());
                     const isBlockKeyword = blockKeywords.includes(bestMatch);
 
                     if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                         if (isBlockKeyword) {
-                            code = 'MISSING_COLON';
+                            code = 'missing-colon';
                             message = `Missing colon (':') after ${bestMatch}`;
                             suggestedEdit = ':';
                             startChar = endChar;
@@ -579,7 +688,7 @@ export class GherkinLinter {
                                 currentLineIdx++;
                                 continue;
                             } else {
-                                code = 'MISSPELLED_KEYWORD';
+                                code = 'invalid-keyword';
                                 message = `Incorrect casing: '${isExactMatch ? bestMatch.toLowerCase() : firstWord}'. Did you mean '${bestMatch}'?`;
                                 suggestedEdit = bestMatch;
                             }
@@ -588,30 +697,26 @@ export class GherkinLinter {
                         // Typo or prefix
                         if (isBlockKeyword) {
                             // Since it's in the description and a block keyword, it's missing a colon too!
-                            code = 'MISSPELLED_KEYWORD';
+                            code = 'invalid-keyword';
                             message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
                             suggestedEdit = bestMatch + ':';
                         } else {
-                            code = 'MISSPELLED_KEYWORD';
+                            code = 'invalid-keyword';
                             message = `Misspelled or incomplete step keyword: '${firstWord}'. Did you mean '${bestMatch}'?`;
                             suggestedEdit = bestMatch;
                         }
                     }
 
                     const range = new vscode.Range(currentLineIdx, startChar, currentLineIdx, endChar);
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         message,
-                        vscode.DiagnosticSeverity.Error
+                        vscode.DiagnosticSeverity.Error,
+                        code as any,
+                        document.version,
+                        suggestedEdit ? { replacementText: suggestedEdit } : undefined
                     );
                     diagnostic.source = 'Gherkin Semantic';
-                    diagnostic.code = code;
-                    diagnostic.relatedInformation = [
-                        new vscode.DiagnosticRelatedInformation(
-                            new vscode.Location(document.uri, range),
-                            suggestedEdit
-                        )
-                    ];
                     diagnostics.push(diagnostic);
                 }
             }
@@ -623,24 +728,25 @@ export class GherkinLinter {
         const dialect = dialectService.getDialect(document);
         const scenarioKeywords = dialect.scenario.map(k => k.trim());
         const examplesKeywords = dialect.examples.map(k => k.trim());
-        
+
         if (scenario && scenario.keyword && scenarioKeywords.includes(scenario.keyword.trim()) && scenario.examples && scenario.examples.length > 0) {
             const lineIndex = Math.max(0, scenario.location.line - 1);
             const startChar = Math.max(0, scenario.location.column - 1);
             const endChar = startChar + scenario.keyword.length;
-            
+
             const matchKeyword = scenario.keyword.trim();
             const examplesKeyword = examplesKeywords[0] || 'Examples';
             const outlineKeyword = dialect.scenarioOutline[0]?.trim() || 'Scenario Outline';
-            
+
             const range = new vscode.Range(lineIndex, startChar, lineIndex, endChar);
-            const diagnostic = new vscode.Diagnostic(
+            const diagnostic = new RuleDiagnostic(
                 range,
                 `A '${matchKeyword}' cannot have '${examplesKeyword}'. Use '${outlineKeyword}' instead.`,
-                vscode.DiagnosticSeverity.Error
+                vscode.DiagnosticSeverity.Error,
+                'scenario-with-examples',
+                document.version
             );
             diagnostic.source = 'Gherkin Semantic';
-            diagnostic.code = 'SCENARIO_WITH_EXAMPLES';
             diagnostics.push(diagnostic);
         }
     }
@@ -652,10 +758,10 @@ export class GherkinLinter {
         for (const step of steps) {
             const stepText = step.text.trim();
             const keyword = step.keyword ? step.keyword.trim() : '';
-            
+
             let semanticType: 'given' | 'when' | 'then' | 'step' = 'step';
             const dialect = dialectService.getDialect(document);
-            
+
             if (dialect.given.map(k => k.trim()).includes(keyword)) {
                 semanticType = 'given';
             } else if (dialect.when.map(k => k.trim()).includes(keyword)) {
@@ -671,10 +777,10 @@ export class GherkinLinter {
             if (defs.length !== 1) {
                 const lineIndex = Math.max(0, step.location.line - 1);
                 const lineText = document.lineAt(lineIndex).text;
-                
+
                 // Highlight just the step text (after the keyword)
                 let startChar = step.location.column ? Math.max(0, step.location.column - 1) : 0;
-                
+
                 // Adjust start character to skip keyword and following space if possible
                 const textIndex = lineText.indexOf(stepText, startChar);
                 if (textIndex !== -1) {
@@ -685,32 +791,27 @@ export class GherkinLinter {
                 const range = new vscode.Range(lineIndex, startChar, lineIndex, Math.max(startChar + 1, endChar));
 
                 if (defs.length === 0) {
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         `⚠️ Undefined step: "${stepText}"`,
-                        vscode.DiagnosticSeverity.Warning
+                        vscode.DiagnosticSeverity.Warning,
+                        'undefined-step',
+                        document.version,
+                        { stepText, stepKeyword: step.keyword.trim() }
                     );
                     diagnostic.source = 'Gherkin Definition';
-                    diagnostic.code = 'UNDEFINED_STEP';
-                    
-                    // Attach the keyword as related information string for the code action to use
-                    diagnostic.relatedInformation = [
-                        new vscode.DiagnosticRelatedInformation(
-                            new vscode.Location(document.uri, range),
-                            step.keyword.trim()
-                        )
-                    ];
 
                     diagnostics.push(diagnostic);
                 } else if (defs.length > 1) {
                     const patterns = defs.map(d => `'${d.rawPattern}'`).join(', ');
-                    const diagnostic = new vscode.Diagnostic(
+                    const diagnostic = new RuleDiagnostic(
                         range,
                         `⚠️ Ambiguous step: matches multiple definitions (${patterns})`,
-                        vscode.DiagnosticSeverity.Warning
+                        vscode.DiagnosticSeverity.Warning,
+                        'ambiguous-step',
+                        document.version
                     );
                     diagnostic.source = 'Gherkin Definition';
-                    diagnostic.code = 'AMBIGUOUS_STEP';
                     diagnostics.push(diagnostic);
                 }
             }
@@ -722,11 +823,13 @@ export class GherkinLinter {
      */
     public clear(document: vscode.TextDocument) {
         const uriStr = document.uri.toString();
+        this.invalidationQueue.delete(uriStr);
         const pending = this.pendingRequests.get(uriStr);
         if (pending?.timer) {
             clearTimeout(pending.timer);
         }
         this.pendingRequests.delete(uriStr);
+        diagnosticRegistry.delete(document.uri.toString());
         this.diagnosticCollection.delete(document.uri);
     }
 
@@ -741,6 +844,7 @@ export class GherkinLinter {
         }
         this.pendingRequests.clear();
         this.eventBusDisposable?.dispose();
+        diagnosticRegistry.clear();
         this.diagnosticCollection.clear();
         this.diagnosticCollection.dispose();
     }
