@@ -15,7 +15,6 @@ export interface CapabilityStatus {
 export interface BootstrapComponents {
     symbolCache: { ensureInitialized: () => Promise<void> };
     featureCache: { ensureInitialized: () => Promise<void> };
-    usageIndexer: { indexWorkspace: () => Promise<void> };
     workspaceGraph: { initialize: () => Promise<void> };
     impactCodeLensProvider: { refresh: () => void };
     eventBus: {
@@ -38,7 +37,6 @@ export class DeferredBootstrap implements vscode.Disposable {
         ['symbolCache', { id: 'symbolCache', criticality: 'essential', state: 'pending', retryCount: 0 }],
         ['workspaceGraph', { id: 'workspaceGraph', criticality: 'dependent', state: 'pending', retryCount: 0 }],
         ['featureCache', { id: 'featureCache', criticality: 'optional', state: 'pending', retryCount: 0 }],
-        ['usageIndexer', { id: 'usageIndexer', criticality: 'optional', state: 'pending', retryCount: 0 }],
         ['impactCodeLens', { id: 'impactCodeLens', criticality: 'dependent', state: 'pending', retryCount: 0 }]
     ]);
 
@@ -84,8 +82,7 @@ export class DeferredBootstrap implements vscode.Disposable {
                             this.markCancelledOrFailed('impactCodeLens', token, 'Dependency workspaceGraph failed');
                         }
                     }),
-                this.runWithRetry('featureCache', () => this.components.featureCache.ensureInitialized(), token),
-                this.runWithRetry('usageIndexer', () => this.components.usageIndexer.indexWorkspace(), token)
+                this.runWithRetry('featureCache', () => this.components.featureCache.ensureInitialized(), token)
             ];
 
             await Promise.allSettled(initTasks);

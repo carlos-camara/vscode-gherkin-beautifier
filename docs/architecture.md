@@ -52,10 +52,10 @@ To mitigate command injection vulnerabilities and protect users from malicious w
 As the custom formatter receives step events, it emits a `step_start` payload precisely before a Python step function runs. The Test Controller listens to this and dynamically creates a transient text decoration in the active `vscode.TextEditor`. This achieves the real-time "animation" of tests moving down the Gherkin feature file.
 
 ### Context-Aware Completion Ranking
-To provide intelligent Behave step autocomplete locally and deterministically, the extension implements a local `CompletionRankingService` backed by a background `UsageIndexer`.
-1. **UsageIndexer (Transactional Snapshot Model)**: Hooked into the `WorkspaceEventBus`, this indexer lazily scans `.feature` files in the background. It utilizes a **FeatureSnapshot** model that maps term frequency and tag affinity on a per-resource basis. When a file is modified or deleted, the indexer applies an atomic mathematical subtraction of the previous snapshot before adding the new state, guaranteeing that global frequency counters never leak memory or become corrupted over time.
+To provide intelligent Behave step autocomplete locally and deterministically, the extension implements a local `CompletionRankingService` backed by the `WorkspaceGraph`.
+1. **WorkspaceGraph (Transactional Snapshot Model)**: Hooked into the `WorkspaceEventBus`, the graph lazily maps Gherkin steps to their Python `StepDefinition` implementations. It uses a **FeatureSnapshot** model that accurately maps resolved definition frequency and tag affinity on a per-resource basis. When a file is modified or deleted, the graph applies an atomic mathematical subtraction of the previous snapshot before adding the new state, guaranteeing that global frequency counters never leak memory or become corrupted over time.
 2. **LRU Cache Tracking**: When a user accepts a completion, an internal command (`gherkinPowerTools.internal.recordCompletion`) is fired, updating a Least Recently Used (LRU) cache to ensure recently used steps get a high priority boost.
-3. **Deterministic Ranking**: When the user requests autocomplete, the `CompletionRankingService` calculates a score based on LRU presence, active feature context, tag affinity, and semantic string matching. The highest scores are assigned a lexicographical `sortText` (e.g., `000_`) to force VS Code's IntelliSense to present the most relevant steps at the top.
+3. **Deterministic Ranking**: When the user requests autocomplete, the `CompletionRankingService` calculates a score based on LRU presence, active feature context, tag affinity, and semantic string matching against the Python definition. The highest scores are assigned a lexicographical `sortText` (e.g., `000_`) to force VS Code's IntelliSense to present the most relevant steps at the top.
 
 ### Lifecycle & Disposal
 Every service that calls `eventBus.onEvent()` tracks its subscription with an `eventBusDisposable`. When a service is disposed, it automatically unregisters itself from the Event Bus. When the extension deactivates, the Event Bus itself is disposed, severing all active subscriptions and preventing memory leaks.
@@ -145,8 +145,8 @@ sequenceDiagram
 
         par Capability: Symbol Cache
             DeferredBootstrap->>Caches: runWithRetry(symbolCache)
-        and Capability: Usage Indexer
-            DeferredBootstrap->>Caches: runWithRetry(usageIndexer)
+        and Capability: Workspace Graph
+            DeferredBootstrap->>Caches: runWithRetry(workspaceGraph)
         and Capability: Feature Cache
             DeferredBootstrap->>Caches: runWithRetry(featureCache)
         end
@@ -164,7 +164,7 @@ sequenceDiagram
 ### Capability-Based Fault Isolation
 To ensure high availability of critical services (like file watchers), the initialization process is broken down into isolated **Capabilities**.
 - **Essential Capabilities** (e.g., File Watchers, Event Bus): Run synchronously. If they fail, the error is logged, but they don't halt other services.
-- **Optional Capabilities** (e.g., Feature Cache, Usage Indexer): Initialized concurrently. A failure in an optional capability does not affect essential systems.
+- **Optional Capabilities** (e.g., Feature Cache, Workspace Graph): Initialized concurrently. A failure in an optional capability does not affect essential systems.
 - **Dependent Capabilities** (e.g., Workspace Graph): Only execute if their parent (Symbol Cache) initializes successfully.
 
 ### Safety & Idempotency

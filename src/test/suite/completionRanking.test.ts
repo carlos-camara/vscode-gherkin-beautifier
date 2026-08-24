@@ -2,12 +2,19 @@ import * as assert from 'assert';
 import { CompletionRankingService, RankingContext } from '../../completionRanking';
 import { StepDefinition } from '../../cache';
 import * as vscode from 'vscode';
+import { StepDefNode, ScenarioNode } from '../../graph';
 
 suite('Completion Ranking Service Test Suite', () => {
     let service: CompletionRankingService;
+    let mockGraph: any;
 
     setup(() => {
-        service = new CompletionRankingService();
+        mockGraph = {
+            currentGeneration: {
+                getNode: (_id: string) => undefined
+            }
+        };
+        service = new CompletionRankingService(mockGraph as any);
     });
 
     function createDef(pattern: string, type: 'given' | 'when' | 'then' | 'step'): StepDefinition {
@@ -112,7 +119,7 @@ suite('Completion Ranking Service Test Suite', () => {
         assert.strictEqual(scoreBoosted - scoreBase, 20, 'Feature context boost should be 20 points');
     });
 
-    test('Global frequency from UsageIndexer boosts score', () => {
+    test('Global frequency from WorkspaceGraph boosts score', () => {
         const def = createDef('I login', 'given');
         def.regex = /I login/;
         const context: RankingContext = {
@@ -122,18 +129,24 @@ suite('Completion Ranking Service Test Suite', () => {
             currentFeatureStepTexts: []
         };
         
-        // Mock getFrequency
-        service.usageIndexer.getFrequency = () => 5;
+        // Mock getFrequency via graph
+        mockGraph.currentGeneration.getNode = (_id: string) => {
+            return {
+                type: 'StepDefinition',
+                usages: ['u1', 'u2', 'u3', 'u4', 'u5']
+            } as StepDefNode;
+        };
         
         const scoreBoosted = service.scoreItem(def, context);
-        service.usageIndexer.getFrequency = () => 0; // reset
+        
+        mockGraph.currentGeneration.getNode = () => undefined; // reset
         const scoreBase = service.scoreItem(def, context);
 
         assert.ok(scoreBoosted > scoreBase, 'Global frequency should boost score');
         assert.strictEqual(scoreBoosted - scoreBase, 10, 'Frequency 5 should give 10 points max boost');
     });
 
-    test('Tag affinity from UsageIndexer boosts score', () => {
+    test('Tag affinity from WorkspaceGraph boosts score', () => {
         const def = createDef('I login', 'given');
         def.regex = /I login/;
         const context: RankingContext = {
@@ -143,161 +156,29 @@ suite('Completion Ranking Service Test Suite', () => {
             currentFeatureStepTexts: []
         };
         
-        // Mock getTagAffinity
-        service.usageIndexer.getTagAffinity = () => 2;
+        // Mock getTagAffinity via graph
+        mockGraph.currentGeneration.getNode = (id: string) => {
+            if (id.includes('test.py')) {
+                return {
+                    type: 'StepDefinition',
+                    usages: ['u1', 'u2'] // 2 usages
+                } as StepDefNode;
+            }
+            if (id === 'u1') return { type: 'Step', parent: 's1' };
+            if (id === 'u2') return { type: 'Step', parent: 's2' };
+            if (id === 's1') return { type: 'Scenario', tags: ['@ui'] } as ScenarioNode;
+            if (id === 's2') return { type: 'Scenario', tags: ['@ui'] } as ScenarioNode;
+            return undefined;
+        };
         
-        const scoreBoosted = service.scoreItem(def, context);
-        service.usageIndexer.getTagAffinity = () => 0; // reset
+        const score = service.scoreItem(def, context);
+        
+        mockGraph.currentGeneration.getNode = () => undefined; // reset
         const scoreBase = service.scoreItem(def, context);
 
-        assert.ok(scoreBoosted > scoreBase, 'Tag affinity should boost score');
-        assert.strictEqual(scoreBoosted - scoreBase, 10, 'Affinity 2 should give 10 points');
+        assert.ok(score > scoreBase, 'Tag affinity should boost score');
+        assert.strictEqual(score, 24, 'Affinity 2 should give 10 points + 4 frequency points + 10 semantic points = 24');
     });
 
-    suite('UsageIndexer incremental snapshot model', () => {
-        let indexer: any;
-        let baseUri: vscode.Uri;
-        
-        setup(() => {
-            indexer = service.usageIndexer as any;
-            baseUri = vscode.workspace.workspaceFolders![0].uri;
-        });
 
-        async function writeAndIndex(filename: string, content: string) {
-            const uri = vscode.Uri.joinPath(baseUri, filename);
-            await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf8'));
-            await indexer.indexFile(uri);
-            return uri;
-        }
-
-        async function removeFile(uri: vscode.Uri) {
-            const { ResourceIdentity } = require('../../utils/resourceIdentity');
-            indexer.removeSnapshot(ResourceIdentity.getCanonicalUriString(uri));
-            try {
-                await vscode.workspace.fs.delete(uri);
-            } catch (e) {}
-        }
-
-        test('create, change, no-op change, delete, and invariant', async () => {
-            const filename = 'incremental.feature';
-            
-            // 1. Create
-            const contentV1 = `
-@ui
-Feature: V1
-    Scenario: one
-        Given I do A
-        When I do B
-            `;
-            const uri = await writeAndIndex(filename, contentV1);
-            
-            assert.strictEqual(indexer.getFrequency('I do A'), 1);
-            assert.strictEqual(indexer.getFrequency('I do B'), 1);
-            assert.strictEqual(indexer.getTagAffinity('I do A', ['@ui']), 1);
-
-            // 2. Change (Add step, change tag)
-            const contentV2 = `
-@api
-Feature: V2
-    Scenario: one
-        Given I do A
-        When I do B
-        Then I do C
-            `;
-            await writeAndIndex(filename, contentV2);
-            
-            // Frequencies updated, B and A stay 1, C becomes 1
-            assert.strictEqual(indexer.getFrequency('I do A'), 1);
-            assert.strictEqual(indexer.getFrequency('I do C'), 1);
-            // Tags updated, no longer @ui
-            assert.strictEqual(indexer.getTagAffinity('I do A', ['@ui']), 0);
-            assert.strictEqual(indexer.getTagAffinity('I do A', ['@api']), 1);
-
-            // 3. No-op change (Frequencies should not duplicate)
-            await writeAndIndex(filename, contentV2);
-            assert.strictEqual(indexer.getFrequency('I do A'), 1, 'Frequency should remain 1 after no-op save');
-
-            // 4. Scenario removal & Tag removal
-            const contentV3 = `
-Feature: V3
-    Scenario: one
-        Given I do A
-            `;
-            await writeAndIndex(filename, contentV3);
-            
-            assert.strictEqual(indexer.getFrequency('I do A'), 1);
-            assert.strictEqual(indexer.getFrequency('I do B'), 0, 'B should be gone');
-            assert.strictEqual(indexer.getFrequency('I do C'), 0, 'C should be gone');
-            assert.strictEqual(indexer.getTagAffinity('I do A', ['@api']), 0, 'Tag affinity removed');
-
-            // 5. Delete
-            await removeFile(uri);
-            assert.strictEqual(indexer.getFrequency('I do A'), 0, 'All frequencies should be 0 after delete');
-
-            // 6. Invariant test: incremental result == clean full rebuild result
-            const contentFinal1 = `Feature: F1\nScenario: S1\nGiven I do A`;
-            const contentFinal2 = `Feature: F2\nScenario: S2\nGiven I do A\nWhen I do B`;
-            
-            // Run messy incremental operations
-            const uri1 = await writeAndIndex('f1.feature', contentFinal1);
-            const uri2 = await writeAndIndex('f2.feature', contentFinal2);
-            await writeAndIndex('f1.feature', contentFinal1 + '\nAnd I do X');
-            await writeAndIndex('f1.feature', contentFinal1); // Back to final
-            await removeFile(uri2);
-            const uri2_new = await writeAndIndex('f2_renamed.feature', contentFinal2); // Rename
-            
-            const incFreqA = indexer.getFrequency('I do A');
-            const incFreqB = indexer.getFrequency('I do B');
-            
-            // Clean rebuild
-            await indexer.reindexAll();
-            const cleanFreqA = indexer.getFrequency('I do A');
-            const cleanFreqB = indexer.getFrequency('I do B');
-            
-            assert.strictEqual(incFreqA, cleanFreqA, 'Invariant failed for A');
-            assert.strictEqual(incFreqB, cleanFreqB, 'Invariant failed for B');
-
-            await removeFile(uri1);
-            await removeFile(uri2_new);
-        });
-
-        test('malformed edit followed by repair', async () => {
-            const filename = 'malformed.feature';
-            const uri = await writeAndIndex(filename, `Feature: OK\nScenario: S\nGiven valid step`);
-            
-            assert.strictEqual(indexer.getFrequency('valid step'), 1);
-
-            // Malformed edit (Parsing failure must not silently double-count data, and keeps last known-good)
-            await writeAndIndex(filename, `Feature OK Scenario S Given valid step`); // invalid Gherkin
-            
-            assert.strictEqual(indexer.getFrequency('valid step'), 1, 'Should retain last known good snapshot');
-
-            // Repair
-            await writeAndIndex(filename, `Feature: OK\nScenario: S\nGiven valid step repaired`);
-            assert.strictEqual(indexer.getFrequency('valid step'), 0);
-            assert.strictEqual(indexer.getFrequency('valid step repaired'), 1);
-
-            await removeFile(uri);
-        });
-
-        test('branch-switch event burst', async () => {
-            // Simulates multiple rapid changes to multiple files
-            const uri1 = await writeAndIndex('burst1.feature', `Feature: B1\nScenario: S\nGiven step one`);
-            const uri2 = await writeAndIndex('burst2.feature', `Feature: B2\nScenario: S\nGiven step two`);
-            
-            // Burst of events (same files rewritten)
-            const p1 = indexer.indexFile(uri1);
-            const p2 = indexer.indexFile(uri2);
-            const p3 = indexer.indexFile(uri1);
-            const p4 = indexer.indexFile(uri2);
-            
-            await Promise.all([p1, p2, p3, p4]);
-
-            assert.strictEqual(indexer.getFrequency('step one'), 1, 'Burst should not duplicate counts');
-            assert.strictEqual(indexer.getFrequency('step two'), 1, 'Burst should not duplicate counts');
-
-            await removeFile(uri1);
-            await removeFile(uri2);
-        });
-    });
 });

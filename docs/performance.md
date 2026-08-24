@@ -15,7 +15,7 @@ If you open a Gherkin document in a project that does not use Python Behave, Ghe
 When Behave is detected, the extension builds a robust index to provide navigation and IntelliSense.
 
 - **Deferred Indexing**: Heavy workspace scanning is offloaded to background threads and does not block the VS Code Extension Host. Editor features (like formatting and syntax highlighting) are immediately available.
-- **Fault-Isolated Capabilities**: Core systems (like Symbol Cache and Usage Indexer) boot up as isolated capabilities. If an optional cache takes too long or fails to read from the disk due to locking, it automatically retries with exponential backoff without halting the essential file-watching systems, ensuring immediate responsiveness.
+- **Fault-Isolated Capabilities**: Core systems (like Symbol Cache and Workspace Graph) boot up as isolated capabilities. If an optional cache takes too long or fails to read from the disk due to locking, it automatically retries with exponential backoff without halting the essential file-watching systems, ensuring immediate responsiveness.
 - **Debounced Watchers**: File system changes are debounced. Rapid modifications during saving or git branch switches will not flood the system with redundant re-indexing events.
 - **Batched Linter Invalidation**: The Linter engine aggregates file events (`documentOpened`, `documentChanged`, `stepDefinitionsUpdated`) into a shared, debounced invalidation queue.
   This buffers event spikes and executes validation in concurrent batches governed by a strict concurrency limit (maximum 5 concurrent parses).

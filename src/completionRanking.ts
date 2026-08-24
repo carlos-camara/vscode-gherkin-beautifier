@@ -1,10 +1,5 @@
-import * as vscode from 'vscode';
-import { parseGherkin } from './parser';
-import { StepDefinition } from './cache';
-import type { Step } from '@cucumber/messages';
-import { WorkspaceEventBus } from './eventBus';
-import { featureDiscoveryService } from './featureDiscovery';
 
+import { StepDefinition } from './cache';
 import { ResourceIdentity } from './utils/resourceIdentity';
 
 export interface RankingContext {
@@ -14,207 +9,13 @@ export interface RankingContext {
     currentFeatureStepTexts: string[];
 }
 
-export interface FeatureSnapshot {
-    uri: string;
-    status: 'success' | 'failure';
-    stepFrequencies: Map<string, number>;
-    stepTagAffinities: Map<string, Set<string>>;
-}
-
-export class UsageIndexer {
-    private globalStepFrequencies = new Map<string, number>();
-    private globalStepTagAffinities = new Map<string, Map<string, number>>();
-    private snapshots = new Map<string, FeatureSnapshot>();
-    private isIndexed = false;
-    private eventBusDisposable?: vscode.Disposable;
-
-    public setEventBus(eventBus: WorkspaceEventBus) {
-        this.eventBusDisposable?.dispose();
-        this.eventBusDisposable = eventBus.onEvent(e => {
-            if (e.type === 'featureFileChanged' || e.type === 'featureFileCreated') {
-                this.indexFile(e.uri);
-            } else if (e.type === 'featureFileDeleted') {
-                this.removeSnapshot(ResourceIdentity.getCanonicalUriString(e.uri));
-            } else if (e.type === 'configurationChanged') {
-                this.reindexAll();
-            }
-        });
-    }
-
-    private async reindexAll() {
-        this.snapshots.clear();
-        this.globalStepFrequencies.clear();
-        this.globalStepTagAffinities.clear();
-        this.isIndexed = false;
-        await this.indexWorkspace();
-    }
-
-    public async indexWorkspace() {
-        if (this.isIndexed) return;
-        this.isIndexed = true;
-        
-        try {
-            const files = await featureDiscoveryService.getFeatureFiles();
-            await Promise.all(files.map(uri => this.indexFile(uri)));
-        } catch (e) {
-            console.error('Failed to index workspace for completion ranking', e);
-        }
-    }
-
-    private removeSnapshot(canonicalUri: string) {
-        const oldSnapshot = this.snapshots.get(canonicalUri);
-        if (!oldSnapshot) return;
-
-        // Subtract frequencies
-        for (const [text, freq] of oldSnapshot.stepFrequencies.entries()) {
-            const current = this.globalStepFrequencies.get(text) || 0;
-            const next = current - freq;
-            if (next <= 0) {
-                this.globalStepFrequencies.delete(text);
-            } else {
-                this.globalStepFrequencies.set(text, next);
-            }
-        }
-
-        // Subtract tag affinities
-        for (const [text, tags] of oldSnapshot.stepTagAffinities.entries()) {
-            const tagMap = this.globalStepTagAffinities.get(text);
-            if (tagMap) {
-                for (const tag of tags) {
-                    const currentCount = tagMap.get(tag) || 0;
-                    const nextCount = currentCount - 1;
-                    if (nextCount <= 0) {
-                        tagMap.delete(tag);
-                    } else {
-                        tagMap.set(tag, nextCount);
-                    }
-                }
-                if (tagMap.size === 0) {
-                    this.globalStepTagAffinities.delete(text);
-                }
-            }
-        }
-
-        this.snapshots.delete(canonicalUri);
-    }
-
-    private applySnapshot(newSnapshot: FeatureSnapshot) {
-        this.removeSnapshot(newSnapshot.uri);
-
-        // Add frequencies
-        for (const [text, freq] of newSnapshot.stepFrequencies.entries()) {
-            const current = this.globalStepFrequencies.get(text) || 0;
-            this.globalStepFrequencies.set(text, current + freq);
-        }
-
-        // Add tag affinities
-        for (const [text, tags] of newSnapshot.stepTagAffinities.entries()) {
-            let tagMap = this.globalStepTagAffinities.get(text);
-            if (!tagMap) {
-                tagMap = new Map<string, number>();
-                this.globalStepTagAffinities.set(text, tagMap);
-            }
-            for (const tag of tags) {
-                const currentCount = tagMap.get(tag) || 0;
-                tagMap.set(tag, currentCount + 1);
-            }
-        }
-
-        this.snapshots.set(newSnapshot.uri, newSnapshot);
-    }
-
-    // Exported for invariant testing
-    public async indexFile(uri: vscode.Uri) {
-        const canonicalUri = ResourceIdentity.getCanonicalUriString(uri);
-        
-        try {
-            let content = '';
-            const openDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
-            if (openDoc) {
-                content = openDoc.getText();
-            } else {
-                const rawBytes = await vscode.workspace.fs.readFile(uri);
-                content = new TextDecoder('utf8').decode(rawBytes);
-            }
-
-            const { document } = await parseGherkin(content);
-
-            if (!document || !document.feature) {
-                return; // Parsing failure: keep last known good snapshot
-            }
-            
-            const featureTags = document.feature.tags.map(t => t.name);
-            const snapshot: FeatureSnapshot = {
-                uri: canonicalUri,
-                status: 'success',
-                stepFrequencies: new Map(),
-                stepTagAffinities: new Map()
-            };
-
-            const processSteps = (steps: readonly Step[], tags: string[]) => {
-                for (const step of steps) {
-                    const text = step.text.trim();
-                    snapshot.stepFrequencies.set(text, (snapshot.stepFrequencies.get(text) || 0) + 1);
-                    
-                    if (!snapshot.stepTagAffinities.has(text)) {
-                        snapshot.stepTagAffinities.set(text, new Set());
-                    }
-                    const affinitySet = snapshot.stepTagAffinities.get(text)!;
-                    for (const t of tags) {
-                        affinitySet.add(t);
-                    }
-                }
-            };
-
-            for (const child of document.feature.children) {
-                if (child.background) {
-                    processSteps(child.background.steps, featureTags);
-                } else if (child.scenario) {
-                    const scenarioTags = [...featureTags, ...child.scenario.tags.map(t => t.name)];
-                    processSteps(child.scenario.steps, scenarioTags);
-                } else if (child.rule) {
-                    const ruleTags = [...featureTags, ...child.rule.tags.map(t => t.name)];
-                    for (const ruleChild of child.rule.children) {
-                        if (ruleChild.background) {
-                            processSteps(ruleChild.background.steps, ruleTags);
-                        } else if (ruleChild.scenario) {
-                            const scenarioTags = [...ruleTags, ...ruleChild.scenario.tags.map(t => t.name)];
-                            processSteps(ruleChild.scenario.steps, scenarioTags);
-                        }
-                    }
-                }
-            }
-
-            this.applySnapshot(snapshot);
-        } catch (e) {
-            // ignore indexing failures
-        }
-    }
-
-    public getFrequency(stepText: string): number {
-        return this.globalStepFrequencies.get(stepText) || 0;
-    }
-
-    public getTagAffinity(stepText: string, activeTags: string[]): number {
-        const tagMap = this.globalStepTagAffinities.get(stepText);
-        if (!tagMap || activeTags.length === 0) return 0;
-        
-        let matchCount = 0;
-        for (const tag of activeTags) {
-            if (tagMap.has(tag)) matchCount++;
-        }
-        return matchCount;
-    }
-
-    public dispose() {
-        this.eventBusDisposable?.dispose();
-    }
-}
+import { WorkspaceGraph, StepDefNode, ScenarioNode } from './graph';
 
 export class CompletionRankingService {
     private recentlyUsed: string[] = [];
     private readonly MAX_RECENT = 20;
-    public usageIndexer = new UsageIndexer();
+    
+    constructor(private workspaceGraph: WorkspaceGraph) {}
 
     public recordCompletion(pattern: string) {
         // Remove if it exists
@@ -247,11 +48,10 @@ export class CompletionRankingService {
             score += Math.max(1, 30 - recentIndex * 2);
         }
 
-        // To match against the indexer and current document steps, we need to strip regex groups from the raw pattern.
+        // To match against the current document steps, we need to strip regex groups from the raw pattern.
         // A simple approximation is just checking if any step text matches the pattern's regex.
         let isUsedInFeature = false;
-        let globalFrequency = 0;
-
+        
         if (def.regex) {
             // Check Current Feature (20 points)
             for (const text of context.currentFeatureStepTexts) {
@@ -260,19 +60,50 @@ export class CompletionRankingService {
                     break;
                 }
             }
-
-            // Estimate global usage and tag affinity by testing the known step texts in the indexer
-            // This could be slow if there are thousands of unique steps, but usually it's bounded.
-            // Alternatively, since this runs on completion, we can sample or bound the search.
-            // For now, we do a quick check against the exact pattern (this is a heuristic).
-            // A perfect implementation would pre-map step texts to definitions.
-            globalFrequency = this.usageIndexer.getFrequency(pattern); 
-            // In a real matcher, the indexer stores exact literal text, while `pattern` is regex.
-            // To bridge this deterministically without heavy regex loop, we can just check if the pattern string is directly found or used as-is.
         }
 
         if (isUsedInFeature) {
             score += 20;
+        }
+
+        // Calculate global frequency and tag affinity dynamically from the graph
+        let globalFrequency = 0;
+        let tagAffinity = 0;
+
+        const defUriStr = ResourceIdentity.getCanonicalUriString(def.uri);
+        const defId = `${defUriStr}:${def.decoratorRange.start.line}`;
+        const defNode = this.workspaceGraph.currentGeneration.getNode(defId) as StepDefNode | undefined;
+
+        if (defNode) {
+            globalFrequency = defNode.usages.length;
+
+            if (context.currentTags.length > 0) {
+                // To calculate tag affinity, we evaluate the scenario tags for every usage
+                const activeTagsSet = new Set(context.currentTags);
+                for (const usageId of defNode.usages) {
+                    let currentId: string | undefined = usageId;
+                    while (currentId) {
+                        const node = this.workspaceGraph.currentGeneration.getNode(currentId);
+                        if (!node) break;
+                        if (node.type === 'Scenario') {
+                            const scNode = node as ScenarioNode;
+                            let matches = false;
+                            for (const t of scNode.tags) {
+                                if (activeTagsSet.has(t)) {
+                                    tagAffinity++;
+                                    matches = true;
+                                }
+                            }
+                            // Only count each usage once towards affinity, even if multiple tags match
+                            if (matches) break;
+                        } else if (node.type === 'Background') {
+                            currentId = (node as any).parent;
+                            continue;
+                        }
+                        currentId = (node as any).parent;
+                    }
+                }
+            }
         }
 
         // Global Frequency (up to 10 points)
@@ -281,9 +112,6 @@ export class CompletionRankingService {
             score += Math.min(10, globalFrequency * 2);
         }
 
-        // Tag Affinity (up to 15 points)
-        // If the pattern is directly associated with current tags
-        const tagAffinity = this.usageIndexer.getTagAffinity(pattern, context.currentTags);
         if (tagAffinity > 0) {
             score += Math.min(15, tagAffinity * 5);
         }
