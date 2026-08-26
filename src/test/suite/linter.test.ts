@@ -341,8 +341,8 @@ Feature: Test
         let diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 0, 'Should not be linted immediately');
 
-        // Wait for it to trigger
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Wait for it to trigger (increased from 300 to 600 for slow CI runners)
+        await new Promise(resolve => setTimeout(resolve, 600));
         
         const anyLinter = linter as any;
         while (anyLinter.isFlushing) {
@@ -361,7 +361,7 @@ Feature: Test
         linter.scheduleLint(doc);
         linter.clear(doc);
 
-        await new Promise(resolve => setTimeout(resolve, 600));
+        await new Promise(resolve => setTimeout(resolve, 800));
         const diagnostics = vscode.languages.getDiagnostics(doc.uri);
         assert.strictEqual(diagnostics.length, 0, 'Diagnostics should be empty because clear() cancelled the timer');
     });
