@@ -613,7 +613,21 @@ export class GherkinLinter {
                             code = 'invalid-keyword';
                             const isExamplesAlias = dialect?.examples?.includes(bestMatch);
                             if (isExamplesAlias) {
-                                const scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                let scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                if (dialect?.scenario) {
+                                    const similar = dialect.scenario.find((k: string) => 
+                                        bestMatch.toLowerCase().startsWith(k.toLowerCase()) || 
+                                        k.toLowerCase().startsWith(bestMatch.toLowerCase().replace(/s$/, ''))
+                                    );
+                                    if (similar) {
+                                        scenarioKeyword = similar;
+                                    } else {
+                                        const notExample = dialect.scenario.find((k: string) => !['Example', 'Ejemplo'].includes(k));
+                                        if (notExample) {
+                                            scenarioKeyword = notExample;
+                                        }
+                                    }
+                                }
                                 message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
                                 suggestedEdit = scenarioKeyword + ':';
                             } else {
@@ -734,7 +748,21 @@ export class GherkinLinter {
                                 code = 'invalid-keyword';
                                 const isExamplesAlias = dialect?.examples?.includes(bestMatch);
                                 if (isExamplesAlias) {
-                                    const scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                    let scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                    if (dialect?.scenario) {
+                                        const similar = dialect.scenario.find((k: string) => 
+                                            bestMatch.toLowerCase().startsWith(k.toLowerCase()) || 
+                                            k.toLowerCase().startsWith(bestMatch.toLowerCase().replace(/s$/, ''))
+                                        );
+                                        if (similar) {
+                                            scenarioKeyword = similar;
+                                        } else {
+                                            const notExample = dialect.scenario.find((k: string) => !['Example', 'Ejemplo'].includes(k));
+                                            if (notExample) {
+                                                scenarioKeyword = notExample;
+                                            }
+                                        }
+                                    }
                                     message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
                                     suggestedEdit = scenarioKeyword + ':';
                                     startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
