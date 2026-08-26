@@ -51,7 +51,10 @@ Autocomplete suggestions intelligently adapt based on your cursor's context:
 1. **Context-Aware Keywords**: Suggests `Given`, `When`, `Then` based on the previous step's semantic type.
 2. **Context-Aware Step Discovery**: Suggests only step definitions that match the current semantic keyword, drastically reducing noise.
 3. **Lexicographical Ranking**: Autocomplete utilizes a strict 5-tier semantic ranking model. Exact text matches (Tier 1) and semantic matches (Tier 2) will mathematically outrank steps based merely on popularity (Tier 5) to guarantee the best contextual result.
-4. **Robust Regex Snippet Generation**: When a complex `RegExp` Behave step is discovered, the engine intelligently extracts capture groups (`(?P<name>...)`), optionals, and character classes into tab-stoppable Snippet placeholders (e.g. `${1:name}`). Every generated snippet is strictly validated against the original `RegExp` to prevent invalid syntaxes. Unsupported constructs fall back cleanly to a safe pattern preview.
+4. **Robust Regex Snippet Generation**: When a complex `RegExp` Behave step is discovered, the engine intelligently
+   extracts capture groups (`(?P<name>...)`), optionals, and character classes into tab-stoppable Snippet placeholders
+   (e.g. `${1:name}`). Every generated snippet is strictly validated against the original `RegExp` to prevent invalid
+   syntaxes. Unsupported constructs fall back cleanly to a safe pattern preview.
 
 - **Tier 1 (Text Compatibility)**: Exact text matches or token prefixes to what you've typed are strictly prioritized.
 - **Tier 2 (Semantic Compatibility)**: Steps that precisely match your Gherkin keyword (`Given`/`When`/`Then`) are prioritized over generic `@step` definitions.
@@ -63,7 +66,11 @@ Autocomplete suggestions intelligently adapt based on your cursor's context:
 The interactive IntelliSense engine uses a specialized `CompletionContextCache` to fetch semantic tags and local step texts directly from the memoized AST. Subsequent completions fetch this context in `~0.0004ms`, rendering the autocomplete engine completely independent of file size.
 
 #### Stable Step Definition Identity
-To ensure accurate usage tracking and completion ranking, the engine uses a deterministic **Step Definition Identity** (`StepDefinitionId`). Unlike simpler tools that only index the raw regex pattern, Gherkin PowerTools calculates a unique canonical identity for every step based on its semantic type, matcher type, normalized pattern, file location, and function name. This guarantees that duplicate patterns across different files do not collide, providing 100% accurate blast-radius impact analysis and autocomplete ranking even during major refactors.
+To ensure accurate usage tracking and completion ranking, the engine uses a deterministic **Step Definition Identity**
+(`StepDefinitionId`). Unlike simpler tools that only index the raw regex pattern, Gherkin PowerTools calculates a
+unique canonical identity for every step based on its semantic type, matcher type, normalized pattern, file location,
+and function name. This guarantees that duplicate patterns across different files do not collide, providing 100%
+accurate blast-radius impact analysis and autocomplete ranking even during major refactors.
 
 #### Ambiguous Step Grouping
 If your project contains identical step definitions (ambiguous steps), Gherkin PowerTools automatically groups them in the Autocomplete list to prevent cluttering the menu with identical duplicates.
@@ -82,7 +89,10 @@ Source file paths inside Hover, Autocomplete documentation, Impact Analysis Quic
 ### Scenario Outline Parameters
 If you are inside a `Scenario Outline` table, typing `<` inside a step will automatically prompt you with the column headers from your `Examples:` table.
 
-This feature natively parses the Gherkin Abstract Syntax Tree (AST), which guarantees 100% accuracy for escaped pipes (`\\|`), localized Gherkin dialects, and correctly merges deduplicated headers across multiple `Examples:` blocks within the same scenario. If your document is temporarily malformed while typing, it automatically falls back to an instantaneous text scanner to keep suggestions perfectly fluid.
+This feature natively parses the Gherkin Abstract Syntax Tree (AST), which guarantees 100% accuracy for escaped pipes
+(`\\|`), localized Gherkin dialects, and correctly merges deduplicated headers across multiple `Examples:` blocks
+within the same scenario. If your document is temporarily malformed while typing, it automatically falls back to an
+instantaneous text scanner to keep suggestions perfectly fluid.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline-completion.gif" alt="Autocomplete suggesting Examples table column headers" width="600" height="340" />

@@ -64,7 +64,13 @@ To provide intelligent Behave step autocomplete locally and deterministically, t
    - **Tier 5 (Learned Signals)**: Evaluates global usage counts across the workspace and LRU (Least Recently Used) cache presence.
    The resulting tier mapping (e.g., `00-00-01-02-99-pattern`) is assigned to the `sortText` property, forcing VS Code's IntelliSense to present the most relevant steps at the top without floating-point arithmetic conflicts.
 
-4. **Hot-Path Context Bounding (`CompletionContextCache`)**: To eliminate `O(N)` regex scanning of large documents during the interactive IntelliSense hot-path, the completion engine employs a strict `CompletionContextCache`. On the first completion request for a document version, it extracts semantic tags and local step texts directly from the memoized `AstRepository`. It caches this `CompletionContextSnapshot` bound to the document version. Subsequent keystrokes fetch this context in `O(1)` time (~0.0004ms), rendering the autocomplete engine completely independent of file size, even on 10,000+ line documents. It guarantees correctness by falling back to text-based regex if the AST is severely malformed.
+4. **Hot-Path Context Bounding (`CompletionContextCache`)**: To eliminate `O(N)` regex scanning of large documents
+   during the interactive IntelliSense hot-path, the completion engine employs a strict `CompletionContextCache`.
+   On the first completion request for a document version, it extracts semantic tags and local step texts directly
+   from the memoized `AstRepository`. It caches this `CompletionContextSnapshot` bound to the document version.
+   Subsequent keystrokes fetch this context in `O(1)` time (~0.0004ms), rendering the autocomplete engine completely
+   independent of file size, even on 10,000+ line documents. It guarantees correctness by falling back to text-based
+   regex if the AST is severely malformed.
 
 ### Lifecycle & Disposal
 Every service that calls `eventBus.onEvent()` tracks its subscription with an `eventBusDisposable`. When a service is disposed, it automatically unregisters itself from the Event Bus. When the extension deactivates, the Event Bus itself is disposed, severing all active subscriptions and preventing memory leaks.
@@ -221,7 +227,12 @@ To prevent race conditions during heavy background indexing and ensure dependent
 ### How the Graph Works
 1. **Incremental, Event-Driven Construction:** Subscribes to the `WorkspaceEventBus`. When a Gherkin document or Python step file is changed, the graph updates only the affected nodes via `executeTransaction`.
 2. **Zero-Overhead Parsing:** Instead of re-parsing text, it natively consumes the memoized AST from the `AstRepository` and the pre-indexed symbols from the `SymbolCache`.
-3. **Semantic Mapping & Stable Identity:** The graph establishes bi-directional edges between Gherkin steps and Python step definitions (`StepNode` <-> `StepDefNode`). It utilizes a deterministic **Step Definition Identity** (`StepDefinitionId`) built from the semantic type, matcher type, normalized pattern, relative URI, and function name. This stable contract prevents node collisions when distinct functions share the same matcher pattern, ensuring perfectly accurate `StepDefNode` indexing. Crucially, it also tracks `semanticType` (Given/When/Then) context for continuation keywords (`And`, `But`), preventing ambiguous step errors.
+3. **Semantic Mapping & Stable Identity:** The graph establishes bi-directional edges between Gherkin steps and
+   Python step definitions (`StepNode` <-> `StepDefNode`). It utilizes a deterministic **Step Definition Identity**
+   (`StepDefinitionId`) built from the semantic type, matcher type, normalized pattern, relative URI, and function name.
+   This stable contract prevents node collisions when distinct functions share the same matcher pattern, ensuring perfectly
+   accurate `StepDefNode` indexing. Crucially, it also tracks `semanticType` (Given/When/Then) context for continuation
+   keywords (`And`, `But`), preventing ambiguous step errors.
 4. **O(1) Queries & Known Mutation Limits:** Powers ultra-fast operations like `getUsages`, `getReferences`, `getImpactedScenarios`, and `getDuplicateImplementations` without iterating over regex patterns on every hover or go-to-definition request.
    Algorithmic optimizations using the robust `StepDefinitionId` mapping have eliminated previous O(N²) bottlenecks during full-workspace regex re-evaluations, scaling efficiently even in workspaces with 5,000+ steps.
 5. **Dashboard Webviews:** The graph directly powers the Gherkin Health Dashboard. The backend queries the graph for complexity metrics, tag distributions, unused, duplicated, and ambiguous nodes, serializes them into a JSON payload, and injects them into an HTML Webview.
