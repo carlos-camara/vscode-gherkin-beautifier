@@ -96,6 +96,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Explain Completion Ranking
+- **Identifier**: `gherkinPowerTools.diagnostics.explainCompletionRanking`
+- **Where it appears**: Command Palette.
+- **Required context**: The `gherkinPowerTools.diagnostics.metricsEnabled` setting must be enabled, and the editor must have focus in a Gherkin document where completions were recently requested.
+- **Input**: None.
+- **Result**: Opens a QuickPick menu detailing the latest semantic and historical factors (e.g., text match, tag affinity, historical usage) that influenced the autocomplete suggestions, helping developers understand why a specific step was ranked higher than another.
+- **Default shortcut**: None.
+
+---
+
 ## Export History as JSON
 - **Identifier**: `gherkinPowerTools.analytics.exportHistory`
 - **Where it appears**: Command Palette.

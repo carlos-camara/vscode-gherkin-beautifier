@@ -30,7 +30,8 @@ export interface RankingScore {
     semanticMatch: SemanticMatchQuality;
     matcherQuality: number;
     localContext: number;
-    learnedSignals: number;
+    historicalUsage: number;
+    tagAffinity: number;
     tieBreaker: string;
 }
 
@@ -39,7 +40,7 @@ export class CompletionRankingService {
     private recentlyUsed: string[] = [];
     private readonly MAX_RECENT = 20;
     private readonly STORAGE_KEY = 'gherkin-powertools.recentCompletions';
-    
+
     constructor(
         private workspaceGraph: WorkspaceGraph,
         private memento?: vscode.Memento
@@ -61,11 +62,11 @@ export class CompletionRankingService {
                 migrated.push(item);
                 continue;
             }
-            
+
             // Old rawPattern: try to migrate by querying the graph
             // Best effort: find definitions with this pattern
             const matches = this.workspaceGraph.currentGeneration.getAllStepDefNodes().filter((n: any) => n.pattern === item);
-            
+
             // If exactly one match, safely migrate. If ambiguous (multiple) or orphaned (0), discard.
             if (matches.length === 1) {
                 migrated.push(matches[0].id);
@@ -74,12 +75,19 @@ export class CompletionRankingService {
         return migrated;
     }
 
-    public recordCompletion(id: string) {
-        this.recentlyUsed = this.recentlyUsed.filter(p => p !== id);
-        this.recentlyUsed.unshift(id);
-        if (this.recentlyUsed.length > this.MAX_RECENT) {
-            this.recentlyUsed.pop();
+    public recordCompletion(ids: string | string[]) {
+        const idArray = Array.isArray(ids) ? ids : [ids];
+
+        for (const id of idArray) {
+            this.recentlyUsed = this.recentlyUsed.filter(p => p !== id);
+            this.recentlyUsed.unshift(id);
         }
+
+        // Trim back to MAX_RECENT
+        if (this.recentlyUsed.length > this.MAX_RECENT) {
+            this.recentlyUsed = this.recentlyUsed.slice(0, this.MAX_RECENT);
+        }
+
         if (this.memento) {
             this.memento.update(this.STORAGE_KEY, this.recentlyUsed);
         }
@@ -121,7 +129,7 @@ export class CompletionRankingService {
 
     public scoreItem(def: StepDefinition, context: RankingContext): RankingScore {
         const pattern = def.rawPattern;
-        
+
         // Tier 1 - Textual Match
         const textMatch = this.calculateTextMatch(context.typedText, pattern);
 
@@ -165,11 +173,13 @@ export class CompletionRankingService {
         }
 
         // Tier 5 - Learned Signals (Recent Use, Global Frequency, Tag Affinity)
-        let learnedSignals = 0;
+        let historicalUsage = 0;
+        let tagAffinity = 0;
+        
         // Recent usage
         const recentIndex = this.recentlyUsed.indexOf(def.id);
         if (recentIndex !== -1) {
-            learnedSignals += Math.max(1, 30 - recentIndex * 2);
+            historicalUsage += Math.max(1, 30 - recentIndex * 2);
         }
 
         const defUriStr = ResourceIdentity.getCanonicalUriString(def.uri);
@@ -177,10 +187,10 @@ export class CompletionRankingService {
         const defNode = this.workspaceGraph.currentGeneration.getNode(defId) as StepDefNode | undefined;
 
         if (defNode) {
-            learnedSignals += Math.min(10, defNode.usages.length * 2);
-            
+            historicalUsage += Math.min(10, defNode.usages.length * 2);
+
             if (context.currentTags.length > 0) {
-                let tagAffinity = 0;
+                let currentTagAffinity = 0;
                 const activeTagsSet = new Set(context.currentTags);
                 for (const usageId of defNode.usages) {
                     let currentId: string | undefined = usageId;
@@ -192,7 +202,7 @@ export class CompletionRankingService {
                             let matches = false;
                             for (const t of scNode.tags) {
                                 if (activeTagsSet.has(t)) {
-                                    tagAffinity++;
+                                    currentTagAffinity++;
                                     matches = true;
                                 }
                             }
@@ -204,7 +214,7 @@ export class CompletionRankingService {
                         currentId = (node as any).parent;
                     }
                 }
-                learnedSignals += Math.min(15, tagAffinity * 5);
+                tagAffinity += Math.min(15, currentTagAffinity * 5);
             }
         }
 
@@ -213,7 +223,8 @@ export class CompletionRankingService {
             semanticMatch,
             matcherQuality,
             localContext,
-            learnedSignals,
+            historicalUsage,
+            tagAffinity,
             tieBreaker: pattern
         };
     }
@@ -222,13 +233,15 @@ export class CompletionRankingService {
         // We invert the numbers so higher quality -> smaller string lexicographically (VS Code sorts A-Z).
         // e.g. textMatch: 5 -> "0", textMatch: 1 -> "4"
         const invert = (val: number, max: number) => Math.max(0, max - val).toString().padStart(2, '0');
-        
+
+        const learnedSignals = score.historicalUsage + score.tagAffinity;
+
         return [
             invert(score.textMatch, 5),
             invert(score.semanticMatch, 3),
             invert(score.matcherQuality, 2),
             invert(score.localContext, 2),
-            invert(score.learnedSignals, 99),
+            invert(learnedSignals, 99),
             score.tieBreaker
         ].join('-');
     }

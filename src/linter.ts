@@ -8,7 +8,7 @@ import { WorkspaceEventBus } from './eventBus';
 import { WorkspaceGraph } from './graph';
 import { RuleDiagnostic, diagnosticRegistry } from './rules';
 
-type InvalidationReason = 
+type InvalidationReason =
     | { type: 'documentOpened', document: vscode.TextDocument }
     | { type: 'documentChanged', document: vscode.TextDocument }
     | { type: 'configurationChanged', affectsLinter: boolean }
@@ -32,7 +32,7 @@ export class GherkinLinter {
     private eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
     private workspaceGraph?: WorkspaceGraph;
-    
+
     private invalidationQueue: Map<string, InvalidationReason> = new Map();
     private flushDebounceTimer?: NodeJS.Timeout;
     private isFlushing = false;
@@ -60,7 +60,7 @@ export class GherkinLinter {
             } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted') {
                 let affected: vscode.Uri[] | undefined = undefined;
                 if (this.workspaceGraph) {
-                    // Correctness-first: if definitions change, any unresolved step might now be resolved, 
+                    // Correctness-first: if definitions change, any unresolved step might now be resolved,
                     // and any resolved step might become ambiguous.
                     // For now, we consider all open feature files as candidates to be safe, but we let the queue batch it.
                     affected = vscode.workspace.textDocuments.map(d => d.uri);
@@ -78,31 +78,31 @@ export class GherkinLinter {
         } else if (reason.type === 'stepDefinitionsUpdated') {
             this.invalidationQueue.set('stepDefs', reason);
         }
-        
+
         if (this.flushDebounceTimer) {
             clearTimeout(this.flushDebounceTimer);
         }
         this.flushDebounceTimer = setTimeout(() => this.flush(), 250);
     }
-    
+
     private immediateInvalidation(reason: InvalidationReason) {
         this.queueInvalidation(reason);
         if (this.flushDebounceTimer) clearTimeout(this.flushDebounceTimer);
         this.flush();
     }
-    
+
     private async flush(): Promise<LinterMetrics | undefined> {
         if (this.isFlushing || this.invalidationQueue.size === 0) return;
         this.isFlushing = true;
         const startTime = Date.now();
-        
+
         const reasons = Array.from(this.invalidationQueue.values());
         this.invalidationQueue.clear();
-        
+
         let candidates = new Map<string, vscode.TextDocument>();
         let globalConfigChanged = false;
         let stepDefsChanged = false;
-        
+
         for (const reason of reasons) {
             if (reason.type === 'documentOpened' || reason.type === 'documentChanged') {
                 candidates.set(reason.document.uri.toString(), reason.document);
@@ -112,7 +112,7 @@ export class GherkinLinter {
                 stepDefsChanged = true;
             }
         }
-        
+
         if (globalConfigChanged || stepDefsChanged) {
             // Add all open feature documents as candidates
             vscode.workspace.textDocuments.forEach(doc => {
@@ -121,18 +121,18 @@ export class GherkinLinter {
                 }
             });
         }
-        
+
         const metrics: LinterMetrics = {
             candidateDocs: candidates.size,
             lintedDocs: 0,
             skippedDocs: 0,
             elapsedTimeMs: 0
         };
-        
+
         // Limit concurrency to 5
         const limit = 5;
         const activePromises = new Set<Promise<void>>();
-        
+
         for (const doc of candidates.values()) {
             const config = this.configService.getConfiguration(doc.uri);
             if (!config.linter.enabled) {
@@ -140,24 +140,24 @@ export class GherkinLinter {
                 metrics.skippedDocs++;
                 continue;
             }
-            
+
             const p = this.lint(doc, ++this.nextRequestId, doc.version).then(() => {
                 metrics.lintedDocs++;
             }).finally(() => {
                 activePromises.delete(p);
             });
             activePromises.add(p);
-            
+
             if (activePromises.size >= limit) {
                 await Promise.race(activePromises);
             }
         }
-        
+
         await Promise.all(activePromises);
-        
+
         metrics.elapsedTimeMs = Date.now() - startTime;
         this.isFlushing = false;
-        
+
         // Output metrics for observability
         process.stdout.write(`\n--- LINTER FLUSH METRICS: candidates=${metrics.candidateDocs}, linted=${metrics.lintedDocs}, skipped=${metrics.skippedDocs}, time=${metrics.elapsedTimeMs}ms ---\n`);
         return metrics;
@@ -508,12 +508,28 @@ export class GherkinLinter {
     private fallbackCheckMisspelledKeywords(document: vscode.TextDocument, diagnostics: vscode.Diagnostic[], dialect: any) {
         const expectedKeywords = [...dialect.given, ...dialect.when, ...dialect.then, ...dialect.and, ...dialect.but, ...dialect.examples, ...dialect.scenario, ...dialect.scenarioOutline, ...dialect.background, ...dialect.feature, ...dialect.rule].map((k: string) => k.trim());
         const blockKeywords = dialectService.getBlockKeywords(dialect);
+        let insideDocString = false;
+        let docStringDelimiter = '';
 
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i).text;
             const trimmed = line.trim();
             if (!trimmed || trimmed.startsWith('#')) continue;
-            if (trimmed.startsWith('|') || trimmed.startsWith('@') || trimmed.startsWith('"""') || trimmed.startsWith("'''")) continue;
+
+            if (trimmed.startsWith('"""') || trimmed.startsWith("'''")) {
+                const delimiter = trimmed.startsWith('"""') ? '"""' : "'''";
+                if (!insideDocString) {
+                    insideDocString = true;
+                    docStringDelimiter = delimiter;
+                } else if (trimmed.startsWith(docStringDelimiter)) {
+                    insideDocString = false;
+                }
+                continue;
+            }
+
+            if (insideDocString) continue;
+
+            if (trimmed.startsWith('|') || trimmed.startsWith('@')) continue;
 
             const firstWord = trimmed.split(/\s+/)[0];
 
@@ -755,23 +771,15 @@ export class GherkinLinter {
         if (this.symbolCache.state !== 'ready') {
             return;
         }
+        let currentContext: 'given' | 'when' | 'then' | 'step' = 'step';
+        const dialect = dialectService.getDialect(document);
+
         for (const step of steps) {
             const stepText = step.text.trim();
             const keyword = step.keyword ? step.keyword.trim() : '';
 
-            let semanticType: 'given' | 'when' | 'then' | 'step' = 'step';
-            const dialect = dialectService.getDialect(document);
-
-            if (dialect.given.map(k => k.trim()).includes(keyword)) {
-                semanticType = 'given';
-            } else if (dialect.when.map(k => k.trim()).includes(keyword)) {
-                semanticType = 'when';
-            } else if (dialect.then.map(k => k.trim()).includes(keyword)) {
-                semanticType = 'then';
-            } else {
-                // For And, But, or * we resolve the context from previous steps
-                semanticType = dialectService.resolveAndBut(document, Math.max(0, step.location.line - 1));
-            }
+            currentContext = dialectService.resolveKeywordSemanticType(keyword, dialect, currentContext);
+            const semanticType = currentContext;
 
             const defs = await this.symbolCache.getStepDefinitions(stepText, semanticType);
             if (defs.length !== 1) {

@@ -12,7 +12,7 @@ for (const [key, rule] of Object.entries(RULES_REGISTRY)) {
 export const DEFAULT_CONFIG = {
     indentation: { steps: 4 },
     tables: { alignToKeyword: true },
-    docStrings: { alignToKeyword: true },
+    docStrings: { alignToKeyword: true, formatJson: 'auto' },
     tags: { format: 'wrap', sort: 'preserve' },
     emptyLines: { betweenScenarios: 1 },
     formatter: { enabled: true },

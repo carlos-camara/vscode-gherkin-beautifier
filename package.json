@@ -111,9 +111,21 @@
           "default": true,
           "markdownDescription": "When `true`, DocStrings are dynamically padded to align with the text start of the preceding step keyword.\n\nSet to `false` for a simpler fixed-column alignment."
         },
+        "gherkinPowerTools.docStrings.formatJson": {
+          "type": "string",
+          "order": 13,
+          "scope": "resource",
+          "enum": [
+            "tagged",
+            "auto",
+            "off"
+          ],
+          "default": "auto",
+          "markdownDescription": "Controls whether JSON content inside DocStrings is automatically formatted.\n\n`tagged` requires a `\"\"\"json` media type. `auto` heuristically detects JSON. `off` disables it."
+        },
         "gherkinPowerTools.emptyLines.betweenScenarios": {
           "type": "number",
-          "order": 12,
+          "order": 14,
           "scope": "resource",
           "default": 1,
           "minimum": 0,
@@ -439,6 +451,11 @@
       {
         "command": "gherkinPowerTools.analytics.clearHistory",
         "title": "Clear History",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.diagnostics.explainCompletionRanking",
+        "title": "Explain Completion Ranking",
         "category": "Gherkin PowerTools"
       }
     ],

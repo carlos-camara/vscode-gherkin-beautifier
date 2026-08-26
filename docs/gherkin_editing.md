@@ -24,6 +24,7 @@ You can format the entire document or just a selection:
   If you trigger the Format Document command explicitly via the Command Palette or keyboard shortcut, you will receive a single concise actionable warning.
 - **Tables:** Data Tables and Examples are dynamically aligned to the preceding step text (by default) to keep everything visually clean.
 - **Doc Strings:** Content inside `"""` doc strings is dynamically padded to align with the step keyword (or preserved exactly, based on configuration).
+  - **JSON Formatting:** If your DocString contains valid JSON, the formatter will automatically parse, align, and format the JSON payload natively. This can be configured or disabled via `gherkinPowerTools.docStrings.formatJson`.
 - **Tags:** Long lines of tags are intelligently wrapped or can be kept on a single line depending on your settings.
 - **Comments:** Comments are preserved and aligned properly.
 - **Blank Lines:** Standardizes blank lines between Scenarios, Rules, and Backgrounds.
@@ -38,7 +39,7 @@ The real-time AST linter validates your Gherkin structure **as you type**. It gr
 
 ### Structural Diagnostics
 - **Missing Colons:** Ensures `Feature:`, `Scenario:`, `Background:`, etc., have their required trailing colon.
-- **Invalid Keywords:** Detects misspelled Gherkin keywords using Levenshtein distance matching for your specific dialect.
+- **Invalid Keywords:** Detects misspelled Gherkin keywords using Levenshtein distance matching for your specific dialect. (The linter intelligently ignores all text inside `"""` DocStrings, preventing false-positive keyword flags on code snippets or JSON data).
 - **Semantic Errors:** Validates nesting (e.g., placing an `Examples:` block inside a plain `Scenario` instead of a `Scenario Outline`).
 - **Table Inconsistency:** Detects unclosed `|` pipes and inconsistent column counts across rows.
 
@@ -66,11 +67,21 @@ Gherkin PowerTools provides curated semantic syntax coloring that works cleanly 
 </div>
 
 ### Document Outline
-Navigate complex feature files using the VS Code Outline sidebar. The outline generates a hierarchical tree of `Feature > Rule > Scenario > Examples`.
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/outline.gif" alt="Outline - Feature, Rule, Scenario tree in the VS Code sidebar" width="600" height="340" />
-</div>
+The extension natively integrates with VS Code's Outline view and Breadcrumbs.
+- You can navigate large `.feature` files easily by clicking on scenarios or rules in the sidebar.
+- Outline nodes update in real-time as you type, and include the tags associated with each block for easier visual filtering.
+
+### Find All References
+When using Python Behave, placing your cursor on a Gherkin step and pressing <kbd>Shift+F12</kbd> (or selecting *Find All References* from the right-click menu) will instantly resolve all other usages of that step across your entire workspace. It will also link back to the Python `@step` decorator that implements it.
+
+### Impact-Aware Step Rename
+You can natively rename Gherkin steps across your entire workspace by pressing <kbd>F2</kbd> (or *Rename Symbol* from the context menu) on any step.
+Gherkin PowerTools features **progressive disclosure**: if the blast radius of your rename is small, it applies instantly. If the rename is "high impact" (affecting multiple files or many scenarios), it safely triggers VS Code's native Refactor Preview pane, allowing you to manually review all exact changes before committing them.
+
+### AST-Based Parameter Completion
+When authoring `Scenario Outline` steps, typing `<` automatically triggers IntelliSense populated with the headers from your Data Tables. This engine uses the core AST instead of basic regex, meaning it natively understands escaped pipes (`\|`), automatically merges multiple `Examples` tables in the same scenario, and prevents autocomplete suggestions from bleeding over into adjacent scenarios.
+During mid-flight typing where the syntax tree is temporarily broken, it uses an instantaneous, constrained regex fallback to guarantee fluid keystroke responses.
 
 ### Breadcrumbs
 VS Code’s breadcrumb navigation at the top of the editor is fully populated, allowing you to quickly jump between scenarios in large files.

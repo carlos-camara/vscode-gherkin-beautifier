@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { WorkspaceGraph, FeatureNode, ScenarioNode, BackgroundNode, StepNode, TagNode } from './graph';
 import { SymbolCache } from './cache';
+import { SourceLocationPresenter } from './utils/sourceLocationPresenter';
 import { StepAnalyzer, StepAnalysisResult } from './stepAnalyzer';
 import { AntiPattern, AntiPatternEngine } from './antiPatternEngine';
 import { SuppressionEngine } from './suppressions';
@@ -309,7 +310,8 @@ export function getDashboardHtml(metrics: ProjectHealthMetrics, recommendations:
         if (rec.affectedFiles) rec.affectedFiles.forEach(f => allFiles.add(f));
     });
     const uniqueFiles = Array.from(allFiles).map(f => {
-        return { uri: f, basename: f.split('/').pop() || f };
+        const uri = vscode.Uri.parse(f);
+        return { uri: f, basename: SourceLocationPresenter.formatShort(uri) };
     }).sort((a, b) => a.basename.localeCompare(b.basename));
 
     return `<!DOCTYPE html>

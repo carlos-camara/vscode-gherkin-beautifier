@@ -33,6 +33,13 @@ This guide addresses common problems organized by observable symptoms.
 **Symptom:** You use a step frequently, but it does not appear at the very top of the IntelliSense list.
 **Likely Causes:** Gherkin PowerTools intentionally overrides raw popularity in favor of semantic relevance.
 **Resolution:** The extension uses a strict **5-tier Lexicographical Ranking model**. Exact text matches (Tier 1) and semantic keyword matches (Tier 2 - e.g. `Given` vs `When`) will strictly outrank steps that you simply use more often (Tier 5). This guarantees that autocomplete suggests the technically correct step over a popular but semantically incorrect one.
+**Developer Tip:** Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run **Gherkin PowerTools: Explain Completion Ranking** to see exactly why a step was ranked higher.
+
+## Autocomplete stops working for Scenario Outline Parameters
+**Symptom:** You type `<` inside a Scenario Outline step, but the autocomplete suggestions for parameters (column headers) do not appear or are outdated.
+**Likely Causes:** Your `.feature` file contains severe structural syntax errors that completely break the AST parser around the `Examples` table, and the temporary text-scanning fallback cannot safely determine the local table context.
+**Diagnostic Steps:** Check for red error squiggles above or near the current scenario indicating a broken table or missing structural keyword.
+**Resolution:** Ensure your `Examples:` table has a valid structure with at least a header row (e.g. `| param1 | param2 |`). Once the syntax error is fixed, the AST parser will instantly recover and precise parameter completion will resume.
 
 ## Python steps are not found (Go to Definition / Autocomplete fail)
 **Symptom:** You use Python Behave, but steps show as "Undefined" in the Linter, and Go to Definition does not work.

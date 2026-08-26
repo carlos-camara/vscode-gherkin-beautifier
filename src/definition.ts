@@ -31,7 +31,7 @@ export class GherkinDefinitionProvider implements vscode.DefinitionProvider {
             return null;
         }
 
-        const semanticType = dialectService.resolveAndBut(document, position.line);
+        const semanticType = dialectService.resolveDocumentLineSemanticType(document, position.line);
         const matches = await this.cache.getStepDefinitions(stepText, semanticType);
         
         if (token.isCancellationRequested || matches.length === 0) {

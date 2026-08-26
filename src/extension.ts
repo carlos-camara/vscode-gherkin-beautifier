@@ -12,8 +12,9 @@ import { logger } from './logger';
 import { GherkinCodeActionProvider, generateSafeFixAllEdit } from './codeAction';
 import { diagnosticRegistry } from './rules';
 import { SuppressionEngine } from './suppressions';
-import { GherkinCompletionProvider } from './completion';
+import { GherkinCompletionProvider, CompletionContextCache } from './completion';
 import { CompletionRankingService } from './completionRanking';
+import { explainCompletionRanking } from './completionDiagnostics';
 import { GherkinHoverProvider } from './hover';
 import { astRepository } from './ast';
 import { WorkspaceGraph } from './graph';
@@ -27,6 +28,7 @@ import { showCommandCenter } from './commandCenter';
 import { GherkinTestController } from './testController';
 import { StepRefactoringService } from './refactoring';
 import { GherkinRenameProvider } from './renameProvider';
+import { GherkinReferenceProvider } from './references';
 import { ConfigurationService, ConfigurationLoader, ProjectConfiguration } from './configuration';
 import { ContextualFeatureDiscoveryService } from './contextualDiscovery';
 import { ImpactCodeLensProvider } from './impactCodeLens';
@@ -127,6 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push({ dispose: () => workspaceGraph.dispose() });
 
     const rankingService = new CompletionRankingService(workspaceGraph, context.workspaceState);
+    const completionContextCache = new CompletionContextCache();
 
     const antiPatternDiagnostics = new AntiPatternDiagnosticsManager(workspaceGraph, symbolCache, eventBus);
     context.subscriptions.push(antiPatternDiagnostics);
@@ -137,6 +140,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // 4. Action Services & Command Modules
     const refactoringService = new StepRefactoringService(workspaceGraph, symbolCache);
     const renameProvider = new GherkinRenameProvider(refactoringService, workspaceGraph);
+    const referenceProvider = new GherkinReferenceProvider(workspaceGraph, symbolCache);
     const impactCodeLensProvider = new ImpactCodeLensProvider(workspaceGraph);
     const formatter = new GherkinFormattingEditProvider(configService);
     const symbolProvider = new GherkinDocumentSymbolProvider();
@@ -167,7 +171,7 @@ export async function activate(context: vscode.ExtensionContext) {
             await contextualDiscoveryService.reset();
             vscode.window.showInformationMessage("Feature recommendations reset.");
         }),
-        vscode.commands.registerCommand('gherkinPowerTools.internal.recordCompletion', (pattern: string) => { rankingService.recordCompletion(pattern); }),
+        vscode.commands.registerCommand('gherkinPowerTools.internal.recordCompletion', (ids: string | string[]) => { rankingService.recordCompletion(ids); }),
         vscode.commands.registerCommand('gherkinPowerTools.showGherkinHealth', () => { showProjectHealthDashboard(context, workspaceGraph, symbolCache); }),
         vscode.commands.registerCommand('gherkinPowerTools.analytics.exportHistory', async () => {
             const history = new MetricsHistory(context);
@@ -181,6 +185,9 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage("Historical trends cleared.");
         }),
         vscode.commands.registerCommand('gherkinPowerTools.commandCenter', showCommandCenter),
+        vscode.commands.registerCommand('gherkinPowerTools.diagnostics.explainCompletionRanking', () => {
+            return explainCompletionRanking(symbolCache, rankingService, completionContextCache);
+        }),
         vscode.commands.registerCommand('gherkinPowerTools.diagnoseWorkspace', () => {
             return showDiagnosticsReport(context, symbolCache, featureCache, configService, bootstrap);
         })
@@ -262,7 +269,11 @@ export async function activate(context: vscode.ExtensionContext) {
                 vscode.window.showInformationMessage("No safe deterministic fixes available in this file.");
             }
         }),
-        vscode.languages.registerRenameProvider({ language: 'python' }, renameProvider)
+        vscode.languages.registerRenameProvider(
+            [{ language: 'feature' }, { language: 'python' }],
+            new GherkinRenameProvider(refactoringService, workspaceGraph)
+        ),
+        vscode.languages.registerReferenceProvider({ language: 'python' }, referenceProvider)
     );
 
     GHERKIN_LANGUAGES.forEach(language => {
@@ -271,10 +282,11 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.languages.registerDocumentRangeFormattingEditProvider({ language }, formatter),
             vscode.languages.registerDocumentSymbolProvider({ language }, symbolProvider),
             vscode.languages.registerDefinitionProvider({ language }, new GherkinDefinitionProvider(symbolCache)),
-            vscode.languages.registerCompletionItemProvider({ language }, new GherkinCompletionProvider(symbolCache, rankingService), ' ', '<'),
+            vscode.languages.registerCompletionItemProvider({ language }, new GherkinCompletionProvider(symbolCache, rankingService, completionContextCache), ' ', '<'),
             vscode.languages.registerHoverProvider({ language }, new GherkinHoverProvider(symbolCache, featureCache)),
             vscode.languages.registerCodeActionsProvider({ language }, new GherkinCodeActionProvider(), { providedCodeActionKinds: GherkinCodeActionProvider.providedCodeActionKinds }),
-            vscode.languages.registerRenameProvider({ language }, renameProvider)
+            vscode.languages.registerRenameProvider({ language }, renameProvider),
+            vscode.languages.registerReferenceProvider({ language }, referenceProvider)
         );
     });
 

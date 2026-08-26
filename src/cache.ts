@@ -149,8 +149,7 @@ export class SymbolCache {
                 const rawPattern = dec.argumentText;
 
                 let matcherType: 'parse' | 'cfparse' | 're' = 'parse';
-                const firstLine = lines[dec.startLine] || '';
-                if (firstLine.match(/@(given|when|then|step)\s*\(\s*re\./i) || rawPattern.includes('(?P<')) {
+                if (dec.rawArg.includes('re.compile') || rawPattern.includes('(?P<')) {
                     matcherType = 're';
                 } else if (rawPattern.includes('{') && rawPattern.includes('}')) {
                     matcherType = 'parse';

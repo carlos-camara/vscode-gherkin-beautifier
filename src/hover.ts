@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { SymbolCache, FeatureCache, StepDefinition } from './cache';
 import { dialectService } from './dialect';
-
-import * as path from 'path';
+import { SourceLocationPresenter } from './utils/sourceLocationPresenter';
 
 export class GherkinHoverProvider implements vscode.HoverProvider {
     private symbolCache: SymbolCache;
@@ -50,7 +49,7 @@ export class GherkinHoverProvider implements vscode.HoverProvider {
         }
 
         const stepText = match[2].trim();
-        const semanticType = dialectService.resolveAndBut(document, position.line);
+        const semanticType = dialectService.resolveDocumentLineSemanticType(document, position.line);
 
         const stepDefs: StepDefinition[] = await this.symbolCache.getStepDefinitions(stepText, semanticType);
 
@@ -70,16 +69,15 @@ export class GherkinHoverProvider implements vscode.HoverProvider {
                 hoverContent.appendMarkdown(`\n\n---\n\n`);
             }
 
-            const basename = path.basename(stepDef.uri.fsPath);
             const line = stepDef.decoratorRange ? stepDef.decoratorRange.start.line + 1 : 1;
-            const link = `${stepDef.uri.toString()}#${line}`;
+            const displayLink = SourceLocationPresenter.formatMarkdownLink(stepDef.uri, line);
             
             let icon = 'symbol-function';
             if (stepDef.type === 'given') icon = 'symbol-event';
             else if (stepDef.type === 'when') icon = 'symbol-method';
             else if (stepDef.type === 'then') icon = 'symbol-constant';
 
-            hoverContent.appendMarkdown(`$(${icon}) **${stepDef.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) [${basename}:${line}](${link}) &nbsp;•&nbsp; $(gear) \`${stepDef.matcherType}\`\n\n`);
+            hoverContent.appendMarkdown(`$(${icon}) **${stepDef.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) ${displayLink} &nbsp;•&nbsp; $(gear) \`${stepDef.matcherType}\`\n\n`);
             
             if (!stepDef.evaluable) {
                 hoverContent.appendMarkdown(`> ⚠️ **Unsupported Matcher:** ${stepDef.compilationError || 'Dynamic expression is not supported'}\n\n`);
