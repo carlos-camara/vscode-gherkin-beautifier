@@ -248,13 +248,28 @@ export class GherkinLinter {
                             .sort((a, b) => b.length - a.length)
                             .find(k => gotText.startsWith(k));
 
-                        if (startsWithBlockKeyword && !gotText.startsWith(startsWithBlockKeyword + ':')) {
+                        const hasColon = gotText.startsWith(startsWithBlockKeyword + ':') || gotText.startsWith(startsWithBlockKeyword + ' :');
+                        if (startsWithBlockKeyword && !hasColon) {
                             code = 'missing-colon';
                             message = `Missing colon (':') after ${startsWithBlockKeyword}`;
                             suggestedEdit = ':';
                             // Point diagnostic exactly at the end of the keyword where colon is missing
                             startChar = startChar + startsWithBlockKeyword.length;
                             endChar = startChar;
+                        } else if (startsWithBlockKeyword && hasColon) {
+                            code = 'invalid-keyword';
+                            const isExamplesAlias = dialect?.examples?.includes(startsWithBlockKeyword);
+                            if (isExamplesAlias) {
+                                const scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                message = `'${startsWithBlockKeyword}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                suggestedEdit = scenarioKeyword + ':';
+                                const firstNonWhitespace = lineText.search(/\\S/);
+                                startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
+                                endChar = startChar + startsWithBlockKeyword.length + 1; // Cover the colon too
+                            } else {
+                                message = `'${startsWithBlockKeyword}:' is structurally out of place here.`;
+                                suggestedEdit = '';
+                            }
                         } else {
                             const firstWord = gotText.split(/\s+/)[0];
                             const stepKeywords = dialectService.getStepKeywords(dialect);
@@ -366,18 +381,18 @@ export class GherkinLinter {
 
             const blockKeywords = dialectService.getBlockKeywords(dialect);
 
-            this.checkDescription(gherkinDocument.feature, diagnostics, document, allExpectedKeywords, blockKeywords);
+            this.checkDescription(gherkinDocument.feature, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
             if (gherkinDocument.feature.children) {
                 for (const child of gherkinDocument.feature.children) {
                     if (child.rule) {
-                        this.checkDescription(child.rule, diagnostics, document, allExpectedKeywords, blockKeywords);
+                        this.checkDescription(child.rule, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
                         if (child.rule.children) {
                             for (const ruleChild of child.rule.children) {
                                 const ruleScenario = ruleChild.scenario || ruleChild.background;
                                 if (ruleScenario) {
                                     await this.checkSteps(ruleScenario.steps || [], diagnostics, document);
                                     this.checkScenarioExamples(ruleChild.scenario, diagnostics, document);
-                                    this.checkDescription(ruleScenario, diagnostics, document, allExpectedKeywords, blockKeywords);
+                                    this.checkDescription(ruleScenario, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
                                 }
                             }
                         }
@@ -386,7 +401,7 @@ export class GherkinLinter {
                         if (scenario) {
                             await this.checkSteps(scenario.steps || [], diagnostics, document);
                             this.checkScenarioExamples(child.scenario, diagnostics, document);
-                            this.checkDescription(scenario, diagnostics, document, allExpectedKeywords, blockKeywords);
+                            this.checkDescription(scenario, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
                         }
                     }
                 }
@@ -638,7 +653,7 @@ export class GherkinLinter {
         }
     }
 
-    private checkDescription(node: any, diagnostics: vscode.Diagnostic[], document: vscode.TextDocument, expectedKeywords: string[], blockKeywords: string[]) {
+    private checkDescription(node: any, diagnostics: vscode.Diagnostic[], document: vscode.TextDocument, expectedKeywords: string[], blockKeywords: string[], dialect: any) {
         if (!node || !node.description) return;
 
         const descLines = node.description.split('\n');
@@ -709,10 +724,26 @@ export class GherkinLinter {
 
                     if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                         if (isBlockKeyword) {
-                            code = 'missing-colon';
-                            message = `Missing colon (':') after ${bestMatch}`;
-                            suggestedEdit = ':';
-                            startChar = endChar;
+                            const hasColon = normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ':') || normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ' :');
+                            if (!hasColon) {
+                                code = 'missing-colon';
+                                message = `Missing colon (':') after ${bestMatch}`;
+                                suggestedEdit = ':';
+                                startChar = endChar;
+                            } else {
+                                code = 'invalid-keyword';
+                                const isExamplesAlias = dialect?.examples?.includes(bestMatch);
+                                if (isExamplesAlias) {
+                                    const scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                    message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                    suggestedEdit = scenarioKeyword + ':';
+                                    startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
+                                    endChar = startChar + bestMatch.length + 1; // Cover the colon too
+                                } else {
+                                    message = `'${bestMatch}:' is structurally out of place here.`;
+                                    suggestedEdit = '';
+                                }
+                            }
                         } else {
                             if (isExactMatch && trimmed.startsWith(bestMatch)) {
                                 currentLineIdx++;
