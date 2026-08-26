@@ -738,7 +738,6 @@
     ]
   },
   "devDependencies": {
-    "@types/micromatch": "^4.0.10",
     "@types/mocha": "^10.0.1",
     "@types/node": "^26.2.0",
     "@types/sinon": "^22.0.0",
