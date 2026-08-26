@@ -47,7 +47,7 @@ A premium testing environment that eliminates the friction between plain-text `.
 
 - **Visual Testing Integration:** Run, debug, and trace Python Behave scenarios visually directly from the VS Code sidebar.
 - **Workspace Intelligence:** Context-aware IntelliSense and <kbd>Cmd+Click</kbd> navigation with O(1) in-memory indexing.
-- **Safe Step Refactoring:** View the exact blast radius of a step before refactoring, and rename it globally with 1-click.
+- **Impact-Aware Safe Refactoring:** Natively rename steps across your entire workspace (<kbd>F2</kbd>) and receive automatic alerts when the blast radius is large before committing the change.
 - **Catch Errors Before CI:** Dialect-aware real-time AST linting catches malformed syntax as you type.
 
 ---
@@ -87,14 +87,16 @@ A Blast Radius CodeLens appears above every Python step definition. View exactly
 Gherkin PowerTools acts in two tiers depending on your project:
 
 ### Generic BDD Frameworks (Cucumber, SpecFlow, Playwright)
-- **AST-Powered Formatting:** Rapidly align tables, tags, and indentation (`Shift+Alt+F` or Editor Context Menu).
-- **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time.
+- **AST-Powered Formatting:** Rapidly align tables, tags, and indentation (`Shift+Alt+F` or Editor Context Menu), including automatic formatting for embedded JSON DocStrings.
+- **Structural Linting:** Catch malformed scenarios across 70+ spoken languages in real-time, completely ignoring invalid text inside Gherkin DocStrings (`"""`).
+- **Find All References:** Instantly locate all usages of a Gherkin step across your entire workspace (<kbd>Shift+F12</kbd> or Context Menu).
 - **Document Outline:** Navigate complex `.feature` structures from the VS Code sidebar.
 - **Gherkin Health Dashboard:** Interactive modern webview to analyze oversized features, tag usage, and architectural anti-patterns with built-in DOM node limits for massive workspaces.
 
 ### Exclusive to Python Behave
-- **Context-Aware IntelliSense:** Autocomplete powered by a robust transactional snapshot model, deterministic Step Definition Identity, recent-usage ranking, and tag affinity.
-- **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu).
+- **Context-Aware IntelliSense:** Autocomplete powered by a robust transactional snapshot model, deterministic Step Definition Identity, recent-usage ranking, tag affinity, clean ambiguity grouping, robust regex snippet extraction, and **precise AST-based parameter extraction for Scenario Outlines** to perfectly match step templates with Example table headers.
+- **Find All References:** Natively find all feature files using a specific Python `@step` decorator directly from your Python code (<kbd>Shift+F12</kbd> or Context Menu).
+- **Step Refactoring:** Safely extract steps or natively rename them across your entire workspace (<kbd>F2</kbd> or Context Menu), featuring progressive disclosure that triggers VS Code's Refactor Preview pane for high-impact renames.
 - **Test Explorer Integration:** Run and debug features with line-by-line execution tracking and pristine Markdown-formatted error traces, ordered strictly chronologically as written in your code.
 - **BDD Anti-pattern Detection Engine:** Instant technical debt diagnostics for unused, ambiguous, or duplicated step definitions. Features Object-based Configuration to dynamically scale heuristic severities (e.g. adjust max sizes per rule).
 - **Standalone CLI (`@carlos-camara/gherkin-pt`):** Enforce formatting, run the Anti-pattern Engine, and calculate project health metrics natively in your CI/CD pipelines.

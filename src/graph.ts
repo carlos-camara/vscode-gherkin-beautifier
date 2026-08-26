@@ -28,7 +28,7 @@ export interface TagNode extends GraphNode { readonly type: 'Tag'; readonly name
 export interface StepDefNode extends GraphNode { readonly type: 'StepDefinition'; readonly pattern: string; readonly matcherType: string; readonly semanticType?: 'given' | 'when' | 'then' | 'step'; readonly pythonFile: string; usages: string[]; }
 interface PythonFileNode extends GraphNode { readonly type: 'PythonFile'; definitions: string[]; }
 
-class WorkspaceGraphGeneration {
+export class WorkspaceGraphGeneration {
     constructor(
         public readonly version: number,
         public readonly nodes: ReadonlyMap<string, GraphNode>,
@@ -229,24 +229,33 @@ export class WorkspaceGraph {
 
     private isInitialized = false;
 
+    private initPromise: Promise<void> | null = null;
     public async initialize(): Promise<void> {
-        if (this.isInitialized) return;
-        this.isInitialized = true;
-
-        try {
-            const featureUris = await featureDiscoveryService.getFeatureFiles();
-            for (const uri of featureUris) {
-                await this.indexFeatureFile(uri);
-            }
-
-            const allDefs = await this.symbolCache.getAllStepDefinitions();
-            const pythonUris = new Set(allDefs.map(d => d.uri.toString()));
-            for (const uriStr of pythonUris) {
-                await this.indexPythonFile(vscode.Uri.parse(uriStr));
-            }
-        } catch (err) {
-            logger.error(`WorkspaceGraph: Error during initialization`, err);
+        if (this.isInitialized || this.initPromise) {
+            return this.initPromise || Promise.resolve();
         }
+
+        this.initPromise = (async () => {
+            try {
+                const allDefs = await this.symbolCache.getAllStepDefinitions();
+                const pythonUris = new Set(allDefs.map(d => d.uri.toString()));
+                for (const uriStr of pythonUris) {
+                    await this.indexPythonFile(vscode.Uri.parse(uriStr));
+                }
+
+                const featureUris = await featureDiscoveryService.getFeatureFiles();
+                for (const uri of featureUris) {
+                    await this.indexFeatureFile(uri);
+                }
+                this.isInitialized = true;
+            } catch (err) {
+                logger.error(`WorkspaceGraph: Error during initialization`, err);
+            } finally {
+                this.initPromise = null;
+            }
+        })();
+
+        return this.initPromise;
     }
 
     public async executeTransaction(reqId: number, uriStr: string, buildFn: (tx: GraphTransaction) => Promise<void>) {
@@ -401,7 +410,7 @@ export class WorkspaceGraph {
                     for (const step of steps) {
                         const stepId = `${uriStr}:${step.location.line}`;
                         const kw = step.keyword ? step.keyword.trim() : '';
-                        currentSemanticType = dialectService.resolveSemanticTypeDownwards(kw, currentSemanticType, dialect);
+                        currentSemanticType = dialectService.resolveKeywordSemanticType(kw, dialect, currentSemanticType);
 
                         const stepNode: StepNode = {
                             id: stepId, type: 'Step', uri: uriStr, line: step.location.line,
@@ -568,7 +577,7 @@ export class WorkspaceGraph {
                     for (const exStep of exStepBlock) {
                         const stepId = `${uriStr}:execute_steps:${exStep.line}:${Math.random().toString(36).substr(2, 5)}`;
                         const kw = exStep.keyword;
-                        currentSemanticType = dialectService.resolveSemanticTypeDownwards(kw, currentSemanticType, dialect);
+                        currentSemanticType = dialectService.resolveKeywordSemanticType(kw, dialect, currentSemanticType);
 
                         let parentDefId = uriStr;
                         for (const def of fileDefs) {

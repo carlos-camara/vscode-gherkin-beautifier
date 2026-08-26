@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 interface Configuration {
     indentation: { steps: number; };
     tables: { alignToKeyword: boolean; };
-    docStrings: { alignToKeyword: boolean; };
+    docStrings: { alignToKeyword: boolean; formatJson: 'tagged' | 'auto' | 'off'; };
     tags: { format: 'wrap' | 'singleLine'; sort: 'preserve' | 'alphabetical'; };
     emptyLines: { betweenScenarios: number; };
     formatter: { enabled: boolean; };
@@ -29,7 +29,7 @@ const PROFILES: Record<string, Partial<Configuration>> = {
         ...JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
         indentation: { steps: 2 },
         tables: { alignToKeyword: false },
-        docStrings: { alignToKeyword: false },
+        docStrings: { alignToKeyword: false, formatJson: 'auto' },
         tags: { format: 'singleLine', sort: 'preserve' },
         emptyLines: { betweenScenarios: 0 }
     },
@@ -37,7 +37,7 @@ const PROFILES: Record<string, Partial<Configuration>> = {
         ...JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
         indentation: { steps: 2 },
         tables: { alignToKeyword: false },
-        docStrings: { alignToKeyword: true }
+        docStrings: { alignToKeyword: true, formatJson: 'auto' }
     }
 };
 interface ConfigError {
@@ -112,6 +112,12 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                         errors.push({ key: subKey, message: `"docStrings.alignToKeyword" must be a boolean.` });
                     } else {
                         config.docStrings.alignToKeyword = section[subKey];
+                    }
+                } else if (subKey === 'formatJson') {
+                    if (section[subKey] !== 'tagged' && section[subKey] !== 'auto' && section[subKey] !== 'off') {
+                        errors.push({ key: subKey, message: `"docStrings.formatJson" must be 'tagged', 'auto', or 'off'.` });
+                    } else {
+                        config.docStrings.formatJson = section[subKey];
                     }
                 } else {
                     errors.push({ key: subKey, message: `Unknown property in docStrings: "${subKey}".` });
@@ -387,6 +393,11 @@ export class ConfigurationService {
         const docStringsAlignToKeyword = getOverride<boolean>('docStrings.alignToKeyword');
         if (docStringsAlignToKeyword !== undefined && typeof docStringsAlignToKeyword === 'boolean') {
             config.docStrings.alignToKeyword = docStringsAlignToKeyword;
+        }
+
+        const docStringsFormatJson = getOverride<'tagged' | 'auto' | 'off'>('docStrings.formatJson');
+        if (docStringsFormatJson !== undefined && (docStringsFormatJson === 'tagged' || docStringsFormatJson === 'auto' || docStringsFormatJson === 'off')) {
+            config.docStrings.formatJson = docStringsFormatJson;
         }
 
         const tagsFormat = getOverride<'wrap' | 'singleLine'>('tags.format');

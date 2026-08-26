@@ -114,5 +114,10 @@ export const GherkinPowerToolsCommands = {
         id: 'gherkinPowerTools.internal.recordCompletion',
         title: 'Record Completion',
         category: CommandCategory
+    },
+    explainCompletionRanking: {
+        id: 'gherkinPowerTools.diagnostics.explainCompletionRanking',
+        title: 'Explain Completion Ranking',
+        category: CommandCategory
     }
 } as const;

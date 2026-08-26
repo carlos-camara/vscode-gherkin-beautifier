@@ -57,6 +57,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
+### `gherkinPowerTools.docStrings.formatJson`
+- **Purpose:** Controls JSON formatting inside DocStrings. `"tagged"` requires `"""json`. `"auto"` heuristically detects JSON. `"off"` disables it.
+- **Type:** `string`
+- **Default:** `"auto"`
+
 ### `gherkinPowerTools.emptyLines.betweenScenarios`
 - **Purpose:** Enforced blank lines between Scenario/Rule blocks.
 - **Type:** `number` (0–3)

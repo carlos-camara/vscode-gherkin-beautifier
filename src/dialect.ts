@@ -4,6 +4,8 @@ import type { Dialect } from '@cucumber/gherkin';
 
 const dialects = require('@cucumber/gherkin/dist/gherkin-languages.json');
 
+export type SemanticStepType = 'given' | 'when' | 'then' | 'step';
+
 export class DialectService {
     private cache = new Map<string, { version: number, dialect: Dialect }>();
 
@@ -60,7 +62,7 @@ export class DialectService {
     public getStepRegex(dialect: Dialect): RegExp {
         const keywords = this.getStepKeywords(dialect);
         if (!keywords.includes('* ')) keywords.push('* ');
-        
+
         // Sort descending by length so longer keywords match first
         keywords.sort((a, b) => b.length - a.length);
         const escaped = keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -74,45 +76,61 @@ export class DialectService {
         return new RegExp(`^\\s*(${escaped.join('|')}):?`, 'im');
     }
 
-    /**
-     * Traverses upwards from a given line to resolve if an And/But step
-     * acts as a Given, When, or Then context.
-     */
-    public resolveAndBut(document: vscode.TextDocument, lineIndex: number): 'given' | 'when' | 'then' | 'step' {
-        const dialect = this.getDialect(document);
-        const givenKeywords = dialect.given;
-        const whenKeywords = dialect.when;
-        const thenKeywords = dialect.then;
-        const stepRegex = this.getStepRegex(dialect);
 
-        for (let i = lineIndex; i >= 0; i--) {
-            const text = document.lineAt(i).text;
-            const match = text.match(stepRegex);
-            if (match) {
-                const kw = match[1];
-                if (givenKeywords.includes(kw)) return 'given';
-                if (whenKeywords.includes(kw)) return 'when';
-                if (thenKeywords.includes(kw)) return 'then';
-            }
-            // Stop if we hit a scenario or feature block since steps cannot cross scenario boundaries
-            if (this.getStructureRegex(dialect).test(text)) {
-                break;
-            }
+    /**
+     * Resolves the semantic type of a keyword.
+     * - Continuation keywords (And, But, *) inherit the previousContext.
+     * - Malformed keywords explicitly return 'step'.
+     * - Ideal for forward-scanning AST walkers (Linter, Outline) to avoid O(N^2) backward document scanning.
+     */
+    public resolveKeywordSemanticType(keyword: string, dialect: Dialect, previousContext: SemanticStepType = 'step'): SemanticStepType {
+        const kw = keyword.trim().toLowerCase();
+
+        // Continuation keywords inherit context. Must be checked first because '*' is also present in given/when/then arrays.
+        if (kw === '*' ||
+            dialect.and.some(k => k.trim().toLowerCase() === kw) ||
+            dialect.but.some(k => k.trim().toLowerCase() === kw)) {
+            return previousContext;
         }
+
+        if (dialect.given.some(k => k.trim().toLowerCase() === kw)) return 'given';
+        if (dialect.when.some(k => k.trim().toLowerCase() === kw)) return 'when';
+        if (dialect.then.some(k => k.trim().toLowerCase() === kw)) return 'then';
+
+        // Malformed input (e.g. "Garbage I do something")
         return 'step';
     }
 
     /**
-     * Resolves the semantic context of a step during a top-to-bottom AST traversal.
-     * Non-continuation keywords (Given/When/Then) establish a new context.
-     * Continuation keywords (And/But/*) preserve the current context.
+     * Resolves the semantic type of a step at a specific document line.
+     * - Efficiently scans backwards if a continuation keyword is found.
+     * - Strictly stops at Scenario/Background block boundaries.
+     * - Replaces resolveAndBut.
      */
-    public resolveSemanticTypeDownwards(keyword: string, currentContext: 'given' | 'when' | 'then' | 'step', dialect: Dialect): 'given' | 'when' | 'then' | 'step' {
-        const kw = keyword.trim();
-        if (dialect.given.map(k => k.trim()).includes(kw)) return 'given';
-        if (dialect.when.map(k => k.trim()).includes(kw)) return 'when';
-        if (dialect.then.map(k => k.trim()).includes(kw)) return 'then';
-        return currentContext;
+    public resolveDocumentLineSemanticType(document: vscode.TextDocument, lineIndex: number): SemanticStepType {
+        const dialect = this.getDialect(document);
+        const stepRegex = this.getStepRegex(dialect);
+        const boundaryRegex = this.getStructureRegex(dialect);
+
+        for (let i = lineIndex; i >= 0; i--) {
+            const text = document.lineAt(i).text;
+
+            // Stop if we hit a scenario or feature block since steps cannot cross boundaries
+            if (boundaryRegex.test(text)) {
+                break;
+            }
+
+            const match = text.match(stepRegex);
+            if (match) {
+                const kw = match[1];
+                const resolved = this.resolveKeywordSemanticType(kw, dialect, 'step');
+                if (resolved !== 'step') {
+                    return resolved; // Found given/when/then
+                }
+                // If it's a continuation (and/but/*), we just continue scanning backwards
+            }
+        }
+        return 'step';
     }
 
     public clearCache(uri: vscode.Uri) {

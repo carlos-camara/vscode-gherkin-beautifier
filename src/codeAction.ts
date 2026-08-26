@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { dialectService } from './dialect';
 import { discoveryService } from './discovery';
 import { diagnosticRegistry, antiPatternRegistry, RULES_REGISTRY, RuleDiagnostic } from './rules';
+import { SourceLocationPresenter } from './utils/sourceLocationPresenter';
 
 export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
     public static readonly providedCodeActionKinds = [
@@ -140,28 +141,8 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
             } else if (diagnostic.ruleId === 'undefined-step') {
                 const action = new vscode.CodeAction('Create empty step definition', vscode.CodeActionKind.QuickFix);
 
-                // Retrieve the keyword from the typed payload
-                const keyword = diagnostic.actionPayload?.stepKeyword || 'step';
 
-                let pyKeyword = keyword.toLowerCase().trim();
-                const dialect = dialectService.getDialect(document);
-
-                const andKeywords = dialect.and.map(k => k.trim().toLowerCase());
-                const butKeywords = dialect.but.map(k => k.trim().toLowerCase());
-                const isContinuation = andKeywords.includes(pyKeyword) || butKeywords.includes(pyKeyword) || pyKeyword === '*';
-
-                // Resolve semantic keyword if it's a continuation
-                if (isContinuation) {
-                    pyKeyword = dialectService.resolveAndBut(document, diagnostic.range.start.line);
-                } else {
-                    const givenKeywords = dialect.given.map(k => k.trim().toLowerCase());
-                    const whenKeywords = dialect.when.map(k => k.trim().toLowerCase());
-                    const thenKeywords = dialect.then.map(k => k.trim().toLowerCase());
-                    if (givenKeywords.includes(pyKeyword)) pyKeyword = 'given';
-                    else if (whenKeywords.includes(pyKeyword)) pyKeyword = 'when';
-                    else if (thenKeywords.includes(pyKeyword)) pyKeyword = 'then';
-                    else pyKeyword = 'step';
-                }
+                let pyKeyword = dialectService.resolveDocumentLineSemanticType(document, diagnostic.range.start.line);
 
                 // Extract step text securely without parsing the human-readable message
                 const stepText = diagnostic.actionPayload?.stepText || '';
@@ -502,7 +483,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
         targetUri = pyFiles[0];
     } else {
         const items = pyFiles.map(uri => ({
-            label: vscode.workspace.asRelativePath(uri),
+            label: SourceLocationPresenter.formatShort(uri),
             uri: uri
         }));
 
@@ -528,7 +509,7 @@ export async function createStepDefinition(stepText: string, keyword: string, do
                     const data = await vscode.workspace.fs.readFile(targetUri);
                     fileContent = Buffer.from(data).toString('utf8');
                 } catch (e) {
-                    vscode.window.showErrorMessage(`Failed to read target file for step generation: ${vscode.workspace.asRelativePath(targetUri)}`);
+                    vscode.window.showErrorMessage(`Failed to read target file for step generation: ${SourceLocationPresenter.formatPath(targetUri)}`);
                     return undefined;
                 }
             }
@@ -605,7 +586,7 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
         targetUri = pyFiles[0];
     } else {
         const items = pyFiles.map(uri => ({
-            label: vscode.workspace.asRelativePath(uri),
+            label: SourceLocationPresenter.formatShort(uri),
             uri: uri
         }));
 
@@ -631,7 +612,7 @@ export async function batchCreateStepDefinitions(steps: {text: string, keyword: 
                     const data = await vscode.workspace.fs.readFile(targetUri);
                     fileContent = Buffer.from(data).toString('utf8');
                 } catch (e) {
-                    vscode.window.showErrorMessage(`Failed to read target file for batch step generation: ${vscode.workspace.asRelativePath(targetUri)}`);
+                    vscode.window.showErrorMessage(`Failed to read target file for batch step generation: ${SourceLocationPresenter.formatPath(targetUri)}`);
                     return undefined;
                 }
             }

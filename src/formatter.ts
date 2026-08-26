@@ -6,7 +6,7 @@ import { ConfigurationService } from './configuration';
 export interface FormatterOptions {
     stepIndentation: number;
     alignTableToKeyword: boolean;
-    docStrings?: { alignToKeyword: boolean };
+    docStrings?: { alignToKeyword: boolean, formatJson?: 'tagged' | 'auto' | 'off' };
     tagsFormat: 'wrap' | 'singleLine';
     tagsSort: 'preserve' | 'alphabetical';
     emptyLinesBetweenScenarios: number;
@@ -20,6 +20,8 @@ interface NodeInfo {
     lines?: string[]; // for FormattedTags or DocString content
     emptyLinesBefore?: number;
     groupId?: string;
+    mediaType?: string;
+    originalEndLine?: number;
 }
 
 interface FormattedLine {
@@ -31,7 +33,7 @@ interface FormattedLine {
 
 
 export class GherkinFormattingEditProvider implements vscode.DocumentFormattingEditProvider, vscode.DocumentRangeFormattingEditProvider {
-    
+
     constructor(private configService: ConfigurationService) {}
 
     private getOptions(uri?: vscode.Uri): FormatterOptions {
@@ -39,7 +41,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         return {
             stepIndentation: config.indentation?.steps ?? 4,
             alignTableToKeyword: config.tables?.alignToKeyword ?? true,
-            docStrings: { alignToKeyword: config.docStrings?.alignToKeyword ?? true },
+            docStrings: { alignToKeyword: config.docStrings?.alignToKeyword ?? true, formatJson: config.docStrings?.formatJson ?? 'auto' },
             tagsFormat: config.tags?.format ?? 'wrap',
             tagsSort: config.tags?.sort ?? 'preserve',
             emptyLinesBetweenScenarios: config.emptyLines?.betweenScenarios ?? 1
@@ -125,7 +127,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         }
 
         const replacementText = filteredLines.map(l => l.text).join(eol);
-        
+
         // Construct the full-line exact replacement range
         const replacementRange = new vscode.Range(
             new vscode.Position(startLineOriginal - 1, 0),
@@ -217,12 +219,14 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                 }
 
                 if (node.type === 'DocString' && node.keyword && node.lines !== undefined) {
-                    out.push({ text: ' '.repeat(node.indent) + node.keyword, originalLine: lineNum });
+                    const mediaType = node.mediaType ? node.mediaType : '';
+                    out.push({ text: ' '.repeat(node.indent) + node.keyword + mediaType, originalLine: lineNum });
                     node.lines.forEach((cl, idx) => {
                         out.push({ text: cl === '' ? '' : ' '.repeat(node.indent) + cl, originalLine: lineNum + 1 + idx });
                     });
-                    // End delimiter line number is lineNum + lines.length + 1
-                    out.push({ text: ' '.repeat(node.indent) + node.keyword, originalLine: lineNum + node.lines.length + 1 });
+
+                    const actualEndLine = node.originalEndLine !== undefined ? node.originalEndLine : lineNum + node.lines.length + 1;
+                    out.push({ text: ' '.repeat(node.indent) + node.keyword, originalLine: actualEndLine });
                     continue;
                 }
 
@@ -298,13 +302,13 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         if (!scenario) return;
 
         const tags = 'tags' in scenario ? scenario.tags : undefined;
-        
+
         this.processTags(tags, indent, options, map);
         this.markEmptyLinesBefore(tags, scenario.location.line, options.emptyLinesBetweenScenarios, map);
-        
-        map.set(scenario.location.line, { 
-            type: 'Background' in scenario ? 'Background' : 'Scenario', 
-            indent, 
+
+        map.set(scenario.location.line, {
+            type: 'Background' in scenario ? 'Background' : 'Scenario',
+            indent,
             keyword: scenario.keyword,
             emptyLinesBefore: map.get(scenario.location.line)?.emptyLinesBefore
         });
@@ -312,7 +316,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
         scenario.steps?.forEach(step => {
             const stepIndent = indent + options.stepIndentation;
             map.set(step.location.line, { type: 'Step', indent: stepIndent, keyword: step.keyword });
-            
+
             if (step.dataTable) {
                 const tableIndent = options.alignTableToKeyword ? stepIndent + (step.keyword?.length || 6) : stepIndent + 2;
                 const groupId = `table-${step.location.line}`;
@@ -320,20 +324,37 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
             }
             if (step.docString) {
                 const startLine = step.docString.location.line;
-                const contentLines = step.docString.content.split(/\r?\n/);
-                const endLine = startLine + contentLines.length + 1;
-                
+
+                let contentLines = step.docString.content.split(/\r?\n/);
+                if (options.docStrings?.formatJson !== 'off') {
+                    const isTagged = step.docString.mediaType?.trim().toLowerCase() === 'json';
+                    const isAuto = options.docStrings?.formatJson === 'auto';
+                    if (isTagged || (isAuto && !step.docString.mediaType && (step.docString.content.trim().startsWith('{') || step.docString.content.trim().startsWith('[')))) {
+                        try {
+                            const parsed = JSON.parse(step.docString.content);
+                            contentLines = JSON.stringify(parsed, null, 2).split(/\r?\n/);
+                        } catch (e) {
+                            // Invalid JSON, fallback to original content
+                        }
+                    }
+                }
+
+                // Keep the original endLine to properly skip original lines in the document map
+                const originalEndLine = startLine + step.docString.content.split(/\r?\n/).length + 1;
+
                 const docStringIndent = options.docStrings?.alignToKeyword ? stepIndent + (step.keyword?.length || 6) : stepIndent + 2;
                 const groupId = `docstring-${startLine}`;
-                map.set(startLine, { 
-                    type: 'DocString', 
-                    indent: docStringIndent, 
+                map.set(startLine, {
+                    type: 'DocString',
+                    indent: docStringIndent,
                     keyword: step.docString.delimiter,
+                    mediaType: step.docString.mediaType,
                     lines: contentLines,
+                    originalEndLine: originalEndLine,
                     groupId
                 });
-                
-                for (let j = startLine + 1; j <= endLine; j++) {
+
+                for (let j = startLine + 1; j <= originalEndLine; j++) {
                     map.set(j, { type: 'Skip', indent: 0, groupId });
                 }
             }
@@ -346,7 +367,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                 this.markEmptyLinesBefore(ex.tags, ex.location.line, options.emptyLinesBetweenScenarios, map);
 
                 map.set(ex.location.line, { type: 'Examples', indent: examplesIndent, keyword: ex.keyword, emptyLinesBefore: map.get(ex.location.line)?.emptyLinesBefore });
-                
+
                 const tableIndent = examplesIndent + 2;
                 const groupId = `table-${ex.location.line}`;
                 if (ex.tableHeader) {
@@ -359,16 +380,16 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
 
     private processTags(tags: readonly Tag[] | undefined, indent: number, options: FormatterOptions, map: Map<number, NodeInfo>) {
         if (!tags || tags.length === 0) return;
-        
+
         const tagLines = Array.from(new Set(tags.map(t => t.location.line))).sort((a,b) => a - b);
         let tagNames = tags.map(t => t.name);
         if (options.tagsSort === 'alphabetical') {
             tagNames = [...tagNames].sort();
         }
-        
+
         const formattedTagLines: string[] = [];
         const indentStr = ' '.repeat(indent);
-        
+
         if (options.tagsFormat === 'singleLine') {
             formattedTagLines.push(indentStr + tagNames.join(' '));
         } else {
@@ -385,7 +406,7 @@ export class GherkinFormattingEditProvider implements vscode.DocumentFormattingE
                 formattedTagLines.push(currentLine);
             }
         }
-        
+
         const groupId = `tags-${tagLines[0]}`;
         for (let i = 0; i < tagLines.length; i++) {
             const line = tagLines[i];

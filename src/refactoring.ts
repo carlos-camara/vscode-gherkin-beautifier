@@ -75,7 +75,15 @@ export class StepRefactoringService {
 
         // 2. Update Feature Usages
         const usages = this.graph.currentGeneration.getUsages(targetDefNode.id);
+        const uniqueScenarios = new Set<string>();
+        const uniqueFeatures = new Set<string>();
+
         for (const usage of usages) {
+            uniqueFeatures.add(usage.uri);
+            if (usage.parent) {
+                uniqueScenarios.add(usage.parent);
+            }
+
             const usageUri = vscode.Uri.parse(usage.uri);
             const usageDoc = await vscode.workspace.openTextDocument(usageUri);
             const lineIdx = usage.line - 1;
@@ -93,6 +101,26 @@ export class StepRefactoringService {
             if (textStartIdx !== -1) {
                 edit.replace(usageUri, new vscode.Range(lineIdx, textStartIdx, lineIdx, textStartIdx + stepText.length), newName);
             }
+        }
+
+        // 3. Progressive Disclosure / Impact Analysis Warning
+        // If graph is still initializing or out of sync, unique counts might be 0, so we just do a simple replacement.
+        // If impact is high (many scenarios or across features), force VS Code Refactor Preview.
+        const isHighImpact = uniqueScenarios.size > 3 || uniqueFeatures.size > 1;
+
+        if (isHighImpact && usages.length > 0) {
+            const metadata: vscode.WorkspaceEditEntryMetadata = {
+                needsConfirmation: true,
+                label: `High Impact Rename: ${uniqueScenarios.size} scenarios across ${uniqueFeatures.size} features`
+            };
+
+            const finalEdit = new vscode.WorkspaceEdit();
+            for (const [uri, textEdits] of edit.entries()) {
+                for (const textEdit of textEdits) {
+                    finalEdit.replace(uri, textEdit.range, textEdit.newText, metadata);
+                }
+            }
+            return finalEdit;
         }
 
         return edit;

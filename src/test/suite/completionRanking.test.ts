@@ -102,14 +102,37 @@ suite('Completion Ranking Service Test Suite', () => {
     });
 
     test('getSortText translates higher tier into lower string values', () => {
-        const score1 = { textMatch: 5, semanticMatch: 3, matcherQuality: 2, localContext: 2, learnedSignals: 50, tieBreaker: 'A' };
-        const score2 = { textMatch: 4, semanticMatch: 3, matcherQuality: 2, localContext: 2, learnedSignals: 99, tieBreaker: 'A' };
+        const score1 = { textMatch: 5, semanticMatch: 3, matcherQuality: 2, localContext: 2, historicalUsage: 25, tagAffinity: 25, tieBreaker: 'A' };
+        const score2 = { textMatch: 4, semanticMatch: 3, matcherQuality: 2, localContext: 2, historicalUsage: 50, tagAffinity: 49, tieBreaker: 'A' };
 
         const str1 = service.getSortText(score1);
         const str2 = service.getSortText(score2);
 
-        // score1 has better textMatch (5 vs 4), so it must sort before score2 despite score2 having max learnedSignals
+        // score1 has better textMatch (5 vs 4), so it must sort before score2 despite score2 having max learned signals
         assert.ok(str1 < str2, 'Tier 1 must dominate Tier 5');
+    });
+
+    test('Score item provides deterministic explanation vectors', () => {
+        const def = createDef('I login', 'given');
+        const context: RankingContext = {
+            semanticType: 'given',
+            typedText: 'I login',
+            currentTags: ['@auth'],
+            currentFeatureStepTexts: ['I login']
+        };
+
+        const score = service.scoreItem(def, context);
+        
+        // This acts as a contract snapshot for the diagnostic command
+        assert.deepStrictEqual(score, {
+            textMatch: TextMatchQuality.EXACT,
+            semanticMatch: SemanticMatchQuality.EXACT,
+            matcherQuality: 2,
+            localContext: 0, // Regex wasn't set, so this skips
+            historicalUsage: 0,
+            tagAffinity: 0,
+            tieBreaker: 'I login'
+        });
     });
 
     test('Identity Generation resolves collisions robustly', () => {
