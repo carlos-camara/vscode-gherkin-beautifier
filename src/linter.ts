@@ -589,9 +589,23 @@ export class GherkinLinter {
 
                 if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                     if (isBlockKeyword) {
-                        code = 'missing-colon';
-                        message = `Missing colon (':') after ${bestMatch}`;
-                        suggestedEdit = bestMatch + ':';
+                        const hasColon = normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ':') || normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ' :');
+                        if (!hasColon) {
+                            code = 'missing-colon';
+                            message = `Missing colon (':') after ${bestMatch}`;
+                            suggestedEdit = bestMatch + ':';
+                        } else {
+                            code = 'invalid-keyword';
+                            const isExamplesAlias = dialect?.examples?.includes(bestMatch);
+                            if (isExamplesAlias) {
+                                const scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                suggestedEdit = scenarioKeyword + ':';
+                            } else {
+                                message = `'${bestMatch}:' is structurally out of place here.`;
+                                suggestedEdit = '';
+                            }
+                        }
                     } else {
                         message = `Incorrect casing: '${isExactMatch ? bestMatch.toLowerCase() : firstWord}'. Did you mean '${bestMatch}'?`;
                         suggestedEdit = bestMatch;
