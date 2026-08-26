@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
-export type RuleSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
-export type RuleCategory = 'AST' | 'Semantic' | 'Behave' | 'Anti-Pattern';
+type RuleSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
+type RuleCategory = 'AST' | 'Semantic' | 'Behave' | 'Anti-Pattern';
 
-export interface RuleDefinition {
+interface RuleDefinition {
     id: string;
     title: string;
     description: string;
@@ -178,7 +178,7 @@ export function isValidSeverity(severity: string): severity is RuleSeverity {
     return ['error', 'warning', 'info', 'hint', 'off'].includes(severity);
 }
 
-export interface CodeActionPayload {
+interface CodeActionPayload {
     replacementText?: string;
     stepText?: string;
     stepKeyword?: string;

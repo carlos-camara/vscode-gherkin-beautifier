@@ -4,7 +4,7 @@ import type { Dialect } from '@cucumber/gherkin';
 
 const dialects = require('@cucumber/gherkin/dist/gherkin-languages.json');
 
-export type SemanticStepType = 'given' | 'when' | 'then' | 'step';
+type SemanticStepType = 'given' | 'when' | 'then' | 'step';
 
 export class DialectService {
     private cache = new Map<string, { version: number, dialect: Dialect }>();

@@ -6,7 +6,7 @@ import { CompletionRankingService, RankingContext, RankingScore } from './comple
 import { astRepository } from './ast';
 import { SourceLocationPresenter } from './utils/sourceLocationPresenter';
 
-export interface CompletionContextSnapshot {
+interface CompletionContextSnapshot {
     version: number;
     tags: string[];
     featureStepTexts: string[];

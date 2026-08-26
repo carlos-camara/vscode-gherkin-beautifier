@@ -298,6 +298,12 @@ export class GherkinLinter {
                                 if (dist < lowestDistance && dist <= threshold) {
                                     lowestDistance = dist;
                                     bestMatch = kw;
+                                } else if (dist === lowestDistance && dist <= threshold) {
+                                    const currentLenDiff = Math.abs(normalizedFirst.length - bestMatch.length);
+                                    const newLenDiff = Math.abs(normalizedFirst.length - normalizedKw.length);
+                                    if (newLenDiff < currentLenDiff) {
+                                        bestMatch = kw;
+                                    }
                                 }
                             }
 
@@ -311,8 +317,29 @@ export class GherkinLinter {
                                 const isBlockKeyword = blockKeywords.includes(bestMatch);
 
                                 if (isBlockKeyword) {
-                                    message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
-                                    suggestedEdit = bestMatch + ':';
+                                    const isExamplesAlias = dialect?.examples?.includes(bestMatch);
+                                    if (isExamplesAlias) {
+                                        let scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                        if (dialect?.scenario) {
+                                            const similar = dialect.scenario.find((k: string) => 
+                                                bestMatch.toLowerCase().startsWith(k.toLowerCase()) || 
+                                                k.toLowerCase().startsWith(bestMatch.toLowerCase().replace(/s$/, ''))
+                                            );
+                                            if (similar) {
+                                                scenarioKeyword = similar;
+                                            } else {
+                                                const notExample = dialect.scenario.find((k: string) => !['Example', 'Ejemplo'].includes(k));
+                                                if (notExample) {
+                                                    scenarioKeyword = notExample;
+                                                }
+                                            }
+                                        }
+                                        message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                        suggestedEdit = scenarioKeyword + ':';
+                                    } else {
+                                        message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
+                                        suggestedEdit = bestMatch + ':';
+                                    }
                                 } else {
                                     message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch.trim()}'?`;
                                     suggestedEdit = bestMatch.trim();
@@ -581,6 +608,12 @@ export class GherkinLinter {
                     if (dist < lowestDistance && dist <= threshold) {
                         lowestDistance = dist;
                         bestMatch = kw;
+                    } else if (dist === lowestDistance && dist <= threshold) {
+                        const currentLenDiff = Math.abs(normalizedFirst.length - bestMatch.length);
+                        const newLenDiff = Math.abs(normalizedFirst.length - normalizedKw.length);
+                        if (newLenDiff < currentLenDiff) {
+                            bestMatch = kw;
+                        }
                     }
                 }
 
@@ -719,6 +752,12 @@ export class GherkinLinter {
                         if (dist < lowestDistance && dist <= threshold) {
                             lowestDistance = dist;
                             bestMatch = kw;
+                        } else if (dist === lowestDistance && dist <= threshold) {
+                            const currentLenDiff = Math.abs(normalizedFirst.length - bestMatch.length);
+                            const newLenDiff = Math.abs(normalizedFirst.length - normalizedKw.length);
+                            if (newLenDiff < currentLenDiff) {
+                                bestMatch = kw;
+                            }
                         }
                     }
                 }

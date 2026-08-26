@@ -68,7 +68,7 @@ The interactive IntelliSense engine uses a specialized `CompletionContextCache` 
 #### Stable Step Definition Identity
 To ensure accurate usage tracking and completion ranking, the engine uses a deterministic **Step Definition Identity**
 (`StepDefinitionId`). Unlike simpler tools that only index the raw regex pattern, Gherkin PowerTools calculates a
-unique canonical identity for every step based on its semantic type, matcher type, normalized pattern, file location,
+unique canonical identity for every step formed strictly by a `uri:line` mapping combined with its semantic type, matcher type, normalized pattern,
 and function name. This guarantees that duplicate patterns across different files do not collide, providing 100%
 accurate blast-radius impact analysis and autocomplete ranking even during major refactors.
 
