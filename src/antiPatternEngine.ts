@@ -272,12 +272,12 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
                     scopeValue: def.pattern,
                     subItems: [
                         ...otherList.map(o => ({
-                            label: `[Conflict] ${o.pattern}`,
+                            label: `[Conflict] ${o.pattern} ${o.uri.split('/').pop()}(${o.line + 1}, 1)`,
                             uri: o.uri,
                             line: o.line + 1
                         })),
                         ...steps.map(s => ({
-                            label: `[Trigger] ${s.text}`,
+                            label: `[Trigger] ${s.text} ${(s.uri || '').split('/').pop()}(${s.location?.line || 1}, 1)`,
                             uri: s.uri || '',
                             line: s.location?.line || 1
                         }))
