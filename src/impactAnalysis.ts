@@ -8,6 +8,7 @@ export interface ImpactReport {
     severity: ImpactSeverity;
     scenarios: ScenarioNode[];
     usages: import('./graph').StepNode[];
+    isAmbiguous: boolean;
 }
 
 export class ImpactAnalyzer {
@@ -77,12 +78,15 @@ export class ImpactAnalyzer {
         if (numScenarios >= 20) severity = 'High';
         else if (numScenarios >= 5) severity = 'Medium';
 
+        const isAmbiguous = usages.some(u => (u as any).ambiguousCandidates && (u as any).ambiguousCandidates.length > 1);
+
         const report = {
             affectedFeatures: affectedFeatures.size,
             affectedScenarios: numScenarios,
             severity,
             scenarios: scenarioNodes,
-            usages
+            usages,
+            isAmbiguous
         };
 
         this.cache.set(stepDefId, { version: this.graph.currentGeneration.version, report });
