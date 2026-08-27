@@ -265,7 +265,7 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
                 affectedFiles: [def.uri],
                 affectedItems: [{
                     label: def.pattern,
-                    description: `Collides with ${others.size} definition(s) over ${steps.length} step(s):`,
+                    description: `Collides with ${others.size} definition(s) over ${steps.length} step(s)`,
                     uri: def.uri,
                     line: def.line + 1,
                     scopeType: 'step',
