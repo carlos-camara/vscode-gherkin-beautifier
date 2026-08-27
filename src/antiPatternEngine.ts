@@ -228,14 +228,14 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
         if (severity === 'off' || metrics.stepAnalysis.ambiguousSteps.length === 0) return [];
         
         const defCollisions = new Map<StepDefNode, Set<StepDefNode>>();
-        const defToSteps = new Map<StepDefNode, Set<string>>();
+        const defToSteps = new Map<StepDefNode, Set<any>>(); // storing ASTNodes (steps)
 
         for (const a of metrics.stepAnalysis.ambiguousSteps) {
             for (const def of a.matchingDefs) {
                 if (!defCollisions.has(def)) defCollisions.set(def, new Set());
                 if (!defToSteps.has(def)) defToSteps.set(def, new Set());
                 
-                defToSteps.get(def)!.add(a.step.text);
+                defToSteps.get(def)!.add(a.step);
 
                 for (const other of a.matchingDefs) {
                     if (other !== def) {
@@ -250,7 +250,7 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
             const steps = Array.from(defToSteps.get(def)!);
             const otherList = Array.from(others);
             
-            const stepExamples = steps.slice(0, 3).map(s => `"${s}"`).join(', ') + (steps.length > 3 ? '...' : '');
+            const stepExamples = steps.slice(0, 3).map(s => `"${s.text}"`).join(', ') + (steps.length > 3 ? '...' : '');
             
             const explanation = `This step definition is ambiguous because it matches step(s) (e.g. ${stepExamples}) that are also matched by:\n` + 
                 otherList.map(o => `- ${o.uri.split('/').pop()}:${o.line + 1} (${o.pattern})`).join('\n');
@@ -265,15 +265,15 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
                 affectedFiles: [def.uri],
                 affectedItems: [{
                     label: def.pattern,
-                    description: `Collides with ${others.size} other definition(s):`,
+                    description: `Causes ambiguity for ${steps.length} Gherkin step(s):`,
                     uri: def.uri,
                     line: def.line + 1,
                     scopeType: 'step',
                     scopeValue: def.pattern,
-                    subItems: otherList.map(o => ({
-                        label: o.pattern,
-                        uri: o.uri,
-                        line: o.line + 1
+                    subItems: steps.map(s => ({
+                        label: s.text,
+                        uri: s.uri || '',
+                        line: s.location?.line || 1
                     }))
                 }],
                 suggestedFix: 'Refine the regex pattern to be more specific and avoid overlapping with other step definitions.'
