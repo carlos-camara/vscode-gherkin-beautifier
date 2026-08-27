@@ -74,7 +74,7 @@ Powered by the new **BDD Anti-pattern Detection Engine**, you can now visually i
 </div>
 
 ### 3. Real-Time Impact Analysis
-A Blast Radius CodeLens appears above every Python step definition. View exactly how many scenarios will be impacted before refactoring, and jump to them with a single click.
+A Blast Radius CodeLens appears above every Python step definition. View exactly how many scenarios will be impacted before refactoring, or instantly see if a step is involved in multiple colliding matchers (`Impact: Ambiguous`). Click the CodeLens to jump directly to the affected scenarios.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/impact-analysis.gif" alt="Impact Analysis - Blast Radius CodeLens" width="600" height="340" />

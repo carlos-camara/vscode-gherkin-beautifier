@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Consistent Source Location Presentation**: Unified source path formatting across Hover, Autocomplete documentation, Impact Analysis Quick Picks, Health Dashboards, and Diagnostics. The new `SourceLocationPresenter` natively supports multi-root workspaces, securely rendering workspace-relative paths and dropping redundant prefixes to prevent exposing absolute disk paths or confusing developers.
 - **O(1) Autocomplete Hot-Path**: Replaced O(N) line-by-line regex scanning during the interactive IntelliSense hot-path with a strict `CompletionContextCache`. The engine now fetches semantic tags and local step texts directly from the memoized AST, binding the context snapshot to the document version. Subsequent completions fetch this context in ~0.0004ms, rendering the autocomplete engine completely independent of file size.
 - **Impact-Aware Native Rename**: Re-architected the global step rename provider (<kbd>F2</kbd>) to support progressive disclosure. Renaming a high-impact step (affecting multiple files or many scenarios) now intercepts the edit and safely triggers VS Code's native Refactor Preview pane, allowing developers to manually review the exact blast radius before committing changes.
+- **Ambiguous CodeLens Impact**: The CodeLens will now explicitly display `⚠️ Impact: Ambiguous` for Python step definitions that are involved in step collisions, actively highlighting ambiguity in the implementation file.
+
+### 🐛 Fixed
+- **Relaxed Ambiguity Usage Policy**: Implemented a relaxed usage policy that registers and tracks usages for ambiguous step definitions correctly, ensuring they do not misleadingly fall back to "Unused".
+- **Structural Alias Quick Fix**: Added a structural detection and Quick Fix that safely identifies and strictly converts misuses of the `Examples` or `Scenarios` keywords back to valid `Scenario` keywords to enforce BDD best practices.
 
 ## [1.8.5] - 2026-08-24
 

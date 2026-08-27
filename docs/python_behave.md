@@ -78,6 +78,7 @@ If your project contains identical step definitions (ambiguous steps), Gherkin P
 - The Markdown documentation (hover) aggregates and lists every source file causing the ambiguity.
 - If the ambiguity spans different semantic types (e.g. `@step` vs `@given`), the item's icon is elevated to a generic `Event` to denote its dual nature.
 - Accepting a grouped item accurately tracks and boosts the ranking of all underlying Python definitions.
+- **Relaxed Ambiguity Policy for Usage**: The usage indexer correctly tracks and records usages for ambiguous step candidates, ensuring that colliding steps are accurately reflected in Impact Analysis rather than incorrectly appearing as "Unused".
 
 #### Consistent Source Location Presentation
 Source file paths inside Hover, Autocomplete documentation, Impact Analysis Quick Picks, and Diagnostics natively support multi-root workspaces. They securely render workspace-relative paths and drop redundant prefixes to prevent exposing absolute disk paths or confusing developers.
@@ -137,6 +138,7 @@ Hovering over any valid step in your `.feature` file reveals its Python implemen
 When modifying existing Python step definitions, it is critical to know how many scenarios will be affected. Gherkin PowerTools includes a real-time **Impact Analysis** engine.
 
 A CodeLens appears directly above every step definition in your `.py` files showing its usage impact:
+- **⚠️ Impact: Ambiguous** (Step matches multiple definitions and causes ambiguity)
 - **Impact: High** (Used in 20+ scenarios)
 - **Impact: Medium** (Used in 5+ scenarios)
 - **Impact: Low** (Used in 1 to 4 scenarios)
