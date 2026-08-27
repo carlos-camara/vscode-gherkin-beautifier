@@ -40,6 +40,7 @@ These rules evaluate the design of your test suite. Their severity and threshold
 
 - **Oversized Scenario (`oversized-scenario`)**: The Scenario has too many steps, suggesting it is testing too much.
 - **Oversized Feature (`oversized-feature`)**: The Feature file has too many Scenarios, making it hard to maintain.
+- **Ambiguous Step Definition (`ambiguous-step-definition`)**: A Python step definition pattern overlaps with other definitions, causing ambiguity during execution.
 - **Duplicated Steps (`duplicated-steps`)**: The exact same steps are repeated multiple times.
 - **Unused Steps (`unused-steps`)**: Python step definitions exist but are not used anywhere. The engine uses a robust `uri:line` deterministic identity within the WorkspaceGraph to guarantee 100% accuracy in blast-radius analysis, preventing false "Unused" positives for steps with identical regex patterns.
 - **Excessive Tags (`excessive-tags`)**: Too many tags are applied to a single element.

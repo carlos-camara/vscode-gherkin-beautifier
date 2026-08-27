@@ -1,4 +1,4 @@
-import { WorkspaceGraph, FeatureNode, ScenarioNode, StepNode } from './graph';
+import { WorkspaceGraph, FeatureNode, ScenarioNode, StepNode, StepDefNode } from './graph';
 import { ProjectHealthMetrics } from './statistics';
 
 type AntiPatternSeverity = 'error' | 'warning' | 'info' | 'hint' | 'off';
@@ -180,7 +180,7 @@ class UnusedStepsRule implements AntiPatternRule {
 
 class AmbiguousStepsRule implements AntiPatternRule {
     metadata: RuleMetadata = {
-        id: 'ambiguous-steps',
+        id: 'ambiguous-step',
         title: 'Ambiguous Steps in Feature Files',
         category: 'Correctness',
         rationale: 'Steps matching multiple step definitions lead to unpredictable test execution.',
@@ -212,6 +212,69 @@ class AmbiguousStepsRule implements AntiPatternRule {
             })),
             suggestedFix: 'Refine your step definition regex patterns to be more specific, so they do not overlap.'
         }];
+    }
+}
+
+class AmbiguousStepDefinitionsRule implements AntiPatternRule {
+    metadata: RuleMetadata = {
+        id: 'ambiguous-step-definition',
+        title: 'Ambiguous Step Definition',
+        category: 'Correctness',
+        rationale: 'This step definition overlaps with others, causing ambiguous matches during execution.',
+        defaultSeverity: 'warning'
+    };
+
+    analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
+        if (severity === 'off' || metrics.stepAnalysis.ambiguousSteps.length === 0) return [];
+        
+        const defCollisions = new Map<StepDefNode, Set<StepDefNode>>();
+        const defToSteps = new Map<StepDefNode, Set<string>>();
+
+        for (const a of metrics.stepAnalysis.ambiguousSteps) {
+            for (const def of a.matchingDefs) {
+                if (!defCollisions.has(def)) defCollisions.set(def, new Set());
+                if (!defToSteps.has(def)) defToSteps.set(def, new Set());
+                
+                defToSteps.get(def)!.add(a.step.text);
+
+                for (const other of a.matchingDefs) {
+                    if (other !== def) {
+                        defCollisions.get(def)!.add(other);
+                    }
+                }
+            }
+        }
+
+        const antiPatterns: AntiPattern[] = [];
+        for (const [def, others] of defCollisions.entries()) {
+            const steps = Array.from(defToSteps.get(def)!);
+            const otherList = Array.from(others);
+            
+            const stepExamples = steps.slice(0, 3).map(s => `"${s}"`).join(', ') + (steps.length > 3 ? '...' : '');
+            
+            const explanation = `This step definition is ambiguous because it matches step(s) (e.g. ${stepExamples}) that are also matched by:\n` + 
+                otherList.map(o => `- ${o.uri.split('/').pop()}:${o.line + 1} (${o.pattern})`).join('\n');
+
+            antiPatterns.push({
+                id: this.metadata.id,
+                title: this.metadata.title,
+                category: this.metadata.category,
+                rationale: this.metadata.rationale,
+                explanation: explanation,
+                severity,
+                affectedFiles: [def.uri],
+                affectedItems: [{
+                    label: def.pattern,
+                    description: `Collides with ${others.size} other definition(s).`,
+                    uri: def.uri,
+                    line: def.line + 1,
+                    scopeType: 'step',
+                    scopeValue: def.pattern
+                }],
+                suggestedFix: 'Refine the regex pattern to be more specific and avoid overlapping with other step definitions.'
+            });
+        }
+        return antiPatterns;
     }
 }
 
@@ -407,6 +470,7 @@ export class AntiPatternEngine {
         this.registerRule(new DuplicatedStepsRule());
         this.registerRule(new UnusedStepsRule());
         this.registerRule(new AmbiguousStepsRule());
+        this.registerRule(new AmbiguousStepDefinitionsRule());
         this.registerRule(new UndefinedStepsRule());
         this.registerRule(new ExcessiveTagsRule());
 
