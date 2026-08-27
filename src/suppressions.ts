@@ -29,10 +29,17 @@ export class SuppressionEngine {
         if (this.suppressionsFile && fs.existsSync(this.suppressionsFile)) {
             try {
                 const content = fs.readFileSync(this.suppressionsFile, 'utf8');
-                this.suppressions = JSON.parse(content);
+                const parsed = JSON.parse(content);
+                if (Array.isArray(parsed)) {
+                    this.suppressions = parsed;
+                } else {
+                    this.suppressions = [];
+                }
             } catch (e) {
-                // Ignore parse errors
+                this.suppressions = [];
             }
+        } else {
+            this.suppressions = [];
         }
     }
 
