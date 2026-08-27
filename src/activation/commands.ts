@@ -46,7 +46,7 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
             }
             const items = report.usages.map(usage => {
                 const parsedUri = vscode.Uri.parse(usage.uri);
-                const description = SourceLocationPresenter.formatShort(parsedUri);
+                const description = `${SourceLocationPresenter.formatShort(parsedUri)}:${usage.line}`;
                 let icon = 'symbol-event';
                 if (usage.semanticType === 'when') icon = 'symbol-method';
                 else if (usage.semanticType === 'then') icon = 'symbol-constant';
