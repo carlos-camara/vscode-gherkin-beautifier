@@ -168,7 +168,7 @@ export class GherkinCodeActionProvider implements vscode.CodeActionProvider {
                 // Determine scope if possible. We don't have payload here, so scope is undefined.
                 // That's fine, the command handles undefined scope (file-level suppression or generic line match)
                 // Actually, wait, if it's a rich diagnostic we might have scope.
-                const richDiag = relevantRichDiagnostics.find(d => d.ruleId === ruleId && d.range.start.line === diagnostic.range.start.line);
+                const richDiag = relevantRichDiagnostics.find(d => d.ruleId === ruleId);
                 const scopeType = richDiag?.actionPayload?.scopeType;
                 const scopeValue = richDiag?.actionPayload?.scopeValue;
 

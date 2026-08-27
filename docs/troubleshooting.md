@@ -67,6 +67,11 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps`, `ambiguous-steps`, and `syntax-errors` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the highly-granular Quick Fixes).
 **Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.rules`.
 
+## Diagnostic suppression (Ignore this error) doesn't seem to work
+**Symptom:** You clicked "Ignore this error" on a diagnostic (like `oversized-scenario`), but the warning still appears.
+**Likely Causes:** In older versions, suppressions were strictly case-sensitive and didn't support multi-root workspaces correctly.
+**Resolution:** Upgrade to version 1.8.6+. Suppressions are now safely canonicalized across macOS and Windows, and properly scoped to the active workspace folder. Check your `.gherkin-pt-suppressions.json` in the root of the specific workspace folder.
+
 ## Rule Configuration (like maxSteps) is ignored
 **Symptom:** You configured a rule like `oversized-scenario` to use a custom threshold (e.g. `maxSteps: 20`), but the engine still uses the default threshold.
 **Likely Causes:** You might have used the legacy string-based format or incorrectly nested the object.

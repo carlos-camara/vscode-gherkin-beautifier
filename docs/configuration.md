@@ -96,6 +96,24 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
+---
+
+## Analytics Settings
+
+### `gherkinPowerTools.analytics.historicalTrends.enabled`
+- **Purpose:** Enable historical snapshots of workspace health to track technical debt over time in the Gherkin Health Dashboard.
+- **Type:** `boolean`
+- **Default:** `true`
+
+### `gherkinPowerTools.analytics.historicalTrends.retentionSnapshots`
+- **Purpose:** Number of historical snapshots to retain before pruning oldest data.
+- **Type:** `number` (1-365)
+- **Default:** `30`
+
+### `gherkinPowerTools.analytics.historicalTrends.maxStorageBytes`
+- **Purpose:** Maximum size (in bytes) allowed for the analytics database. Oldest entries will be pruned if exceeded.
+- **Type:** `number`
+- **Default:** `5242880` (5MB)
 
 ---
 

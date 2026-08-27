@@ -303,32 +303,6 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
                 readableLabel = snippetString.replace(/\$\{\d+:([^}]+)\}/g, '<$1>');
             }
 
-            const item = new vscode.CompletionItem(readableLabel, kind);
-            item.insertText = finalInsertText;
-            item.detail = `(behave) @${def.type}`;
-
-            const doc = new vscode.MarkdownString();
-            doc.appendMarkdown(`**${def.functionName || 'step_impl'}**\n\n`);
-            if (def.documentation) {
-                doc.appendMarkdown(`---\n${def.documentation}\n\n`);
-            }
-            doc.appendMarkdown(`---\n`);
-
-            // Add Regex and Source File exactly as required by the test plan
-            const exactPattern = def.regex ? def.regex.toString() : def.rawPattern;
-            doc.appendMarkdown(`**Regex:** \`${exactPattern}\`\n\n`);
-
-            const relativePath = SourceLocationPresenter.formatPath(def.uri);
-            doc.appendMarkdown(`**Source:** \`${relativePath}\``);
-
-            item.documentation = doc;
-
-            // Set the range to replace the entire typed text after the keyword
-            item.range = replaceRange;
-
-            // Allow VS Code to filter by matching what the user typed against the human-readable pattern
-            item.filterText = readableLabel;
-
             const score = this.rankingService.scoreItem(def, rankingContext);
             const insertTextStr = typeof finalInsertText === 'string' ? finalInsertText : finalInsertText.value;
             const groupKey = `${readableLabel}::${insertTextStr}`;
@@ -380,29 +354,55 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             }
 
             const doc = new vscode.MarkdownString();
+            doc.supportThemeIcons = true;
 
             if (defCount > 1) {
                 doc.appendMarkdown(`**Ambiguous Definitions (${defCount})**\n\n`);
-                for (const def of group.defs) {
-                    doc.appendMarkdown(`---\n**${def.functionName || 'step_impl'}**\n\n`);
-                    const relativePath = SourceLocationPresenter.formatPath(def.uri);
-                    doc.appendMarkdown(`**Source:** \`${relativePath}\`\n\n`);
+                for (let i = 0; i < group.defs.length; i++) {
+                    const def = group.defs[i];
+                    if (i > 0) {
+                        doc.appendMarkdown(`\n\n---\n\n`);
+                    }
+                    const line = def.decoratorRange ? def.decoratorRange.start.line + 1 : 1;
+                    const displayLink = SourceLocationPresenter.formatMarkdownLink(def.uri, line);
+                    
+                    let icon = 'symbol-function';
+                    if (def.type === 'given') icon = 'symbol-event';
+                    else if (def.type === 'when') icon = 'symbol-method';
+                    else if (def.type === 'then') icon = 'symbol-constant';
+                    
+                    doc.appendMarkdown(`$(${icon}) **${def.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) ${displayLink} &nbsp;•&nbsp; $(gear) \`${def.matcherType}\`\n\n`);
+                    
+                    if (!(def as any).evaluable && (def as any).evaluable !== undefined) {
+                        doc.appendMarkdown(`> ⚠️ **Unsupported Matcher:** ${(def as any).compilationError || 'Dynamic expression is not supported'}\n\n`);
+                    }
+                    
+                    const quote = def.rawPattern.includes('\n') ? '"""' : "'";
+                    doc.appendCodeblock(`@${def.type}(${quote}${def.rawPattern}${quote})\ndef ${def.functionName || 'step_impl'}(context, ...):`, 'python');
                 }
             } else {
                 const def = group.defs[0];
-                doc.appendMarkdown(`**${def.functionName || 'step_impl'}**\n\n`);
-                if (def.documentation) {
-                    doc.appendMarkdown(`---\n${def.documentation}\n\n`);
+                const line = def.decoratorRange ? def.decoratorRange.start.line + 1 : 1;
+                const displayLink = SourceLocationPresenter.formatMarkdownLink(def.uri, line);
+                
+                let icon = 'symbol-function';
+                if (def.type === 'given') icon = 'symbol-event';
+                else if (def.type === 'when') icon = 'symbol-method';
+                else if (def.type === 'then') icon = 'symbol-constant';
+                
+                doc.appendMarkdown(`$(${icon}) **${def.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) ${displayLink} &nbsp;•&nbsp; $(gear) \`${def.matcherType}\`\n\n`);
+                
+                if (!(def as any).evaluable && (def as any).evaluable !== undefined) {
+                    doc.appendMarkdown(`> ⚠️ **Unsupported Matcher:** ${(def as any).compilationError || 'Dynamic expression is not supported'}\n\n`);
                 }
-            }
-
-            doc.appendMarkdown(`---\n`);
-            const exactPattern = group.defs[0].regex ? group.defs[0].regex.toString() : group.defs[0].rawPattern;
-            doc.appendMarkdown(`**Regex:** \`${exactPattern}\`\n\n`);
-
-            if (defCount === 1) {
-                const relativePath = SourceLocationPresenter.formatPath(group.defs[0].uri);
-                doc.appendMarkdown(`**Source:** \`${relativePath}\``);
+                
+                const quote = def.rawPattern.includes('\n') ? '"""' : "'";
+                doc.appendCodeblock(`@${def.type}(${quote}${def.rawPattern}${quote})\ndef ${def.functionName || 'step_impl'}(context, ...):`, 'python');
+                
+                if (def.documentation) {
+                    doc.appendMarkdown(`\n\n`);
+                    doc.appendCodeblock(def.documentation, 'text');
+                }
             }
 
             item.documentation = doc;

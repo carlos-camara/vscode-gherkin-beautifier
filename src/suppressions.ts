@@ -65,11 +65,20 @@ export class SuppressionEngine {
             }
         }
         
+        let matchPath = fsPath;
+        let matchRoot = this.workspaceRoot;
+        
+        if (process.platform === 'win32' || process.platform === 'darwin') {
+            matchPath = matchPath.toLowerCase();
+            matchRoot = matchRoot.toLowerCase();
+        }
+        
         // If the path is inside workspaceRoot, make it relative
-        if (fsPath.startsWith(this.workspaceRoot)) {
-            const rel = path.relative(this.workspaceRoot, fsPath);
+        if (matchPath.startsWith(matchRoot)) {
+            const rel = fsPath.substring(this.workspaceRoot.length);
+            const cleanRel = rel.startsWith(path.sep) || rel.startsWith('/') ? rel.substring(1) : rel;
             // Always use forward slashes for cross-platform compatibility in config files
-            return rel.replace(/\\/g, '/');
+            return cleanRel.replace(/\\/g, '/');
         }
         return fsPath;
     }
@@ -84,8 +93,14 @@ export class SuppressionEngine {
             }
             
             // Check URI
-            if (supp.uri && supp.uri !== relativeUri && supp.uri !== uriString && supp.uri !== '*') {
-                return false;
+            if (supp.uri && supp.uri !== '*') {
+                let matchesUri = false;
+                if (process.platform === 'win32' || process.platform === 'darwin') {
+                    matchesUri = supp.uri.toLowerCase() === relativeUri.toLowerCase() || supp.uri.toLowerCase() === uriString.toLowerCase();
+                } else {
+                    matchesUri = supp.uri === relativeUri || supp.uri === uriString;
+                }
+                if (!matchesUri) return false;
             }
 
             // Check scope

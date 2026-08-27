@@ -84,4 +84,8 @@ If a heuristic anti-pattern finding is deliberate or unavoidable (e.g., a massiv
 3. You will be prompted to provide a mandatory **reason** (e.g. "Approved legacy component").
 4. The suppression is recorded in a structural ledger at the root of your workspace (`.gherkin-pt-suppressions.json`).
 
+> [!TIP]
+> **Multi-root and Cross-Platform Support**
+> The suppression engine is fully multi-root workspace aware. Suppressions are stored locally relative to each workspace folder. The engine automatically canonicalizes paths, safely ignoring casing differences on macOS and Windows, ensuring that your suppressions reliably silence diagnostics regardless of how your operating system passes paths to VS Code.
+
 The diagnostic is immediately removed from the editor. Note that core parsing errors like `syntax-error` cannot be suppressed.
