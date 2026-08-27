@@ -132,7 +132,13 @@ export class AntiPatternDiagnosticsManager {
 
                         const categoryIcon = pattern.category === 'Style' ? '🎨' : (pattern.category === 'Correctness' ? '🛑' : '📊');
                         const inlineMessage = item.description || pattern.explanation;
-                        const message = `\u00A0\n${categoryIcon} ${pattern.title} (${pattern.category})\n\n${inlineMessage}\n\n📖 Rationale:\n${pattern.rationale}\n\n💡 Fix:\n${pattern.suggestedFix}\n\u00A0`;
+                        
+                        let subItemsText = '';
+                        if (item.subItems && item.subItems.length > 0) {
+                            subItemsText = '\n\n' + item.subItems.map(s => `- ${s.label}`).join('\n');
+                        }
+                        
+                        const message = `\u00A0\n${categoryIcon} ${pattern.title} (${pattern.category})\n\n${inlineMessage}${subItemsText}\n\n📖 Rationale:\n${pattern.rationale}\n\n💡 Fix:\n${pattern.suggestedFix}\n\u00A0`;
 
                         const diag = new RuleDiagnostic(
                             range, 
@@ -142,6 +148,18 @@ export class AntiPatternDiagnosticsManager {
                             0, 
                             { scopeType: item.scopeType, scopeValue: item.scopeValue }
                         );
+                        
+                        if (item.subItems && item.subItems.length > 0) {
+                            diag.relatedInformation = item.subItems.map(s => {
+                                const uri = s.uri ? vscode.Uri.parse(s.uri) : vscode.Uri.parse(uriString);
+                                const l = s.line !== undefined && s.line > 0 ? s.line - 1 : 0;
+                                return new vscode.DiagnosticRelatedInformation(
+                                    new vscode.Location(uri, new vscode.Position(l, 0)),
+                                    s.label
+                                );
+                            });
+                        }
+                        
                         diag.source = 'Gherkin PowerTools';
 
                         diagnosticsMap.get(uriString)!.push(diag);
