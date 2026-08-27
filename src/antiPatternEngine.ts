@@ -265,16 +265,23 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
                 affectedFiles: [def.uri],
                 affectedItems: [{
                     label: def.pattern,
-                    description: `Causes ambiguity for ${steps.length} Gherkin step(s):`,
+                    description: `Collides with ${others.size} definition(s) over ${steps.length} step(s):`,
                     uri: def.uri,
                     line: def.line + 1,
                     scopeType: 'step',
                     scopeValue: def.pattern,
-                    subItems: steps.map(s => ({
-                        label: s.text,
-                        uri: s.uri || '',
-                        line: s.location?.line || 1
-                    }))
+                    subItems: [
+                        ...otherList.map(o => ({
+                            label: `[Conflict] ${o.pattern}`,
+                            uri: o.uri,
+                            line: o.line + 1
+                        })),
+                        ...steps.map(s => ({
+                            label: `[Trigger] ${s.text}`,
+                            uri: s.uri || '',
+                            line: s.location?.line || 1
+                        }))
+                    ]
                 }],
                 suggestedFix: 'Refine the regex pattern to be more specific and avoid overlapping with other step definitions.'
             });
