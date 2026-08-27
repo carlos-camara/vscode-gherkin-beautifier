@@ -221,7 +221,7 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
         title: 'Ambiguous Step Definition',
         category: 'Correctness',
         rationale: 'This step definition overlaps with others, causing ambiguous matches during execution.',
-        defaultSeverity: 'warning'
+        defaultSeverity: 'error'
     };
 
     analyze(_graph: WorkspaceGraph, metrics: ProjectHealthMetrics, severity: AntiPatternSeverity): AntiPattern[] {
@@ -265,11 +265,16 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
                 affectedFiles: [def.uri],
                 affectedItems: [{
                     label: def.pattern,
-                    description: `Collides with ${others.size} other definition(s).`,
+                    description: `Collides with ${others.size} other definition(s):`,
                     uri: def.uri,
                     line: def.line + 1,
                     scopeType: 'step',
-                    scopeValue: def.pattern
+                    scopeValue: def.pattern,
+                    subItems: otherList.map(o => ({
+                        label: o.pattern,
+                        uri: o.uri,
+                        line: o.line + 1
+                    }))
                 }],
                 suggestedFix: 'Refine the regex pattern to be more specific and avoid overlapping with other step definitions.'
             });

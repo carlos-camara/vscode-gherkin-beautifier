@@ -116,7 +116,7 @@ suite('Anti-Pattern Engine Test Suite', () => {
         const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: customConfig as any });
         assert.strictEqual(ap.length, 2);
         assert.strictEqual(ap[0].title, 'Ambiguous Step Definition');
-        assert.strictEqual(ap[0].severity, 'warning'); // default severity
+        assert.strictEqual(ap[0].severity, 'error'); // default severity
         assert.strictEqual(ap[0].affectedFiles[0], 'def1.py');
         assert.strictEqual(ap[1].title, 'Ambiguous Step Definition');
         assert.strictEqual(ap[1].affectedFiles[0], 'def2.py');

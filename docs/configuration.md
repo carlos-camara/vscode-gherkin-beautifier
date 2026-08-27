@@ -123,7 +123,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
   - `table-inconsistency` (error)
   - `undefined-step` (error)
   - `ambiguous-step` (error)
-  - `ambiguous-step-definition` (warning)
+  - `ambiguous-step-definition` (error)
   - `oversized-scenario` (warning)
   - `oversized-feature` (info)
   - `duplicated-steps` (error)
