@@ -279,7 +279,7 @@ class AmbiguousStepDefinitionsRule implements AntiPatternRule {
                         ...steps.map(s => ({
                             label: `[Trigger] ${s.text}`,
                             uri: s.uri || '',
-                            line: s.location?.line || 1
+                            line: s.line !== undefined ? s.line + 1 : 1
                         }))
                     ]
                 }],
