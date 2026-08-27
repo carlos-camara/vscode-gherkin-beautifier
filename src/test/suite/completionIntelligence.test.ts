@@ -21,7 +21,7 @@ suite('Completion Intelligence Test Suite', () => {
         eventBus.dispose();
     });
 
-    test('Strict ambiguity policy: Ambiguous steps contribute 0 usage', async () => {
+    test('Relaxed ambiguity policy: Ambiguous steps contribute usage to all candidates', async () => {
         const featureUri = 'file:///project/test.feature';
         const pythonUri1 = 'file:///project/steps1.py';
         const pythonUri2 = 'file:///project/steps2.py';
@@ -103,8 +103,10 @@ suite('Completion Intelligence Test Suite', () => {
         
         const ambiguousDef1 = tx.nodes.get('file:///project/steps1.py:10');
         const ambiguousDef2 = tx.nodes.get('file:///project/steps2.py:20');
-        assert.strictEqual(ambiguousDef1.usages.length, 0, 'Ambiguous definition 1 should have 0 usages');
-        assert.strictEqual(ambiguousDef2.usages.length, 0, 'Ambiguous definition 2 should have 0 usages');
+        assert.strictEqual(ambiguousDef1.usages.length, 1, 'Ambiguous definition 1 should have 1 usage');
+        assert.strictEqual(ambiguousDef2.usages.length, 1, 'Ambiguous definition 2 should have 1 usage');
+        assert.strictEqual(ambiguousDef1.usages[0], 'Step:1', 'Ambiguous definition 1 usage should point to step');
+        assert.strictEqual(ambiguousDef2.usages[0], 'Step:1', 'Ambiguous definition 2 usage should point to step');
 
         // Verify unambiguous step
         assert.strictEqual((step2 as any).definitionId, 'file:///project/steps1.py:15', 'Unambiguous step should have correct definitionId');
