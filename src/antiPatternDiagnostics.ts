@@ -133,12 +133,7 @@ export class AntiPatternDiagnosticsManager {
                         const categoryIcon = pattern.category === 'Style' ? '🎨' : (pattern.category === 'Correctness' ? '🛑' : '📊');
                         const inlineMessage = item.description || pattern.explanation;
                         
-                        let subItemsText = '';
-                        if (item.subItems && item.subItems.length > 0) {
-                            subItemsText = '\n\n' + item.subItems.map(s => `- ${s.label}`).join('\n');
-                        }
-                        
-                        const message = `\u00A0\n${categoryIcon} ${pattern.title} (${pattern.category})\n\n${inlineMessage}${subItemsText}\n\n📖 Rationale:\n${pattern.rationale}\n\n💡 Fix:\n${pattern.suggestedFix}\n\u00A0`;
+                        const message = `\u00A0\n${categoryIcon} ${pattern.title} (${pattern.category})\n\n${inlineMessage}\n\n📖 Rationale:\n${pattern.rationale}\n\n💡 Fix:\n${pattern.suggestedFix}\n\u00A0`;
 
                         const diag = new RuleDiagnostic(
                             range, 
