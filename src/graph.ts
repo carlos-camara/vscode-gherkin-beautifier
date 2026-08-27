@@ -633,6 +633,15 @@ export class WorkspaceGraph {
                             tx.setNode(defNode);
                         }
                     }
+                    if (stNode.ambiguousCandidates) {
+                        stNode.ambiguousCandidates.forEach(candId => {
+                            const defNode = tx.getNodeForMutation<StepDefNode>(candId);
+                            if (defNode) {
+                                defNode.usages = defNode.usages.filter(uId => uId !== id);
+                                tx.setNode(defNode);
+                            }
+                        });
+                    }
                 }
                 if (node.type === 'StepDefinition') {
                     const defNode = node as StepDefNode;
@@ -676,6 +685,16 @@ export class WorkspaceGraph {
                 (stepMut as any).definitionId = undefined;
                 (stepMut as any).ambiguousCandidates = defs.map(d => `${this.getCanonicalUri(d.uri)}:${d.decoratorRange.start.line}`);
                 tx.setNode(stepMut); // Triggers unresolvedSteps.add(stepNode.id)
+            }
+            
+            for (const def of defs) {
+                const defUriStr = this.getCanonicalUri(def.uri);
+                const defId = `${defUriStr}:${def.decoratorRange.start.line}`;
+                const defNode = tx.getNodeForMutation<StepDefNode>(defId);
+                if (defNode && !defNode.usages.includes(stepNode.id)) {
+                    defNode.usages.push(stepNode.id);
+                    tx.setNode(defNode);
+                }
             }
         }
     }
