@@ -133,7 +133,7 @@ Wait a few seconds for the lazy-initialization to complete. If it still doesn't 
 
 ## Run fails (Behave executable is not found)
 **Symptom:** You click "Play" in the Test Explorer, but the test immediately fails with a "Command not found" or "behave is not recognized" error in the output.
-**Likely Causes:** `behave` is not installed, or your virtual environment is not active in the shell that VS Code spawns.
+**Likely Causes:** `behave` is not installed, or your virtual environment is not active in the environment that VS Code resolves for the process (the extension intentionally does not spawn a shell for security).
 **Resolution:**
 If using a virtual environment manager like Poetry or Pipenv, update your configuration in `.gherkin-powertoolsrc.json` or `.vscode/settings.json`:
 ```json

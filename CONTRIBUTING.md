@@ -19,6 +19,7 @@ Here is a breakdown of the core modules located in the `src/` directory:
 - **`definition.ts`**: The Go-To-Definition provider. Accesses `cache.ts` for instant lookups.
 - **`outline.ts`**: Constructs the hierarchical tree of `Feature > Rule > Scenario` for the VS Code Outline panel.
 - **`statistics.ts`**: Generates the interactive HTML Webview dashboard by parsing workspace files to count BDD metrics.
+- **`execution.ts`**: The unified Secure Execution Gateway and `BehaveExecutionPlan` factory. Manages test execution across the Test Explorer, Run, and Debug paths securely.
 - **`codeAction.ts`**: Generates quick fixes (💡) for undefined steps or syntax typos.
 - **`completion.ts`**: Smart IntelliSense autocompletion parsing regex into Snippets.
 - **`cache.ts`**: Asynchronous caching engine that non-blockingly indexes the workspace via `vscode.workspace.findFiles`.

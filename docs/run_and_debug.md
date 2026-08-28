@@ -112,6 +112,9 @@ If you need to use an absolute path (e.g. to a local Python interpreter or a `.v
 ```
 This strictly overrides the `executable` specified in `behave.execution`, keeping your project configuration portable and secure.
 
+### Unified Execution Plan
+All execution paths (Run, Debug, Test Explorer, and Tasks) are securely routed through the unified `BehaveExecutionPlan`. This architecture guarantees that your virtual environments, custom arguments, and machine-specific overrides are resolved identically regardless of how you trigger the test.
+
 You can also pass persistent arguments (like passing userdata to the environment):
 
 ```json

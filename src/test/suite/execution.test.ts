@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { runBehave, runBehaveWithPrompt, parseArgsStringToVector, debugBehave, clearMemoryArgs, resolveBehaveExecutionDetails, activeExecutions } from '../../execution';
+import { runBehave, runBehaveWithPrompt, parseArgsStringToVector, debugBehave, clearMemoryArgs, createBehaveExecutionPlan, activeExecutions } from '../../execution';
 import { ConfigurationService } from '../../configuration';
 
 suite('Execution Test Suite', () => {
@@ -82,16 +82,16 @@ suite('Execution Test Suite', () => {
         activeExecutions.clear();
     });
 
-    test('resolveBehaveExecutionDetails uses Python extension active interpreter', async () => {
+    test('createBehaveExecutionPlan uses Python extension active interpreter', async () => {
         const uri = vscode.Uri.file('/workspace/features/test.feature');
-        const details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
-        assert.ok(details);
-        assert.strictEqual(details.executable, '/custom/python');
-        assert.deepStrictEqual(details.args, ['-m', 'behave', '--no-capture', './features/test.feature']);
+        const plan = await createBehaveExecutionPlan(uri, undefined, 'run', mockConfigService);
+        assert.ok(plan);
+        assert.strictEqual(plan.executable, '/custom/python');
+        assert.deepStrictEqual(plan.args, ['-m', 'behave', '--no-capture', './features/test.feature']);
     });
 
 
-    test('resolveBehaveExecutionDetails uses structured execution object', async () => {
+    test('createBehaveExecutionPlan uses structured execution object', async () => {
         const structuredConfigService = {
             getConfiguration: () => ({
                 behave: {
@@ -105,13 +105,13 @@ suite('Execution Test Suite', () => {
         } as unknown as ConfigurationService;
         
         const uri = vscode.Uri.file('/workspace/features/test.feature');
-        const details = await resolveBehaveExecutionDetails(uri, 42, structuredConfigService);
-        assert.ok(details);
-        assert.strictEqual(details.executable, 'uv');
-        assert.deepStrictEqual(details.args, ['run', 'behave', '--no-capture', './features/test.feature:42']);
+        const plan = await createBehaveExecutionPlan(uri, 42, 'run', structuredConfigService);
+        assert.ok(plan);
+        assert.strictEqual(plan.executable, 'uv');
+        assert.deepStrictEqual(plan.args, ['run', 'behave', '--no-capture', './features/test.feature:42']);
     });
 
-    test('resolveBehaveExecutionDetails overrides executable if localExecutable is present', async () => {
+    test('createBehaveExecutionPlan overrides executable if localExecutable is present', async () => {
         const localExecutableConfigService = {
             getConfiguration: () => ({
                 behave: {
@@ -126,13 +126,13 @@ suite('Execution Test Suite', () => {
         } as unknown as ConfigurationService;
         
         const uri = vscode.Uri.file('/workspace/features/test.feature');
-        const details = await resolveBehaveExecutionDetails(uri, 42, localExecutableConfigService);
-        assert.ok(details);
-        assert.strictEqual(details.executable, '/home/user/.venv/bin/behave');
-        assert.deepStrictEqual(details.args, ['-m', 'behave', '--no-capture', './features/test.feature:42']);
+        const plan = await createBehaveExecutionPlan(uri, 42, 'run', localExecutableConfigService);
+        assert.ok(plan);
+        assert.strictEqual(plan.executable, '/home/user/.venv/bin/behave');
+        assert.deepStrictEqual(plan.args, ['-m', 'behave', '--no-capture', './features/test.feature:42']);
     });
 
-    test('resolveBehaveExecutionDetails handles shell injection characters securely as distinct arguments', async () => {
+    test('createBehaveExecutionPlan handles shell injection characters securely as distinct arguments', async () => {
         const maliciousConfigService = {
             getConfiguration: () => ({
                 behave: {
@@ -148,18 +148,18 @@ suite('Execution Test Suite', () => {
         const uri = vscode.Uri.file('/workspace/features/test "$(echo inject)".feature');
         (vscode.workspace as any).asRelativePath = () => 'features/test "$(echo inject)".feature';
         
-        const details = await resolveBehaveExecutionDetails(uri, undefined, maliciousConfigService);
-        assert.ok(details);
+        const plan = await createBehaveExecutionPlan(uri, undefined, 'run', maliciousConfigService);
+        assert.ok(plan);
         // The injection strings must remain intact as distinct arguments, not split or evaluated
-        assert.deepStrictEqual(details.args, ['-m', 'behave', '--tags=@dev; rm -rf /', './features/test "$(echo inject)".feature']);
+        assert.deepStrictEqual(plan.args, ['-m', 'behave', '--tags=@dev; rm -rf /', './features/test "$(echo inject)".feature']);
     });
 
-    test('resolveBehaveExecutionDetails correctly appends Example row line number to arguments', async () => {
+    test('createBehaveExecutionPlan correctly appends Example row line number to arguments', async () => {
         const uri = vscode.Uri.file('/workspace/features/test.feature');
         // Example row line is just a line number to Behave
-        const details = await resolveBehaveExecutionDetails(uri, 55, mockConfigService);
-        assert.ok(details);
-        assert.deepStrictEqual(details.args, ['-m', 'behave', '--no-capture', './features/test.feature:55']);
+        const plan = await createBehaveExecutionPlan(uri, 55, 'run', mockConfigService);
+        assert.ok(plan);
+        assert.deepStrictEqual(plan.args, ['-m', 'behave', '--no-capture', './features/test.feature:55']);
     });
 
     test('runBehave creates ProcessExecution task', async () => {
@@ -194,8 +194,8 @@ suite('Execution Test Suite', () => {
         const uri = vscode.Uri.file('/workspace/features/test.feature');
         await runBehaveWithPrompt(uri, undefined, mockConfigService);
         
-        const details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
-        assert.ok(details?.args.includes('--no-capture'));
+        const plan = await createBehaveExecutionPlan(uri, undefined, 'run', mockConfigService);
+        assert.ok(plan?.args.includes('--no-capture'));
     });
 
     test('runBehaveWithPrompt saves modified args in memory', async () => {
@@ -208,8 +208,8 @@ suite('Execution Test Suite', () => {
         
         await runBehaveWithPrompt(uri, undefined, mockConfigService);
 
-        const details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
-        assert.ok(details?.args.includes('--tags=@wip'));
+        const plan = await createBehaveExecutionPlan(uri, undefined, 'run', mockConfigService);
+        assert.ok(plan?.args.includes('--tags=@wip'));
     });
 
     test('clearMemoryArgs correctly resets additional arguments', async () => {
@@ -222,13 +222,13 @@ suite('Execution Test Suite', () => {
         
         await runBehaveWithPrompt(uri, undefined, mockConfigService);
         
-        let details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
-        assert.ok(details?.args.includes('--tags=@fast'));
+        let plan = await createBehaveExecutionPlan(uri, undefined, 'run', mockConfigService);
+        assert.ok(plan?.args.includes('--tags=@fast'));
         
         clearMemoryArgs();
         
-        details = await resolveBehaveExecutionDetails(uri, undefined, mockConfigService);
-        assert.ok(details?.args.includes('--no-capture'));
+        plan = await createBehaveExecutionPlan(uri, undefined, 'run', mockConfigService);
+        assert.ok(plan?.args.includes('--no-capture'));
     });
 
     test('parseArgsStringToVector correctly splits arguments and unquotes strings', () => {

@@ -39,25 +39,43 @@ function getExecutionSignature(uri: vscode.Uri, line: number | undefined): strin
     return `${uri.toString()}#${line ?? 'all'}`;
 }
 
-interface ExecutionDetails {
-    executable: string;
-    args: string[];
+export type BehaveExecutionMode = 'run' | 'debug' | 'test-explorer';
+
+export interface BehaveExecutionPlan {
+    /** The resolved executable (e.g., 'behave', '/path/to/python', './script.sh') */
+    readonly executable: string;
+    /** The complete array of arguments, including target paths and tags */
+    readonly args: readonly string[];
+    /** The absolute path to the working directory for the execution */
+    readonly cwd: string;
+    /** The environment variables required for the execution */
+    readonly env: Readonly<Record<string, string>>;
+    /** Flag indicating if the resolved executable is a Python interpreter (crucial for Debugging) */
+    readonly isPythonInterpreter: boolean;
+    /** The VS Code Workspace folder owning this execution */
+    readonly workspaceFolder: vscode.WorkspaceFolder;
 }
 
-export async function resolveBehaveExecutionDetails(
+export async function createBehaveExecutionPlan(
     uri: vscode.Uri,
     line: number | undefined,
+    mode: BehaveExecutionMode,
     configService: ConfigurationService
-): Promise<ExecutionDetails | undefined> {
+): Promise<BehaveExecutionPlan | undefined> {
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!workspaceFolder) {
+        return undefined;
+    }
+
     const config = configService.getConfiguration(uri);
     
     let executable: string;
     let baseArgs: string[] = [];
+    let isPythonInterpreter = false;
     
     const configuredExecution = config.behave.execution;
     
     if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
-        // Use the new structured config
         executable = configuredExecution.executable;
         baseArgs = [...configuredExecution.arguments];
     } else {
@@ -70,7 +88,6 @@ export async function resolveBehaveExecutionDetails(
             }
             try {
                 const api = pythonExt.exports;
-                const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
                 if (api.settings && api.settings.getExecutionDetails) {
                     const details = api.settings.getExecutionDetails(workspaceFolder?.uri);
                     if (details && details.execCommand && details.execCommand.length > 0) {
@@ -82,21 +99,18 @@ export async function resolveBehaveExecutionDetails(
             }
         }
         
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-        if (workspaceFolder) {
-            const execPath = pythonExecParts && pythonExecParts.length > 0 ? pythonExecParts[0] : '';
-            if (!execPath || !path.isAbsolute(execPath) || !execPath.startsWith(workspaceFolder.uri.fsPath)) {
-                const commonVenvs = ['.venv', 'venv', 'env'];
-                for (const venv of commonVenvs) {
-                    const binPath = path.join(workspaceFolder.uri.fsPath, venv, 'bin', 'python');
-                    const scriptsPath = path.join(workspaceFolder.uri.fsPath, venv, 'Scripts', 'python.exe');
-                    if (fs.existsSync(binPath)) {
-                        pythonExecParts = [binPath];
-                        break;
-                    } else if (fs.existsSync(scriptsPath)) {
-                        pythonExecParts = [scriptsPath];
-                        break;
-                    }
+        const execPath = pythonExecParts && pythonExecParts.length > 0 ? pythonExecParts[0] : '';
+        if (!execPath || !path.isAbsolute(execPath) || !execPath.startsWith(workspaceFolder.uri.fsPath)) {
+            const commonVenvs = ['.venv', 'venv', 'env'];
+            for (const venv of commonVenvs) {
+                const binPath = path.join(workspaceFolder.uri.fsPath, venv, 'bin', 'python');
+                const scriptsPath = path.join(workspaceFolder.uri.fsPath, venv, 'Scripts', 'python.exe');
+                if (fs.existsSync(binPath)) {
+                    pythonExecParts = [binPath];
+                    break;
+                } else if (fs.existsSync(scriptsPath)) {
+                    pythonExecParts = [scriptsPath];
+                    break;
                 }
             }
         }
@@ -104,6 +118,7 @@ export async function resolveBehaveExecutionDetails(
         if (pythonExecParts && pythonExecParts.length > 0) {
             executable = pythonExecParts[0];
             baseArgs = [...pythonExecParts.slice(1), '-m', 'behave'];
+            isPythonInterpreter = true;
         } else {
             executable = 'behave';
             baseArgs = [];
@@ -112,6 +127,7 @@ export async function resolveBehaveExecutionDetails(
 
     if (config.behave.localExecutable && config.behave.localExecutable.trim().length > 0) {
         executable = config.behave.localExecutable.trim();
+        isPythonInterpreter = false; // Custom executable, might not be a python interpreter
     }
 
     let additionalArgs: string[];
@@ -123,19 +139,52 @@ export async function resolveBehaveExecutionDetails(
     
     additionalArgs = additionalArgs.filter(a => a.trim().length > 0);
     
-    let pathArg = uri.fsPath;
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-    if (workspaceFolder) {
-        pathArg = './' + vscode.workspace.asRelativePath(uri, false);
-    }
-    
+    let pathArg = './' + vscode.workspace.asRelativePath(uri, false);
     if (line !== undefined) {
         pathArg = `${pathArg}:${line}`;
     }
     
-    const args = [...baseArgs, ...additionalArgs, pathArg];
-    
-    return { executable, args };
+    const finalArgs = [...baseArgs, ...additionalArgs];
+    const cwd = workspaceFolder.uri.fsPath;
+    const env: Record<string, string> = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' };
+
+    if (mode === 'test-explorer') {
+        // Inject custom formatter for real-time updates
+        const assetsPath = path.join(__dirname, '..', 'assets');
+        
+        // Ensure pretty formatter is still used for stdout if no formatter is specified
+        if (!finalArgs.includes('-f') && !finalArgs.includes('--format')) {
+            finalArgs.push('-f', 'pretty');
+        }
+        
+        // Disable behave's internal capture so VS Code Test Results panel gets all stdout/stderr natively
+        if (!finalArgs.includes('--no-capture')) {
+            finalArgs.push('--no-capture');
+        }
+        if (!finalArgs.includes('--no-capture-stderr')) {
+            finalArgs.push('--no-capture-stderr');
+        }
+
+        finalArgs.push('-f', 'vscode_behave_formatter:VSCodeFormatter');
+        
+        if (env.PYTHONPATH) {
+            env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
+        } else {
+            env.PYTHONPATH = assetsPath;
+        }
+    }
+
+    // pathArg goes last
+    finalArgs.push(pathArg);
+
+    return {
+        executable,
+        args: finalArgs,
+        cwd,
+        env,
+        isPythonInterpreter,
+        workspaceFolder
+    };
 }
 
 export async function runBehave(uri: vscode.Uri, line: number | undefined, configService: ConfigurationService) {
@@ -145,24 +194,22 @@ export async function runBehave(uri: vscode.Uri, line: number | undefined, confi
         return;
     }
 
-    const details = await resolveBehaveExecutionDetails(uri, line, configService);
-    if (!details) { return; }
-
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!workspaceFolder) {
+    const plan = await createBehaveExecutionPlan(uri, line, 'run', configService);
+    if (!plan) {
         vscode.window.showErrorMessage('Open a workspace to execute tests.');
         return;
     }
 
     const taskName = line !== undefined ? `Behave Scenario (Line ${line})` : `Behave Feature`;
     
-    const execution = new vscode.ProcessExecution(details.executable, details.args, {
-        env: { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
+    const execution = new vscode.ProcessExecution(plan.executable, plan.args as string[], {
+        cwd: plan.cwd,
+        env: plan.env
     });
     
     const task = new vscode.Task(
         { type: 'gherkinPowerTools', command: 'run' },
-        workspaceFolder,
+        plan.workspaceFolder,
         taskName,
         'Gherkin PowerTools',
         execution
@@ -265,41 +312,52 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
         return;
     }
 
-    const config = configService.getConfiguration(uri);
-    
-    let additionalArgs: string[];
-    if (memoryAdditionalArgs !== undefined) {
-        additionalArgs = parseArgsStringToVector(memoryAdditionalArgs);
-    } else {
-        additionalArgs = [...config.behave.additionalArguments];
-    }
-    additionalArgs = additionalArgs.filter(a => a.trim().length > 0);
-    
-    let pathArg = uri.fsPath;
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-    if (workspaceFolder) {
-        pathArg = './' + vscode.workspace.asRelativePath(uri, false);
-    }
-
-    if (line !== undefined) {
-        pathArg = `${pathArg}:${line}`;
-    }
-    
-    const debugConfig: vscode.DebugConfiguration = {
-        name: "Debug Behave (PowerTools)",
-        type: "python",
-        request: "launch",
-        module: "behave",
-        args: [...additionalArgs, pathArg],
-        console: "internalConsole",
-        justMyCode: true,
-        env: { FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
-    };
-    
-    if (!workspaceFolder) {
+    const plan = await createBehaveExecutionPlan(uri, line, 'debug', configService);
+    if (!plan) {
         vscode.window.showErrorMessage('Open a workspace to start debugging.');
         return;
     }
+    
+    if (!plan.isPythonInterpreter) {
+        vscode.window.showWarningMessage('Debugging a custom executable is not fully supported by the Python debugger. It may fail to attach.');
+    }
+    
+    let debugConfig: vscode.DebugConfiguration;
+    if (plan.isPythonInterpreter) {
+        let debugArgs = plan.args as string[];
+        if (debugArgs[0] === '-m' && debugArgs[1] === 'behave') {
+            debugArgs = debugArgs.slice(2);
+        }
+        
+        debugConfig = {
+            name: "Debug Behave (PowerTools)",
+            type: "python",
+            request: "launch",
+            python: plan.executable,
+            module: "behave",
+            args: debugArgs,
+            console: "internalConsole",
+            justMyCode: true,
+            env: plan.env,
+            cwd: plan.cwd
+        };
+    } else {
+        debugConfig = {
+            name: "Debug Behave (PowerTools)",
+            type: "python",
+            request: "launch",
+            program: plan.executable,
+            args: plan.args as string[],
+            console: "internalConsole",
+            justMyCode: true,
+            env: plan.env,
+            cwd: plan.cwd
+        };
+    }
+    
+    // We get pathArg from the last argument for the match later
+    const pathArg = plan.args[plan.args.length - 1];
+
     return new Promise<void>(async (resolve) => {
         let activeSession: vscode.DebugSession | undefined;
         let isResolved = false;
@@ -339,7 +397,7 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
             }
         });
 
-        const started = await vscode.debug.startDebugging(workspaceFolder, debugConfig);
+        const started = await vscode.debug.startDebugging(plan.workspaceFolder, debugConfig);
         if (!started) {
             startDisposable.dispose();
             terminateDisposable.dispose();
@@ -377,53 +435,17 @@ export async function runBehaveForTestRun(
     token: vscode.CancellationToken,
     onEvent?: (event: any) => void
 ): Promise<number | null> {
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!workspaceFolder) {
+    const plan = await createBehaveExecutionPlan(uri, line, 'test-explorer', configService);
+    if (!plan) {
         onOutput('\r\n\x1b[31mError: Cannot run Behave against a file outside of a workspace folder.\x1b[0m\r\n');
         return null;
     }
 
-    const details = await resolveBehaveExecutionDetails(uri, line, configService);
-    if (!details) {
-        return null;
-    }
-
-    const cwd = workspaceFolder.uri.fsPath;
-
-    // Inject custom formatter for real-time updates
-    const assetsPath = path.join(__dirname, '..', 'assets');
-    const pathArg = details.args.pop();
-    
-    // Ensure pretty formatter is still used for stdout if no formatter is specified
-    if (!details.args.includes('-f') && !details.args.includes('--format')) {
-        details.args.push('-f', 'pretty');
-    }
-    
-    // Disable behave's internal capture so VS Code Test Results panel gets all stdout/stderr natively
-    if (!details.args.includes('--no-capture')) {
-        details.args.push('--no-capture');
-    }
-    if (!details.args.includes('--no-capture-stderr')) {
-        details.args.push('--no-capture-stderr');
-    }
-
-    details.args.push('-f', 'vscode_behave_formatter:VSCodeFormatter');
-    if (pathArg) {
-        details.args.push(pathArg);
-    }
-
     return new Promise<number | null>((resolve) => {
-        const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' };
-        if (env.PYTHONPATH) {
-            env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
-        } else {
-            env.PYTHONPATH = assetsPath;
-        }
-
-        const child = cp.spawn(details.executable, details.args, {
-            cwd,
+        const child = cp.spawn(plan.executable, plan.args as string[], {
+            cwd: plan.cwd,
             shell: false, // Security constraint: Never use shell execution
-            env
+            env: plan.env
         });
 
         let lineBuffer = '';
