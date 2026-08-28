@@ -7,7 +7,9 @@ import { parsePythonDecorators } from './tokenizer';
 import type { Tag, Scenario } from '@cucumber/messages';
 import { WorkspaceEventBus } from './eventBus';
 import { ResourceIdentity } from './utils/resourceIdentity';
+import { generateStepDefId } from './utils/stepIdentity';
 export interface StepDefinition {
+    id: string;
     type: 'given' | 'when' | 'then' | 'step';
     rawPattern: string;
     matcherType: 'parse' | 'cfparse' | 're';
@@ -147,8 +149,7 @@ export class SymbolCache {
                 const rawPattern = dec.argumentText;
 
                 let matcherType: 'parse' | 'cfparse' | 're' = 'parse';
-                const firstLine = lines[dec.startLine] || '';
-                if (firstLine.match(/@(given|when|then|step)\s*\(\s*re\./i) || rawPattern.includes('(?P<')) {
+                if (dec.rawArg.includes('re.compile') || rawPattern.includes('(?P<')) {
                     matcherType = 're';
                 } else if (rawPattern.includes('{') && rawPattern.includes('}')) {
                     matcherType = 'parse';
@@ -249,6 +250,7 @@ export class SymbolCache {
                     }
 
                     definitions.push({
+                        id: generateStepDefId(stepType, matcherType, rawPattern, uri, functionName),
                         type: stepType,
                         rawPattern,
                         matcherType,

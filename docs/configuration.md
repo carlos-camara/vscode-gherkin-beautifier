@@ -57,6 +57,11 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Type:** `boolean`
 - **Default:** `true`
 
+### `gherkinPowerTools.docStrings.formatJson`
+- **Purpose:** Controls JSON formatting inside DocStrings. `"tagged"` requires `"""json`. `"auto"` heuristically detects JSON. `"off"` disables it.
+- **Type:** `string`
+- **Default:** `"auto"`
+
 ### `gherkinPowerTools.emptyLines.betweenScenarios`
 - **Purpose:** Enforced blank lines between Scenario/Rule blocks.
 - **Type:** `number` (0–3)
@@ -92,7 +97,6 @@ Individual settings (like `indentation.steps`) always override the profile defau
 - **Default:** `true`
 
 
----
 
 ## Anti-pattern Detection Engine Settings
 
@@ -118,6 +122,7 @@ Individual settings (like `indentation.steps`) always override the profile defau
   - `table-inconsistency` (error)
   - `undefined-step` (error)
   - `ambiguous-step` (error)
+  - `ambiguous-step-definition` (error)
   - `oversized-scenario` (warning)
   - `oversized-feature` (info)
   - `duplicated-steps` (error)

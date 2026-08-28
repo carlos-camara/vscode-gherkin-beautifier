@@ -29,6 +29,18 @@ This guide addresses common problems organized by observable symptoms.
 **Likely Causes:** The Gherkin file contains structural syntax errors.
 **Resolution:** Automatic formatting (like Format on Save) is intentionally designed to be **silent** when syntax errors are present. This prevents intrusive warning popups from interrupting you while you type an incomplete document. Fix the syntax errors (indicated by the red squiggly lines) and the formatter will resume working automatically.
 
+## Autocomplete suggestions are not sorted by popularity
+**Symptom:** You use a step frequently, but it does not appear at the very top of the IntelliSense list.
+**Likely Causes:** Gherkin PowerTools intentionally overrides raw popularity in favor of semantic relevance.
+**Resolution:** The extension uses a strict **5-tier Lexicographical Ranking model**. Exact text matches (Tier 1) and semantic keyword matches (Tier 2 - e.g. `Given` vs `When`) will strictly outrank steps that you simply use more often (Tier 5). This guarantees that autocomplete suggests the technically correct step over a popular but semantically incorrect one.
+**Developer Tip:** Enable `gherkinPowerTools.diagnostics.metricsEnabled` and run **Gherkin PowerTools: Explain Completion Ranking** to see exactly why a step was ranked higher.
+
+## Autocomplete stops working for Scenario Outline Parameters
+**Symptom:** You type `<` inside a Scenario Outline step, but the autocomplete suggestions for parameters (column headers) do not appear or are outdated.
+**Likely Causes:** Your `.feature` file contains severe structural syntax errors that completely break the AST parser around the `Examples` table, and the temporary text-scanning fallback cannot safely determine the local table context.
+**Diagnostic Steps:** Check for red error squiggles above or near the current scenario indicating a broken table or missing structural keyword.
+**Resolution:** Ensure your `Examples:` table has a valid structure with at least a header row (e.g. `| param1 | param2 |`). Once the syntax error is fixed, the AST parser will instantly recover and precise parameter completion will resume.
+
 ## Python steps are not found (Go to Definition / Autocomplete fail)
 **Symptom:** You use Python Behave, but steps show as "Undefined" in the Linter, and Go to Definition does not work.
 **Likely Causes:** The extension is looking in the wrong directory, or your virtual environment is causing performance timeouts.
@@ -54,6 +66,11 @@ Virtual environments (`.venv`, `env`, `node_modules`, etc.) are automatically ex
 **Likely Causes:** Both the realtime Linter and the BDD Anti-pattern Detection Engine are configured to report on the same file, but the filtering mechanism failed or configuration is conflicting.
 **Diagnostic Steps:** Check if `"gherkinPowerTools.antiPatterns.enabled": true` is set. The Anti-pattern Diagnostics Manager is designed to automatically filter out `undefined-steps`, `ambiguous-steps`, and `syntax-errors` from visual editor diagnostics to prevent conflicts with the realtime Linter (which provides the highly-granular Quick Fixes).
 **Resolution:** This should be handled automatically by the extension (as of version 1.8.7). If you still see it, try reloading the VS Code window, or temporarily set the conflicting rule to `"off"` in `gherkinPowerTools.rules`.
+
+## Diagnostic suppression (Ignore this error) doesn't seem to work
+**Symptom:** You clicked "Ignore this error" on a diagnostic (like `oversized-scenario`), but the warning still appears.
+**Likely Causes:** In older versions, suppressions were strictly case-sensitive and didn't support multi-root workspaces correctly.
+**Resolution:** Upgrade to version 1.8.6+. Suppressions are now safely canonicalized across macOS and Windows, and properly scoped to the active workspace folder. Check your `.gherkin-pt-suppressions.json` in the root of the specific workspace folder.
 
 ## Rule Configuration (like maxSteps) is ignored
 **Symptom:** You configured a rule like `oversized-scenario` to use a custom threshold (e.g. `maxSteps: 20`), but the engine still uses the default threshold.

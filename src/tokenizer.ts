@@ -6,6 +6,7 @@ interface TokenizedDecorator {
     startCol: number;
     endLine: number;
     endCol: number;
+    rawArg: string;
 }
 
 export function parsePythonDecorators(content: string): TokenizedDecorator[] {
@@ -54,7 +55,7 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
                     // Parse until we hit matching ')'
                     let parens = 1;
                     const argStartIndex = i;
-                    let lastValidStringContent: string | null = null;
+                    let stringsFound: string[] = [];
                     let nonWhitespaceEncounteredOutsideString = false;
 
                     while (i < len && parens > 0) {
@@ -121,9 +122,7 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
                                     }
                                 }
 
-                                if (!nonWhitespaceEncounteredOutsideString) {
-                                    lastValidStringContent = strContent;
-                                }
+                                stringsFound.push(strContent);
                             } else {
                                 if (c !== ' ' && c !== '\t' && c !== '\r' && c !== '\n' && c !== '#') {
                                     nonWhitespaceEncounteredOutsideString = true;
@@ -143,14 +142,31 @@ export function parsePythonDecorators(content: string): TokenizedDecorator[] {
                     if (parens === 0) {
                         // Successfully found the end
                         const rawArg = content.substring(argStartIndex, i - 1).trim();
+                        let argumentText = rawArg;
+                        let isStringLiteral = false;
+
+                        if (stringsFound.length === 1 && !nonWhitespaceEncounteredOutsideString) {
+                            argumentText = stringsFound[0];
+                            isStringLiteral = true;
+                        } else if (stringsFound.length === 1) {
+                            const trimmed = rawArg.trim();
+                            const matchReCompile = /^re\.compile\s*\(\s*(?:r|u|f|b|fr|rf|br|rb)?(?:'''|"""|'|")[\s\S]*(?:'''|"""|'|")\s*\)$/i;
+                            
+                            if (matchReCompile.test(trimmed)) {
+                                argumentText = stringsFound[0];
+                                isStringLiteral = true;
+                            }
+                        }
+
                         decorators.push({
                             type: matchType,
-                            argumentText: lastValidStringContent !== null && !nonWhitespaceEncounteredOutsideString ? lastValidStringContent : rawArg,
-                            isStringLiteral: lastValidStringContent !== null && !nonWhitespaceEncounteredOutsideString,
+                            argumentText: argumentText,
+                            isStringLiteral: isStringLiteral,
                             startLine,
                             startCol,
                             endLine: line,
-                            endCol: col
+                            endCol: col,
+                            rawArg
                         });
                         continue;
                     }

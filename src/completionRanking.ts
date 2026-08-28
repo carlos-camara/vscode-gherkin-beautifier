@@ -1,9 +1,6 @@
-import * as vscode from 'vscode';
-import { parseGherkin } from './parser';
+
 import { StepDefinition } from './cache';
-import type { Step } from '@cucumber/messages';
-import { WorkspaceEventBus } from './eventBus';
-import { featureDiscoveryService } from './featureDiscovery';
+import { ResourceIdentity } from './utils/resourceIdentity';
 
 export interface RankingContext {
     semanticType: 'given' | 'when' | 'then' | 'step';
@@ -12,191 +9,240 @@ export interface RankingContext {
     currentFeatureStepTexts: string[];
 }
 
-class UsageIndexer {
-    private stepFrequencies = new Map<string, number>();
-    private stepTagAffinities = new Map<string, Set<string>>();
-    private isIndexed = false;
-    private eventBusDisposable?: vscode.Disposable;
+import { WorkspaceGraph, StepDefNode, ScenarioNode } from './graph';
 
-    public setEventBus(eventBus: WorkspaceEventBus) {
-        this.eventBusDisposable?.dispose();
-        this.eventBusDisposable = eventBus.onEvent(e => {
-            if (e.type === 'featureFileChanged' || e.type === 'featureFileCreated') {
-                this.indexFile(e.uri);
-            }
-        });
-    }
-
-    public async indexWorkspace() {
-        if (this.isIndexed) return;
-        this.isIndexed = true;
-        
-        try {
-            const files = await featureDiscoveryService.getFeatureFiles();
-            await Promise.all(files.map(uri => this.indexFile(uri)));
-        } catch (e) {
-            console.error('Failed to index workspace for completion ranking', e);
-        }
-    }
-
-    private async indexFile(uri: vscode.Uri) {
-        try {
-            const rawBytes = await vscode.workspace.fs.readFile(uri);
-            const content = new TextDecoder('utf8').decode(rawBytes);
-            const { document } = await parseGherkin(content);
-
-            if (!document || !document.feature) return;
-            
-            const featureTags = document.feature.tags.map(t => t.name);
-
-            const processSteps = (steps: readonly Step[], tags: string[]) => {
-                for (const step of steps) {
-                    const text = step.text.trim();
-                    this.stepFrequencies.set(text, (this.stepFrequencies.get(text) || 0) + 1);
-                    
-                    if (!this.stepTagAffinities.has(text)) {
-                        this.stepTagAffinities.set(text, new Set());
-                    }
-                    const affinitySet = this.stepTagAffinities.get(text)!;
-                    for (const t of tags) {
-                        affinitySet.add(t);
-                    }
-                }
-            };
-
-            for (const child of document.feature.children) {
-                if (child.background) {
-                    processSteps(child.background.steps, featureTags);
-                } else if (child.scenario) {
-                    const scenarioTags = [...featureTags, ...child.scenario.tags.map(t => t.name)];
-                    processSteps(child.scenario.steps, scenarioTags);
-                } else if (child.rule) {
-                    const ruleTags = [...featureTags, ...child.rule.tags.map(t => t.name)];
-                    for (const ruleChild of child.rule.children) {
-                        if (ruleChild.background) {
-                            processSteps(ruleChild.background.steps, ruleTags);
-                        } else if (ruleChild.scenario) {
-                            const scenarioTags = [...ruleTags, ...ruleChild.scenario.tags.map(t => t.name)];
-                            processSteps(ruleChild.scenario.steps, scenarioTags);
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            // ignore indexing failures for single files
-        }
-    }
-
-    public getFrequency(stepText: string): number {
-        return this.stepFrequencies.get(stepText) || 0;
-    }
-
-    public getTagAffinity(stepText: string, activeTags: string[]): number {
-        const affinities = this.stepTagAffinities.get(stepText);
-        if (!affinities || activeTags.length === 0) return 0;
-        
-        let matchCount = 0;
-        for (const tag of activeTags) {
-            if (affinities.has(tag)) matchCount++;
-        }
-        return matchCount;
-    }
-
-    public dispose() {
-        this.eventBusDisposable?.dispose();
-    }
+export enum TextMatchQuality {
+    EXACT = 5,
+    EXACT_PREFIX = 4,
+    TOKEN_PREFIX = 3,
+    PARTIAL = 2,
+    UNRELATED = 1,
 }
 
+export enum SemanticMatchQuality {
+    EXACT = 3,
+    GENERIC = 2,
+    INCOMPATIBLE = 1,
+}
+
+export interface RankingScore {
+    textMatch: TextMatchQuality;
+    semanticMatch: SemanticMatchQuality;
+    matcherQuality: number;
+    localContext: number;
+    historicalUsage: number;
+    tagAffinity: number;
+    tieBreaker: string;
+}
+
+import * as vscode from 'vscode';
 export class CompletionRankingService {
     private recentlyUsed: string[] = [];
     private readonly MAX_RECENT = 20;
-    public usageIndexer = new UsageIndexer();
+    private readonly STORAGE_KEY = 'gherkin-powertools.recentCompletions';
 
-    public recordCompletion(pattern: string) {
-        // Remove if it exists
-        this.recentlyUsed = this.recentlyUsed.filter(p => p !== pattern);
-        // Add to front
-        this.recentlyUsed.unshift(pattern);
-        if (this.recentlyUsed.length > this.MAX_RECENT) {
-            this.recentlyUsed.pop();
+    constructor(
+        private workspaceGraph: WorkspaceGraph,
+        private memento?: vscode.Memento
+    ) {
+        if (this.memento) {
+            const stored = this.memento.get<string[]>(this.STORAGE_KEY, []) || [];
+            this.recentlyUsed = this.migrateStoredPatterns(stored);
+            if (this.recentlyUsed.length !== stored.length) {
+                this.memento.update(this.STORAGE_KEY, this.recentlyUsed);
+            }
         }
     }
 
-    public scoreItem(def: StepDefinition, context: RankingContext): number {
-        let score = 0;
+    private migrateStoredPatterns(stored: string[]): string[] {
+        const migrated: string[] = [];
+        for (const item of stored) {
+            // Check if it's already a new StepDefinitionId (contains colons)
+            if (item.includes(':')) {
+                migrated.push(item);
+                continue;
+            }
+
+            // Old rawPattern: try to migrate by querying the graph
+            // Best effort: find definitions with this pattern
+            const matches = this.workspaceGraph.currentGeneration.getAllStepDefNodes().filter((n: any) => n.pattern === item);
+
+            // If exactly one match, safely migrate. If ambiguous (multiple) or orphaned (0), discard.
+            if (matches.length === 1) {
+                migrated.push(matches[0].id);
+            }
+        }
+        return migrated;
+    }
+
+    public recordCompletion(ids: string | string[]) {
+        const idArray = Array.isArray(ids) ? ids : [ids];
+
+        for (const id of idArray) {
+            this.recentlyUsed = this.recentlyUsed.filter(p => p !== id);
+            this.recentlyUsed.unshift(id);
+        }
+
+        // Trim back to MAX_RECENT
+        if (this.recentlyUsed.length > this.MAX_RECENT) {
+            this.recentlyUsed = this.recentlyUsed.slice(0, this.MAX_RECENT);
+        }
+
+        if (this.memento) {
+            this.memento.update(this.STORAGE_KEY, this.recentlyUsed);
+        }
+    }
+
+    private normalizeText(text: string): string {
+        return text.trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    private calculateTextMatch(typedText: string, pattern: string): TextMatchQuality {
+        if (!typedText) return TextMatchQuality.UNRELATED;
+
+        const normTyped = this.normalizeText(typedText);
+        const normPattern = this.normalizeText(pattern);
+
+        if (normTyped === normPattern) {
+            return TextMatchQuality.EXACT;
+        }
+
+        if (normPattern.startsWith(normTyped)) {
+            // Check if it's a token boundary or just a substring prefix
+            // If the next character in pattern after the match is a space or end of string, it's a token prefix
+            // Otherwise it's an exact prefix but maybe mid-word.
+            // Actually, EXACT_PREFIX could mean it starts with it precisely. TOKEN_PREFIX could mean partial word.
+            // Let's simplify:
+            if (normPattern.charAt(normTyped.length) === ' ' || normPattern.charAt(normTyped.length) === '') {
+                return TextMatchQuality.EXACT_PREFIX;
+            }
+            return TextMatchQuality.TOKEN_PREFIX;
+        }
+
+        // Partial means it contains the text but not as a prefix
+        if (normPattern.includes(normTyped)) {
+            return TextMatchQuality.PARTIAL;
+        }
+
+        return TextMatchQuality.UNRELATED;
+    }
+
+    public scoreItem(def: StepDefinition, context: RankingContext): RankingScore {
         const pattern = def.rawPattern;
 
-        // 1. Textual Match (15 points if exactly typed prefix)
-        if (context.typedText && pattern.startsWith(context.typedText)) {
-            score += 15;
-        }
+        // Tier 1 - Textual Match
+        const textMatch = this.calculateTextMatch(context.typedText, pattern);
 
-        // 2. Semantic Category Match (10 points)
+        // Tier 2 - Semantic Category Match
+        let semanticMatch = SemanticMatchQuality.INCOMPATIBLE;
         if (def.type === context.semanticType) {
-            score += 10;
+            semanticMatch = SemanticMatchQuality.EXACT;
+        } else if (def.type === 'step') { // generic @step
+            semanticMatch = SemanticMatchQuality.GENERIC;
         }
 
-        // 3. Recent Usage (Up to 30 points)
-        const recentIndex = this.recentlyUsed.indexOf(pattern);
-        if (recentIndex !== -1) {
-            // 30 for most recent, decreasing
-            score += Math.max(1, 30 - recentIndex * 2);
+        // Tier 3 - Matcher Quality
+        // E.g., plaintext > simple regex > complex regex
+        // We'll give higher points to simple strings.
+        // A simple proxy is whether it has regex groups or not.
+        let matcherQuality = 0;
+        if (!pattern.includes('{') && !pattern.includes('(')) {
+            matcherQuality = 2; // Plain text
+        } else if (pattern.includes('{')) {
+            matcherQuality = 1; // Parse expressions
+        } else {
+            matcherQuality = 0; // Raw regex
         }
 
-        // To match against the indexer and current document steps, we need to strip regex groups from the raw pattern.
-        // A simple approximation is just checking if any step text matches the pattern's regex.
+        // Tier 4 - Local Project Context
+        let localContext = 0;
         let isUsedInFeature = false;
-        let globalFrequency = 0;
-
         if (def.regex) {
-            // Check Current Feature (20 points)
             for (const text of context.currentFeatureStepTexts) {
                 if (def.regex.test(text)) {
                     isUsedInFeature = true;
                     break;
                 }
             }
-
-            // Estimate global usage and tag affinity by testing the known step texts in the indexer
-            // This could be slow if there are thousands of unique steps, but usually it's bounded.
-            // Alternatively, since this runs on completion, we can sample or bound the search.
-            // For now, we do a quick check against the exact pattern (this is a heuristic).
-            // A perfect implementation would pre-map step texts to definitions.
-            globalFrequency = this.usageIndexer.getFrequency(pattern); 
-            // In a real matcher, the indexer stores exact literal text, while `pattern` is regex.
-            // To bridge this deterministically without heavy regex loop, we can just check if the pattern string is directly found or used as-is.
         }
-
         if (isUsedInFeature) {
-            score += 20;
+            localContext = 2; // High relevance if already used in this feature
+        } else {
+            // Check folder? For now we just use current feature
+            localContext = 0;
         }
 
-        // Global Frequency (up to 10 points)
-        // Normalizing arbitrarily (e.g. 5+ uses gives 10 points)
-        if (globalFrequency > 0) {
-            score += Math.min(10, globalFrequency * 2);
+        // Tier 5 - Learned Signals (Recent Use, Global Frequency, Tag Affinity)
+        let historicalUsage = 0;
+        let tagAffinity = 0;
+        
+        // Recent usage
+        const recentIndex = this.recentlyUsed.indexOf(def.id);
+        if (recentIndex !== -1) {
+            historicalUsage += Math.max(1, 30 - recentIndex * 2);
         }
 
-        // Tag Affinity (up to 15 points)
-        // If the pattern is directly associated with current tags
-        const tagAffinity = this.usageIndexer.getTagAffinity(pattern, context.currentTags);
-        if (tagAffinity > 0) {
-            score += Math.min(15, tagAffinity * 5);
+        const defUriStr = ResourceIdentity.getCanonicalUriString(def.uri);
+        const defId = `${defUriStr}:${def.decoratorRange.start.line}`;
+        const defNode = this.workspaceGraph.currentGeneration.getNode(defId) as StepDefNode | undefined;
+
+        if (defNode) {
+            historicalUsage += Math.min(10, defNode.usages.length * 2);
+
+            if (context.currentTags.length > 0) {
+                let currentTagAffinity = 0;
+                const activeTagsSet = new Set(context.currentTags);
+                for (const usageId of defNode.usages) {
+                    let currentId: string | undefined = usageId;
+                    while (currentId) {
+                        const node = this.workspaceGraph.currentGeneration.getNode(currentId);
+                        if (!node) break;
+                        if (node.type === 'Scenario') {
+                            const scNode = node as ScenarioNode;
+                            let matches = false;
+                            for (const t of scNode.tags) {
+                                if (activeTagsSet.has(t)) {
+                                    currentTagAffinity++;
+                                    matches = true;
+                                }
+                            }
+                            if (matches) break;
+                        } else if (node.type === 'Background') {
+                            currentId = (node as any).parent;
+                            continue;
+                        }
+                        currentId = (node as any).parent;
+                    }
+                }
+                tagAffinity += Math.min(15, currentTagAffinity * 5);
+            }
         }
 
-        return score;
+        return {
+            textMatch,
+            semanticMatch,
+            matcherQuality,
+            localContext,
+            historicalUsage,
+            tagAffinity,
+            tieBreaker: pattern
+        };
     }
 
-    /**
-     * Converts a numerical score (higher is better) into a lexicographical string (lower is better for VS Code).
-     * e.g., score 100 -> "000_pattern"
-     *       score 50  -> "050_pattern"
-     */
-    public getSortText(score: number, pattern: string): string {
-        // Invert the score (assuming max realistic score is ~100)
-        // We use 999 - score so higher scores get lower numbers.
-        const inverted = Math.max(0, 999 - score);
-        const prefix = inverted.toString().padStart(3, '0');
-        return `${prefix}_${pattern}`;
+    public getSortText(score: RankingScore): string {
+        // We invert the numbers so higher quality -> smaller string lexicographically (VS Code sorts A-Z).
+        // e.g. textMatch: 5 -> "0", textMatch: 1 -> "4"
+        const invert = (val: number, max: number) => Math.max(0, max - val).toString().padStart(2, '0');
+
+        const learnedSignals = score.historicalUsage + score.tagAffinity;
+
+        return [
+            invert(score.textMatch, 5),
+            invert(score.semanticMatch, 3),
+            invert(score.matcherQuality, 2),
+            invert(score.localContext, 2),
+            invert(learnedSignals, 99),
+            score.tieBreaker
+        ].join('-');
     }
 }

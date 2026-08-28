@@ -90,11 +90,36 @@ suite('Anti-Pattern Engine Test Suite', () => {
             ]
         } as any};
         
-        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: ruleConfig as any });
+        const customConfig = { ...ruleConfig, "ambiguous-step-definition": "off" };
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: customConfig as any });
         assert.strictEqual(ap.length, 1);
         assert.strictEqual(ap[0].title, 'Ambiguous Steps in Feature Files');
         assert.strictEqual(ap[0].severity, 'error');
         assert.ok(ap[0].affectedItems![0].label.includes('Matches 2 defs'));
+    });
+
+    test('AmbiguousStepDefinitionsRule triggers on colliding step definitions', () => {
+        const metrics = { ...baseMetrics, stepAnalysis: {
+            ...baseMetrics.stepAnalysis,
+            ambiguousSteps: [
+                {
+                    step: { keyword: 'Given', text: 'conflict', uri: 'file.feature', line: 1 },
+                    matchingDefs: [
+                        { uri: 'def1.py', line: 1, text: '.*', pattern: '.*' },
+                        { uri: 'def2.py', line: 1, text: 'conflict.*', pattern: 'conflict.*' }
+                    ]
+                }
+            ]
+        } as any};
+        
+        const customConfig = { ...ruleConfig, "ambiguous-step": "off" };
+        const ap = engine.generateAntiPatterns(mockGraph, metrics, { rules: customConfig as any });
+        assert.strictEqual(ap.length, 2);
+        assert.strictEqual(ap[0].title, 'Ambiguous Step Definition');
+        assert.strictEqual(ap[0].severity, 'error'); // default severity
+        assert.strictEqual(ap[0].affectedFiles[0], 'def1.py');
+        assert.strictEqual(ap[1].title, 'Ambiguous Step Definition');
+        assert.strictEqual(ap[1].affectedFiles[0], 'def2.py');
     });
 
     test('OversizedFeatureRule triggers when feature size > 20', () => {

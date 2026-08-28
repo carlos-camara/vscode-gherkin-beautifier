@@ -20,13 +20,13 @@ The real-time AST linter parses your `.feature` files as you type. It immediatel
 ### Quick Fixes (Code Actions)
 When the linter detects issues, a lightbulb icon (💡) appears, offering instantaneous Quick Fixes (accessible via <kbd>Ctrl+.</kbd> or <kbd>Cmd+.</kbd>):
 - **Add Missing Colon**: Fixes structural mistakes like missing colons on `Feature` or `Scenario`.
-- **Change Keyword**: Offers to correct misspelled keywords to a valid one for your dialect.
+- **Change Keyword**: Corrects misspelled keywords to a valid one for your dialect. It safely detects structural misuses of `Examples` or `Scenarios` aliases and strictly converts them back to valid `Scenario` keywords to enforce BDD best practices.
 - **Convert to Scenario Outline**: Automatically changes a `Scenario` to a `Scenario Outline` if a Data Table uses `<var>` template parameters.
 - **Generate Python Step**: For `undefined-step` errors, instantly generates a valid Python stub with extracted parameters.
 - **Fix Table Inconsistency**: Adds empty cells or removes overflowing cells to align the table width.
 
 #### Batch Quick Fixes
-Run the **Gherkin PowerTools: Fix All Safe Auto-Fixable Problems** command to automatically correct all non-overlapping, deterministic (semantics-preserving) Quick Fixes across the entire active document without breaking undo history.
+Run the **Gherkin PowerTools: Fix All Safe Auto-Fixable Problems** command to automatically correct all non-overlapping, deterministic (semantics-preserving) Quick Fixes across the entire active document without breaking undo history. Alternatively, run **Gherkin PowerTools: Fix All Auto** to apply all safe formatting and fixes.
 
 ---
 
@@ -40,8 +40,9 @@ These rules evaluate the design of your test suite. Their severity and threshold
 
 - **Oversized Scenario (`oversized-scenario`)**: The Scenario has too many steps, suggesting it is testing too much.
 - **Oversized Feature (`oversized-feature`)**: The Feature file has too many Scenarios, making it hard to maintain.
+- **Ambiguous Step Definition (`ambiguous-step-definition`)**: A Python step definition pattern overlaps with other definitions, causing ambiguity during execution.
 - **Duplicated Steps (`duplicated-steps`)**: The exact same steps are repeated multiple times.
-- **Unused Steps (`unused-steps`)**: Python step definitions exist but are not used anywhere.
+- **Unused Steps (`unused-steps`)**: Python step definitions exist but are not used anywhere. The engine uses a robust `uri:line` deterministic identity within the WorkspaceGraph to guarantee 100% accuracy in blast-radius analysis, preventing false "Unused" positives for steps with identical regex patterns.
 - **Excessive Tags (`excessive-tags`)**: Too many tags are applied to a single element.
 - **Inconsistent Formatting (`inconsistent-formatting`)**: The Gherkin document contains inconsistent formatting.
 
@@ -82,5 +83,9 @@ If a heuristic anti-pattern finding is deliberate or unavoidable (e.g., a massiv
 2. Open the Quick Fix menu (<kbd>Cmd+.</kbd> or <kbd>Ctrl+.</kbd>) and select **Suppress finding**.
 3. You will be prompted to provide a mandatory **reason** (e.g. "Approved legacy component").
 4. The suppression is recorded in a structural ledger at the root of your workspace (`.gherkin-pt-suppressions.json`).
+
+> [!TIP]
+> **Multi-root and Cross-Platform Support**
+> The suppression engine is fully multi-root workspace aware. Suppressions are stored locally relative to each workspace folder. The engine automatically canonicalizes paths, safely ignoring casing differences on macOS and Windows, ensuring that your suppressions reliably silence diagnostics regardless of how your operating system passes paths to VS Code.
 
 The diagnostic is immediately removed from the editor. Note that core parsing errors like `syntax-error` cannot be suppressed.

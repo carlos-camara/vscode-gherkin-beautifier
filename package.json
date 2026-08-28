@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
-  "version": "1.8.5",
+  "version": "1.8.6",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -111,9 +111,21 @@
           "default": true,
           "markdownDescription": "When `true`, DocStrings are dynamically padded to align with the text start of the preceding step keyword.\n\nSet to `false` for a simpler fixed-column alignment."
         },
+        "gherkinPowerTools.docStrings.formatJson": {
+          "type": "string",
+          "order": 13,
+          "scope": "resource",
+          "enum": [
+            "tagged",
+            "auto",
+            "off"
+          ],
+          "default": "auto",
+          "markdownDescription": "Controls whether JSON content inside DocStrings is automatically formatted.\n\n`tagged` requires a `\"\"\"json` media type. `auto` heuristically detects JSON. `off` disables it."
+        },
         "gherkinPowerTools.emptyLines.betweenScenarios": {
           "type": "number",
-          "order": 12,
+          "order": 14,
           "scope": "resource",
           "default": 1,
           "minimum": 0,
@@ -283,6 +295,7 @@
             "table-inconsistency": "error",
             "undefined-step": "error",
             "ambiguous-step": "error",
+            "ambiguous-step-definition": "error",
             "oversized-scenario": "warning",
             "oversized-feature": "info",
             "duplicated-steps": "error",
@@ -439,6 +452,11 @@
       {
         "command": "gherkinPowerTools.analytics.clearHistory",
         "title": "Clear History",
+        "category": "Gherkin PowerTools"
+      },
+      {
+        "command": "gherkinPowerTools.diagnostics.explainCompletionRanking",
+        "title": "Explain Completion Ranking",
         "category": "Gherkin PowerTools"
       }
     ],
@@ -663,6 +681,12 @@
           "**/.gherkin"
         ],
         "url": "./gherkin-powertools.schema.json"
+      },
+      {
+        "fileMatch": [
+          "**/.gherkin-pt-suppressions.json"
+        ],
+        "url": "./schemas/suppressions.schema.json"
       }
     ],
     "keybindings": [
@@ -721,7 +745,6 @@
     ]
   },
   "devDependencies": {
-    "@types/micromatch": "^4.0.10",
     "@types/mocha": "^10.0.1",
     "@types/node": "^26.2.0",
     "@types/sinon": "^22.0.0",

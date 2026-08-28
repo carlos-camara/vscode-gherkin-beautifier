@@ -13,7 +13,7 @@ suite('DialectService Test Suite', () => {
     Then I get a result
     And I get another result
     But I don't get this result`;
-        
+
         const dialect = dialectService.detectDialect(text);
         assert.strictEqual(dialect.name, 'English');
 
@@ -23,7 +23,7 @@ suite('DialectService Test Suite', () => {
         assert.ok(stepKeywords.includes('Then '));
         assert.ok(stepKeywords.includes('And '));
         assert.ok(stepKeywords.includes('But '));
-        
+
         const blockKeywords = dialectService.getBlockKeywords(dialect);
         assert.ok(blockKeywords.includes('Feature'));
         assert.ok(blockKeywords.includes('Scenario'));
@@ -106,7 +106,7 @@ Funktionalität: Hallo
         assert.ok(blockKeywords.includes('Szenario'));
     });
 
-    test('And/But Resolution (Spanish)', async () => {
+    test('resolveDocumentLineSemanticType Resolution (Spanish)', async () => {
         const docText = `# language: es
 Característica: Prueba
   Escenario: Prueba
@@ -120,32 +120,54 @@ Característica: Prueba
     Pero no veo esto`;
 
         const document = await vscode.workspace.openTextDocument({ content: docText, language: 'feature' });
-        
+
         // Line 3: "Dado un paso inicial" (given)
         // Line 4: "Y un paso secundario" -> should resolve to given
-        assert.strictEqual(dialectService.resolveAndBut(document, 4), 'given');
+        assert.strictEqual(dialectService.resolveDocumentLineSemanticType(document, 4), 'given');
         // Line 5: "Pero no esto" -> should resolve to given
-        assert.strictEqual(dialectService.resolveAndBut(document, 5), 'given');
+        assert.strictEqual(dialectService.resolveDocumentLineSemanticType(document, 5), 'given');
 
         // Line 6: "Cuando hago algo" (when)
         // Line 7: "Y hago otra cosa" -> should resolve to when
-        assert.strictEqual(dialectService.resolveAndBut(document, 7), 'when');
+        assert.strictEqual(dialectService.resolveDocumentLineSemanticType(document, 7), 'when');
 
         // Line 8: "Entonces veo resultados" (then)
         // Line 9: "Y veo mas cosas" -> should resolve to then
-        assert.strictEqual(dialectService.resolveAndBut(document, 9), 'then');
+        assert.strictEqual(dialectService.resolveDocumentLineSemanticType(document, 9), 'then');
         // Line 10: "Pero no veo esto" -> should resolve to then
-        assert.strictEqual(dialectService.resolveAndBut(document, 10), 'then');
+        assert.strictEqual(dialectService.resolveDocumentLineSemanticType(document, 10), 'then');
+    });
+
+    test('resolveKeywordSemanticType contract', async () => {
+        const dialect = dialectService.detectDialect('');
+        // Direct exact match
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('Given ', dialect, 'step'), 'given');
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('When ', dialect, 'step'), 'when');
+
+        // Trimming resilience
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('Then', dialect, 'step'), 'then');
+        assert.strictEqual(dialectService.resolveKeywordSemanticType(' Then  ', dialect, 'step'), 'then');
+
+        // Continuation inheritance
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('And ', dialect, 'given'), 'given');
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('But ', dialect, 'when'), 'when');
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('* ', dialect, 'then'), 'then');
+
+        // Continuation default (no prior context)
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('And ', dialect, 'step'), 'step');
+
+        // Malformed keyword explicitly returns 'step'
+        assert.strictEqual(dialectService.resolveKeywordSemanticType('Garbage ', dialect, 'given'), 'step');
     });
 
     test('Regex generation', async () => {
         const text = `# language: es\n`;
         const dialect = dialectService.detectDialect(text);
-        
+
         const structureRegex = dialectService.getStructureRegex(dialect);
         assert.ok(structureRegex.test('  Característica: Hola'));
         assert.ok(structureRegex.test('  Escenario: Hola'));
-        
+
         const stepRegex = dialectService.getStepRegex(dialect);
         assert.ok(stepRegex.test('Dado algo'));
         const match = 'Dado algo'.match(stepRegex);
@@ -166,9 +188,9 @@ Característica: Prueba
         const uri = vscode.Uri.file('/tmp/dialect_test.feature');
         dialectService.clearCache(uri);
 
-        // resolveAndBut boundary fallback when hitting Scenario line
+        // resolveDocumentLineSemanticType boundary fallback when hitting Scenario line
         const docText = `Scenario: Test\n  And step without given`;
         const document = await vscode.workspace.openTextDocument({ content: docText, language: 'feature' });
-        assert.strictEqual(dialectService.resolveAndBut(document, 1), 'step');
+        assert.strictEqual(dialectService.resolveDocumentLineSemanticType(document, 1), 'step');
     });
 });

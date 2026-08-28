@@ -102,16 +102,6 @@ export class AntiPatternDiagnosticsManager {
             if (pattern.affectedItems && pattern.affectedItems.length > 0) {
                 // Pre-load dynamic suppression engines for all affected URIs
                 const dynamicEngines = new Map<string, SuppressionEngine>();
-                const getEngine = (uriString: string) => {
-                    const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(uriString));
-                    const root = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
-                    if (!root) return this.suppressionEngine; // Fallback
-                    if (!dynamicEngines.has(root)) {
-                        dynamicEngines.set(root, new SuppressionEngine(root));
-                    }
-                    return dynamicEngines.get(root)!;
-                };
-
                 for (const item of pattern.affectedItems) {
                     if (item.uri) {
                         const uriString = item.uri;
@@ -119,7 +109,7 @@ export class AntiPatternDiagnosticsManager {
                             diagnosticsMap.set(uriString, []);
                         }
                         
-                        const engine = getEngine(uriString);
+                        const engine = this.getEngineForUri(uriString, dynamicEngines);
                         // Check if this specific item is suppressed
                         if (engine.isSuppressed(pattern.id, uriString, item.scopeType, item.scopeValue)) {
                             continue;
@@ -132,6 +122,7 @@ export class AntiPatternDiagnosticsManager {
 
                         const categoryIcon = pattern.category === 'Style' ? '🎨' : (pattern.category === 'Correctness' ? '🛑' : '📊');
                         const inlineMessage = item.description || pattern.explanation;
+                        
                         const message = `\u00A0\n${categoryIcon} ${pattern.title} (${pattern.category})\n\n${inlineMessage}\n\n📖 Rationale:\n${pattern.rationale}\n\n💡 Fix:\n${pattern.suggestedFix}\n\u00A0`;
 
                         const diag = new RuleDiagnostic(
@@ -142,30 +133,31 @@ export class AntiPatternDiagnosticsManager {
                             0, 
                             { scopeType: item.scopeType, scopeValue: item.scopeValue }
                         );
+                        
+                        if (item.subItems && item.subItems.length > 0) {
+                            diag.relatedInformation = item.subItems.map(s => {
+                                const uri = s.uri ? vscode.Uri.parse(s.uri) : vscode.Uri.parse(uriString);
+                                const l = s.line !== undefined && s.line > 0 ? s.line - 1 : 0;
+                                return new vscode.DiagnosticRelatedInformation(
+                                    new vscode.Location(uri, new vscode.Position(l, 0)),
+                                    s.label
+                                );
+                            });
+                        }
+                        
                         diag.source = 'Gherkin PowerTools';
 
                         diagnosticsMap.get(uriString)!.push(diag);
                     }
                 }
             } else if (pattern.affectedFiles && pattern.affectedFiles.length > 0) {
-                // Pre-load dynamic suppression engines for all affected URIs
                 const dynamicEngines = new Map<string, SuppressionEngine>();
-                const getEngine = (uriString: string) => {
-                    const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(uriString));
-                    const root = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
-                    if (!root) return this.suppressionEngine; // Fallback
-                    if (!dynamicEngines.has(root)) {
-                        dynamicEngines.set(root, new SuppressionEngine(root));
-                    }
-                    return dynamicEngines.get(root)!;
-                };
-
                 // Fallback to affected files (highlighting the top of the file)
                 for (const fileUri of pattern.affectedFiles) {
                     if (!diagnosticsMap.has(fileUri)) {
                         diagnosticsMap.set(fileUri, []);
                     }
-                    const engine = getEngine(fileUri);
+                    const engine = this.getEngineForUri(fileUri, dynamicEngines);
                     if (engine.isSuppressed(pattern.id, fileUri)) {
                         continue;
                     }
@@ -198,6 +190,32 @@ export class AntiPatternDiagnosticsManager {
             this.diagnosticCollection.set(vscode.Uri.parse(uriString), diagnostics);
             antiPatternRegistry.set(uriString, diagnostics as RuleDiagnostic[]);
         }
+    }
+
+    private getEngineForUri(uriString: string, dynamicEngines: Map<string, SuppressionEngine>): SuppressionEngine {
+        const parsedUri = vscode.Uri.parse(uriString);
+        let workspaceFolder = vscode.workspace.getWorkspaceFolder(parsedUri);
+        
+        // Fallback for case-insensitive platforms if getWorkspaceFolder fails (due to case mismatch)
+        if (!workspaceFolder && vscode.workspace.workspaceFolders) {
+            const isCaseInsensitive = process.platform === 'win32' || process.platform === 'darwin';
+            if (isCaseInsensitive) {
+                const lowerFsPath = parsedUri.fsPath.toLowerCase();
+                for (const folder of vscode.workspace.workspaceFolders) {
+                    if (lowerFsPath.startsWith(folder.uri.fsPath.toLowerCase())) {
+                        workspaceFolder = folder;
+                        break;
+                    }
+                }
+            }
+        }
+
+        const root = workspaceFolder ? workspaceFolder.uri.fsPath : undefined;
+        if (!root) return this.suppressionEngine; // Fallback
+        if (!dynamicEngines.has(root)) {
+            dynamicEngines.set(root, new SuppressionEngine(root));
+        }
+        return dynamicEngines.get(root)!;
     }
 
     private mapSeverity(severity: string): vscode.DiagnosticSeverity | undefined {

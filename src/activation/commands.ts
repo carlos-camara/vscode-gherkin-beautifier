@@ -6,6 +6,7 @@ import { SymbolCache } from '../cache';
 import { WorkspaceEventBus } from '../eventBus';
 import { runBehave, runBehaveWithPrompt, debugBehave } from '../execution';
 import { createStepDefinition } from '../codeAction';
+import { SourceLocationPresenter } from '../utils/sourceLocationPresenter';
 import { ImpactReport } from '../impactAnalysis';
 
 interface CommandServices {
@@ -44,8 +45,8 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
                 return;
             }
             const items = report.usages.map(usage => {
-                const parts = vscode.Uri.parse(usage.uri).path.split('/');
-                const description = parts.length >= 2 ? `${parts[parts.length - 2]}/${parts[parts.length - 1]}` : parts[parts.length - 1];
+                const parsedUri = vscode.Uri.parse(usage.uri);
+                const description = `${SourceLocationPresenter.formatShort(parsedUri)}:${usage.line}`;
                 let icon = 'symbol-event';
                 if (usage.semanticType === 'when') icon = 'symbol-method';
                 else if (usage.semanticType === 'then') icon = 'symbol-constant';
@@ -159,7 +160,7 @@ export function registerProductionCommands(services: CommandServices): vscode.Di
                 vscode.window.showErrorMessage('No Python step definition files found.');
                 return;
             }
-            const targetOptions = targetUris.map(uri => ({ label: vscode.workspace.asRelativePath(uri), uri }));
+            const targetOptions = targetUris.map(uri => ({ label: SourceLocationPresenter.formatShort(uri), uri }));
             const selectedTarget = await vscode.window.showQuickPick(targetOptions, { placeHolder: 'Select target file' });
             if (!selectedTarget) return;
 

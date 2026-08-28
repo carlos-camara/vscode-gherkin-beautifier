@@ -14,8 +14,8 @@ const defaultOptions: FormatterOptions = {
 
 let docVersion = 1;
 
-async function runFormat(formatter: GherkinFormattingEditProvider, unformatted: string): Promise<string> {
-    const formattedLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: docVersion++, getText: () => unformatted }, defaultOptions, { isCancellationRequested: false } as vscode.CancellationToken);
+async function runFormat(formatter: GherkinFormattingEditProvider, unformatted: string, options: FormatterOptions = defaultOptions): Promise<string> {
+    const formattedLines = await formatter.formatGherkin({ uri: vscode.Uri.file('test.feature'), version: docVersion++, getText: () => unformatted }, options, { isCancellationRequested: false } as vscode.CancellationToken);
     return formattedLines ? formattedLines.map(l => l.text).join('\n') : '';
 }
 
@@ -476,6 +476,79 @@ suite('Formatter VS Code API Wrapper Tests', () => {
             '            """',
             '              hello',
             '            """'
+        ].join('\n'));
+    });
+
+    test('DocString formatting: formatJson auto', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = [
+            'Feature: F',
+            'Scenario: S',
+            'Given doc:',
+            '"""',
+            '{"messy":true}',
+            '"""'
+        ].join('\n');
+
+        const result = await runFormat(formatter, unformatted, { ...defaultOptions, docStrings: { alignToKeyword: true, formatJson: 'auto' } });
+        assert.strictEqual(result, [
+            'Feature: F',
+            '',
+            '  Scenario: S',
+            '    Given doc:',
+            '          """',
+            '          {',
+            '            "messy": true',
+            '          }',
+            '          """'
+        ].join('\n'));
+    });
+
+    test('DocString formatting: formatJson tagged', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = [
+            'Feature: F',
+            'Scenario: S',
+            'Given doc:',
+            '"""json',
+            '{"messy":true}',
+            '"""'
+        ].join('\n');
+
+        const result = await runFormat(formatter, unformatted, { ...defaultOptions, docStrings: { alignToKeyword: true, formatJson: 'tagged' } });
+        assert.strictEqual(result, [
+            'Feature: F',
+            '',
+            '  Scenario: S',
+            '    Given doc:',
+            '          """json',
+            '          {',
+            '            "messy": true',
+            '          }',
+            '          """'
+        ].join('\n'));
+    });
+
+    test('DocString formatting: formatJson invalid ignored', async () => {
+        const formatter = new GherkinFormattingEditProvider(mockConfigService);
+        const unformatted = [
+            'Feature: F',
+            'Scenario: S',
+            'Given doc:',
+            '"""json',
+            '{"messy":true',
+            '"""'
+        ].join('\n');
+
+        const result = await runFormat(formatter, unformatted, { ...defaultOptions, docStrings: { alignToKeyword: true, formatJson: 'auto' } });
+        assert.strictEqual(result, [
+            'Feature: F',
+            '',
+            '  Scenario: S',
+            '    Given doc:',
+            '          """json',
+            '          {"messy":true',
+            '          """'
         ].join('\n'));
     });
 

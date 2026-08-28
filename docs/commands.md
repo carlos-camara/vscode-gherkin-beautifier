@@ -24,6 +24,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 
 ---
 
+## Fix All Auto
+- **Identifier**: `gherkinPowerTools.fixAllAuto`
+- **Where it appears**: Command Palette.
+- **Required context**: An active `.feature` file.
+- **Input**: None.
+- **Result**: Automatically applies all safe formatting and fixes.
+- **Default shortcut**: None.
+
+---
+
 ## Suppress Gherkin Rule Finding
 - **Identifier**: `gherkinPowerTools.suppressFinding`
 - **Where it appears**: Internal Code Action (hidden from Command Palette).
@@ -82,6 +92,16 @@ Gherkin PowerTools contributes several commands to improve your workflow. All co
 - **Input**: None.
 - **Result**: Opens an Output Channel displaying real-time parser performance metrics, cache hit ratios, and AST complexities to aid in developer troubleshooting.
 - **Related setting**: `gherkinPowerTools.diagnostics.metricsEnabled`
+- **Default shortcut**: None.
+
+---
+
+## Explain Completion Ranking
+- **Identifier**: `gherkinPowerTools.diagnostics.explainCompletionRanking`
+- **Where it appears**: Command Palette.
+- **Required context**: The `gherkinPowerTools.diagnostics.metricsEnabled` setting must be enabled, and the editor must have focus in a Gherkin document where completions were recently requested.
+- **Input**: None.
+- **Result**: Opens a QuickPick menu detailing the latest semantic and historical factors (e.g., text match, tag affinity, historical usage) that influenced the autocomplete suggestions, helping developers understand why a specific step was ranked higher than another.
 - **Default shortcut**: None.
 
 ---

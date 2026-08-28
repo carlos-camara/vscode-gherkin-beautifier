@@ -1,53 +1,176 @@
 import * as vscode from 'vscode';
-import { SymbolCache } from './cache';
+import { SymbolCache, StepDefinition } from './cache';
 import { dialectService } from './dialect';
 import type { Dialect } from '@cucumber/gherkin';
-import { CompletionRankingService, RankingContext } from './completionRanking';
+import { CompletionRankingService, RankingContext, RankingScore } from './completionRanking';
+import { astRepository } from './ast';
+import { SourceLocationPresenter } from './utils/sourceLocationPresenter';
+
+interface CompletionContextSnapshot {
+    version: number;
+    tags: string[];
+    featureStepTexts: string[];
+}
+
+export class CompletionContextCache {
+    private cache = new Map<string, CompletionContextSnapshot>();
+
+    public async getSnapshot(document: vscode.TextDocument, stepRegex: RegExp): Promise<CompletionContextSnapshot> {
+        const uriStr = document.uri.toString();
+        const cached = this.cache.get(uriStr);
+
+        if (cached && cached.version === document.version) {
+            return cached;
+        }
+
+        let gherkinDocument = null;
+        try {
+            const result = await astRepository.getAST(document);
+            gherkinDocument = result.document;
+        } catch (e) {
+            // Ignored, will fallback to regex
+        }
+
+        const tags = new Set<string>();
+        const featureStepTexts: string[] = [];
+
+        if (gherkinDocument && gherkinDocument.feature) {
+            const feature = gherkinDocument.feature;
+            feature.tags?.forEach((t: any) => tags.add(t.name));
+
+            for (const child of feature.children || []) {
+                if (child.background?.steps) {
+                    child.background.steps.forEach((s: any) => featureStepTexts.push(s.text.trim()));
+                }
+                if (child.scenario) {
+                    child.scenario.tags?.forEach((t: any) => tags.add(t.name));
+                    child.scenario.steps?.forEach((s: any) => featureStepTexts.push(s.text.trim()));
+                }
+                if (child.rule) {
+                    child.rule.tags?.forEach((t: any) => tags.add(t.name));
+                    child.rule.children?.forEach((rc: any) => {
+                        if (rc.background?.steps) {
+                            rc.background.steps.forEach((s: any) => featureStepTexts.push(s.text.trim()));
+                        }
+                        if (rc.scenario) {
+                            rc.scenario.tags?.forEach((t: any) => tags.add(t.name));
+                            rc.scenario.steps?.forEach((s: any) => featureStepTexts.push(s.text.trim()));
+                        }
+                    });
+                }
+            }
+        } else {
+            // Text Fallback: If AST failed severely, fallback to regex
+            const currentText = document.getText();
+            const matches = currentText.matchAll(/@[\w-]+/g);
+            for (const m of matches) tags.add(m[0]);
+
+            for (let i = 0; i < document.lineCount; i++) {
+                const line = document.lineAt(i).text.trim();
+                const stepMatch = line.match(stepRegex);
+                if (stepMatch) {
+                    featureStepTexts.push(line.substring(stepMatch[1].length).trim());
+                }
+            }
+        }
+
+        const snapshot: CompletionContextSnapshot = {
+            version: document.version,
+            tags: Array.from(tags),
+            featureStepTexts
+        };
+
+        this.cache.set(uriStr, snapshot);
+
+        // Bound memory to max 10 open documents
+        if (this.cache.size > 10) {
+            const firstKey = this.cache.keys().next().value;
+            if (firstKey) this.cache.delete(firstKey);
+        }
+
+        return snapshot;
+    }
+
+    public invalidate(uri: vscode.Uri) {
+        this.cache.delete(uri.toString());
+    }
+}
+
+export function validateSnippetAgainstRegex(snippet: string, regex: RegExp): boolean {
+    let concrete = snippet.replace(/\$\{\d+:([^}]+)\}/g, '$1');
+    const result = regex.test(concrete);
+    return result;
+}
 
 /**
- * Cleans up raw regex syntax from step definition patterns to provide
- * human-readable completion snippets.
+ * Generates a safe, human-readable snippet from a regex pattern.
+ * If validation fails (e.g. complex lookarounds or failing classes), returns null.
  */
-function cleanRegexSnippet(snippet: string): string {
-    let clean = snippet;
-    
-    // 1. Remove ^ and $ anchors at start and end
-    clean = clean.replace(/^\^/, '').replace(/\$$/, '');
+export function generateSafeRegexSnippet(pattern: string, regex?: RegExp): string | null {
+    let clean = pattern;
+    let counter = 1;
 
-    // 2. Resolve non-capturing groups (?:a|b|c) -> always pick the first option 'a'
+    // Resolve alternations ANYWHERE inside parentheses: e.g. (first|second) -> pick first
     let prev;
     do {
         prev = clean;
-        clean = clean.replace(/\(\?:([^|)]+)(?:\|[^|)]+)*\)/g, '$1');
+        clean = clean.replace(/\(([^()|]*?)\|[^()]*\)/g, '($1)');
     } while (clean !== prev);
 
-    // 3. Remove optional modifiers (?) and any stray parentheses left from groups
+    // Resolve non-capturing groups (?:a) -> a
+    do {
+        prev = clean;
+        clean = clean.replace(/\(\?:([^()]*)\)/g, '$1');
+    } while (clean !== prev);
+
+    // Character classes FIRST
+    clean = clean.replace(/\\d\+/g, '123');
+    clean = clean.replace(/\\d\*/g, '123');
+    clean = clean.replace(/\\w\+/g, 'text');
+    clean = clean.replace(/\\w\*/g, 'text');
+    clean = clean.replace(/\.\*/g, '...');
+    clean = clean.replace(/\.\+/g, '...');
+
+    // Then named groups
+    clean = clean.replace(/\(\?P<([^>]+)>[^()]*\)/g, (_match, name) => {
+        return `\${${counter++}:${name}}`;
+    });
+
+    // Then unnamed groups
+    clean = clean.replace(/\([^()?P][^()]*\)/g, (match) => {
+        let inner = match.substring(1, match.length - 1);
+        if (!inner || inner.includes('\\') || inner.includes('[')) {
+            inner = 'val';
+        }
+        return `\${${counter++}:${inner}}`;
+    });
+
     clean = clean.replace(/\?/g, '');
     clean = clean.replace(/[()]/g, '');
+    clean = clean.replace(/\\s[*+]/g, ' ');
 
-    // 4. Replace regex spaces \s*, \s+, \s? with actual spaces
-    clean = clean.replace(/\\s[*+?]/g, ' ');
-
-    // 5. Replace other common raw regex quantifiers/classes with placeholders
-    clean = clean.replace(/\\d\+/g, '123');
-    clean = clean.replace(/\\w\+/g, 'text');
-    clean = clean.replace(/\.\*/g, '...');
-
-    // 6. Clean up escape characters (e.g. \. -> .)
     clean = clean.replace(/\\([a-zA-Z0-9.])/g, '$1');
-
-    // 7. Collapse multiple spaces
+    clean = clean.replace(/\\\$/g, '$');
+    clean = clean.replace(/^\^/, '').replace(/\$$/, '');
     clean = clean.replace(/\s+/g, ' ').trim();
+
+    if (regex) {
+        if (!validateSnippetAgainstRegex(clean, regex)) {
+            return null;
+        }
+    }
 
     return clean;
 }
 export class GherkinCompletionProvider implements vscode.CompletionItemProvider {
     private symbolCache: SymbolCache;
     private rankingService: CompletionRankingService;
+    private contextCache: CompletionContextCache;
 
-    constructor(symbolCache: SymbolCache, rankingService: CompletionRankingService) {
+    constructor(symbolCache: SymbolCache, rankingService: CompletionRankingService, contextCache: CompletionContextCache) {
         this.symbolCache = symbolCache;
         this.rankingService = rankingService;
+        this.contextCache = contextCache;
     }
 
     public async provideCompletionItems(
@@ -56,17 +179,17 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
         token: vscode.CancellationToken,
         _context: vscode.CompletionContext
     ): Promise<vscode.CompletionItem[] | vscode.CompletionList | undefined> {
-        
+
         const linePrefix = document.lineAt(position).text.substring(0, position.character);
         const dialect = dialectService.getDialect(document);
-        
+
         // Check if we are inside a parameter typing state: e.g. "Given I do <fo"
         const paramMatch = linePrefix.match(/<([^>]*)$/);
-        
+
         if (paramMatch) {
             const typedParamText = paramMatch[1];
-            const headers = this.getOutlineHeaders(document, position.line, dialect);
-            
+            const headers = await this.getOutlineHeaders(document, position.line, dialect);
+
             if (headers.length > 0) {
                 const replaceRange = new vscode.Range(
                     position.line,
@@ -87,14 +210,14 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
                 return items;
             }
         }
-        
+
         // Ensure we only autocomplete when a valid step keyword is present
         const stepKeywords = dialectService.getStepKeywords(dialect);
         if (!stepKeywords.includes('* ')) stepKeywords.push('* ');
         stepKeywords.sort((a, b) => b.length - a.length);
         const escapedSteps = stepKeywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         const stepRegex = new RegExp(`^(\\s*(?:${escapedSteps.join('|')}))`);
-        
+
         const match = linePrefix.match(stepRegex);
         if (!match) {
             return undefined;
@@ -112,39 +235,29 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
         );
 
         // Determine semantic type of the current step
-        const kw = keywordPrefix.trim();
-        let semanticType: 'given' | 'when' | 'then' | 'step' = 'step';
-        
-        if (dialect.given.includes(kw) || dialect.given.includes(kw + ' ')) semanticType = 'given';
-        else if (dialect.when.includes(kw) || dialect.when.includes(kw + ' ')) semanticType = 'when';
-        else if (dialect.then.includes(kw) || dialect.then.includes(kw + ' ')) semanticType = 'then';
-        else if (dialect.and.includes(kw) || dialect.and.includes(kw + ' ') || 
-                 dialect.but.includes(kw) || dialect.but.includes(kw + ' ') || 
-                 kw === '*') {
-            semanticType = dialectService.resolveAndBut(document, position.line);
-        }
+        const semanticType = dialectService.resolveDocumentLineSemanticType(document, position.line);
 
         const definitions = await this.symbolCache.getAllStepDefinitions(semanticType);
         const completionItems: vscode.CompletionItem[] = [];
         const seenPatterns = new Set<string>();
 
-        // Fast extraction of current document context for ranking
-        const currentText = document.getText();
-        const currentTags = Array.from(currentText.matchAll(/@[\w-]+/g)).map(m => m[0]);
-        const currentFeatureStepTexts: string[] = [];
-        for (let i = 0; i < document.lineCount; i++) {
-            const line = document.lineAt(i).text.trim();
-            const stepMatch = line.match(stepRegex);
-            if (stepMatch) {
-                currentFeatureStepTexts.push(line.substring(stepMatch[1].length).trim());
-            }
+        interface GroupedCompletion {
+            readableLabel: string;
+            finalInsertText: string | vscode.SnippetString;
+            kind: vscode.CompletionItemKind;
+            highestScore: RankingScore;
+            defs: StepDefinition[];
         }
+        const groups = new Map<string, GroupedCompletion>();
+
+        // Fast extraction of current document context for ranking via Snapshot Cache
+        const snapshot = await this.contextCache.getSnapshot(document, stepRegex);
 
         const rankingContext: RankingContext = {
             semanticType,
             typedText,
-            currentTags,
-            currentFeatureStepTexts
+            currentTags: snapshot.tags,
+            currentFeatureStepTexts: snapshot.featureStepTexts
         };
 
         for (const def of definitions) {
@@ -153,86 +266,222 @@ export class GherkinCompletionProvider implements vscode.CompletionItemProvider 
             }
 
             const pattern = def.rawPattern;
+            const defId = def.id;
 
             // Avoid duplicates
-            if (seenPatterns.has(pattern)) {
+            if (seenPatterns.has(defId)) {
                 continue;
             }
-            seenPatterns.add(pattern);
+            seenPatterns.add(defId);
 
             let kind = vscode.CompletionItemKind.Function;
             if (def.type === 'given') kind = vscode.CompletionItemKind.Event;
             else if (def.type === 'when') kind = vscode.CompletionItemKind.Method;
             else if (def.type === 'then') kind = vscode.CompletionItemKind.Value;
 
-            // Convert Behave parameters {param} or {param:d} and regex (?P<param>.*) to Snippets ${1:param}
             let snippetString = pattern;
-            let counter = 1;
+            let readableLabel = pattern;
+            let finalInsertText: string | vscode.SnippetString = pattern;
 
-            // Replace {param} or {param:type} -> ${1:param}
-            snippetString = snippetString.replace(/\{([^}:]+)(?::[^}]+)?\}/g, (_match, paramName) => {
-                return `\${${counter++}:${paramName}}`;
-            });
-
-            // Replace (?P<param>.*) -> ${1:param}
-            snippetString = snippetString.replace(/\(\?P<([^>]+)>.*?\)/g, (_match, paramName) => {
-                return `\${${counter++}:${paramName}}`;
-            });
-
-            // Clean up regex artifacts for human-readable completion
-            const cleanedSnippetString = cleanRegexSnippet(snippetString);
-            const readableLabel = cleanedSnippetString.replace(/\$\{\d+:([^}]+)\}/g, '<$1>');
-
-            const item = new vscode.CompletionItem(readableLabel, kind);
-            item.insertText = new vscode.SnippetString(cleanedSnippetString);
-            item.detail = `(behave) @${def.type}`;
-            
-            const doc = new vscode.MarkdownString();
-            doc.appendMarkdown(`**${def.functionName || 'step_impl'}**\n\n`);
-            if (def.documentation) {
-                doc.appendMarkdown(`---\n${def.documentation}\n\n`);
+            if (def.matcherType === 're') {
+                const safeSnippet = generateSafeRegexSnippet(pattern, def.regex);
+                if (safeSnippet !== null) {
+                    finalInsertText = new vscode.SnippetString(safeSnippet);
+                    readableLabel = safeSnippet.replace(/\$\{\d+:([^}]+)\}/g, '<$1>');
+                } else {
+                    // Fallback UX for unsupported or unsafe regex
+                    finalInsertText = def.rawPattern;
+                    readableLabel = def.rawPattern + ' [Regex]';
+                }
+            } else {
+                let counter = 1;
+                // Replace {param} or {param:type} -> ${1:param}
+                snippetString = snippetString.replace(/\{([^}:]+)(?::[^}]+)?\}/g, (_match, paramName) => {
+                    return `\${${counter++}:${paramName}}`;
+                });
+                finalInsertText = new vscode.SnippetString(snippetString);
+                readableLabel = snippetString.replace(/\$\{\d+:([^}]+)\}/g, '<$1>');
             }
-            doc.appendMarkdown(`---\n`);
-            
-            // Add Regex and Source File exactly as required by the test plan
-            const exactPattern = def.regex ? def.regex.toString() : def.rawPattern;
-            doc.appendMarkdown(`**Regex:** \`${exactPattern}\`\n\n`);
-            
-            const relativePath = vscode.workspace.asRelativePath(def.uri);
-            doc.appendMarkdown(`**Source:** \`${relativePath}\``);
-            
-            item.documentation = doc;
-            
-            // Set the range to replace the entire typed text after the keyword
-            item.range = replaceRange;
-            
-            // Allow VS Code to filter by matching what the user typed against the human-readable pattern
-            item.filterText = readableLabel;
-            
-            // Apply contextual ranking
+
             const score = this.rankingService.scoreItem(def, rankingContext);
-            item.sortText = this.rankingService.getSortText(score, pattern);
-            
-            // Attach internal command to track when this completion is accepted
+            const insertTextStr = typeof finalInsertText === 'string' ? finalInsertText : finalInsertText.value;
+            const groupKey = `${readableLabel}::${insertTextStr}`;
+
+            const existingGroup = groups.get(groupKey);
+            if (!existingGroup) {
+                groups.set(groupKey, {
+                    readableLabel,
+                    finalInsertText,
+                    kind,
+                    highestScore: score,
+                    defs: [def]
+                });
+            } else {
+                const kindRank: Record<vscode.CompletionItemKind, number> = {
+                    [vscode.CompletionItemKind.Function]: 1,
+                    [vscode.CompletionItemKind.Value]: 2, // then
+                    [vscode.CompletionItemKind.Method]: 3, // when
+                    [vscode.CompletionItemKind.Event]: 4, // given
+                } as any;
+
+                const existingKindRank = kindRank[existingGroup.kind] || 0;
+                const currentKindRank = kindRank[kind] || 0;
+                if (currentKindRank > existingKindRank) {
+                    existingGroup.kind = kind;
+                }
+
+                const existingSort = this.rankingService.getSortText(existingGroup.highestScore);
+                const currentSort = this.rankingService.getSortText(score);
+                if (currentSort < existingSort) { // Lower string is better
+                    existingGroup.highestScore = score;
+                }
+
+                existingGroup.defs.push(def);
+            }
+        }
+
+        for (const group of groups.values()) {
+            const item = new vscode.CompletionItem(group.readableLabel, group.kind);
+            item.insertText = group.finalInsertText;
+
+            const defCount = group.defs.length;
+            const types = Array.from(new Set(group.defs.map(d => d.type))).join('/');
+
+            if (defCount === 1) {
+                item.detail = `(behave) @${types}`;
+            } else {
+                item.detail = `(behave) @${types} (${defCount} matching definitions)`;
+            }
+
+            const doc = new vscode.MarkdownString();
+            doc.supportThemeIcons = true;
+
+            if (defCount > 1) {
+                doc.appendMarkdown(`**Ambiguous Definitions (${defCount})**\n\n`);
+                for (let i = 0; i < group.defs.length; i++) {
+                    const def = group.defs[i];
+                    if (i > 0) {
+                        doc.appendMarkdown(`\n\n---\n\n`);
+                    }
+                    const line = def.decoratorRange ? def.decoratorRange.start.line + 1 : 1;
+                    const displayLink = SourceLocationPresenter.formatMarkdownLink(def.uri, line);
+                    
+                    let icon = 'symbol-function';
+                    if (def.type === 'given') icon = 'symbol-event';
+                    else if (def.type === 'when') icon = 'symbol-method';
+                    else if (def.type === 'then') icon = 'symbol-constant';
+                    
+                    doc.appendMarkdown(`$(${icon}) **${def.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) ${displayLink} &nbsp;•&nbsp; $(gear) \`${def.matcherType}\`\n\n`);
+                    
+                    if (!(def as any).evaluable && (def as any).evaluable !== undefined) {
+                        doc.appendMarkdown(`> ⚠️ **Unsupported Matcher:** ${(def as any).compilationError || 'Dynamic expression is not supported'}\n\n`);
+                    }
+                    
+                    const quote = def.rawPattern.includes('\n') ? '"""' : "'";
+                    doc.appendCodeblock(`@${def.type}(${quote}${def.rawPattern}${quote})\ndef ${def.functionName || 'step_impl'}(context, ...):`, 'python');
+                }
+            } else {
+                const def = group.defs[0];
+                const line = def.decoratorRange ? def.decoratorRange.start.line + 1 : 1;
+                const displayLink = SourceLocationPresenter.formatMarkdownLink(def.uri, line);
+                
+                let icon = 'symbol-function';
+                if (def.type === 'given') icon = 'symbol-event';
+                else if (def.type === 'when') icon = 'symbol-method';
+                else if (def.type === 'then') icon = 'symbol-constant';
+                
+                doc.appendMarkdown(`$(${icon}) **${def.functionName || 'step_impl'}** &nbsp;•&nbsp; $(file) ${displayLink} &nbsp;•&nbsp; $(gear) \`${def.matcherType}\`\n\n`);
+                
+                if (!(def as any).evaluable && (def as any).evaluable !== undefined) {
+                    doc.appendMarkdown(`> ⚠️ **Unsupported Matcher:** ${(def as any).compilationError || 'Dynamic expression is not supported'}\n\n`);
+                }
+                
+                const quote = def.rawPattern.includes('\n') ? '"""' : "'";
+                doc.appendCodeblock(`@${def.type}(${quote}${def.rawPattern}${quote})\ndef ${def.functionName || 'step_impl'}(context, ...):`, 'python');
+                
+                if (def.documentation) {
+                    doc.appendMarkdown(`\n\n`);
+                    doc.appendCodeblock(def.documentation, 'text');
+                }
+            }
+
+            item.documentation = doc;
+            item.range = replaceRange;
+            item.filterText = group.readableLabel;
+            item.sortText = this.rankingService.getSortText(group.highestScore);
+
+            const defIds = group.defs.map(d => d.id);
             item.command = {
                 title: 'Record Completion',
                 command: 'gherkinPowerTools.internal.recordCompletion',
-                arguments: [pattern]
+                arguments: [defIds]
             };
-            
+
             completionItems.push(item);
         }
 
         return completionItems;
     }
 
-    private getOutlineHeaders(document: vscode.TextDocument, currentLine: number, dialect: Dialect): string[] {
+    private async getOutlineHeaders(document: vscode.TextDocument, currentLine: number, dialect: Dialect): Promise<string[]> {
+        let gherkinDocument = null;
+        try {
+            const result = await astRepository.getAST(document);
+            gherkinDocument = result.document;
+        } catch (e) {
+            // Ignored, will fallback to regex
+        }
+
+        if (gherkinDocument && gherkinDocument.feature) {
+            const scenarios: any[] = [];
+            for (const child of gherkinDocument.feature.children || []) {
+                if (child.scenario) scenarios.push(child.scenario);
+                if (child.rule && child.rule.children) {
+                    child.rule.children.forEach(rc => {
+                        if (rc.scenario) scenarios.push(rc.scenario);
+                    });
+                }
+            }
+
+            const targetLine = currentLine + 1; // AST is 1-indexed, VSCode is 0-indexed
+            let activeScenario: any = null;
+            let maxLine = -1;
+
+            for (const scenario of scenarios) {
+                if (scenario.location.line <= targetLine && scenario.location.line > maxLine) {
+                    maxLine = scenario.location.line;
+                    activeScenario = scenario;
+                }
+            }
+
+            if (activeScenario && activeScenario.examples && activeScenario.examples.length > 0) {
+                const headersSet = new Set<string>();
+                for (const example of activeScenario.examples) {
+                    if (example.tableHeader && example.tableHeader.cells) {
+                        for (const cell of example.tableHeader.cells) {
+                            if (cell.value && cell.value.trim() !== '') {
+                                headersSet.add(cell.value); // AST parser automatically resolves escaped pipes
+                            }
+                        }
+                    }
+                }
+                if (headersSet.size > 0) {
+                    return Array.from(headersSet);
+                }
+            }
+        }
+
+        // Narrow Text Fallback: If AST failed or is incomplete while typing, fallback to regex
+        return this.getOutlineHeadersRegex(document, currentLine, dialect);
+    }
+
+    private getOutlineHeadersRegex(document: vscode.TextDocument, currentLine: number, dialect: Dialect): string[] {
         const outlineKeywords = dialect.scenarioOutline.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
         const scenarioKeywords = dialect.scenario.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
         const rootKeywords = [...dialect.feature, ...dialect.rule, ...dialect.background]
             .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
         const examplesKeywords = dialect.examples.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-        
+
         const outlineRegex = new RegExp(`^\\s*(?:${outlineKeywords})\\s*:`);
         const scenarioRegex = new RegExp(`^\\s*(?:${scenarioKeywords})\\s*:`);
         const rootRegex = new RegExp(`^\\s*(?:${rootKeywords})\\s*:`);

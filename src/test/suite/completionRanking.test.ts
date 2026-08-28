@@ -1,17 +1,25 @@
 import * as assert from 'assert';
-import { CompletionRankingService, RankingContext } from '../../completionRanking';
+import { CompletionRankingService, RankingContext, TextMatchQuality, SemanticMatchQuality } from '../../completionRanking';
 import { StepDefinition } from '../../cache';
 import * as vscode from 'vscode';
+import { StepDefNode } from '../../graph';
 
 suite('Completion Ranking Service Test Suite', () => {
     let service: CompletionRankingService;
+    let mockGraph: any;
 
     setup(() => {
-        service = new CompletionRankingService();
+        mockGraph = {
+            currentGeneration: {
+                getNode: (_id: string) => undefined
+            }
+        };
+        service = new CompletionRankingService(mockGraph as any);
     });
 
     function createDef(pattern: string, type: 'given' | 'when' | 'then' | 'step'): StepDefinition {
         return {
+            id: `test:${type}:${pattern}`,
             type,
             rawPattern: pattern,
             matcherType: 'parse',
@@ -21,7 +29,7 @@ suite('Completion Ranking Service Test Suite', () => {
         };
     }
 
-    test('Semantic category match boosts score', () => {
+    test('Semantic category match gives EXACT', () => {
         const def = createDef('I login', 'given');
         const context: RankingContext = {
             semanticType: 'given',
@@ -31,15 +39,14 @@ suite('Completion Ranking Service Test Suite', () => {
         };
         
         const scoreMatch = service.scoreItem(def, context);
+        assert.strictEqual(scoreMatch.semanticMatch, SemanticMatchQuality.EXACT);
         
         context.semanticType = 'when';
         const scoreNoMatch = service.scoreItem(def, context);
-
-        assert.ok(scoreMatch > scoreNoMatch, 'Matching semantic type should rank higher');
-        assert.strictEqual(scoreMatch - scoreNoMatch, 10, 'Semantic match should give 10 points');
+        assert.strictEqual(scoreNoMatch.semanticMatch, SemanticMatchQuality.INCOMPATIBLE);
     });
 
-    test('Exact typed prefix boosts score', () => {
+    test('Textual prefix match identifies EXACT_PREFIX', () => {
         const def = createDef('I type my password', 'when');
         const context: RankingContext = {
             semanticType: 'when',
@@ -49,149 +56,127 @@ suite('Completion Ranking Service Test Suite', () => {
         };
         
         const scoreExact = service.scoreItem(def, context);
+        assert.strictEqual(scoreExact.textMatch, TextMatchQuality.EXACT_PREFIX);
         
         context.typedText = 'type'; // not a prefix
         const scoreFuzzy = service.scoreItem(def, context);
-
-        assert.ok(scoreExact > scoreFuzzy, 'Exact prefix match should rank higher');
-        assert.strictEqual(scoreExact - scoreFuzzy, 15, 'Exact match should give 15 points');
+        assert.strictEqual(scoreFuzzy.textMatch, TextMatchQuality.PARTIAL);
     });
 
-    test('Recently used items rank higher', () => {
-        const def1 = createDef('first step', 'given');
-        const def2 = createDef('second step', 'given');
+    test('Adversarial Ranking: Textual relevance outranks popularity', () => {
+        const defPopular = createDef('I have some completely unrelated stuff', 'given');
+        const defExact = createDef('I have 5 apples', 'given');
 
         const context: RankingContext = {
             semanticType: 'given',
-            typedText: '',
+            typedText: 'I have 5',
             currentTags: [],
             currentFeatureStepTexts: []
         };
 
-        // Before recording
-        const initialScore1 = service.scoreItem(def1, context);
-        const initialScore2 = service.scoreItem(def2, context);
-        assert.strictEqual(initialScore1, initialScore2);
-
-        // Record usage
-        service.recordCompletion('first step');
-        service.recordCompletion('second step');
-
-        // After recording, second step was recorded last (most recently)
-        const newScore1 = service.scoreItem(def1, context);
-        const newScore2 = service.scoreItem(def2, context);
-
-        assert.ok(newScore2 > newScore1, 'Most recently used should rank highest');
-        assert.ok(newScore1 > initialScore1, 'Recently used should rank higher than not used');
-    });
-
-    test('getSortText assigns lower string for higher score', () => {
-        const strHigh = service.getSortText(100, 'pattern A');
-        const strLow = service.getSortText(50, 'pattern B');
-
-        // Lexicographical comparison
-        assert.ok(strHigh < strLow, 'Higher score should produce lexicographically smaller string');
-    });
-
-    test('Feature context match boosts score', () => {
-        const def = createDef('I login', 'given');
-        def.regex = /I login/;
-        const context: RankingContext = {
-            semanticType: 'given',
-            typedText: '',
-            currentTags: [],
-            currentFeatureStepTexts: []
-        };
-        
-        const scoreBase = service.scoreItem(def, context);
-        
-        context.currentFeatureStepTexts = ['Given I login', 'When I do something'];
-        const scoreBoosted = service.scoreItem(def, context);
-
-        assert.ok(scoreBoosted > scoreBase, 'Feature context should boost score');
-        assert.strictEqual(scoreBoosted - scoreBase, 20, 'Feature context boost should be 20 points');
-    });
-
-    test('Global frequency from UsageIndexer boosts score', () => {
-        const def = createDef('I login', 'given');
-        def.regex = /I login/;
-        const context: RankingContext = {
-            semanticType: 'given',
-            typedText: '',
-            currentTags: [],
-            currentFeatureStepTexts: []
-        };
-        
-        // Mock getFrequency
-        service.usageIndexer.getFrequency = () => 5;
-        
-        const scoreBoosted = service.scoreItem(def, context);
-        service.usageIndexer.getFrequency = () => 0; // reset
-        const scoreBase = service.scoreItem(def, context);
-
-        assert.ok(scoreBoosted > scoreBase, 'Global frequency should boost score');
-        assert.strictEqual(scoreBoosted - scoreBase, 10, 'Frequency 5 should give 10 points max boost');
-    });
-
-    test('Tag affinity from UsageIndexer boosts score', () => {
-        const def = createDef('I login', 'given');
-        def.regex = /I login/;
-        const context: RankingContext = {
-            semanticType: 'given',
-            typedText: '',
-            currentTags: ['@ui'],
-            currentFeatureStepTexts: []
-        };
-        
-        // Mock getTagAffinity
-        service.usageIndexer.getTagAffinity = () => 2;
-        
-        const scoreBoosted = service.scoreItem(def, context);
-        service.usageIndexer.getTagAffinity = () => 0; // reset
-        const scoreBase = service.scoreItem(def, context);
-
-        assert.ok(scoreBoosted > scoreBase, 'Tag affinity should boost score');
-        assert.strictEqual(scoreBoosted - scoreBase, 10, 'Affinity 2 should give 10 points');
-    });
-
-    test('UsageIndexer tallies step frequency and tag affinity', async () => {
-        const featureContent = `
-@ui @login
-Feature: Test Feature
-    Background:
-        Given I am on the login page
-    
-    @fast
-    Scenario: Valid login
-        When I enter valid credentials
-        Then I am logged in
-        
-    Scenario: Invalid login
-        When I enter invalid credentials
-        Then I am not logged in
-        And I am on the login page
-        `;
-        
-        const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'temp_ranking_test.feature');
-        await vscode.workspace.fs.writeFile(uri, Buffer.from(featureContent, 'utf8'));
-        
-        try {
-            const indexer = service.usageIndexer;
-            
-            // Invoke the private indexFile method
-            await (indexer as any).indexFile(uri);
-            
-            // Background is parsed once as child of feature.
-            assert.strictEqual(indexer.getFrequency('I am on the login page'), 2);
-            assert.strictEqual(indexer.getFrequency('I enter valid credentials'), 1);
-            
-            assert.strictEqual(indexer.getTagAffinity('I enter valid credentials', ['@fast']), 1);
-            assert.strictEqual(indexer.getTagAffinity('I enter valid credentials', ['@ui', '@login']), 2);
-            assert.strictEqual(indexer.getTagAffinity('I enter valid credentials', ['@backend']), 0);
-        } finally {
-            try {
-                await vscode.workspace.fs.delete(uri);
-            } catch (e) {}
+        // Make the popular item extremely popular (recent + global usage)
+        for (let i = 0; i < 20; i++) {
+            service.recordCompletion(defPopular.id);
         }
+        mockGraph.currentGeneration.getNode = (id: string) => {
+            if (id.includes('test.py') && id.includes(defPopular.rawPattern)) {
+                return {
+                    type: 'StepDefinition',
+                    usages: Array(100).fill('usage') // Massively used
+                } as StepDefNode;
+            }
+            return undefined;
+        };
+
+        const scorePopular = service.scoreItem(defPopular, context);
+        const scoreExact = service.scoreItem(defExact, context);
+
+        const sortTextPopular = service.getSortText(scorePopular);
+        const sortTextExact = service.getSortText(scoreExact);
+
+        assert.strictEqual(scoreExact.textMatch, TextMatchQuality.EXACT_PREFIX);
+        assert.strictEqual(scorePopular.textMatch, TextMatchQuality.UNRELATED);
+
+        // Lexicographical comparison (ascending order in VS Code, so smaller string is better)
+        assert.ok(sortTextExact < sortTextPopular, 'Exact text match must win against massive popularity');
+    });
+
+    test('getSortText translates higher tier into lower string values', () => {
+        const score1 = { textMatch: 5, semanticMatch: 3, matcherQuality: 2, localContext: 2, historicalUsage: 25, tagAffinity: 25, tieBreaker: 'A' };
+        const score2 = { textMatch: 4, semanticMatch: 3, matcherQuality: 2, localContext: 2, historicalUsage: 50, tagAffinity: 49, tieBreaker: 'A' };
+
+        const str1 = service.getSortText(score1);
+        const str2 = service.getSortText(score2);
+
+        // score1 has better textMatch (5 vs 4), so it must sort before score2 despite score2 having max learned signals
+        assert.ok(str1 < str2, 'Tier 1 must dominate Tier 5');
+    });
+
+    test('Score item provides deterministic explanation vectors', () => {
+        const def = createDef('I login', 'given');
+        const context: RankingContext = {
+            semanticType: 'given',
+            typedText: 'I login',
+            currentTags: ['@auth'],
+            currentFeatureStepTexts: ['I login']
+        };
+
+        const score = service.scoreItem(def, context);
+        
+        // This acts as a contract snapshot for the diagnostic command
+        assert.deepStrictEqual(score, {
+            textMatch: TextMatchQuality.EXACT,
+            semanticMatch: SemanticMatchQuality.EXACT,
+            matcherQuality: 2,
+            localContext: 0, // Regex wasn't set, so this skips
+            historicalUsage: 0,
+            tagAffinity: 0,
+            tieBreaker: 'I login'
+        });
+    });
+
+    test('Identity Generation resolves collisions robustly', () => {
+        const { generateStepDefId } = require('../../utils/stepIdentity');
+        
+        // Exact same pattern, different semantic types
+        const id1 = generateStepDefId('given', 'parse', 'I log in', vscode.Uri.file('/foo.py'), 'login_step');
+        const id2 = generateStepDefId('when', 'parse', 'I log in', vscode.Uri.file('/foo.py'), 'login_step');
+        assert.notStrictEqual(id1, id2, 'IDs should differ by semantic type');
+        
+        // Exact same pattern, different files
+        const id3 = generateStepDefId('given', 'parse', 'I log in', vscode.Uri.file('/bar.py'), 'login_step');
+        assert.notStrictEqual(id1, id3, 'IDs should differ by file');
+        
+        // Ensure colons inside the pattern don't break string splitting parsing
+        const id4 = generateStepDefId('given', 'parse', 'I log in: {count:d}', vscode.Uri.file('/foo.py'), 'login_step');
+        const { parseStepDefId } = require('../../utils/stepIdentity');
+        const parsed = parseStepDefId(id4);
+        assert.strictEqual(parsed.rawPattern, 'I log in: {count:d}', 'Parsed pattern should match exactly including colons');
+    });
+
+    test('Migration gracefully handles old rawPattern histories', () => {
+        let storedData: string[] = ['I log in', 'I log out', 'test:given:I am an already migrated ID:foo.py:step'];
+        
+        const mockMemento: any = {
+            get: () => storedData,
+            update: (_key: string, data: any) => { storedData = data; }
+        };
+        
+        mockGraph.currentGeneration.getAllStepDefNodes = () => [
+            { id: 'new:given:I log in:foo.py:step', pattern: 'I log in' },
+            // I log out is ambiguous (two definitions)
+            { id: 'new:given:I log out:bar.py:step1', pattern: 'I log out' },
+            { id: 'new:when:I log out:bar.py:step2', pattern: 'I log out' },
+        ];
+        
+        // Re-initialize service with memento
+        service = new CompletionRankingService(mockGraph, mockMemento);
+        
+        // I log in -> unambiguous, migrated.
+        // I log out -> ambiguous, dropped.
+        // test:given... -> already migrated, preserved.
+        assert.strictEqual(storedData.length, 2, 'Ambiguous items should be dropped');
+        assert.strictEqual(storedData[1], 'test:given:I am an already migrated ID:foo.py:step');
+        assert.strictEqual(storedData[0], 'new:given:I log in:foo.py:step');
     });
 });

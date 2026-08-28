@@ -74,7 +74,9 @@ export class ImpactCodeLensProvider implements vscode.CodeLensProvider {
         const report = this.analyzer.calculateImpact(lens.defId);
         
         let title = '';
-        if (report.affectedScenarios > 0) {
+        if (report.isAmbiguous) {
+            title = `Impact: Ambiguous (${report.affectedScenarios} Scenario${report.affectedScenarios > 1 ? 's' : ''})`;
+        } else if (report.affectedScenarios > 0) {
             title = `Impact: ${report.severity} (${report.affectedScenarios} Scenario${report.affectedScenarios > 1 ? 's' : ''})`;
         } else {
             title = `Impact: Unused`;

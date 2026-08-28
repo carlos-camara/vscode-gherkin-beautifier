@@ -75,23 +75,15 @@ export class GherkinDocumentSymbolProvider implements vscode.DocumentSymbolProvi
         );
 
         if (node.steps) {
+            let currentContext: 'given' | 'when' | 'then' | 'step' = 'step';
             for (const step of node.steps) {
                 const kw = step.keyword.trim();
-                let semanticType: 'given' | 'when' | 'then' | 'step' = 'step';
-                
-                if (dialect.given.includes(kw) || dialect.given.includes(kw + ' ')) semanticType = 'given';
-                else if (dialect.when.includes(kw) || dialect.when.includes(kw + ' ')) semanticType = 'when';
-                else if (dialect.then.includes(kw) || dialect.then.includes(kw + ' ')) semanticType = 'then';
-                else if (dialect.and.includes(kw) || dialect.and.includes(kw + ' ') || 
-                         dialect.but.includes(kw) || dialect.but.includes(kw + ' ') || 
-                         kw === '*') {
-                    semanticType = dialectService.resolveAndBut(document, Math.max(0, step.location.line - 1));
-                }
+                currentContext = dialectService.resolveKeywordSemanticType(kw, dialect, currentContext);
                 
                 let kind = vscode.SymbolKind.String;
-                if (semanticType === 'given') kind = vscode.SymbolKind.Event;
-                else if (semanticType === 'when') kind = vscode.SymbolKind.Method;
-                else if (semanticType === 'then') kind = vscode.SymbolKind.Constant;
+                if (currentContext === 'given') kind = vscode.SymbolKind.Event;
+                else if (currentContext === 'when') kind = vscode.SymbolKind.Method;
+                else if (currentContext === 'then') kind = vscode.SymbolKind.Constant;
 
                 const stepSymbol = this.createSymbol(
                     step.keyword + step.text,

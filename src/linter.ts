@@ -8,7 +8,7 @@ import { WorkspaceEventBus } from './eventBus';
 import { WorkspaceGraph } from './graph';
 import { RuleDiagnostic, diagnosticRegistry } from './rules';
 
-type InvalidationReason = 
+type InvalidationReason =
     | { type: 'documentOpened', document: vscode.TextDocument }
     | { type: 'documentChanged', document: vscode.TextDocument }
     | { type: 'configurationChanged', affectsLinter: boolean }
@@ -32,7 +32,7 @@ export class GherkinLinter {
     private eventBus?: WorkspaceEventBus;
     private eventBusDisposable?: vscode.Disposable;
     private workspaceGraph?: WorkspaceGraph;
-    
+
     private invalidationQueue: Map<string, InvalidationReason> = new Map();
     private flushDebounceTimer?: NodeJS.Timeout;
     private isFlushing = false;
@@ -60,7 +60,7 @@ export class GherkinLinter {
             } else if (e.type === 'stepDefinitionsUpdated' || e.type === 'stepFileDeleted') {
                 let affected: vscode.Uri[] | undefined = undefined;
                 if (this.workspaceGraph) {
-                    // Correctness-first: if definitions change, any unresolved step might now be resolved, 
+                    // Correctness-first: if definitions change, any unresolved step might now be resolved,
                     // and any resolved step might become ambiguous.
                     // For now, we consider all open feature files as candidates to be safe, but we let the queue batch it.
                     affected = vscode.workspace.textDocuments.map(d => d.uri);
@@ -78,31 +78,31 @@ export class GherkinLinter {
         } else if (reason.type === 'stepDefinitionsUpdated') {
             this.invalidationQueue.set('stepDefs', reason);
         }
-        
+
         if (this.flushDebounceTimer) {
             clearTimeout(this.flushDebounceTimer);
         }
         this.flushDebounceTimer = setTimeout(() => this.flush(), 250);
     }
-    
+
     private immediateInvalidation(reason: InvalidationReason) {
         this.queueInvalidation(reason);
         if (this.flushDebounceTimer) clearTimeout(this.flushDebounceTimer);
         this.flush();
     }
-    
+
     private async flush(): Promise<LinterMetrics | undefined> {
         if (this.isFlushing || this.invalidationQueue.size === 0) return;
         this.isFlushing = true;
         const startTime = Date.now();
-        
+
         const reasons = Array.from(this.invalidationQueue.values());
         this.invalidationQueue.clear();
-        
+
         let candidates = new Map<string, vscode.TextDocument>();
         let globalConfigChanged = false;
         let stepDefsChanged = false;
-        
+
         for (const reason of reasons) {
             if (reason.type === 'documentOpened' || reason.type === 'documentChanged') {
                 candidates.set(reason.document.uri.toString(), reason.document);
@@ -112,7 +112,7 @@ export class GherkinLinter {
                 stepDefsChanged = true;
             }
         }
-        
+
         if (globalConfigChanged || stepDefsChanged) {
             // Add all open feature documents as candidates
             vscode.workspace.textDocuments.forEach(doc => {
@@ -121,18 +121,18 @@ export class GherkinLinter {
                 }
             });
         }
-        
+
         const metrics: LinterMetrics = {
             candidateDocs: candidates.size,
             lintedDocs: 0,
             skippedDocs: 0,
             elapsedTimeMs: 0
         };
-        
+
         // Limit concurrency to 5
         const limit = 5;
         const activePromises = new Set<Promise<void>>();
-        
+
         for (const doc of candidates.values()) {
             const config = this.configService.getConfiguration(doc.uri);
             if (!config.linter.enabled) {
@@ -140,24 +140,24 @@ export class GherkinLinter {
                 metrics.skippedDocs++;
                 continue;
             }
-            
+
             const p = this.lint(doc, ++this.nextRequestId, doc.version).then(() => {
                 metrics.lintedDocs++;
             }).finally(() => {
                 activePromises.delete(p);
             });
             activePromises.add(p);
-            
+
             if (activePromises.size >= limit) {
                 await Promise.race(activePromises);
             }
         }
-        
+
         await Promise.all(activePromises);
-        
+
         metrics.elapsedTimeMs = Date.now() - startTime;
         this.isFlushing = false;
-        
+
         // Output metrics for observability
         process.stdout.write(`\n--- LINTER FLUSH METRICS: candidates=${metrics.candidateDocs}, linted=${metrics.lintedDocs}, skipped=${metrics.skippedDocs}, time=${metrics.elapsedTimeMs}ms ---\n`);
         return metrics;
@@ -248,13 +248,28 @@ export class GherkinLinter {
                             .sort((a, b) => b.length - a.length)
                             .find(k => gotText.startsWith(k));
 
-                        if (startsWithBlockKeyword && !gotText.startsWith(startsWithBlockKeyword + ':')) {
+                        const hasColon = gotText.startsWith(startsWithBlockKeyword + ':') || gotText.startsWith(startsWithBlockKeyword + ' :');
+                        if (startsWithBlockKeyword && !hasColon) {
                             code = 'missing-colon';
                             message = `Missing colon (':') after ${startsWithBlockKeyword}`;
                             suggestedEdit = ':';
                             // Point diagnostic exactly at the end of the keyword where colon is missing
                             startChar = startChar + startsWithBlockKeyword.length;
                             endChar = startChar;
+                        } else if (startsWithBlockKeyword && hasColon) {
+                            code = 'invalid-keyword';
+                            const isExamplesAlias = dialect?.examples?.includes(startsWithBlockKeyword);
+                            if (isExamplesAlias) {
+                                const scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                message = `'${startsWithBlockKeyword}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                suggestedEdit = scenarioKeyword + ':';
+                                const firstNonWhitespace = lineText.search(/\\S/);
+                                startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
+                                endChar = startChar + startsWithBlockKeyword.length + 1; // Cover the colon too
+                            } else {
+                                message = `'${startsWithBlockKeyword}:' is structurally out of place here.`;
+                                suggestedEdit = '';
+                            }
                         } else {
                             const firstWord = gotText.split(/\s+/)[0];
                             const stepKeywords = dialectService.getStepKeywords(dialect);
@@ -283,6 +298,12 @@ export class GherkinLinter {
                                 if (dist < lowestDistance && dist <= threshold) {
                                     lowestDistance = dist;
                                     bestMatch = kw;
+                                } else if (dist === lowestDistance && dist <= threshold) {
+                                    const currentLenDiff = Math.abs(normalizedFirst.length - bestMatch.length);
+                                    const newLenDiff = Math.abs(normalizedFirst.length - normalizedKw.length);
+                                    if (newLenDiff < currentLenDiff) {
+                                        bestMatch = kw;
+                                    }
                                 }
                             }
 
@@ -296,8 +317,29 @@ export class GherkinLinter {
                                 const isBlockKeyword = blockKeywords.includes(bestMatch);
 
                                 if (isBlockKeyword) {
-                                    message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
-                                    suggestedEdit = bestMatch + ':';
+                                    const isExamplesAlias = dialect?.examples?.includes(bestMatch);
+                                    if (isExamplesAlias) {
+                                        let scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                        if (dialect?.scenario) {
+                                            const similar = dialect.scenario.find((k: string) => 
+                                                bestMatch.toLowerCase().startsWith(k.toLowerCase()) || 
+                                                k.toLowerCase().startsWith(bestMatch.toLowerCase().replace(/s$/, ''))
+                                            );
+                                            if (similar) {
+                                                scenarioKeyword = similar;
+                                            } else {
+                                                const notExample = dialect.scenario.find((k: string) => !['Example', 'Ejemplo'].includes(k));
+                                                if (notExample) {
+                                                    scenarioKeyword = notExample;
+                                                }
+                                            }
+                                        }
+                                        message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                        suggestedEdit = scenarioKeyword + ':';
+                                    } else {
+                                        message = `Misspelled or incomplete block keyword: '${firstWord}'. Did you mean '${bestMatch}:'?`;
+                                        suggestedEdit = bestMatch + ':';
+                                    }
                                 } else {
                                     message = `Misspelled or incomplete keyword: '${firstWord}'. Did you mean '${bestMatch.trim()}'?`;
                                     suggestedEdit = bestMatch.trim();
@@ -366,18 +408,18 @@ export class GherkinLinter {
 
             const blockKeywords = dialectService.getBlockKeywords(dialect);
 
-            this.checkDescription(gherkinDocument.feature, diagnostics, document, allExpectedKeywords, blockKeywords);
+            this.checkDescription(gherkinDocument.feature, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
             if (gherkinDocument.feature.children) {
                 for (const child of gherkinDocument.feature.children) {
                     if (child.rule) {
-                        this.checkDescription(child.rule, diagnostics, document, allExpectedKeywords, blockKeywords);
+                        this.checkDescription(child.rule, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
                         if (child.rule.children) {
                             for (const ruleChild of child.rule.children) {
                                 const ruleScenario = ruleChild.scenario || ruleChild.background;
                                 if (ruleScenario) {
                                     await this.checkSteps(ruleScenario.steps || [], diagnostics, document);
                                     this.checkScenarioExamples(ruleChild.scenario, diagnostics, document);
-                                    this.checkDescription(ruleScenario, diagnostics, document, allExpectedKeywords, blockKeywords);
+                                    this.checkDescription(ruleScenario, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
                                 }
                             }
                         }
@@ -386,7 +428,7 @@ export class GherkinLinter {
                         if (scenario) {
                             await this.checkSteps(scenario.steps || [], diagnostics, document);
                             this.checkScenarioExamples(child.scenario, diagnostics, document);
-                            this.checkDescription(scenario, diagnostics, document, allExpectedKeywords, blockKeywords);
+                            this.checkDescription(scenario, diagnostics, document, allExpectedKeywords, blockKeywords, dialect);
                         }
                     }
                 }
@@ -508,12 +550,28 @@ export class GherkinLinter {
     private fallbackCheckMisspelledKeywords(document: vscode.TextDocument, diagnostics: vscode.Diagnostic[], dialect: any) {
         const expectedKeywords = [...dialect.given, ...dialect.when, ...dialect.then, ...dialect.and, ...dialect.but, ...dialect.examples, ...dialect.scenario, ...dialect.scenarioOutline, ...dialect.background, ...dialect.feature, ...dialect.rule].map((k: string) => k.trim());
         const blockKeywords = dialectService.getBlockKeywords(dialect);
+        let insideDocString = false;
+        let docStringDelimiter = '';
 
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i).text;
             const trimmed = line.trim();
             if (!trimmed || trimmed.startsWith('#')) continue;
-            if (trimmed.startsWith('|') || trimmed.startsWith('@') || trimmed.startsWith('"""') || trimmed.startsWith("'''")) continue;
+
+            if (trimmed.startsWith('"""') || trimmed.startsWith("'''")) {
+                const delimiter = trimmed.startsWith('"""') ? '"""' : "'''";
+                if (!insideDocString) {
+                    insideDocString = true;
+                    docStringDelimiter = delimiter;
+                } else if (trimmed.startsWith(docStringDelimiter)) {
+                    insideDocString = false;
+                }
+                continue;
+            }
+
+            if (insideDocString) continue;
+
+            if (trimmed.startsWith('|') || trimmed.startsWith('@')) continue;
 
             const firstWord = trimmed.split(/\s+/)[0];
 
@@ -550,6 +608,12 @@ export class GherkinLinter {
                     if (dist < lowestDistance && dist <= threshold) {
                         lowestDistance = dist;
                         bestMatch = kw;
+                    } else if (dist === lowestDistance && dist <= threshold) {
+                        const currentLenDiff = Math.abs(normalizedFirst.length - bestMatch.length);
+                        const newLenDiff = Math.abs(normalizedFirst.length - normalizedKw.length);
+                        if (newLenDiff < currentLenDiff) {
+                            bestMatch = kw;
+                        }
                     }
                 }
 
@@ -573,9 +637,37 @@ export class GherkinLinter {
 
                 if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                     if (isBlockKeyword) {
-                        code = 'missing-colon';
-                        message = `Missing colon (':') after ${bestMatch}`;
-                        suggestedEdit = bestMatch + ':';
+                        const hasColon = normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ':') || normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ' :');
+                        if (!hasColon) {
+                            code = 'missing-colon';
+                            message = `Missing colon (':') after ${bestMatch}`;
+                            suggestedEdit = bestMatch + ':';
+                        } else {
+                            code = 'invalid-keyword';
+                            const isExamplesAlias = dialect?.examples?.includes(bestMatch);
+                            if (isExamplesAlias) {
+                                let scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                if (dialect?.scenario) {
+                                    const similar = dialect.scenario.find((k: string) => 
+                                        bestMatch.toLowerCase().startsWith(k.toLowerCase()) || 
+                                        k.toLowerCase().startsWith(bestMatch.toLowerCase().replace(/s$/, ''))
+                                    );
+                                    if (similar) {
+                                        scenarioKeyword = similar;
+                                    } else {
+                                        const notExample = dialect.scenario.find((k: string) => !['Example', 'Ejemplo'].includes(k));
+                                        if (notExample) {
+                                            scenarioKeyword = notExample;
+                                        }
+                                    }
+                                }
+                                message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                suggestedEdit = scenarioKeyword + ':';
+                            } else {
+                                message = `'${bestMatch}:' is structurally out of place here.`;
+                                suggestedEdit = '';
+                            }
+                        }
                     } else {
                         message = `Incorrect casing: '${isExactMatch ? bestMatch.toLowerCase() : firstWord}'. Did you mean '${bestMatch}'?`;
                         suggestedEdit = bestMatch;
@@ -608,7 +700,7 @@ export class GherkinLinter {
         }
     }
 
-    private checkDescription(node: any, diagnostics: vscode.Diagnostic[], document: vscode.TextDocument, expectedKeywords: string[], blockKeywords: string[]) {
+    private checkDescription(node: any, diagnostics: vscode.Diagnostic[], document: vscode.TextDocument, expectedKeywords: string[], blockKeywords: string[], dialect: any) {
         if (!node || !node.description) return;
 
         const descLines = node.description.split('\n');
@@ -660,6 +752,12 @@ export class GherkinLinter {
                         if (dist < lowestDistance && dist <= threshold) {
                             lowestDistance = dist;
                             bestMatch = kw;
+                        } else if (dist === lowestDistance && dist <= threshold) {
+                            const currentLenDiff = Math.abs(normalizedFirst.length - bestMatch.length);
+                            const newLenDiff = Math.abs(normalizedFirst.length - normalizedKw.length);
+                            if (newLenDiff < currentLenDiff) {
+                                bestMatch = kw;
+                            }
                         }
                     }
                 }
@@ -679,10 +777,40 @@ export class GherkinLinter {
 
                     if (isExactMatch || normalizedFirst === bestMatch.toLowerCase()) {
                         if (isBlockKeyword) {
-                            code = 'missing-colon';
-                            message = `Missing colon (':') after ${bestMatch}`;
-                            suggestedEdit = ':';
-                            startChar = endChar;
+                            const hasColon = normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ':') || normalizedTrimmed.startsWith(bestMatch.toLowerCase() + ' :');
+                            if (!hasColon) {
+                                code = 'missing-colon';
+                                message = `Missing colon (':') after ${bestMatch}`;
+                                suggestedEdit = ':';
+                                startChar = endChar;
+                            } else {
+                                code = 'invalid-keyword';
+                                const isExamplesAlias = dialect?.examples?.includes(bestMatch);
+                                if (isExamplesAlias) {
+                                    let scenarioKeyword = dialect?.scenario?.[0] || 'Scenario';
+                                    if (dialect?.scenario) {
+                                        const similar = dialect.scenario.find((k: string) => 
+                                            bestMatch.toLowerCase().startsWith(k.toLowerCase()) || 
+                                            k.toLowerCase().startsWith(bestMatch.toLowerCase().replace(/s$/, ''))
+                                        );
+                                        if (similar) {
+                                            scenarioKeyword = similar;
+                                        } else {
+                                            const notExample = dialect.scenario.find((k: string) => !['Example', 'Ejemplo'].includes(k));
+                                            if (notExample) {
+                                                scenarioKeyword = notExample;
+                                            }
+                                        }
+                                    }
+                                    message = `'${bestMatch}:' is not allowed in this context. Did you mean '${scenarioKeyword}:'?`;
+                                    suggestedEdit = scenarioKeyword + ':';
+                                    startChar = firstNonWhitespace !== -1 ? firstNonWhitespace : 0;
+                                    endChar = startChar + bestMatch.length + 1; // Cover the colon too
+                                } else {
+                                    message = `'${bestMatch}:' is structurally out of place here.`;
+                                    suggestedEdit = '';
+                                }
+                            }
                         } else {
                             if (isExactMatch && trimmed.startsWith(bestMatch)) {
                                 currentLineIdx++;
@@ -755,23 +883,15 @@ export class GherkinLinter {
         if (this.symbolCache.state !== 'ready') {
             return;
         }
+        let currentContext: 'given' | 'when' | 'then' | 'step' = 'step';
+        const dialect = dialectService.getDialect(document);
+
         for (const step of steps) {
             const stepText = step.text.trim();
             const keyword = step.keyword ? step.keyword.trim() : '';
 
-            let semanticType: 'given' | 'when' | 'then' | 'step' = 'step';
-            const dialect = dialectService.getDialect(document);
-
-            if (dialect.given.map(k => k.trim()).includes(keyword)) {
-                semanticType = 'given';
-            } else if (dialect.when.map(k => k.trim()).includes(keyword)) {
-                semanticType = 'when';
-            } else if (dialect.then.map(k => k.trim()).includes(keyword)) {
-                semanticType = 'then';
-            } else {
-                // For And, But, or * we resolve the context from previous steps
-                semanticType = dialectService.resolveAndBut(document, Math.max(0, step.location.line - 1));
-            }
+            currentContext = dialectService.resolveKeywordSemanticType(keyword, dialect, currentContext);
+            const semanticType = currentContext;
 
             const defs = await this.symbolCache.getStepDefinitions(stepText, semanticType);
             if (defs.length !== 1) {
