@@ -681,6 +681,12 @@
           "**/.gherkin"
         ],
         "url": "./gherkin-powertools.schema.json"
+      },
+      {
+        "fileMatch": [
+          "**/.gherkin-pt-suppressions.json"
+        ],
+        "url": "./schemas/suppressions.schema.json"
       }
     ],
     "keybindings": [
