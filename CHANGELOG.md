@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
-## [1.8.6] - Unreleased
+## [1.8.6] - 2026-08-28
 
 ### 🚀 Added
 - **Completion Intelligence Redesign**: Replaced the legacy `UsageIndexer` additive string-parsing model with a strict **5-tier Lexicographical Ranking model** backed by the `WorkspaceGraph`. Autocomplete suggestions are now deterministically ranked such that semantic text matching strictly outranks raw popularity, usage counts, and tag affinities.
