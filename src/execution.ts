@@ -54,13 +54,17 @@ export async function resolveBehaveExecutionDetails(
     let executable: string;
     let baseArgs: string[] = [];
     
-    const configuredExecution = config.behave.execution;
-    
-    if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
-        // Use the new structured config
-        executable = configuredExecution.executable;
-        baseArgs = [...configuredExecution.arguments];
+    if (config.behave.localExecution) {
+        executable = config.behave.localExecution.executable;
+        baseArgs = [...config.behave.localExecution.arguments];
     } else {
+        const configuredExecution = config.behave.execution;
+        
+        if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
+            // Use the new structured config
+            executable = configuredExecution.executable;
+            baseArgs = [...configuredExecution.arguments];
+        } else {
         const pythonExt = vscode.extensions.getExtension('ms-python.python');
         let pythonExecParts: string[] | undefined;
         
@@ -109,10 +113,7 @@ export async function resolveBehaveExecutionDetails(
             baseArgs = [];
         }
     }
-
-    if (config.behave.localExecutable && config.behave.localExecutable.trim().length > 0) {
-        executable = config.behave.localExecutable.trim();
-    }
+}
 
     let additionalArgs: string[];
     if (memoryAdditionalArgs !== undefined) {

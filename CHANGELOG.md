@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.7] - Unreleased
 
+### 🚀 Added
+- **Structured Local Execution Override**: Replaced the legacy `gherkinPowerTools.behave.localExecutable` string setting with a structured `gherkinPowerTools.behave.localExecution` object. This strictly separates the executable path from arguments to eliminate command injection risks and ensure semantic correctness for argument vectors.
+- **Automated Execution Migration**: The Configuration Service now heuristically migrates legacy `localExecutable` strings, automatically injecting `['-m', 'behave']` arguments if the path points to a Python interpreter.
+
+### ⚠️ Deprecated
+- `gherkinPowerTools.behave.localExecutable` is deprecated. Please migrate to `gherkinPowerTools.behave.localExecution`.
+
 ## [1.8.6] - 2026-08-28
 
 ### 🚀 Added

@@ -193,11 +193,18 @@ Core syntax errors cannot be suppressed.
 - **Default:** `{"executable": "behave", "arguments": []}`
 - **Example:** `{"executable": "poetry", "arguments": ["run", "behave"]}`
 
+### `gherkinPowerTools.behave.localExecution`
+- **Purpose:** Absolute path to a local Behave executable or Python interpreter and its arguments. Overrides `behave.execution` completely. **Machine-specific override**, do not put in `.gherkin-powertoolsrc.json`.
+- **Type:** `object` with `executable` (string) and `arguments` (array of strings)
+- **Default:** *None*
+- **Example:** `{"executable": "/home/user/.venv/bin/behave", "arguments": []}`
+
 ### `gherkinPowerTools.behave.localExecutable`
-- **Purpose:** Absolute path to a local Behave executable or Python interpreter. Overrides the `executable` specified in `behave.execution`. **Machine-specific override**, do not put in `.gherkin-powertoolsrc.json`.
+- **Purpose:** *(Deprecated)* Legacy absolute path to a local Behave executable or Python interpreter.
 - **Type:** `string`
 - **Default:** *None*
 - **Example:** `"/home/user/.venv/bin/behave"`
+- **Deprecation Note:** This setting is deprecated because it causes semantically incorrect argument vectors. Please use `gherkinPowerTools.behave.localExecution` instead.
 
 
 ### `gherkinPowerTools.behave.additionalArguments`
@@ -232,7 +239,7 @@ You can optionally commit a `.gherkin-powertoolsrc.json` to your repository root
 
 ### Precedence Hierarchy
 Configuration settings are resolved in the following order of precedence (highest to lowest):
-1. **Machine-Specific Overrides**: User Settings (`behave.localExecutable`).
+1. **Machine-Specific Overrides**: User Settings (`behave.localExecution`).
 2. **Project-level `.gherkin-powertoolsrc.json`**: Used to override settings for the entire team and CI/CD.
 3. **VS Code Workspace Settings**: Settings configured in `.vscode/settings.json`.
 4. **VS Code User Settings**: Global settings.

@@ -108,7 +108,10 @@ If you need to override the execution engine entirely (e.g. wrapping Behave insi
 If you need to use an absolute path (e.g. to a local Python interpreter or a `.venv/bin/behave` executable), you should **not** commit this to your shared settings. Instead, use the machine-overridable setting in your global User Settings:
 
 ```json
-"gherkinPowerTools.behave.localExecutable": "/home/user/.venv/bin/behave"
+  "gherkinPowerTools.behave.localExecution": {
+    "executable": "/home/user/.venv/bin/behave",
+    "arguments": []
+  }
 ```
 This strictly overrides the `executable` specified in `behave.execution`, keeping your project configuration portable and secure.
 
@@ -137,7 +140,7 @@ No additional configuration is required, just ensure Behave is installed in the 
 
 - **"Behave executable not found":** By default, Gherkin PowerTools automatically detects local virtual environments (like `.venv`, `venv`, `env`).
   If your environment is elsewhere, ensure it is selected in the VS Code status bar and that `behave` is installed in it.
-  If you need to manually specify a path for a non-standard setup, you can use the `gherkinPowerTools.behave.localExecutable` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
+  If you need to manually specify a path for a non-standard setup, you can use `gherkinPowerTools.behave.localExecution` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
 - **"Tests are not discovered or do not run":** Ensure your workspace is Trusted. For security reasons, the extension blocks Behave execution in Untrusted (Restricted) workspaces.
 
 - **Tests run but show no output:** Ensure you aren't passing arguments that suppress output, or add `--no-capture` to `additionalArguments` if you need to see `print()` statements.
