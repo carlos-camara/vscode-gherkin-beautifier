@@ -31,8 +31,9 @@ The `WorkspaceEvent` union type includes payloads for:
 
 ### Execution Output & Custom Formatting
 When running Behave tests through the Test Explorer, the extension spawns Behave as a child process and injects a custom Python formatter (`vscode_behave_formatter.py`).
-This formatter translates Python-side test results and the final **Context Snapshot** into standardized JSON events (`##VSCODE_BEHAVE_EVENT:`).
-These stdout events are piped directly back to the extension, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI.
+To eliminate fragility caused by standard output corruption, this formatter establishes a robust, bidirectional TCP socket connection with the extension.
+It translates Python-side test results and the final **Context Snapshot** into strictly-typed NDJSON (Newline Delimited JSON) events.
+These `ProtocolEnvelope` payloads are flushed safely over the socket, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI without relying on fragile stdout parsing.
 
 ### Secure Execution Gateway & Workspace Trust
 To mitigate command injection vulnerabilities and protect users from malicious workspaces, test execution runs through a **Secure Execution Gateway**:

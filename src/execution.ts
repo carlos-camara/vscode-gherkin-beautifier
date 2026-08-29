@@ -2,7 +2,9 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as net from 'net';
 import { ConfigurationService } from './configuration';
+import { NDJSONSocketReader } from './protocol';
 
 let memoryAdditionalArgs: string | undefined = undefined;
 
@@ -56,16 +58,16 @@ export async function resolveBehaveExecutionDetails(
     configService: ConfigurationService
 ): Promise<ExecutionDetails | undefined> {
     const config = configService.getConfiguration(uri);
-    
+
     let executable: string;
     let baseArgs: string[] = [];
-    
+
     if (config.behave.localExecution) {
         executable = config.behave.localExecution.executable;
         baseArgs = [...config.behave.localExecution.arguments];
     } else {
         const configuredExecution = config.behave.execution;
-        
+
         if (configuredExecution.executable !== 'behave' || configuredExecution.arguments.length > 0) {
             // Use the new structured config
             executable = configuredExecution.executable;
@@ -73,7 +75,7 @@ export async function resolveBehaveExecutionDetails(
         } else {
         const pythonExt = vscode.extensions.getExtension('ms-python.python');
         let pythonExecParts: string[] | undefined;
-        
+
         if (pythonExt) {
             if (!pythonExt.isActive) {
                 await pythonExt.activate();
@@ -91,7 +93,7 @@ export async function resolveBehaveExecutionDetails(
                 // Ignore python ext API errors
             }
         }
-        
+
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
         if (workspaceFolder) {
             const execPath = pythonExecParts && pythonExecParts.length > 0 ? pythonExecParts[0] : '';
@@ -110,7 +112,7 @@ export async function resolveBehaveExecutionDetails(
                 }
             }
         }
-        
+
         if (pythonExecParts && pythonExecParts.length > 0) {
             executable = pythonExecParts[0];
             baseArgs = [...pythonExecParts.slice(1), '-m', 'behave'];
@@ -127,15 +129,15 @@ export async function resolveBehaveExecutionDetails(
     } else {
         additionalArgs = [...config.behave.additionalArguments];
     }
-    
+
     additionalArgs = additionalArgs.filter(a => a.trim().length > 0);
-    
+
     let pathArg = uri.fsPath;
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
     if (workspaceFolder) {
         pathArg = './' + vscode.workspace.asRelativePath(uri, false);
     }
-    
+
     let pathArgs: string[] = [];
     if (typeof lineOrLines === 'number') {
         pathArgs.push(`${pathArg}:${lineOrLines}`);
@@ -146,9 +148,9 @@ export async function resolveBehaveExecutionDetails(
     } else {
         pathArgs.push(pathArg);
     }
-    
+
     const args = [...baseArgs, ...additionalArgs, ...pathArgs];
-    
+
     return { executable, args };
 }
 
@@ -169,11 +171,11 @@ export async function runBehave(uri: vscode.Uri, lineOrLines: number | Set<numbe
     }
 
     const taskName = lineOrLines !== undefined ? `Behave Scenario` : `Behave Feature`;
-    
+
     const execution = new vscode.ProcessExecution(details.executable, details.args, {
         env: { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
     });
-    
+
     const task = new vscode.Task(
         { type: 'gherkinPowerTools', command: 'run' },
         workspaceFolder,
@@ -181,7 +183,7 @@ export async function runBehave(uri: vscode.Uri, lineOrLines: number | Set<numbe
         'Gherkin PowerTools',
         execution
     );
-    
+
     task.presentationOptions = {
         echo: true,
         focus: true,
@@ -196,18 +198,18 @@ export async function runBehave(uri: vscode.Uri, lineOrLines: number | Set<numbe
 
 export async function runBehaveWithPrompt(uri: vscode.Uri, _line: number | undefined, configService: ConfigurationService) {
     const config = configService.getConfiguration(uri);
-    
+
     let defaultArgsStr = config.behave.additionalArguments.join(' ');
     if (memoryAdditionalArgs !== undefined) {
         defaultArgsStr = memoryAdditionalArgs;
     }
-    
+
     const newArgsStr = await vscode.window.showInputBox({
         prompt: "Edit Behave additional arguments (e.g., --tags=@wip --no-capture)",
         value: defaultArgsStr,
         placeHolder: "Enter additional arguments..."
     });
-    
+
     if (newArgsStr !== undefined) {
         const action = await vscode.window.showInformationMessage(
             'Execution arguments updated. Do you want to save them permanently to your Workspace Settings?',
@@ -267,7 +269,7 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
 
     const pythonExtension = vscode.extensions.getExtension('ms-python.python');
     const debugpyExtension = vscode.extensions.getExtension('ms-python.debugpy');
-    
+
     if (!pythonExtension && !debugpyExtension) {
         const action = await vscode.window.showErrorMessage(
             'The Python extension is required to debug Behave scenarios. Please install it to use this feature.',
@@ -280,7 +282,7 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
     }
 
     const config = configService.getConfiguration(uri);
-    
+
     let additionalArgs: string[];
     if (memoryAdditionalArgs !== undefined) {
         additionalArgs = parseArgsStringToVector(memoryAdditionalArgs);
@@ -288,7 +290,7 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
         additionalArgs = [...config.behave.additionalArguments];
     }
     additionalArgs = additionalArgs.filter(a => a.trim().length > 0);
-    
+
     let pathArg = uri.fsPath;
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
     if (workspaceFolder) {
@@ -305,7 +307,7 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
     } else {
         pathArgs.push(pathArg);
     }
-    
+
     const debugConfig: vscode.DebugConfiguration = {
         name: "Debug Behave (PowerTools)",
         type: "python",
@@ -316,7 +318,7 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
         justMyCode: true,
         env: { FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
     };
-    
+
     if (!workspaceFolder) {
         vscode.window.showErrorMessage('Open a workspace to start debugging.');
         return;
@@ -343,7 +345,7 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
                 startDisposable.dispose();
             }
         });
-        
+
         // Safety timeout for the start listener
         setTimeout(() => startDisposable.dispose(), 5000);
 
@@ -352,7 +354,7 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
                 terminateDisposable.dispose();
                 safeResolve();
             } else if (
-                !activeSession && 
+                !activeSession &&
                 (session.name === debugConfig.name || (session.configuration.type === 'python' && session.configuration.module === 'behave' && session.configuration.args?.includes(pathArgs[0] ?? pathArg)))
             ) {
                 terminateDisposable.dispose();
@@ -417,7 +419,7 @@ export async function runBehaveForTestRun(
     if (!details.args.includes('-f') && !details.args.includes('--format')) {
         details.args.push('-f', 'pretty');
     }
-    
+
     // Disable behave's internal capture so VS Code Test Results panel gets all stdout/stderr natively
     if (!details.args.includes('--no-capture')) {
         details.args.push('--no-capture');
@@ -429,73 +431,89 @@ export async function runBehaveForTestRun(
     details.args.push('-f', 'vscode_behave_formatter:VSCodeFormatter');
 
     return new Promise<number | null>((resolve) => {
-        const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' };
-        if (env.PYTHONPATH) {
-            env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
-        } else {
-            env.PYTHONPATH = assetsPath;
-        }
+        let child: cp.ChildProcess;
+        let reader: NDJSONSocketReader | undefined;
+        let cancelDisposable: vscode.Disposable;
+        let timeout: NodeJS.Timeout;
 
-        const child = cp.spawn(details.executable, details.args, {
-            cwd,
-            shell: false, // Security constraint: Never use shell execution
-            env
+        const server = net.createServer((socket) => {
+            reader = new NDJSONSocketReader(socket, (envelope) => {
+                if (onEvent) {
+                    onEvent(envelope);
+                }
+            }, (err) => {
+                // Log protocol errors to output so user knows something went wrong with the reporting
+                onOutput(`\r\n\x1b[31m[Protocol Error] ${err}\x1b[0m\r\n`);
+            });
         });
 
-        let lineBuffer = '';
-        const handleData = (data: Buffer) => {
-            const text = data.toString('utf8');
-            lineBuffer += text;
-            let newlineIndex;
-            while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
-                const line = lineBuffer.substring(0, newlineIndex + 1);
-                lineBuffer = lineBuffer.substring(newlineIndex + 1);
-                
-                if (line.startsWith('##VSCODE_BEHAVE_EVENT:')) {
-                    if (onEvent) {
-                        try {
-                            const eventJson = line.substring('##VSCODE_BEHAVE_EVENT:'.length).trim();
-                            const event = JSON.parse(eventJson);
-                            onEvent(event);
-                        } catch (e) {
-                            // ignore parse errors
-                        }
-                    }
-                } else {
-                    // Send to VS Code terminal replacing newlines with \r\n
+        server.listen(0, '127.0.0.1', () => {
+            const address = server.address() as net.AddressInfo;
+            const port = address.port;
+
+            const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always', VSCODE_BEHAVE_PORT: port.toString() };
+            if (env.PYTHONPATH) {
+                env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
+            } else {
+                env.PYTHONPATH = assetsPath;
+            }
+
+            child = cp.spawn(details.executable, details.args, {
+                cwd,
+                shell: false,
+                env
+            });
+
+            let lineBuffer = '';
+            const handleData = (data: Buffer) => {
+                const text = data.toString('utf8');
+                lineBuffer += text;
+                let newlineIndex;
+                while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
+                    const line = lineBuffer.substring(0, newlineIndex + 1);
+                    lineBuffer = lineBuffer.substring(newlineIndex + 1);
+
+                    // The stdout is now ONLY human output. Replace \n with \r\n for terminal formatting.
                     onOutput(line.replace(/(?<!\r)\n/g, '\r\n'));
                 }
-            }
-        };
+            };
 
-        child.stdout?.on('data', handleData);
-        child.stderr?.on('data', handleData);
+            child.stdout?.on('data', handleData);
+            child.stderr?.on('data', handleData);
 
-        // Respect cancellation: kill the child process
-        const cancelDisposable = token.onCancellationRequested(() => {
-            child.kill('SIGKILL');
-            cancelDisposable.dispose();
-            resolve(null);
+            cancelDisposable = token.onCancellationRequested(() => {
+                child.kill('SIGKILL');
+                cleanup();
+                resolve(null);
+            });
+
+            timeout = setTimeout(() => {
+                child.kill('SIGKILL');
+                cleanup();
+                resolve(null);
+            }, 5 * 60 * 1000);
+
+            child.on('close', (code) => {
+                // flush remaining buffer
+                if (lineBuffer.length > 0) {
+                    onOutput(lineBuffer.replace(/(?<!\r)\n/g, '\r\n'));
+                }
+                cleanup();
+                resolve(code ?? null);
+            });
+
+            child.on('error', (err) => {
+                cleanup();
+                onOutput(`[Gherkin PowerTools] Failed to start Behave: ${err.message}\r\n`);
+                resolve(null);
+            });
         });
 
-        // Safety timeout: 5 minutes
-        const timeout = setTimeout(() => {
-            child.kill('SIGKILL');
-            cancelDisposable.dispose();
-            resolve(null);
-        }, 5 * 60 * 1000);
-
-        child.on('close', (code) => {
+        function cleanup() {
             clearTimeout(timeout);
-            cancelDisposable.dispose();
-            resolve(code ?? null);
-        });
-
-        child.on('error', (err) => {
-            clearTimeout(timeout);
-            cancelDisposable.dispose();
-            onOutput(`[Gherkin PowerTools] Failed to start Behave: ${err.message}\r\n`);
-            resolve(null);
-        });
+            if (cancelDisposable) cancelDisposable.dispose();
+            if (reader) reader.close();
+            server.close();
+        }
     });
 }
