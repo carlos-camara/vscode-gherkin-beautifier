@@ -1,15 +1,28 @@
 import json
 import sys
 import inspect
+import socket
+import os
 from behave.formatter.base import Formatter
 
 class VSCodeFormatter(Formatter):
     name = "vscode"
-    description = "Emits NDJSON events for VS Code Test Explorer"
+    description = "Emits NDJSON events for VS Code Test Explorer over TCP"
 
     def __init__(self, stream_opener, config):
         super(VSCodeFormatter, self).__init__(stream_opener, config)
         self._step_queue = []
+        self._sock = None
+
+        port_str = os.environ.get("VSCODE_BEHAVE_PORT")
+        if port_str:
+            try:
+                port = int(port_str)
+                self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._sock.connect(("127.0.0.1", port))
+            except Exception as e:
+                sys.stderr.write(f"VSCodeFormatter Failed to connect to port {port_str}: {e}\n")
+                self._sock = None
 
     def step(self, step):
         self._step_queue.append(step)
@@ -63,7 +76,7 @@ class VSCodeFormatter(Formatter):
             "status": step.status.name if hasattr(step.status, 'name') else str(step.status),
             "duration": getattr(step, 'duration', 0)
         }
-        
+
         if data["status"] in ["failed", "error", "hook_error", "undefined"]:
             if getattr(step, "location", None):
                 import os
@@ -71,7 +84,7 @@ class VSCodeFormatter(Formatter):
                 if filename:
                     data["error_file"] = os.path.abspath(filename)
                 data["error_line"] = getattr(step.location, "line", None)
-            
+
             error_msg = getattr(step, "error_message", None)
             if error_msg:
                 data["error_message"] = f"Step: {step.name}\n{error_msg.strip()}"
@@ -94,10 +107,23 @@ class VSCodeFormatter(Formatter):
             self.current_scenario = None
         self._emit("eof", {})
 
+        if self._sock:
+            try:
+                self._sock.close()
+            except Exception:
+                pass
+
     def _emit(self, event, data):
-        payload = json.dumps({"event": event, "data": data})
-        sys.stdout.write(f"\n##VSCODE_BEHAVE_EVENT:{payload}\n")
-        sys.stdout.flush()
+        payload = json.dumps({"version": 1, "type": event, "payload": data})
+        if self._sock:
+            try:
+                self._sock.sendall(f"{payload}\n".encode("utf-8"))
+            except Exception as e:
+                sys.stderr.write(f"VSCodeFormatter Failed to send event {event}: {e}\n")
+        else:
+            # Fallback to stdout if no socket is available (e.g. testing)
+            sys.stdout.write(f"\n##VSCODE_BEHAVE_EVENT:{json.dumps({'event': event, 'data': data})}\n")
+            sys.stdout.flush()
 
     def _get_context_from_stack(self):
         try:
@@ -106,7 +132,7 @@ class VSCodeFormatter(Formatter):
                 if 'runner' in frame.f_locals:
                     runner = frame.f_locals['runner']
                     if hasattr(runner, 'context'):
-                        return runner.context
+                        return runner.contex
         except Exception:
             pass
         return None
@@ -116,10 +142,10 @@ class VSCodeFormatter(Formatter):
             ctx = getattr(self, 'scenario_context', None)
             if not ctx:
                 return None
-            
+
             snapshot = {}
             ignore_keys = {'feature', 'scenario', 'tags', 'active_outline', 'aborted', 'failed', 'text', 'table', 'stdout_capture', 'stderr_capture', 'log_capture', 'exc_traceback', 'execute_steps', 'FAIL_ON_CLEANUP_ERRORS', 'LAYER_NAMES', 'config', 'cleanup_errors', 'fail_on_cleanup_errors'}
-            
+
             keys = set()
             if hasattr(ctx, '_root') and isinstance(ctx._root, dict):
                 keys.update(ctx._root.keys())

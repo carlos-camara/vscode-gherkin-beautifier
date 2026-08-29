@@ -159,8 +159,8 @@ If you need to point to a specific local Python virtual environment via an absol
 
 ## Live Step Tracking animation is not visible
 **Symptom:** The scenario runs in the Test Explorer, but the active step is not highlighted in the editor.
-**Likely Causes:** The custom Formatter isn't emitting `step_start` events, or the file is not currently focused.
-**Resolution:** Ensure your `behave` process has not overridden the custom JSON formatter, and verify that the `.feature` file you are running is currently open and active in the editor.
+**Likely Causes:** The custom Formatter isn't emitting `step_start` events over the TCP socket, or the file is not currently focused.
+**Resolution:** Ensure your `behave` process has not overridden the custom NDJSON-over-TCP formatter, and verify that the `.feature` file you are running is currently open and active in the editor.
 
 ## Syntax Errors cascade into massive false-positives
 **Symptom:** You missed a colon on a `Scenario`, and suddenly all steps below it have red underlines.

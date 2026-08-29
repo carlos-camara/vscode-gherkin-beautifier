@@ -360,7 +360,7 @@ export class GherkinTestController {
                     },
                     token,
                     (event) => {
-                        if (event.event === 'scenario') {
+                        if (event.type === 'scenario') {
                             currentScenarioFailed = false;
                             currentScenarioDuration = 0;
                             currentScenarioErrorFile = undefined;
@@ -368,7 +368,7 @@ export class GherkinTestController {
                             currentScenarioErrorMessage = undefined;
                             const rootItem = this.controller.items.get(target.uri.toString());
                             if (rootItem) {
-                                currentScenarioItem = findItemByLine(rootItem, event.data.line) || (event.data.name ? findItemByName(rootItem, event.data.name) : undefined);
+                                currentScenarioItem = findItemByLine(rootItem, event.payload.line) || (event.payload.name ? findItemByName(rootItem, event.payload.name) : undefined);
                             }
                             if (currentScenarioItem) {
                                 const childrenToRemove: string[] = [];
@@ -380,54 +380,54 @@ export class GherkinTestController {
                                 childrenToRemove.forEach(id => currentScenarioItem!.children.delete(id));
                                 run.started(currentScenarioItem);
                             }
-                        } else if (event.event === 'step_start') {
+                        } else if (event.type === 'step_start') {
                             if (currentScenarioItem && currentScenarioItem.uri) {
                                 const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === currentScenarioItem!.uri!.toString());
-                                if (editor && event.data.line) {
-                                    const line = event.data.line - 1;
+                                if (editor && event.payload.line) {
+                                    const line = event.payload.line - 1;
                                     const range = new vscode.Range(line, 0, line, 0);
                                     editor.setDecorations(this.activeStepDecoration, [range]);
                                 }
                             }
-                        } else if (event.event === 'step') {
+                        } else if (event.type === 'step') {
                             if (currentScenarioItem && currentScenarioItem.uri) {
                                 this.clearActiveStepDecoration(currentScenarioItem.uri);
                             }
-                            if (['failed', 'undefined', 'error'].includes(event.data.status)) {
+                            if (['failed', 'undefined', 'error'].includes(event.payload.status)) {
                                 currentScenarioFailed = true;
-                                if (event.data.error_file && event.data.error_line !== undefined) {
-                                    currentScenarioErrorFile = event.data.error_file;
-                                    currentScenarioErrorLine = event.data.error_line;
+                                if (event.payload.error_file && event.payload.error_line !== undefined) {
+                                    currentScenarioErrorFile = event.payload.error_file;
+                                    currentScenarioErrorLine = event.payload.error_line;
                                 }
-                                if (event.data.error_message) {
-                                    currentScenarioErrorMessage = event.data.error_message;
+                                if (event.payload.error_message) {
+                                    currentScenarioErrorMessage = event.payload.error_message;
                                 }
                             }
-                            if (event.data.duration) {
-                                currentScenarioDuration += event.data.duration;
+                            if (event.payload.duration) {
+                                currentScenarioDuration += event.payload.duration;
                             }
-                        } else if (event.event === 'scenario_result') {
-                            if (currentScenarioItem && TestIdentity.parse(currentScenarioItem.id).line === event.data.line) {
+                        } else if (event.type === 'scenario_result') {
+                            if (currentScenarioItem && TestIdentity.parse(currentScenarioItem.id).line === event.payload.line) {
                                 processedItems.add(currentScenarioItem);
                                 
-                                if (event.data.context_snapshot) {
-                                    const keys = Object.keys(event.data.context_snapshot);
+                                if (event.payload.context_snapshot) {
+                                    const keys = Object.keys(event.payload.context_snapshot);
                                     if (keys.length > 0) {
                                         let snapshotOutput = '\r\n\x1b[35m--------------------------------------------------\x1b[0m\r\n';
                                         snapshotOutput += '\x1b[35mFINAL CONTEXT STATE (Context Snapshot)\x1b[0m\r\n';
                                         snapshotOutput += '\x1b[35m--------------------------------------------------\x1b[0m\r\n';
                                         for (const key of keys) {
-                                            snapshotOutput += `\x1b[34m• context.${key}\x1b[0m = ${event.data.context_snapshot[key]}\r\n`;
+                                            snapshotOutput += `\x1b[34m• context.${key}\x1b[0m = ${event.payload.context_snapshot[key]}\r\n`;
                                         }
                                         snapshotOutput += '\x1b[35m--------------------------------------------------\x1b[0m\r\n\r\n';
                                         run.appendOutput(snapshotOutput, undefined, currentScenarioItem);
                                     }
                                 }
 
-                                const isFailure = ['failed', 'error', 'hook_error'].includes(event.data.status) || currentScenarioFailed;
+                                const isFailure = ['failed', 'error', 'hook_error'].includes(event.payload.status) || currentScenarioFailed;
                                 if (isFailure) {
-                                    if (event.data.error_message) {
-                                        currentScenarioErrorMessage = event.data.error_message;
+                                    if (event.payload.error_message) {
+                                        currentScenarioErrorMessage = event.payload.error_message;
                                     }
                                     const rawMsg = currentScenarioErrorMessage || "Scenario failed";
                                     const msgText = rawMsg.split('\n').filter((line, index, arr) => index === 0 || line !== arr[index - 1]).join('\n');
@@ -462,7 +462,7 @@ export class GherkinTestController {
                                     } else {
                                         run.failed(currentScenarioItem, msg, currentScenarioDuration * 1000 || undefined);
                                     }
-                                } else if (event.data.status === 'skipped' || event.data.status === 'untested') {
+                                } else if (event.payload.status === 'skipped' || event.payload.status === 'untested') {
                                     run.skipped(currentScenarioItem);
                                 } else {
                                     run.passed(currentScenarioItem, currentScenarioDuration * 1000 || undefined);

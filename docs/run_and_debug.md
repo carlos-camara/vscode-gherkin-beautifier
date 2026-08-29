@@ -44,7 +44,8 @@ Version 1.7.8 introduced the ability to run or debug specific data rows within a
 </div>
 
 ### Console Output & Failure Reporting
-When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error.
+The extension uses a dedicated, highly reliable NDJSON-over-TCP protocol to receive test events, ensuring that your test execution telemetry is never corrupted by standard output.
+When you execute a test, the VS Code **Test Results** panel will safely capture and display Behave's live standard output and standard error without interference.
 
 If a test fails, the node in the tree will turn red. To keep your editor clean, error messages and stack traces are **collapsed by default**. You can view the exact failure details by explicitly clicking on the failed step or the error message within the Test Explorer. Exception stack traces are fully formatted as **Markdown code blocks** for pristine readability inside the Test Peek view.
 

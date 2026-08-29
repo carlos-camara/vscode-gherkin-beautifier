@@ -50,7 +50,7 @@ Feature: Sample Feature
     Given a step
 `);
 
-        // We simulate the file watcher event by calling the private method through cast
+        // We simulate the file watcher event by calling the private method through cas
         const testControllerPrivate = controller as any;
         const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
 
@@ -102,7 +102,7 @@ Feature: Rules Feature
         assert.ok(ruleItem);
         assert.strictEqual(ruleItem!.label, 'A business rule');
         assert.strictEqual(ruleItem!.id, `${featureUri.toString()}?type=rule&line=3`);
-        
+
         let scenarioItem: vscode.TestItem | undefined;
         ruleItem!.children.forEach((item: vscode.TestItem) => { scenarioItem = item; });
         assert.strictEqual(scenarioItem!.label, 'Rule scenario');
@@ -191,21 +191,37 @@ Feature: Run Feature
 
         // Mock child_process.spawn to simulate Behave events
         const cp = require('child_process');
+        const net = require('net');
         const originalSpawn = cp.spawn;
-        cp.spawn = () => {
+        cp.spawn = (_executable: string, _args: string[], options: any) => {
             const EventEmitter = require('events');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
             child.kill = () => {};
 
-            // Simulate Behave NDJSON stream
             setTimeout(() => {
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Run scenario"}}\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step_start", "data": {"line": 4}}\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step", "data": {"status": "passed", "duration": 0.1}}\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3, "context_snapshot": {"foo": "bar"}}}\n'));
-                child.emit('close', 0);
+                const port = parseInt(options.env.VSCODE_BEHAVE_PORT, 10);
+                const client = new net.Socket();
+                client.connect(port, '127.0.0.1', () => {
+                    const payloads = [
+                        JSON.stringify({ version: 1, type: "scenario", payload: { line: 3, name: "Run scenario", filename: "" } }),
+                        JSON.stringify({ version: 1, type: "step_start", payload: { line: 4, name: "" } }),
+                        JSON.stringify({ version: 1, type: "step", payload: { status: "passed", name: "" } }),
+                        JSON.stringify({ version: 1, type: "scenario_result", payload: { status: "passed", line: 3, context_snapshot: {"foo": "bar"} } }),
+                        JSON.stringify({ version: 1, type: "eof", payload: {} })
+                    ];
+                    for (const p of payloads) {
+                        client.write(Buffer.from(p + '\n'));
+                    }
+                    client.end();
+                });
+
+                client.on('close', () => {
+                    setTimeout(() => {
+                        child.emit('close', 0);
+                    }, 20);
+                });
             }, 10);
 
             return child;
@@ -242,10 +258,10 @@ Feature: Fail Feature
         const fileItem = testControllerPrivate.getOrCreateFile(featureUri);
         await testControllerPrivate.parseTestsInFileContents(fileItem);
 
-        // Mock child_process.spawn to simulate Behave events
         const cp = require('child_process');
+        const net = require('net');
         const originalSpawn = cp.spawn;
-        cp.spawn = () => {
+        cp.spawn = (_executable: string, _args: string[], options: any) => {
             const EventEmitter = require('events');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
@@ -253,10 +269,27 @@ Feature: Fail Feature
             child.kill = () => {};
 
             setTimeout(() => {
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Fail scenario"}}\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "step", "data": {"status": "failed", "error_message": "AssertionError", "error_file": "steps.py", "error_line": 10}}\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "failed", "line": 3}}\n'));
-                child.emit('close', 1);
+                const port = parseInt(options.env.VSCODE_BEHAVE_PORT, 10);
+                const client = new net.Socket();
+                client.connect(port, '127.0.0.1', () => {
+                    const payloads = [
+                        JSON.stringify({ version: 1, type: "scenario", payload: { line: 3, name: "Fail scenario", filename: "" } }),
+                        JSON.stringify({ version: 1, type: "step_start", payload: { line: 4, name: "" } }),
+                        JSON.stringify({ version: 1, type: "step", payload: { status: "failed", name: "", error_message: "Traceback error", error_file: "test.py", error_line: 10 } }),
+                        JSON.stringify({ version: 1, type: "scenario_result", payload: { status: "failed", line: 3 } }),
+                        JSON.stringify({ version: 1, type: "eof", payload: {} })
+                    ];
+                    for (const p of payloads) {
+                        client.write(Buffer.from(p + '\n'));
+                    }
+                    client.end();
+                });
+
+                client.on('close', () => {
+                    setTimeout(() => {
+                        child.emit('close', 1);
+                    }, 20);
+                });
             }, 10);
 
             return child;
