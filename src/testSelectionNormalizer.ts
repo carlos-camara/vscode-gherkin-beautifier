@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { TestIdentity } from './testIdentity';
 
 /**
  * Normalizes a VS Code TestRunRequest into a deterministic, flat array of exactly which
@@ -42,7 +43,10 @@ export class TestSelectionNormalizer {
             const hasIncludedDescendant = this.hasDescendantInSet(item, includes);
 
             if (isTargeted) {
-                if (hasExcludedDescendant) {
+                const identity = TestIdentity.parse(item.id);
+                const isUnrunnableNode = identity.type === 'rule' || identity.type === 'examples';
+                
+                if (hasExcludedDescendant || isUnrunnableNode) {
                     // Cannot run this parent directly, decompose into children
                     item.children.forEach(child => traverse(child, true));
                 } else {
@@ -67,8 +71,10 @@ export class TestSelectionNormalizer {
             const uriCmp = uriA.localeCompare(uriB);
             if (uriCmp !== 0) return uriCmp;
 
-            const lineA = this.extractLineFromId(a.id) ?? 0;
-            const lineB = this.extractLineFromId(b.id) ?? 0;
+            const identityA = TestIdentity.parse(a.id);
+            const identityB = TestIdentity.parse(b.id);
+            const lineA = identityA.line ?? 0;
+            const lineB = identityB.line ?? 0;
             return lineA - lineB;
         });
     }
@@ -82,10 +88,5 @@ export class TestSelectionNormalizer {
             }
         });
         return found;
-    }
-
-    private extractLineFromId(id: string): number | undefined {
-        const match = id.match(/#(:?feature|scenario|rule):?(\d+)?$/);
-        return match && match[2] ? parseInt(match[2], 10) : undefined;
     }
 }
