@@ -27,6 +27,8 @@ You can run your tests at any level of granularity:
 - **Run Scenario:** Click the Play button next to a single Scenario.
 - **Run Example Row:** Click the Play button next to a single row inside a Scenario Outline.
 
+The execution engine uses a **Test Selection Normalization Layer** to ensure that tests run deterministically (top-down in the order they appear in the file). If you trigger a run that includes overlapping parents and children (e.g., you click "Run" on a Feature but specifically "Exclude" one Scenario inside it), the normalizer seamlessly decomposes the execution tree, preventing duplicate runs and strictly enforcing your exclusions.
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer" width="600" height="340" />
 </div>
