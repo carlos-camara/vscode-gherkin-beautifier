@@ -44,11 +44,12 @@ To mitigate command injection vulnerabilities and protect users from malicious w
 
 ### Test Selection Normalization Layer
 VS Code's `TestRunRequest` can contain complex overlapping inclusion and exclusion trees (e.g. running a whole Feature but excluding a specific Scenario, while also explicitly running an Example row).
-To prevent redundant child process executions and ensure mathematically correct test selection, the extension utilizes a dedicated `TestSelectionNormalizer`.
-1. **Top-Down Tree Traversal:** The normalizer walks the Test Explorer hierarchy from the requested root elements.
-2. **Deep Exclusion Pruning:** If a node is included but contains explicitly excluded descendants, the layer dynamically decomposes the parent node into its non-excluded siblings, preventing the parent process from indiscriminately running the whole file.
-3. **Duplicate Prevention:** By normalizing overlapping includes, the layer prevents tests from being executed multiple times simultaneously.
-4. **Deterministic Ordering:** The normalizer guarantees that tests are enqueued in strict document-line order (lexicographically by URI and ascending by line number), matching exactly how they appear in the `.feature` file regardless of the order they were selected in the UI.
+To prevent redundant child process executions and ensure mathematically correct test selection, the extension utilizes a dedicated `TestSelectionNormalizer` driven by a canonical `TestIdentity` abstraction.
+1. **URI-Based TestIdentity:** Every test item node receives a deterministic query-string based ID (e.g., `file:///path/to/feature.feature?type=scenario&line=15`) that resolves unambiguously without fragment collisions.
+2. **Top-Down Tree Traversal:** The normalizer walks the Test Explorer hierarchy from the requested root elements.
+3. **Deep Exclusion Pruning & Structural Decomposition:** If a node is included but contains explicitly excluded descendants, the layer dynamically decomposes the parent node into its non-excluded siblings. Critically, because Behave cannot execute abstract structural nodes like `Rule` or `Scenario Outline` independently by their declared line numbers, the normalizer seamlessly unpacks these nodes into their runnable leaf descendants (individual scenarios or example rows), preventing the parent process from indiscriminately running the whole block.
+4. **Duplicate Prevention:** By normalizing overlapping includes, the layer prevents tests from being executed multiple times simultaneously.
+5. **Deterministic Ordering:** The normalizer guarantees that tests are enqueued in strict document-line order (lexicographically by URI and ascending by line number), matching exactly how they appear in the `.feature` file regardless of the order they were selected in the UI.
 
 ### Performance Characteristics
 - **Debounced Updates**: Groups rapid file system events (e.g. typing or git checkouts) into 300ms windows to prevent thrashing.

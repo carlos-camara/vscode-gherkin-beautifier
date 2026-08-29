@@ -94,18 +94,19 @@ Feature: Rules Feature
         let featureItem: vscode.TestItem | undefined;
         fileItem.children.forEach((item: vscode.TestItem) => { featureItem = item; });
 
-        assert.strictEqual(featureItem!.children.size, 1);
+        assert.strictEqual(featureItem!.id, `${featureUri.toString()}?type=feature`);
+
         let ruleItem: vscode.TestItem | undefined;
         featureItem!.children.forEach((item: vscode.TestItem) => { ruleItem = item; });
 
         assert.ok(ruleItem);
         assert.strictEqual(ruleItem!.label, 'A business rule');
-        assert.strictEqual(ruleItem!.children.size, 1);
-
+        assert.strictEqual(ruleItem!.id, `${featureUri.toString()}?type=rule&line=3`);
+        
         let scenarioItem: vscode.TestItem | undefined;
         ruleItem!.children.forEach((item: vscode.TestItem) => { scenarioItem = item; });
-
         assert.strictEqual(scenarioItem!.label, 'Rule scenario');
+        assert.strictEqual(scenarioItem!.id, `${featureUri.toString()}?type=scenario&line=4`);
     });
 
     test('Parses Scenario Outline and Examples rows into TestItems', async () => {
@@ -144,10 +145,10 @@ Feature: Outline Feature
         scenarioOutlineItem!.children.forEach((item: vscode.TestItem) => { exampleItems.push(item); });
 
         assert.strictEqual(exampleItems[0].label, 'arg=1');
-        assert.strictEqual(exampleItems[0].id, `${featureUri.toString()}#scenario:7`);
+        assert.strictEqual(exampleItems[0].id, `${featureUri.toString()}?type=row&line=7`);
 
         assert.strictEqual(exampleItems[1].label, 'arg=2');
-        assert.strictEqual(exampleItems[1].id, `${featureUri.toString()}#scenario:8`);
+        assert.strictEqual(exampleItems[1].id, `${featureUri.toString()}?type=row&line=8`);
     });
     test('Binds to WorkspaceEventBus correctly', () => {
         const { WorkspaceEventBus } = require('../../eventBus');
@@ -375,8 +376,8 @@ Feature: Skip Feature
 
             setTimeout(() => {
                 // Only process Scenario 1
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 3, "name": "Scenario 1"}}\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 3}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 2, "name": "Scenario 1"}}\n'));
+                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 2}}\n'));
                 child.emit('close', 0);
             }, 10);
 

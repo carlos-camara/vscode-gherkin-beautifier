@@ -35,8 +35,14 @@ export function registerExecutionListeners(context: vscode.ExtensionContext) {
     );
 }
 
-function getExecutionSignature(uri: vscode.Uri, line: number | undefined): string {
-    return `${uri.toString()}#${line ?? 'all'}`;
+function getExecutionSignature(uri: vscode.Uri, lineOrLines: number | Set<number> | undefined): string {
+    let linesStr = 'all';
+    if (typeof lineOrLines === 'number') {
+        linesStr = lineOrLines.toString();
+    } else if (lineOrLines instanceof Set) {
+        linesStr = Array.from(lineOrLines).sort().join(',');
+    }
+    return `${uri.toString()}#${linesStr}`;
 }
 
 interface ExecutionDetails {
@@ -46,7 +52,7 @@ interface ExecutionDetails {
 
 export async function resolveBehaveExecutionDetails(
     uri: vscode.Uri,
-    line: number | undefined,
+    lineOrLines: number | Set<number> | undefined,
     configService: ConfigurationService
 ): Promise<ExecutionDetails | undefined> {
     const config = configService.getConfiguration(uri);
@@ -130,23 +136,30 @@ export async function resolveBehaveExecutionDetails(
         pathArg = './' + vscode.workspace.asRelativePath(uri, false);
     }
     
-    if (line !== undefined) {
-        pathArg = `${pathArg}:${line}`;
+    let pathArgs: string[] = [];
+    if (typeof lineOrLines === 'number') {
+        pathArgs.push(`${pathArg}:${lineOrLines}`);
+    } else if (lineOrLines instanceof Set && lineOrLines.size > 0) {
+        for (const l of lineOrLines) {
+            pathArgs.push(`${pathArg}:${l}`);
+        }
+    } else {
+        pathArgs.push(pathArg);
     }
     
-    const args = [...baseArgs, ...additionalArgs, pathArg];
+    const args = [...baseArgs, ...additionalArgs, ...pathArgs];
     
     return { executable, args };
 }
 
-export async function runBehave(uri: vscode.Uri, line: number | undefined, configService: ConfigurationService) {
-    const signature = getExecutionSignature(uri, line);
+export async function runBehave(uri: vscode.Uri, lineOrLines: number | Set<number> | undefined, configService: ConfigurationService) {
+    const signature = getExecutionSignature(uri, lineOrLines);
     if (activeExecutions.has(signature)) {
         vscode.window.showWarningMessage('This test is already running.');
         return;
     }
 
-    const details = await resolveBehaveExecutionDetails(uri, line, configService);
+    const details = await resolveBehaveExecutionDetails(uri, lineOrLines, configService);
     if (!details) { return; }
 
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
@@ -155,7 +168,7 @@ export async function runBehave(uri: vscode.Uri, line: number | undefined, confi
         return;
     }
 
-    const taskName = line !== undefined ? `Behave Scenario (Line ${line})` : `Behave Feature`;
+    const taskName = lineOrLines !== undefined ? `Behave Scenario` : `Behave Feature`;
     
     const execution = new vscode.ProcessExecution(details.executable, details.args, {
         env: { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
@@ -245,8 +258,8 @@ export function parseArgsStringToVector(argsString: string): string[] {
     return args;
 }
 
-export async function debugBehave(uri: vscode.Uri, line: number | undefined, configService: ConfigurationService) {
-    const signature = getExecutionSignature(uri, line);
+export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<number> | undefined, configService: ConfigurationService) {
+    const signature = getExecutionSignature(uri, lineOrLines);
     if (activeExecutions.has(signature)) {
         vscode.window.showWarningMessage('This test is already running.');
         return;
@@ -282,8 +295,15 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
         pathArg = './' + vscode.workspace.asRelativePath(uri, false);
     }
 
-    if (line !== undefined) {
-        pathArg = `${pathArg}:${line}`;
+    let pathArgs: string[] = [];
+    if (typeof lineOrLines === 'number') {
+        pathArgs.push(`${pathArg}:${lineOrLines}`);
+    } else if (lineOrLines instanceof Set && lineOrLines.size > 0) {
+        for (const l of lineOrLines) {
+            pathArgs.push(`${pathArg}:${l}`);
+        }
+    } else {
+        pathArgs.push(pathArg);
     }
     
     const debugConfig: vscode.DebugConfiguration = {
@@ -291,7 +311,7 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
         type: "python",
         request: "launch",
         module: "behave",
-        args: [...additionalArgs, pathArg],
+        args: [...additionalArgs, ...pathArgs],
         console: "internalConsole",
         justMyCode: true,
         env: { FORCE_COLOR: '1', BEHAVE_COLOR: 'always' }
@@ -313,10 +333,10 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
         };
 
         const startDisposable = vscode.debug.onDidStartDebugSession(session => {
-            // Match the session by name or if it's a python session running behave with our pathArg
+            // Match the session by name or if it's a python session running behave with our first pathArg
             if (
                 session.name === debugConfig.name ||
-                (session.configuration.type === 'python' && session.configuration.module === 'behave' && session.configuration.args?.includes(pathArg))
+                (session.configuration.type === 'python' && session.configuration.module === 'behave' && session.configuration.args?.includes(pathArgs[0] ?? pathArg))
             ) {
                 activeSession = session;
                 activeExecutions.set(signature, session);
@@ -333,7 +353,7 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
                 safeResolve();
             } else if (
                 !activeSession && 
-                (session.name === debugConfig.name || (session.configuration.type === 'python' && session.configuration.module === 'behave' && session.configuration.args?.includes(pathArg)))
+                (session.name === debugConfig.name || (session.configuration.type === 'python' && session.configuration.module === 'behave' && session.configuration.args?.includes(pathArgs[0] ?? pathArg)))
             ) {
                 terminateDisposable.dispose();
                 safeResolve();
@@ -372,7 +392,7 @@ export async function debugBehave(uri: vscode.Uri, line: number | undefined, con
  */
 export async function runBehaveForTestRun(
     uri: vscode.Uri,
-    line: number | undefined,
+    lineOrLines: number | Set<number> | undefined,
     configService: ConfigurationService,
     onOutput: (text: string) => void,
     token: vscode.CancellationToken,
@@ -384,7 +404,7 @@ export async function runBehaveForTestRun(
         return null;
     }
 
-    const details = await resolveBehaveExecutionDetails(uri, line, configService);
+    const details = await resolveBehaveExecutionDetails(uri, lineOrLines, configService);
     if (!details) {
         return null;
     }
@@ -393,8 +413,6 @@ export async function runBehaveForTestRun(
 
     // Inject custom formatter for real-time updates
     const assetsPath = path.join(__dirname, '..', 'assets');
-    const pathArg = details.args.pop();
-    
     // Ensure pretty formatter is still used for stdout if no formatter is specified
     if (!details.args.includes('-f') && !details.args.includes('--format')) {
         details.args.push('-f', 'pretty');
@@ -409,9 +427,6 @@ export async function runBehaveForTestRun(
     }
 
     details.args.push('-f', 'vscode_behave_formatter:VSCodeFormatter');
-    if (pathArg) {
-        details.args.push(pathArg);
-    }
 
     return new Promise<number | null>((resolve) => {
         const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' };
