@@ -144,7 +144,10 @@ If using a virtual environment manager like Poetry or Pipenv, update your config
 ```
 If you need to point to a specific local Python virtual environment via an absolute path, configure the machine-specific override in your global User Settings to prevent committing absolute paths to your repository:
 ```json
-"gherkinPowerTools.behave.localExecutable": "/absolute/path/to/.venv/bin/behave"
+"gherkinPowerTools.behave.localExecution": {
+  "executable": "/absolute/path/to/.venv/bin/behave",
+  "arguments": []
+}
 ```
 
 ## Debugging does not stop at breakpoints
@@ -175,7 +178,7 @@ If you need to point to a specific local Python virtual environment via an absol
 **Symptom:** The extension cannot find Python, Behave, or local workspace paths when running inside a remote environment.
 **Likely Causes:** Gherkin PowerTools correctly executes on the remote machine where the workspace is hosted (as a `workspace` extension). Absolute paths configured for a local OS (e.g., Windows `C:\...`) will fail when the extension evaluates them on the Linux remote host.
 **Resolution:**
-1. Ensure your `gherkinPowerTools.behave.localExecutable` or `python.defaultInterpreterPath` uses the path inside the remote environment.
+1. Ensure your `gherkinPowerTools.behave.localExecution` or `python.defaultInterpreterPath` uses the path inside the remote environment.
 2. Ensure you have installed the Behave dependencies on the remote host/container.
 3. If using the CLI (`npx @carlos-camara/gherkin-pt`), ensure you run it from the **Integrated Terminal** in VS Code, which is connected to your remote environment, rather than your local OS terminal.
 
