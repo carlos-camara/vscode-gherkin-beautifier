@@ -3,6 +3,7 @@ import { astRepository } from './ast';
 import { featureDiscoveryService } from './featureDiscovery';
 import { logger } from './logger';
 import { ConfigurationService } from './configuration';
+import { TestSelectionNormalizer } from './testSelectionNormalizer';
 import { runBehaveForTestRun } from './execution';
 import * as path from 'path';
 import { WorkspaceEventBus } from './eventBus';
@@ -259,12 +260,8 @@ export class GherkinTestController {
 
         const run = mode !== 'debug' ? this.controller.createTestRun(request) : undefined;
 
-        const itemsToRun: vscode.TestItem[] = [];
-        if (request.include) {
-            itemsToRun.push(...request.include);
-        } else {
-            this.controller.items.forEach(item => itemsToRun.push(item));
-        }
+        const normalizer = new TestSelectionNormalizer();
+        const itemsToRun = normalizer.normalize(request, this.controller.items);
 
         // Recursively enqueue all children so the UI shows spinners
         const enqueueItem = (item: vscode.TestItem) => {
