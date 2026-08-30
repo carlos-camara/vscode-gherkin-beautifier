@@ -415,7 +415,7 @@ export async function runBehaveForTestRun(
     }
 
     const config = configService.getConfiguration(uri);
-    const timeoutSeconds = config.behave.executionTimeout ?? 0;
+    const timeoutSeconds = config.behave.executionTimeout || 300;
 
     const cwd = workspaceFolder.uri.fsPath;
 

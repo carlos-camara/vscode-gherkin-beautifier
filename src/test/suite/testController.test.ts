@@ -191,9 +191,8 @@ Feature: Run Feature
 
         // Mock child_process.spawn to simulate Behave events
         const cp = require('child_process');
-        const net = require('net');
         const originalSpawn = cp.spawn;
-        cp.spawn = (_executable: string, _args: string[], options: any) => {
+        cp.spawn = (_executable: string, _args: string[], _options: any) => {
             const EventEmitter = require('events');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
@@ -201,27 +200,20 @@ Feature: Run Feature
             child.kill = () => {};
 
             setTimeout(() => {
-                const port = parseInt(options.env.VSCODE_BEHAVE_PORT, 10);
-                const client = new net.Socket();
-                client.connect(port, '127.0.0.1', () => {
-                    const payloads = [
-                        JSON.stringify({ version: 1, type: "scenario", payload: { line: 3, name: "Run scenario", filename: "" } }),
-                        JSON.stringify({ version: 1, type: "step_start", payload: { line: 4, name: "" } }),
-                        JSON.stringify({ version: 1, type: "step", payload: { status: "passed", name: "" } }),
-                        JSON.stringify({ version: 1, type: "scenario_result", payload: { status: "passed", line: 3, context_snapshot: {"foo": "bar"} } }),
-                        JSON.stringify({ version: 1, type: "eof", payload: {} })
-                    ];
-                    for (const p of payloads) {
-                        client.write(Buffer.from(p + '\n'));
-                    }
-                    client.end();
-                });
+                const payloads = [
+                    JSON.stringify({ event: "scenario", data: { line: 3, name: "Run scenario", filename: "" } }),
+                    JSON.stringify({ event: "step_start", data: { line: 4, name: "" } }),
+                    JSON.stringify({ event: "step", data: { status: "passed", name: "" } }),
+                    JSON.stringify({ event: "scenario_result", data: { status: "passed", line: 3, context_snapshot: {"foo": "bar"} } }),
+                    JSON.stringify({ event: "eof", data: {} })
+                ];
+                for (const p of payloads) {
+                    child.stdout.emit('data', Buffer.from(`\n##VSCODE_BEHAVE_EVENT:${p}\n`));
+                }
 
-                client.on('close', () => {
-                    setTimeout(() => {
-                        child.emit('close', 0);
-                    }, 20);
-                });
+                setTimeout(() => {
+                    child.emit('close', 0);
+                }, 20);
             }, 10);
 
             return child;
@@ -259,9 +251,8 @@ Feature: Fail Feature
         await testControllerPrivate.parseTestsInFileContents(fileItem);
 
         const cp = require('child_process');
-        const net = require('net');
         const originalSpawn = cp.spawn;
-        cp.spawn = (_executable: string, _args: string[], options: any) => {
+        cp.spawn = (_executable: string, _args: string[], _options: any) => {
             const EventEmitter = require('events');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
@@ -269,27 +260,20 @@ Feature: Fail Feature
             child.kill = () => {};
 
             setTimeout(() => {
-                const port = parseInt(options.env.VSCODE_BEHAVE_PORT, 10);
-                const client = new net.Socket();
-                client.connect(port, '127.0.0.1', () => {
-                    const payloads = [
-                        JSON.stringify({ version: 1, type: "scenario", payload: { line: 3, name: "Fail scenario", filename: "" } }),
-                        JSON.stringify({ version: 1, type: "step_start", payload: { line: 4, name: "" } }),
-                        JSON.stringify({ version: 1, type: "step", payload: { status: "failed", name: "", error_message: "Traceback error", error_file: "test.py", error_line: 10 } }),
-                        JSON.stringify({ version: 1, type: "scenario_result", payload: { status: "failed", line: 3 } }),
-                        JSON.stringify({ version: 1, type: "eof", payload: {} })
-                    ];
-                    for (const p of payloads) {
-                        client.write(Buffer.from(p + '\n'));
-                    }
-                    client.end();
-                });
+                const payloads = [
+                    JSON.stringify({ event: "scenario", data: { line: 3, name: "Run scenario", filename: "features/test.feature" } }),
+                    JSON.stringify({ event: "step_start", data: { line: 4, name: "" } }),
+                    JSON.stringify({ event: "step", data: { status: "failed", name: "Failing step", error_file: "/workspace/features/test.feature", error_line: 4, error_message: "AssertionError" } }),
+                    JSON.stringify({ event: "scenario_result", data: { status: "failed", line: 3 } }),
+                    JSON.stringify({ event: "eof", data: {} })
+                ];
+                for (const p of payloads) {
+                    child.stdout.emit('data', Buffer.from(`\n##VSCODE_BEHAVE_EVENT:${p}\n`));
+                }
 
-                client.on('close', () => {
-                    setTimeout(() => {
-                        child.emit('close', 1);
-                    }, 20);
-                });
+                setTimeout(() => {
+                    child.emit('close', 1);
+                }, 20);
             }, 10);
 
             return child;
