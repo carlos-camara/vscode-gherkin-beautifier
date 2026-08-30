@@ -47,40 +47,40 @@ export interface EofPayload {
 }
 
 // Runtime Type Guards
-export function isProtocolEnvelope(obj: any): obj is ProtocolEnvelope {
+function isProtocolEnvelope(obj: any): obj is ProtocolEnvelope {
     return typeof obj === 'object' && obj !== null &&
            obj.version === 1 &&
            typeof obj.type === 'string' &&
            obj.hasOwnProperty('payload');
 }
 
-export function isFeaturePayload(obj: any): obj is FeaturePayload {
+function isFeaturePayload(obj: any): obj is FeaturePayload {
     return typeof obj === 'object' && obj !== null &&
            typeof obj.name === 'string' &&
            typeof obj.filename === 'string' &&
            typeof obj.line === 'number';
 }
 
-export function isScenarioPayload(obj: any): obj is ScenarioPayload {
+function isScenarioPayload(obj: any): obj is ScenarioPayload {
     return typeof obj === 'object' && obj !== null &&
            typeof obj.name === 'string' &&
            typeof obj.filename === 'string' &&
            typeof obj.line === 'number';
 }
 
-export function isStepStartPayload(obj: any): obj is StepStartPayload {
+function isStepStartPayload(obj: any): obj is StepStartPayload {
     return typeof obj === 'object' && obj !== null &&
            typeof obj.name === 'string' &&
            typeof obj.line === 'number';
 }
 
-export function isStepPayload(obj: any): obj is StepPayload {
+function isStepPayload(obj: any): obj is StepPayload {
     return typeof obj === 'object' && obj !== null &&
            typeof obj.name === 'string' &&
            typeof obj.status === 'string';
 }
 
-export function isScenarioResultPayload(obj: any): obj is ScenarioResultPayload {
+function isScenarioResultPayload(obj: any): obj is ScenarioResultPayload {
     return typeof obj === 'object' && obj !== null &&
            typeof obj.line === 'number' &&
            typeof obj.status === 'string';
