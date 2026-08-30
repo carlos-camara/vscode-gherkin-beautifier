@@ -144,7 +144,10 @@ If using a virtual environment manager like Poetry or Pipenv, update your config
 ```
 If you need to point to a specific local Python virtual environment via an absolute path, configure the machine-specific override in your global User Settings to prevent committing absolute paths to your repository:
 ```json
-"gherkinPowerTools.behave.localExecutable": "/absolute/path/to/.venv/bin/behave"
+"gherkinPowerTools.behave.localExecution": {
+  "executable": "/absolute/path/to/.venv/bin/behave",
+  "arguments": []
+}
 ```
 
 ## Debugging does not stop at breakpoints
@@ -156,8 +159,8 @@ If you need to point to a specific local Python virtual environment via an absol
 
 ## Live Step Tracking animation is not visible
 **Symptom:** The scenario runs in the Test Explorer, but the active step is not highlighted in the editor.
-**Likely Causes:** The custom Formatter isn't emitting `step_start` events, or the file is not currently focused.
-**Resolution:** Ensure your `behave` process has not overridden the custom JSON formatter, and verify that the `.feature` file you are running is currently open and active in the editor.
+**Likely Causes:** The custom Formatter isn't emitting `step_start` events over the TCP socket, or the file is not currently focused.
+**Resolution:** Ensure your `behave` process has not overridden the custom NDJSON-over-TCP formatter, and verify that the `.feature` file you are running is currently open and active in the editor.
 
 ## Syntax Errors cascade into massive false-positives
 **Symptom:** You missed a colon on a `Scenario`, and suddenly all steps below it have red underlines.
@@ -175,7 +178,7 @@ If you need to point to a specific local Python virtual environment via an absol
 **Symptom:** The extension cannot find Python, Behave, or local workspace paths when running inside a remote environment.
 **Likely Causes:** Gherkin PowerTools correctly executes on the remote machine where the workspace is hosted (as a `workspace` extension). Absolute paths configured for a local OS (e.g., Windows `C:\...`) will fail when the extension evaluates them on the Linux remote host.
 **Resolution:**
-1. Ensure your `gherkinPowerTools.behave.localExecutable` or `python.defaultInterpreterPath` uses the path inside the remote environment.
+1. Ensure your `gherkinPowerTools.behave.localExecution` or `python.defaultInterpreterPath` uses the path inside the remote environment.
 2. Ensure you have installed the Behave dependencies on the remote host/container.
 3. If using the CLI (`npx @carlos-camara/gherkin-pt`), ensure you run it from the **Integrated Terminal** in VS Code, which is connected to your remote environment, rather than your local OS terminal.
 
