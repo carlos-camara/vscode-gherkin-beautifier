@@ -26,7 +26,7 @@ export async function executeMigrations(context: vscode.ExtensionContext): Promi
  * Automates the migration from the deprecated string-based `behave.localExecutable`
  * to the new structured `behave.localExecution` object setting.
  */
-async function migrateLegacyLocalExecutableSettings(): Promise<void> {
+export async function migrateLegacyLocalExecutableSettings(): Promise<void> {
     const config = vscode.workspace.getConfiguration('gherkinPowerTools.behave');
     const inspection = config.inspect<string>('localExecutable');
 
@@ -56,7 +56,7 @@ async function migrateLegacyLocalExecutableSettings(): Promise<void> {
  * to the new structured `behave.execution` object setting. 
  * This ensures users don't face execution errors without manual action.
  */
-async function migrateLegacyExecutionSettings(): Promise<void> {
+export async function migrateLegacyExecutionSettings(): Promise<void> {
     const config = vscode.workspace.getConfiguration('gherkinPowerTools.behave');
     const inspection = config.inspect<string>('command');
 

@@ -18,8 +18,8 @@ suite('Timeout and Execution Termination', () => {
             behave: {
                 executionTimeout: 5,
                 localExecution: {
-                    executable: 'python',
-                    arguments: ['-c', 'import time; time.sleep(1000)'] // Long running script
+                    executable: 'node',
+                    arguments: ['-e', 'setTimeout(() => {}, 100000)'] // Long running script
                 },
                 additionalArguments: []
             }
@@ -52,7 +52,7 @@ suite('Timeout and Execution Termination', () => {
         );
 
         // Advance clock past the 5-second timeout
-        clock.tick(5001);
+        await clock.tickAsync(5001);
 
         const outcome = await executionPromise;
 
@@ -90,8 +90,8 @@ suite('Timeout and Execution Termination', () => {
 
     test('runBehaveForTestRun should return success outcome for normal exit', async () => {
         mockConfig.behave.localExecution = {
-            executable: 'python',
-            arguments: ['-c', 'print("done")']
+            executable: 'node',
+            arguments: ['-e', 'console.log("done")']
         };
         
         const workspaceFolders = vscode.workspace.workspaceFolders;

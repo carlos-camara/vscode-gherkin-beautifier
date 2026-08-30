@@ -439,6 +439,10 @@ export async function runBehaveForTestRun(
     details.args.push('-f', 'vscode_behave_formatter:VSCodeFormatter');
 
     return new Promise<ExecutionOutcome>((resolve) => {
+        if (token.isCancellationRequested) {
+            return resolve({ type: 'cancelled' });
+        }
+
         let child: cp.ChildProcess;
         let reader: NDJSONSocketReader | undefined;
         let cancelDisposable: vscode.Disposable;
