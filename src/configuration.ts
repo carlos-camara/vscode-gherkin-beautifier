@@ -9,7 +9,7 @@ interface Configuration {
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
     rules: Record<string, any>;
-    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecution?: { executable: string; arguments: string[] }; };
+    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecution?: { executable: string; arguments: string[] }; executionTimeout?: number; };
     featureGlobs: string[];
 }
 

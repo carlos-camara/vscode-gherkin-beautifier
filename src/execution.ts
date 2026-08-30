@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as net from 'net';
 import { ConfigurationService } from './configuration';
-import { NDJSONSocketReader } from './protocol';
+import { killProcessTree } from './processUtils';
+import * as os from 'os';
 
 let memoryAdditionalArgs: string | undefined = undefined;
 
@@ -373,12 +373,6 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
         // Force focus to the Debug Console
         vscode.commands.executeCommand('workbench.panel.repl.view.focus');
 
-        // 10 minute absolute fallback timeout to prevent infinite hanging
-        setTimeout(() => {
-            startDisposable.dispose();
-            terminateDisposable.dispose();
-            safeResolve();
-        }, 10 * 60 * 1000);
     });
 }
 
@@ -390,8 +384,17 @@ export async function debugBehave(uri: vscode.Uri, lineOrLines: number | Set<num
  * TEST RESULTS panel shows the full Behave output instead of
  * "The test case did not report any output."
  *
- * @returns A promise that resolves with the process exit code (or null on timeout/cancel).
+ * @returns A promise that resolves with the ExecutionOutcome.
  */
+export type ExecutionOutcome =
+    | { type: 'success' }
+    | { type: 'failure', code: number }
+    | { type: 'launch_failure', error: string }
+    | { type: 'process_error', error: string }
+    | { type: 'cancelled' }
+    | { type: 'timeout', durationSeconds: number }
+    | { type: 'protocol_failure', error: string };
+
 export async function runBehaveForTestRun(
     uri: vscode.Uri,
     lineOrLines: number | Set<number> | undefined,
@@ -399,17 +402,20 @@ export async function runBehaveForTestRun(
     onOutput: (text: string) => void,
     token: vscode.CancellationToken,
     onEvent?: (event: any) => void
-): Promise<number | null> {
+): Promise<ExecutionOutcome> {
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
     if (!workspaceFolder) {
         onOutput('\r\n\x1b[31mError: Cannot run Behave against a file outside of a workspace folder.\x1b[0m\r\n');
-        return null;
+        return { type: 'launch_failure', error: 'Not in workspace' };
     }
 
     const details = await resolveBehaveExecutionDetails(uri, lineOrLines, configService);
     if (!details) {
-        return null;
+        return { type: 'launch_failure', error: 'Cannot resolve execution details' };
     }
+
+    const config = configService.getConfiguration(uri);
+    const timeoutSeconds = config.behave.executionTimeout || 300;
 
     const cwd = workspaceFolder.uri.fsPath;
 
@@ -430,90 +436,114 @@ export async function runBehaveForTestRun(
 
     details.args.push('-f', 'vscode_behave_formatter:VSCodeFormatter');
 
-    return new Promise<number | null>((resolve) => {
-        let child: cp.ChildProcess;
-        let reader: NDJSONSocketReader | undefined;
-        let cancelDisposable: vscode.Disposable;
-        let timeout: NodeJS.Timeout;
+    return new Promise<ExecutionOutcome>((resolve) => {
+        if (token.isCancellationRequested) {
+            return resolve({ type: 'cancelled' });
+        }
 
-        const server = net.createServer((socket) => {
-            reader = new NDJSONSocketReader(socket, (envelope) => {
-                if (onEvent) {
-                    onEvent(envelope);
-                }
-            }, (err) => {
-                // Log protocol errors to output so user knows something went wrong with the reporting
-                onOutput(`\r\n\x1b[31m[Protocol Error] ${err}\x1b[0m\r\n`);
-            });
+        let child: cp.ChildProcess;
+        let cancelDisposable: vscode.Disposable;
+        let timeoutHandle: NodeJS.Timeout | undefined;
+        let isResolved = false;
+
+        const safeResolve = (outcome: ExecutionOutcome) => {
+            if (!isResolved) {
+                isResolved = true;
+                cleanup();
+                resolve(outcome);
+            }
+        };
+
+        const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' };
+        if (env.PYTHONPATH) {
+            env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
+        } else {
+            env.PYTHONPATH = assetsPath;
+        }
+
+        // Spawn detached on POSIX so we can kill the process group
+        const isWindows = os.platform() === 'win32';
+        child = cp.spawn(details.executable, details.args, {
+            cwd,
+            shell: false,
+            env,
+            detached: !isWindows
         });
 
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address() as net.AddressInfo;
-            const port = address.port;
-
-            const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always', VSCODE_BEHAVE_PORT: port.toString() };
-            if (env.PYTHONPATH) {
-                env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
-            } else {
-                env.PYTHONPATH = assetsPath;
-            }
-
-            child = cp.spawn(details.executable, details.args, {
-                cwd,
-                shell: false,
-                env
-            });
-
-            let lineBuffer = '';
-            const handleData = (data: Buffer) => {
-                const text = data.toString('utf8');
-                lineBuffer += text;
-                let newlineIndex;
-                while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
-                    const line = lineBuffer.substring(0, newlineIndex + 1);
-                    lineBuffer = lineBuffer.substring(newlineIndex + 1);
-
-                    // The stdout is now ONLY human output. Replace \n with \r\n for terminal formatting.
+        let lineBuffer = '';
+        const handleData = (data: Buffer) => {
+            const text = data.toString('utf8');
+            lineBuffer += text;
+            let newlineIndex;
+            while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
+                const line = lineBuffer.substring(0, newlineIndex + 1);
+                lineBuffer = lineBuffer.substring(newlineIndex + 1);
+                
+                const match = line.match(/^##VSCODE_BEHAVE_EVENT:(.*)/);
+                if (match) {
+                    try {
+                        const parsed = JSON.parse(match[1]);
+                        if (onEvent) {
+                            onEvent({ version: 1, type: parsed.event, payload: parsed.data });
+                        }
+                    } catch (e) {
+                        // ignore malformed event
+                    }
+                } else {
                     onOutput(line.replace(/(?<!\r)\n/g, '\r\n'));
                 }
-            };
+            }
+        };
 
-            child.stdout?.on('data', handleData);
-            child.stderr?.on('data', handleData);
+        child.stdout?.on('data', handleData);
+        child.stderr?.on('data', handleData);
 
-            cancelDisposable = token.onCancellationRequested(() => {
-                child.kill('SIGKILL');
-                cleanup();
-                resolve(null);
-            });
+        cancelDisposable = token.onCancellationRequested(() => {
+            if (child.pid) killProcessTree(child.pid);
+            safeResolve({ type: 'cancelled' });
+        });
 
-            timeout = setTimeout(() => {
-                child.kill('SIGKILL');
-                cleanup();
-                resolve(null);
-            }, 5 * 60 * 1000);
+        if (timeoutSeconds > 0) {
+            timeoutHandle = setTimeout(() => {
+                if (child.pid) killProcessTree(child.pid);
+                onOutput(`\r\n\x1b[31m[Gherkin PowerTools] Execution timed out after ${timeoutSeconds} seconds.\x1b[0m\r\n`);
+                safeResolve({ type: 'timeout', durationSeconds: timeoutSeconds });
+            }, timeoutSeconds * 1000);
+        }
 
-            child.on('close', (code) => {
-                // flush remaining buffer
-                if (lineBuffer.length > 0) {
+        child.on('close', (code) => {
+            if (lineBuffer.length > 0) {
+                const match = lineBuffer.match(/^##VSCODE_BEHAVE_EVENT:(.*)/);
+                if (match) {
+                    try {
+                        const parsed = JSON.parse(match[1]);
+                        if (onEvent) {
+                            onEvent({ version: 1, type: parsed.event, payload: parsed.data });
+                        }
+                    } catch (e) {}
+                } else {
                     onOutput(lineBuffer.replace(/(?<!\r)\n/g, '\r\n'));
                 }
-                cleanup();
-                resolve(code ?? null);
-            });
+            }
+            if (!isResolved) {
+                if (code === 0) {
+                    safeResolve({ type: 'success' });
+                } else if (code !== null) {
+                    safeResolve({ type: 'failure', code });
+                } else {
+                    safeResolve({ type: 'process_error', error: 'Process exited unexpectedly without exit code' });
+                }
+            }
+        });
 
-            child.on('error', (err) => {
-                cleanup();
-                onOutput(`[Gherkin PowerTools] Failed to start Behave: ${err.message}\r\n`);
-                resolve(null);
-            });
+        child.on('error', (err) => {
+            onOutput(`\r\n\x1b[31m[Gherkin PowerTools] Failed to start Behave: ${err.message}\x1b[0m\r\n`);
+            safeResolve({ type: 'launch_failure', error: err.message });
         });
 
         function cleanup() {
-            clearTimeout(timeout);
-            if (cancelDisposable) cancelDisposable.dispose();
-            if (reader) reader.close();
-            server.close();
+            cancelDisposable?.dispose();
+            if (timeoutHandle) clearTimeout(timeoutHandle);
         }
     });
 }

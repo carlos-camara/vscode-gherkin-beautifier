@@ -1,0 +1,1 @@
+{"entry": ["src/extension.ts", "src/cli/**/*.ts", "src/test/**/*.ts", "scripts/**/*.js"]}

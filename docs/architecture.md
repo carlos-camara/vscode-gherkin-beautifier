@@ -47,6 +47,14 @@ To mitigate command injection vulnerabilities and protect users from malicious w
 4. **Machine-Specific Configuration Isolation**: To prevent absolute executable paths (e.g., local Python interpreters) from being inadvertently committed to version control in shared `.gherkin-powertoolsrc.json` or `.vscode/settings.json` files, the execution model introduces a strict `behave.localExecution` override scoped exclusively to the user's machine settings.
 5. **Zero-Config Virtual Environment Discovery**: To eliminate manual setup, the extension leverages the official Microsoft Python API to detect the active virtual environment. If a global interpreter is active, Gherkin PowerTools automatically scans the workspace and prioritizes local virtual environments (like `.venv`, `venv`, `env`) implicitly.
 
+### Execution Termination & Process Cleanup
+To prevent orphaned Python processes, particularly when running long E2E tests or terminating tests prematurely, the extension employs a robust cross-platform **Process Tree Cleanup** mechanism.
+When a test execution is cancelled or times out (configured via `gherkinPowerTools.behave.executionTimeout`), the extension does not simply kill the parent process. Instead, it locates all descendent processes and issues a recursive termination:
+- **POSIX Systems**: The process is spawned in detached mode with its own process group ID (`pgid`), allowing the extension to send `SIGKILL` to the entire group (`-pid`).
+- **Windows Systems**: The extension leverages the native `taskkill /pid <PID> /T /F` command to forcefully terminate the entire process tree.
+
+Furthermore, `runBehaveForTestRun` utilizes a strict `ExecutionOutcome` discriminated union (`success`, `failure`, `timeout`, `cancelled`, `launch_failure`, `process_error`, `protocol_failure`) instead of ambiguous exit codes. This strictly isolates infrastructure failures (like timeouts or cancellations) from actual test assertion failures, ensuring that the Test Explorer always reflects the true reason for a failed run.
+
 ### Test Selection Normalization Layer
 VS Code's `TestRunRequest` can contain complex overlapping inclusion and exclusion trees (e.g. running a whole Feature but excluding a specific Scenario, while also explicitly running an Example row).
 To prevent redundant child process executions and ensure mathematically correct test selection, the extension utilizes a dedicated `TestSelectionNormalizer` driven by a canonical `TestIdentity` abstraction.

@@ -343,6 +343,7 @@ export class GherkinTestController {
 
                 let capturedOutput = '';
                 let currentScenarioItem: vscode.TestItem | undefined;
+                let currentStepItem: vscode.TestItem | undefined;
                 let currentScenarioFailed = false;
                 let currentScenarioDuration = 0;
                 let currentScenarioErrorFile: string | undefined;
@@ -350,13 +351,13 @@ export class GherkinTestController {
                 let currentScenarioErrorMessage: string | undefined;
                 const processedItems = new Set<vscode.TestItem>();
 
-                const exitCode = await runBehaveForTestRun(
+                const outcome = await runBehaveForTestRun(
                     target.uri,
                     target.runWholeFeature ? undefined : target.lines,
                     this.configService,
                     (text) => {
                         capturedOutput += text;
-                        run.appendOutput(text, undefined, currentScenarioItem || target.items[0]);
+                        run.appendOutput(text, undefined, currentStepItem || currentScenarioItem || target.items[0]);
                     },
                     token,
                     (event) => {
@@ -366,6 +367,7 @@ export class GherkinTestController {
                             currentScenarioErrorFile = undefined;
                             currentScenarioErrorLine = undefined;
                             currentScenarioErrorMessage = undefined;
+                            currentStepItem = undefined;
                             const rootItem = this.controller.items.get(target.uri.toString());
                             if (rootItem) {
                                 currentScenarioItem = findItemByLine(rootItem, event.payload.line) || (event.payload.name ? findItemByName(rootItem, event.payload.name) : undefined);
@@ -382,6 +384,12 @@ export class GherkinTestController {
                             }
                         } else if (event.type === 'step_start') {
                             if (currentScenarioItem && currentScenarioItem.uri) {
+                                if (event.payload.line) {
+                                    currentStepItem = findItemByLine(currentScenarioItem, event.payload.line);
+                                    if (currentStepItem) {
+                                        run.started(currentStepItem);
+                                    }
+                                }
                                 const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === currentScenarioItem!.uri!.toString());
                                 if (editor && event.payload.line) {
                                     const line = event.payload.line - 1;
@@ -393,6 +401,19 @@ export class GherkinTestController {
                             if (currentScenarioItem && currentScenarioItem.uri) {
                                 this.clearActiveStepDecoration(currentScenarioItem.uri);
                             }
+                            if (currentStepItem) {
+                                if (['failed', 'undefined', 'error'].includes(event.payload.status)) {
+                                    const msg = new vscode.TestMessage(event.payload.error_message || 'Step failed');
+                                    if (event.payload.error_file && event.payload.error_line) {
+                                        msg.location = new vscode.Location(vscode.Uri.file(event.payload.error_file), new vscode.Position(event.payload.error_line - 1, 0));
+                                    }
+                                    run.failed(currentStepItem, msg, event.payload.duration ? event.payload.duration * 1000 : undefined);
+                                } else {
+                                    run.passed(currentStepItem, event.payload.duration ? event.payload.duration * 1000 : undefined);
+                                }
+                            }
+                            currentStepItem = undefined;
+                            
                             if (['failed', 'undefined', 'error'].includes(event.payload.status)) {
                                 currentScenarioFailed = true;
                                 if (event.payload.error_file && event.payload.error_line !== undefined) {
@@ -474,11 +495,18 @@ export class GherkinTestController {
                     }
                 );
 
-                if (exitCode !== 0 && exitCode !== null && processedItems.size === 0) {
+                if (outcome.type === 'failure' && processedItems.size === 0) {
                     const cleanOutput = capturedOutput.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-                    const md = new vscode.MarkdownString(`**Behave exited with code ${exitCode}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
+                    const md = new vscode.MarkdownString(`**Behave exited with code ${outcome.code}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
                     target.items.forEach(item => run.failed(item, new vscode.TestMessage(md)));
-                } else if (exitCode !== null) {
+                } else if (outcome.type === 'launch_failure' || outcome.type === 'process_error' || outcome.type === 'protocol_failure') {
+                    const errorMsg = outcome.type === 'launch_failure' ? outcome.error : 
+                                     outcome.type === 'process_error' ? `Process crashed: ${outcome.error}` : 
+                                     `Protocol error: ${outcome.error}`;
+                    target.items.forEach(item => run.errored(item, new vscode.TestMessage(errorMsg)));
+                } else if (outcome.type === 'timeout') {
+                    target.items.forEach(item => run.errored(item, new vscode.TestMessage(`Execution timed out after ${outcome.durationSeconds} seconds.`)));
+                } else if (outcome.type !== 'cancelled') {
                     const markUnprocessed = (node: vscode.TestItem, isTargeted: boolean = false) => {
                         const targeted = isTargeted || target.items.includes(node);
                         if (node.children.size === 0) {

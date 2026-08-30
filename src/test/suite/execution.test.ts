@@ -282,33 +282,25 @@ suite('Execution Test Suite', () => {
         const uri = vscode.Uri.file('/workspace/features/test.feature');
 
         const cp = require('child_process');
-        const net = require('net');
         const originalSpawn = cp.spawn;
-
-        cp.spawn = (_executable: string, _args: string[], options: any) => {
+        cp.spawn = (_executable: string, _args: string[], _options: any) => {
             const EventEmitter = require('events');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
+            child.pid = 123;
             child.kill = () => {};
 
             setTimeout(() => {
-                const port = parseInt(options.env.VSCODE_BEHAVE_PORT, 10);
-                const client = new net.Socket();
-                client.connect(port, '127.0.0.1', () => {
-                    const payload = JSON.stringify({ version: 1, type: "step_start", payload: { name: 'test', line: 4 } });
-                    client.write(Buffer.from(payload + '\n'));
-                    client.end();
-                });
+                const payload = JSON.stringify({ event: "step_start", data: { name: 'test', line: 4 } });
+                child.stdout.emit('data', Buffer.from(`##VSCODE_BEHAVE_EVENT:${payload}\n`));
 
                 child.stdout.emit('data', Buffer.from('Standard output line 1\n'));
                 child.stdout.emit('data', Buffer.from('Standard output line 2\n'));
 
-                client.on('close', () => {
-                    setTimeout(() => {
-                        child.emit('close', 0);
-                    }, 20);
-                });
+                setTimeout(() => {
+                    child.emit('close', 0);
+                }, 20);
             }, 10);
 
             return child;
@@ -328,7 +320,7 @@ suite('Execution Test Suite', () => {
                 (event: any) => eventsReceived.push(event)
             );
 
-            assert.strictEqual(exitCode, 0);
+            assert.deepStrictEqual(exitCode, { type: 'success' });
 
             // Standard output should be passed through with \r\n
             assert.strictEqual(outputReceived.length, 2);
@@ -357,9 +349,13 @@ suite('Execution Test Suite', () => {
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
-            child.kill = () => { killCalled = true; };
+            child.pid = 789;
+            child.kill = () => {};
             return child; // Hangs forever until killed
         };
+
+        const originalProcessKill = process.kill;
+        process.kill = () => { killCalled = true; return true; };
 
         const tokenSource = new vscode.CancellationTokenSource();
 
@@ -377,10 +373,11 @@ suite('Execution Test Suite', () => {
             tokenSource.cancel();
 
             const exitCode = await runPromise;
-            assert.strictEqual(exitCode, null, 'Should return null on cancellation');
-            assert.strictEqual(killCalled, true, 'Should invoke child.kill()');
+            assert.deepStrictEqual(exitCode, { type: 'cancelled' }, 'Should return cancelled on cancellation');
+            assert.strictEqual(killCalled, true, 'Should invoke process.kill()');
         } finally {
             cp.spawn = originalSpawn;
+            process.kill = originalProcessKill;
         }
     });
 
@@ -418,7 +415,7 @@ suite('Execution Test Suite', () => {
                 () => {}
             );
 
-            assert.strictEqual(exitCode, null);
+            assert.deepStrictEqual(exitCode, { type: 'launch_failure', error: 'spawn behave ENOENT' });
             assert.ok(outputs.some(text => text.includes('Failed to start Behave')));
             assert.ok(outputs.some(text => text.includes('ENOENT')));
         } finally {
@@ -434,23 +431,28 @@ suite('Execution Test Suite', () => {
         const originalSpawn = cp.spawn;
         let killCalled = false;
 
+        let childMock: any;
         cp.spawn = () => {
             const EventEmitter = require('events');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
-            child.kill = () => { killCalled = true; child.emit('close', null); };
+            child.pid = 456;
+            child.kill = () => {};
+            childMock = child;
             return child; // Hangs until killed
         };
 
+        const originalProcessKill = process.kill;
+        process.kill = () => { killCalled = true; childMock.emit('close', null); return true; };
+
+
         const tokenSource = new vscode.CancellationTokenSource();
 
-        // Temporarily patch global setTimeout to trigger immediately for this tes
         const originalSetTimeout = global.setTimeout;
         (global as any).setTimeout = (cb: any, ms: number) => {
             if (ms === 5 * 60 * 1000) {
-                // If it's the safety timeout, call it immediately
-                originalSetTimeout(cb, 10);
+                originalSetTimeout(cb, 100);
                 return 1 as any;
             }
             return originalSetTimeout(cb, ms);
@@ -465,10 +467,11 @@ suite('Execution Test Suite', () => {
                 tokenSource.token,
                 () => {}
             );
-            assert.strictEqual(exitCode, null);
-            assert.strictEqual(killCalled, true, 'Should invoke child.kill() on timeout');
+            assert.deepStrictEqual(exitCode, { type: 'timeout', durationSeconds: 0.1 });
+            assert.strictEqual(killCalled, true, 'Should invoke process.kill() on timeout');
         } finally {
             cp.spawn = originalSpawn;
+            process.kill = originalProcessKill;
             global.setTimeout = originalSetTimeout;
         }
     });
