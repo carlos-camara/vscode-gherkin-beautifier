@@ -9,7 +9,7 @@ interface Configuration {
     formatter: { enabled: boolean; };
     linter: { enabled: boolean; enabledRules: string[]; };
     rules: Record<string, any>;
-    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecutable?: string; };
+    behave: { stepGlobs: string[]; ignoreGlobs: string[]; additionalArguments: string[]; execution: { executable: string; arguments: string[] }; localExecution?: { executable: string; arguments: string[] }; };
     featureGlobs: string[];
 }
 
@@ -224,8 +224,8 @@ function validateAndMergeConfig(parsed: any, baseConfig?: Configuration): { erro
                             errors.push({ key: 'execution.arguments', message: `"behave.execution.arguments" must be an array of strings.` });
                         }
                     }
-                } else if (subKey === 'localExecutable') {
-                    errors.push({ key: subKey, message: `"behave.localExecutable" is a machine-specific override and cannot be defined in the portable project configuration.` });
+                } else if (subKey === 'localExecution' || subKey === 'localExecutable') {
+                    errors.push({ key: subKey, message: `"behave.${subKey}" is a machine-specific override and cannot be defined in the portable project configuration.` });
                 } else {
                     errors.push({ key: subKey, message: `Unknown property in behave: "${subKey}".` });
                 }
@@ -503,7 +503,24 @@ export class ConfigurationService {
 
         const localExecutable = getOverride<string>('behave.localExecutable');
         if (localExecutable !== undefined && typeof localExecutable === 'string') {
-            config.behave.localExecutable = localExecutable;
+            const isPython = localExecutable.trim().endsWith('python') || localExecutable.trim().endsWith('python.exe');
+            config.behave.localExecution = {
+                executable: localExecutable.trim(),
+                arguments: isPython ? ['-m', 'behave'] : []
+            };
+        }
+
+        const localExecution = getOverride<{ executable: string; arguments: string[] }>('behave.localExecution');
+        if (localExecution !== undefined && typeof localExecution === 'object' && localExecution !== null) {
+            if (!config.behave.localExecution) {
+                config.behave.localExecution = { executable: 'behave', arguments: [] };
+            }
+            if (typeof localExecution.executable === 'string') {
+                config.behave.localExecution.executable = localExecution.executable;
+            }
+            if (Array.isArray(localExecution.arguments) && localExecution.arguments.every(i => typeof i === 'string')) {
+                config.behave.localExecution.arguments = localExecution.arguments;
+            }
         }
 
         return config;
