@@ -114,7 +114,7 @@ Share team formatting and diagnostic rules by committing a `.gherkin-powertoolsr
 | `gherkinPowerTools.rules` | `{...}` | Diagnostic rule overrides. Accepts string severities (`"error"`) or configuration objects (`{ "severity": "warning", "maxSteps": 20 }`). |
 | `gherkinPowerTools.behave.stepGlobs` | `["**/steps/**/*.py", ...]` | Paths to Python step definitions. |
 | `gherkinPowerTools.behave.execution` | `{"executable": "behave", "arguments": []}` | Secure Test Explorer execution command (e.g., `{"executable": "poetry", "arguments": ["run", "behave"]}`). |
-| `gherkinPowerTools.behave.localExecutable` | *None* | Machine-specific override for the Behave executable absolute path. |
+| `gherkinPowerTools.behave.localExecution` | *None* | Machine-specific override for the Behave executable absolute path and arguments. |
 
 *Visit the **[Configuration Reference](https://carlos-camara.github.io/vscode-gherkin-powertools/configuration/)** for all available settings.*
 

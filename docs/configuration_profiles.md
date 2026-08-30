@@ -47,7 +47,7 @@ Gherkin PowerTools automatically contributes a JSON schema for `.gherkin-powerto
 
 Configuration values are resolved in the following order (highest precedence first):
 
-1. **Machine-Specific Overrides**: Settings scoped as `machine-overridable` (e.g., `behave.localExecutable`) set in User Settings.
+1. **Machine-Specific Overrides**: Settings scoped as `machine-overridable` (e.g., `behave.localExecution`) set in User Settings.
 2. **Configuration Profile**: `.gherkin-powertoolsrc.json` in the workspace root.
 3. **Workspace Folder Settings**: `.vscode/settings.json` in the specific folder.
 4. **Workspace Settings**: `.vscode/settings.json` at the workspace level.
