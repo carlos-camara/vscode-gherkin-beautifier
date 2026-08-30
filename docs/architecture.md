@@ -35,6 +35,10 @@ To eliminate fragility caused by standard output corruption, this formatter esta
 It translates Python-side test results and the final **Context Snapshot** into strictly-typed NDJSON (Newline Delimited JSON) events.
 These `ProtocolEnvelope` payloads are flushed safely over the socket, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI without relying on fragile stdout parsing.
 
+#### Graceful Degradation & Compatibility
+To interact with the Behave runtime, the formatter must access internal private APIs (such as `_step_index`, `_lines`, and `hook_failures`). Because these variables are undocumented and subject to change in community forks (like Behave `1.3.3`) or future releases, the formatter uses a `BehaveCompatibilityAdapter`.
+This adapter safely isolates all private access. If an internal variable is missing or altered, the adapter invokes a **Graceful Degradation** fallback. Instead of crashing the test runner, core execution tracking continues flawlessly, and only the optional UI telemetry (such as precise line tracking or Context Snapshots) degrades.
+
 ### Secure Execution Gateway & Workspace Trust
 To mitigate command injection vulnerabilities and protect users from malicious workspaces, test execution runs through a **Secure Execution Gateway**:
 1. **Workspace Trust Integration**: Before any process is spawned, the extension verifies the environment using VS Code's native `workspace.isTrusted` API. Test execution is strictly blocked in untrusted workspaces.

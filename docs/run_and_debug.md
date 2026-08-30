@@ -133,6 +133,8 @@ You can also pass persistent arguments (like passing userdata to the environment
 ### Edit Arguments & Run
 If you need to change arguments on the fly (e.g., adding `--tags=@wip` for a single run without modifying your settings), use the **Edit Behave args & Run** button at the top of the Test Explorer view.
 
+You can also explicitly right-click a specific Feature or Scenario in the Test Explorer tree and select **Edit Feature...** or **Edit Scenario...** to supply custom arguments specifically for that node's run.
+
 ---
 
 ## Remote Workspaces (Dev Containers, WSL, SSH)

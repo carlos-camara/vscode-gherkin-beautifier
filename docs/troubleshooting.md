@@ -157,10 +157,13 @@ If you need to point to a specific local Python virtual environment via an absol
 1. Ensure the official Microsoft Python extension is installed and active.
 2. Ensure you clicked the **Debug (Bug icon)** in the Test Explorer, not the **Run (Play icon)**.
 
-## Live Step Tracking animation is not visible
-**Symptom:** The scenario runs in the Test Explorer, but the active step is not highlighted in the editor.
-**Likely Causes:** The custom Formatter isn't emitting `step_start` events over the TCP socket, or the file is not currently focused.
-**Resolution:** Ensure your `behave` process has not overridden the custom NDJSON-over-TCP formatter, and verify that the `.feature` file you are running is currently open and active in the editor.
+## Live Step Tracking animation is not visible or incomplete
+**Symptom:** The scenario runs in the Test Explorer, but the active step is not highlighted in the editor, or Context Snapshots are missing from the output, but the tests still pass or fail correctly.
+**Likely Causes:**
+1. The file is not currently focused.
+2. The custom Formatter isn't emitting `step_start` events over the TCP socket (perhaps overridden by another `behave` argument).
+3. You are running an incompatible or highly customized version of Behave (e.g. community forks other than `1.3.3`). The extension uses a "Graceful Degradation" adapter, which prevents the test runner from crashing by disabling missing private APIs.
+**Resolution:** Ensure your `.feature` file is currently open and active. Ensure your `behave` process has not overridden the custom NDJSON-over-TCP formatter. If the issue persists, verify you are using an officially supported Behave version (e.g., `1.2.6`, `1.2.7.dev`, `1.3.3`).
 
 ## Syntax Errors cascade into massive false-positives
 **Symptom:** You missed a colon on a `Scenario`, and suddenly all steps below it have red underlines.

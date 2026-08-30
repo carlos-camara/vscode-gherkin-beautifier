@@ -1,0 +1,517 @@
+class Context(object):
+    """Hold contextual information during the running of tests.
+
+    This object is a place to store information related to the tests you're
+    running. You may add arbitrary attributes to it of whatever value you need.
+
+    During the running of your tests the object will have additional layers of
+    namespace added and removed automatically. There is a "root" namespace and
+    additional namespaces for features and scenarios.
+
+    Certain names are used by *behave*; be wary of using them yourself as
+    *behave* may overwrite the value you set. These names are:
+
+    .. attribute:: feature
+
+      This is set when we start testing a new feature and holds a
+      :class:`~behave.model.Feature`. It will not be present outside of a
+      feature (i.e. within the scope of the environment before_all and
+      after_all).
+
+    .. attribute:: scenario
+
+      This is set when we start testing a new scenario (including the
+      individual scenarios of a scenario outline) and holds a
+      :class:`~behave.model.Scenario`. It will not be present outside of the
+      scope of a scenario.
+
+    .. attribute:: tags
+
+      The current set of active tags (as a Python set containing instances of
+      :class:`~behave.model.Tag` which are basically just glorified strings)
+      combined from the feature and scenario. This attribute will not be
+      present outside of a feature scope.
+
+    .. attribute:: aborted
+
+      This is set to true in the root namespace when the user aborts a test run
+      (:exc:`KeyboardInterrupt` exception). Initially: False.
+
+    .. attribute:: failed
+
+      This is set to true in the root namespace as soon as a step fails.
+      Initially: False.
+
+    .. attribute:: table
+
+      This is set at the step level and holds any :class:`~behave.model.Table`
+      associated with the step.
+
+    .. attribute:: text
+
+      This is set at the step level and holds any multiline text associated
+      with the step.
+
+    .. attribute:: config
+
+      The configuration of *behave* as determined by configuration files and
+      command-line options. The attributes of this object are the same as the
+      `configuration file section names`_.
+
+    .. attribute:: active_outline
+
+      This is set for each scenario in a scenario outline and references the
+      :class:`~behave.model.Row` that is active for the current scenario. It is
+      present mostly for debugging, but may be useful otherwise.
+
+    .. attribute:: captured
+
+        If any output capture is enabled, provides access to a
+        :class:`~behave.capture.Captured` object that contains a snapshot
+        of all captured data (stdout/stderr/log).
+
+        .. versionadded:: 1.3.0
+
+    A :class:`behave.runner.ContextMaskWarning` warning will be raised if user
+    code attempts to overwrite one of these variables, or if *behave* itself
+    tries to overwrite a user-set variable.
+
+    You may use the "in" operator to test whether a certain value has been set
+    on the context, for example::
+
+        "feature" in context
+
+    checks whether there is a "feature" value in the context.
+
+    Values may be deleted from the context using "del" but only at the level
+    they are set. You can't delete a value set by a feature at a scenario level
+    but you can delete a value set for a scenario in that scenario.
+
+    .. _`configuration file section names`: behave.html#configuration-files
+    """
+    # pylint: disable=too-many-instance-attributes
+    LAYER_NAMES = ["testrun", "feature", "rule", "scenario"]
+    FAIL_ON_CLEANUP_ERRORS = True
+
+    def __init__(self, runner):
+        self._runner = weakref.proxy(runner)
+        self._config = runner.config
+        root_data = self._root = {
+            "aborted": False,
+            "failed": False,
+            "config": self._config,
+            "active_outline": None,
+            "cleanup_errors": 0,
+            "@cleanups": [],    # -- REQUIRED-BY: before_all() hook
+            "@layer": "testrun",
+        }
+        self._stack = [root_data]
+        self._record = {}
+        self._origin = {}
+        self._mode = ContextMode.BEHAVE
+
+        # -- MODEL ENTITY REFERENCES/SUPPORT:
+        # DISABLED: self.rule = None
+        # DISABLED: self.scenario = None
+        self.feature = None
+        self.text = None
+        self.table = None
+
+        # -- RUNTIME SUPPORT:
+        self.fail_on_cleanup_errors = self.FAIL_ON_CLEANUP_ERRORS
+
+    def abort(self, reason=None):
+        """Abort the test run.
+
+        This sets the :attr:`aborted` attribute to true.
+        Any test runner evaluates this attribute to abort a test run.
+
+        .. versionadded:: 1.2.7
+        """
+        if not self.aborted:
+            # -- ONLY ONCE:
+            print("ABORTED: {}".format(reason or ""), file=sys.stderr)
+            self._set_root_attribute("aborted", True)
+
+    def use_or_assign_param(self, name, value):
+        """Use an existing context parameter (aka: attribute) or
+        assign a value to new context parameter (if it does not exist yet).
+
+        :param name:   Context parameter name (as string)
+        :param value:  Parameter value for new parameter.
+        :return: Existing or newly created parameter.
+
+        .. versionadded:: 1.2.7
+        """
+        if name not in self:
+            # -- CASE: New, missing param -- Assign parameter-value.
+            setattr(self, name, value)
+            return value
+        # -- OTHERWISE: Use existing param
+        return getattr(self, name, None)
+
+
+    def use_or_create_param(self, name, factory_func, *args, **kwargs):
+        """Use an existing context parameter (aka: attribute) or
+        create a new parameter if it does not exist yet.
+
+        :param name:   Context parameter name (as string)
+        :param factory_func: Factory function, used if parameter is created.
+        :param args: Positional args for ``factory_func()`` on create.
+        :param kwargs: Named args for ``factory_func()`` on create.
+        :return: Existing or newly created parameter.
+
+        .. versionadded:: 1.2.7
+        """
+        if name not in self:
+            # -- CASE: New, missing param -- Create it.
+            param_value = factory_func(*args, **kwargs)
+            setattr(self, name, param_value)
+            return param_value
+        # -- OTHERWISE: Use existing param
+        return getattr(self, name, None)
+
+    @staticmethod
+    def ignore_cleanup_error(context, cleanup_func, exception):
+        pass
+
+    @staticmethod
+    def print_cleanup_error(context, cleanup_func, exception):
+        cleanup_func_name = getattr(cleanup_func, "__name__", None)
+        if not cleanup_func_name:
+            cleanup_func_name = "%r" % cleanup_func
+        print(u"CLEANUP-ERROR in %s: %s: %s" %
+              (cleanup_func_name, exception.__class__.__name__, exception))
+        traceback.print_exc(file=sys.stdout)
+        # MAYBE: context._dump(pretty=True, prefix="Context: ")
+        # -- MARK: testrun as FAILED
+        # context._set_root_attribute("failed", True)
+
+    def _do_cleanups(self):
+        """Execute optional cleanup functions when stack frame is popped.
+        A user can add a user-specified handler for cleanup errors.
+
+        .. code-block:: python
+
+            # -- FILE: features/environment.py
+            def cleanup_database(database):
+                pass
+
+            def handle_cleanup_error(context, cleanup_func, exception):
+                pass
+
+            def before_all(context):
+                context.on_cleanup_error = handle_cleanup_error
+                context.add_cleanup(cleanup_database, the_database)
+        """
+        # -- BEST-EFFORT ALGORITHM: Tries to perform all cleanups.
+        if not self._stack:
+            return
+
+        current_layer = self._stack[0]
+        cleanup_funcs = current_layer.get("@cleanups", [])
+        on_cleanup_error = getattr(self, "on_cleanup_error",
+                                   self.print_cleanup_error)
+        context = self
+        cleanup_errors = []
+        for cleanup_func in reversed(cleanup_funcs):
+            try:
+                cleanup_func()
+            except Exception as e: # pylint: disable=broad-except
+                # pylint: disable=protected-access
+                context._root["cleanup_errors"] += 1
+                cleanup_errors.append(sys.exc_info())
+                on_cleanup_error(context, cleanup_func, e)
+
+        current_layer["@cleanups"] = []
+        if self.fail_on_cleanup_errors and cleanup_errors:
+            first_cleanup_erro_info = cleanup_errors[0]
+            del cleanup_errors  # -- ENSURE: Release other exception frames.
+            six.reraise(*first_cleanup_erro_info)
+
+    def _do_remaining_cleanups(self, capture_sink=None):
+        """
+        Performs any remaining cleanup operations.
+
+        This is done by removing the remaining layers from the context stack
+        and performs any pending cleanups.
+        """
+        # -- SINCE: behave v1.2.7
+        cleanup_errors = []
+        while len(self._stack) > 1:
+            try:
+                # -- PERFORM CLEANUPS:
+                self._pop(capture_sink=capture_sink)
+            except Exception:
+                cleanup_errors.append(sys.exc_info())
+
+        # -- FINALLY: Perform cleanups on last layer (if needed).
+        self._do_cleanups()
+        if self.fail_on_cleanup_errors and cleanup_errors:
+            first_cleanup_erro_info = cleanup_errors[0]
+            del cleanup_errors  # -- ENSURE: Release other exception frames.
+            six.reraise(*first_cleanup_erro_info)
+
+    def _push(self, layer=None):
+        """Push a new layer on the context stack.
+        HINT: Use layer values: "testrun", "feature", "rule, "scenario".
+
+        :param layer:   Layer name to use (or None).
+        """
+        initial_data = {"@cleanups": []}
+        if layer:
+            initial_data["@layer"] = layer
+        self._stack.insert(0, initial_data)
+
+    def _pop(self, capture_sink=None):
+        """
+        Pop the current layer from the context stack.
+        This performs any pending cleanups that are registered for this layer.
+        """
+        # -- PREPARED:
+        # if capture_sink is None:
+        #    capture_sink = self._runner.capture_sink
+
+        try:
+            if self.config.should_capture_hooks():
+                layer = self._stack[0].get("@layer", None)
+                name = "{}.cleanup".format(layer or "")
+                show_on_success = any_hook.show_cleanup_on_success
+                with capture_output_to_sink(self._config,
+                                            capture_sink2=capture_sink,
+                                            name=name,
+                                            show_on_success=show_on_success):
+                    self._do_cleanups()
+            else:
+                self._do_cleanups()
+        finally:
+            # -- ENSURE: Layer is removed even if cleanup-errors occur.
+            self._stack.pop(0)
+
+
+
+    def _use_with_behave_mode(self):
+        """Provides a context manager for using the context in BEHAVE mode."""
+        return use_context_with_mode(self, ContextMode.BEHAVE)
+
+    def use_with_user_mode(self):
+        """Provides a context manager for using the context in USER mode."""
+        return use_context_with_mode(self, ContextMode.USER)
+
+    def user_mode(self):
+        warnings.warn("Use 'use_with_user_mode()' instead",
+                      PendingDeprecationWarning, stacklevel=2)
+        return self.use_with_user_mode()
+
+    def _set_root_attribute(self, attr, value):
+        for frame in self.__dict__["_stack"]:
+            if frame is self.__dict__["_root"]:
+                continue
+            if attr in frame:
+                record = self.__dict__["_record"][attr]
+                params = {
+                    "attr": attr,
+                    "filename": record[0],
+                    "line": record[1],
+                    "function": record[3],
+                }
+                self._emit_warning(attr, params)
+
+        self.__dict__["_root"][attr] = value
+        if attr not in self._origin:
+            self._origin[attr] = self._mode
+
+    def _emit_warning(self, attr, params):
+        msg = ""
+        if self._mode is ContextMode.BEHAVE and self._origin[attr] is not ContextMode.BEHAVE:
+            msg = "behave runner is masking context attribute '%(attr)s' " \
+                  "originally set in %(function)s (%(filename)s:%(line)s)"
+        elif self._mode is ContextMode.USER:
+            if self._origin[attr] is not ContextMode.USER:
+                msg = "user code is masking context attribute '%(attr)s' " \
+                      "originally set by behave"
+            elif self._config.verbose:
+                msg = "user code is masking context attribute " \
+                    "'%(attr)s'; see the tutorial for what this means"
+        if msg:
+            msg = msg % params
+            warnings.warn(msg, ContextMaskWarning, stacklevel=3)
+
+    def _dump(self, pretty=False, prefix="  "):
+        for level, frame in enumerate(self._stack):
+            print("%sLevel %d" % (prefix, level))
+            if pretty:
+                for name in sorted(frame.keys()):
+                    value = frame[name]
+                    print("%s  %-15s = %r" % (prefix, name, value))
+            else:
+                print(prefix + repr(frame))
+
+    def __getattr__(self, attr):
+        if attr[0] == "_":
+            try:
+                return self.__dict__[attr]
+            except KeyError:
+                raise AttributeError(attr)
+
+        for frame in self._stack:
+            if attr in frame:
+                return frame[attr]
+        msg = "'{0}' object has no attribute '{1}'"
+        msg = msg.format(self.__class__.__name__, attr)
+        raise AttributeError(msg)
+
+    def __setattr__(self, attr, value):
+        if attr[0] == "_":
+            self.__dict__[attr] = value
+            return
+
+        for frame in self._stack[1:]:
+            if attr in frame:
+                record = self._record[attr]
+                params = {
+                    "attr": attr,
+                    "filename": record[0],
+                    "line": record[1],
+                    "function": record[3],
+                }
+                self._emit_warning(attr, params)
+
+        stack_limit = 2
+        if six.PY2:
+            stack_limit += 1     # Due to traceback2 usage.
+        stack_frame = traceback.extract_stack(limit=stack_limit)[0]
+        self._record[attr] = stack_frame
+        frame = self._stack[0]
+        frame[attr] = value
+        if attr not in self._origin:
+            self._origin[attr] = self._mode
+
+    def __delattr__(self, attr):
+        frame = self._stack[0]
+        if attr in frame:
+            del frame[attr]
+            del self._record[attr]
+        else:
+            msg = "'{0}' object has no attribute '{1}' at the current level"
+            msg = msg.format(self.__class__.__name__, attr)
+            raise AttributeError(msg)
+
+    def __contains__(self, attr):
+        if attr[0] == "_":
+            return attr in self.__dict__
+        for frame in self._stack:
+            if attr in frame:
+                return True
+        return False
+
+    def execute_steps(self, steps_text):
+        """The steps identified in the "steps" text string will be parsed and
+        executed in turn just as though they were defined in a feature file.
+
+        If the execute_steps call fails (either through error or failure
+        assertion) then the step invoking it will need to catch the resulting
+        exceptions.
+
+        :param steps_text:  Text with the Gherkin steps to execute (as string).
+        :returns: True, if the steps executed successfully.
+        :raises: AssertionError, if a step failure occurs.
+        :raises: ValueError, if invoked without a feature context.
+        """
+        require_type(steps_text, six.text_type, message="Steps must be unicode")
+        if not self.feature:
+            raise ValueError("execute_steps() called outside of feature")
+
+        # -- PREPARE: Save original context data for current step.
+        # Needed if step definition that called this method uses .table/.text
+        original_table = getattr(self, "table", None)
+        original_text = getattr(self, "text", None)
+
+        self.feature.parser.variant = "steps"
+        steps = self.feature.parser.parse_steps(steps_text)
+        with self._use_with_behave_mode():
+            for step in steps:
+                passed = step.run(self._runner, quiet=True, capture=False)
+                if not passed:
+                    # -- ISSUE #96: Provide more substep info to diagnose problem.
+                    step_line = u"%s %s" % (step.keyword, step.name)
+                    message = "%s SUB-STEP: %s" % \
+                              (step.status.name.upper(), step_line)
+                    if step.error_message:
+                        message += "\nSubstep info: %s\n" % step.error_message
+                        message += u"Traceback (of failed substep):\n"
+                        message += u"".join(traceback.format_tb(step.exc_traceback))
+                    # message += u"\nTraceback (of context.execute_steps()):"
+                    assert False, message
+
+            # -- FINALLY: Restore original context data for current step.
+            self.table = original_table
+            self.text = original_text
+        return True
+
+    def _select_stack_frame_by_layer(self, layer):
+        """Select context stack frame by layer name.
+
+        :param layer:   Layer name (as string).
+        :return: Selected frame object (if any)
+        :raises: LookupError, if layer was not found.
+        """
+        for frame in self._stack:
+            frame_layer = frame.get("@layer", None)
+            if layer == frame_layer:
+                return frame
+        # -- OOPS, NOT FOUND:
+        raise LookupError("Context.stack: layer=%s not found" % layer)
+
+    def add_cleanup(self, cleanup_func, *args, **kwargs):
+        """Adds a cleanup function that is called when :meth:`Context._pop()`
+        is called. This is intended for user-cleanups.
+
+        :param cleanup_func:    Callable function
+        :param args:            Args for cleanup_func() call (optional).
+        :param kwargs:          Kwargs for cleanup_func() call (optional).
+
+        .. note:: RESERVED :obj:`layer` : optional-string
+
+            The keyword argument ``layer="LAYER_NAME"`` can to be used to
+            assign the :obj:`cleanup_func` to specific a layer on the context stack
+            (instead of the current layer).
+
+            Known layer names are: "testrun", "feature", "rule", "scenario"
+
+        .. seealso:: :attr:`.Context.LAYER_NAMES`
+        """
+        # -- PRECONDITIONS:
+        require_callable(cleanup_func, message="REQUIRES: callable(cleanup_func)")
+        if not self._stack:
+            raise RuntimeError("Context._stack is empty")
+
+        layer_name = kwargs.pop("layer", None)
+        if args or kwargs:
+            def internal_cleanup_func():
+                cleanup_func(*args, **kwargs)
+        else:
+            internal_cleanup_func = cleanup_func
+
+        current_frame = self._stack[0]
+        if layer_name:
+            current_frame = self._select_stack_frame_by_layer(layer_name)
+        if cleanup_func not in current_frame["@cleanups"]:
+            # -- AVOID DUPLICATES:
+            current_frame["@cleanups"].append(internal_cleanup_func)
+
+    @property
+    def captured(self):
+        return self._runner.captured
+
+    def attach(self, mime_type, data):
+        """Embeds data (e.g. a screenshot) in reports for all
+        formatters that support it, such as the JSON formatter.
+
+        :param mime_type:       MIME type of the binary data.
+        :param data:            Bytes-like object to embed.
+        """
+        is_compatible = lambda f: hasattr(f, "embedding")  # noqa: E731
+        for formatter in filter(is_compatible, self._runner.formatters):
+            formatter.embedding(mime_type, data)
+
