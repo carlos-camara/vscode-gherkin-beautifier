@@ -74,8 +74,11 @@ If you need to override the execution engine entirely (e.g., wrapping Behave ins
 }
 ```
 
-If you need a strictly local machine-specific override (e.g., an absolute path to a Python interpreter or virtual environment), configure `localExecutable` in your **User Settings**:
+If you need a strictly local machine-specific override (e.g., an absolute path to a Python interpreter or virtual environment), configure `localExecution` in your **User Settings**:
 
 ```json
-"gherkinPowerTools.behave.localExecutable": "/home/user/.venv/bin/behave"
+"gherkinPowerTools.behave.localExecution": {
+  "executable": "/home/user/.venv/bin/behave",
+  "arguments": []
+}
 ```

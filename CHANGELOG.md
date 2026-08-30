@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 🔗 **[Read the full release notes on GitHub](https://github.com/carlos-camara/vscode-gherkin-powertools/releases)**
 
+## [1.8.7] - Unreleased
+
+### 🚀 Added
+- **TCP Protocol Redesign**: Performed an architecture and reliability redesign of the communication protocol between the Behave Python runtime and Gherkin PowerTools. The execution engine now uses a bidirectional NDJSON-over-TCP protocol instead of relying on standard output/error parsing. This perfectly decouples test results from Python's standard output, permanently eliminating fragile parsing bugs and preventing test failure truncation when users execute code that also prints to stdout.
+- **Test Selection Normalization Layer**: Added a dedicated `TestSelectionNormalizer` that sits between the VS Code Test Explorer UI and the Behave execution engine. It perfectly evaluates complex inclusion and exclusion rules (e.g. running an entire Feature but explicitly excluding one Scenario), prevents overlapping duplicate test executions, and ensures test are always launched in deterministic document-line order.
+- **Structured Local Execution Override**: Replaced the legacy `gherkinPowerTools.behave.localExecutable` string setting with a structured `gherkinPowerTools.behave.localExecution` object. This strictly separates the executable path from arguments to eliminate command injection risks and ensure semantic correctness for argument vectors.
+- **Automated Execution Migration**: The Configuration Service now heuristically migrates legacy `localExecutable` strings, automatically injecting `['-m', 'behave']` arguments if the path points to a Python interpreter.
+
+### ⚠️ Deprecated
+- `gherkinPowerTools.behave.localExecutable` is deprecated. Please migrate to `gherkinPowerTools.behave.localExecution`.
+
 ## [1.8.6] - 2026-08-28
 
 ### 🚀 Added

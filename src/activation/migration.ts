@@ -16,9 +16,39 @@ export async function executeMigrations(context: vscode.ExtensionContext): Promi
         
         // Migrate legacy command configurations automatically on start
         await migrateLegacyExecutionSettings();
+        await migrateLegacyLocalExecutableSettings();
     } catch (err) {
         logger.error(`Error during legacy migration: ${err}`);
     }
+}
+
+/**
+ * Automates the migration from the deprecated string-based `behave.localExecutable`
+ * to the new structured `behave.localExecution` object setting.
+ */
+export async function migrateLegacyLocalExecutableSettings(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('gherkinPowerTools.behave');
+    const inspection = config.inspect<string>('localExecutable');
+
+    if (!inspection) { return; }
+
+    const migrateTarget = async (value: string | undefined, target: vscode.ConfigurationTarget) => {
+        if (value) {
+            const executable = value.trim();
+            const isPython = executable.endsWith('python') || executable.endsWith('python.exe');
+            const args = isPython ? ['-m', 'behave'] : [];
+            await config.update('localExecution', { executable, arguments: args }, target);
+            logger.info(`Migrated legacy behave.localExecutable "${value}" to behave.localExecution at target ${target}.`);
+        }
+        // Always delete the legacy command to clean up their settings
+        if (value !== undefined) {
+            await config.update('localExecutable', undefined, target);
+        }
+    };
+
+    // Migrate in order of priority to ensure all overrides are migrated
+    await migrateTarget(inspection.globalValue, vscode.ConfigurationTarget.Global);
+    await migrateTarget(inspection.workspaceValue, vscode.ConfigurationTarget.Workspace);
 }
 
 /**

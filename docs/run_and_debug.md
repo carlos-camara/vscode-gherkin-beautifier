@@ -27,6 +27,11 @@ You can run your tests at any level of granularity:
 - **Run Scenario:** Click the Play button next to a single Scenario.
 - **Run Example Row:** Click the Play button next to a single row inside a Scenario Outline.
 
+The execution engine uses a **Test Selection Normalization Layer** to ensure that tests run deterministically (top-down in the order they appear in the file).
+Because Behave cannot independently run structural nodes like `Rule` or `Scenario Outline` using their declared line numbers, the normalizer seamlessly decomposes these abstract nodes into their specific runnable descendants (e.g., individual `Scenario` or Example `Row` lines).
+
+Additionally, if you trigger a run that includes overlapping parents and children (e.g., you click "Run" on a Feature but specifically "Exclude" one Scenario inside it), the normalizer strictly enforces your exclusions, preventing duplicate runs and ensuring the execution perfectly mirrors the visual Test Explorer state.
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/run-demo.gif" alt="Run a Behave scenario from Test Explorer" width="600" height="340" />
 </div>
@@ -40,7 +45,8 @@ Version 1.7.8 introduced the ability to run or debug specific data rows within a
 </div>
 
 ### Console Output & Failure Reporting
-When you execute a test, the VS Code **Test Results** panel will display Behave's live standard output and standard error.
+The extension uses a dedicated, highly reliable NDJSON-over-TCP protocol to receive test events, ensuring that your test execution telemetry is never corrupted by standard output.
+When you execute a test, the VS Code **Test Results** panel will safely capture and display Behave's live standard output and standard error without interference.
 
 If a test fails, the node in the tree will turn red. To keep your editor clean, error messages and stack traces are **collapsed by default**. You can view the exact failure details by explicitly clicking on the failed step or the error message within the Test Explorer. Exception stack traces are fully formatted as **Markdown code blocks** for pristine readability inside the Test Peek view.
 
@@ -108,7 +114,10 @@ If you need to override the execution engine entirely (e.g. wrapping Behave insi
 If you need to use an absolute path (e.g. to a local Python interpreter or a `.venv/bin/behave` executable), you should **not** commit this to your shared settings. Instead, use the machine-overridable setting in your global User Settings:
 
 ```json
-"gherkinPowerTools.behave.localExecutable": "/home/user/.venv/bin/behave"
+  "gherkinPowerTools.behave.localExecution": {
+    "executable": "/home/user/.venv/bin/behave",
+    "arguments": []
+  }
 ```
 This strictly overrides the `executable` specified in `behave.execution`, keeping your project configuration portable and secure.
 
@@ -124,6 +133,8 @@ You can also pass persistent arguments (like passing userdata to the environment
 ### Edit Arguments & Run
 If you need to change arguments on the fly (e.g., adding `--tags=@wip` for a single run without modifying your settings), use the **Edit Behave args & Run** button at the top of the Test Explorer view.
 
+You can also explicitly right-click a specific Feature or Scenario in the Test Explorer tree and select **Edit Feature...** or **Edit Scenario...** to supply custom arguments specifically for that node's run.
+
 ---
 
 ## Remote Workspaces (Dev Containers, WSL, SSH)
@@ -137,7 +148,7 @@ No additional configuration is required, just ensure Behave is installed in the 
 
 - **"Behave executable not found":** By default, Gherkin PowerTools automatically detects local virtual environments (like `.venv`, `venv`, `env`).
   If your environment is elsewhere, ensure it is selected in the VS Code status bar and that `behave` is installed in it.
-  If you need to manually specify a path for a non-standard setup, you can use the `gherkinPowerTools.behave.localExecutable` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
+  If you need to manually specify a path for a non-standard setup, you can use `gherkinPowerTools.behave.localExecution` in your User Settings to point to the absolute path of your Behave executable (e.g., `.venv/bin/behave`).
 - **"Tests are not discovered or do not run":** Ensure your workspace is Trusted. For security reasons, the extension blocks Behave execution in Untrusted (Restricted) workspaces.
 
 - **Tests run but show no output:** Ensure you aren't passing arguments that suppress output, or add `--no-capture` to `additionalArguments` if you need to see `print()` statements.

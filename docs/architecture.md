@@ -31,16 +31,32 @@ The `WorkspaceEvent` union type includes payloads for:
 
 ### Execution Output & Custom Formatting
 When running Behave tests through the Test Explorer, the extension spawns Behave as a child process and injects a custom Python formatter (`vscode_behave_formatter.py`).
-This formatter translates Python-side test results and the final **Context Snapshot** into standardized JSON events (`##VSCODE_BEHAVE_EVENT:`).
-These stdout events are piped directly back to the extension, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI.
+To eliminate fragility caused by standard output corruption, this formatter establishes a robust, bidirectional TCP socket connection with the extension.
+It translates Python-side test results and the final **Context Snapshot** into strictly-typed NDJSON (Newline Delimited JSON) events.
+These `ProtocolEnvelope` payloads are flushed safely over the socket, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI without relying on fragile stdout parsing.
+
+#### Graceful Degradation & Compatibility
+To interact with the Behave runtime, the formatter must access internal private APIs (such as `_step_index`, `_lines`, and `hook_failures`). Because these variables are undocumented and subject to change in community forks (like Behave `1.3.3`) or future releases, the formatter uses a `BehaveCompatibilityAdapter`.
+This adapter safely isolates all private access. If an internal variable is missing or altered, the adapter invokes a **Graceful Degradation** fallback. Instead of crashing the test runner, core execution tracking continues flawlessly, and only the optional UI telemetry (such as precise line tracking or Context Snapshots) degrades.
 
 ### Secure Execution Gateway & Workspace Trust
 To mitigate command injection vulnerabilities and protect users from malicious workspaces, test execution runs through a **Secure Execution Gateway**:
 1. **Workspace Trust Integration**: Before any process is spawned, the extension verifies the environment using VS Code's native `workspace.isTrusted` API. Test execution is strictly blocked in untrusted workspaces.
 2. **Structured Execution Model**: Instead of parsing free-form shell commands, the extension enforces a structured `behave.execution` object (separating the `executable` and its `arguments`).
 3. **Safe Process Spawning**: The underlying child process is spawned securely using `cp.spawn` with `shell: false`, ensuring arguments are passed directly to the executable without shell evaluation, thereby neutralizing injection vectors.
-4. **Machine-Specific Configuration Isolation**: To prevent absolute executable paths (e.g., local Python interpreters) from being inadvertently committed to version control in shared `.gherkin-powertoolsrc.json` or `.vscode/settings.json` files, the execution model introduces a strict `behave.localExecutable` override scoped exclusively to the user's machine settings.
+4. **Machine-Specific Configuration Isolation**: To prevent absolute executable paths (e.g., local Python interpreters) from being inadvertently committed to version control in shared `.gherkin-powertoolsrc.json` or `.vscode/settings.json` files, the execution model introduces a strict `behave.localExecution` override scoped exclusively to the user's machine settings.
 5. **Zero-Config Virtual Environment Discovery**: To eliminate manual setup, the extension leverages the official Microsoft Python API to detect the active virtual environment. If a global interpreter is active, Gherkin PowerTools automatically scans the workspace and prioritizes local virtual environments (like `.venv`, `venv`, `env`) implicitly.
+
+### Test Selection Normalization Layer
+VS Code's `TestRunRequest` can contain complex overlapping inclusion and exclusion trees (e.g. running a whole Feature but excluding a specific Scenario, while also explicitly running an Example row).
+To prevent redundant child process executions and ensure mathematically correct test selection, the extension utilizes a dedicated `TestSelectionNormalizer` driven by a canonical `TestIdentity` abstraction.
+1. **URI-Based TestIdentity:** Every test item node receives a deterministic query-string based ID (e.g., `file:///path/to/feature.feature?type=scenario&line=15`) that resolves unambiguously without fragment collisions.
+2. **Top-Down Tree Traversal:** The normalizer walks the Test Explorer hierarchy from the requested root elements.
+3. **Deep Exclusion Pruning & Structural Decomposition:** If a node is included but contains explicitly excluded descendants, the layer dynamically decomposes the parent node into its non-excluded siblings.
+   Critically, because Behave cannot execute abstract structural nodes like `Rule` or `Scenario Outline` independently by their declared line numbers, the normalizer seamlessly unpacks these nodes into their runnable leaf descendants (individual scenarios or example rows).
+   This prevents the parent process from indiscriminately running the whole block.
+4. **Duplicate Prevention:** By normalizing overlapping includes, the layer prevents tests from being executed multiple times simultaneously.
+5. **Deterministic Ordering:** The normalizer guarantees that tests are enqueued in strict document-line order (lexicographically by URI and ascending by line number), matching exactly how they appear in the `.feature` file regardless of the order they were selected in the UI.
 
 ### Performance Characteristics
 - **Debounced Updates**: Groups rapid file system events (e.g. typing or git checkouts) into 300ms windows to prevent thrashing.
