@@ -2,9 +2,7 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as net from 'net';
 import { ConfigurationService } from './configuration';
-import { NDJSONSocketReader } from './protocol';
 import { killProcessTree } from './processUtils';
 import * as os from 'os';
 
@@ -444,7 +442,6 @@ export async function runBehaveForTestRun(
         }
 
         let child: cp.ChildProcess;
-        let reader: NDJSONSocketReader | undefined;
         let cancelDisposable: vscode.Disposable;
         let timeoutHandle: NodeJS.Timeout | undefined;
         let isResolved = false;
@@ -457,95 +454,96 @@ export async function runBehaveForTestRun(
             }
         };
 
-        const server = net.createServer((socket) => {
-            reader = new NDJSONSocketReader(socket, (envelope) => {
-                if (onEvent) {
-                    onEvent(envelope);
-                }
-            }, (err) => {
-                onOutput(`\r\n\x1b[31m[Protocol Error] ${err}\x1b[0m\r\n`);
-                // Do not resolve yet, let process exit or timeout
-            });
+        const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always' };
+        if (env.PYTHONPATH) {
+            env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
+        } else {
+            env.PYTHONPATH = assetsPath;
+        }
+
+        // Spawn detached on POSIX so we can kill the process group
+        const isWindows = os.platform() === 'win32';
+        child = cp.spawn(details.executable, details.args, {
+            cwd,
+            shell: false,
+            env,
+            detached: !isWindows
         });
 
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address() as net.AddressInfo;
-            const port = address.port;
-
-            const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always', VSCODE_BEHAVE_PORT: port.toString() };
-            if (env.PYTHONPATH) {
-                env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
-            } else {
-                env.PYTHONPATH = assetsPath;
-            }
-
-            // Spawn detached on POSIX so we can kill the process group
-            const isWindows = os.platform() === 'win32';
-            child = cp.spawn(details.executable, details.args, {
-                cwd,
-                shell: false,
-                env,
-                detached: !isWindows
-            });
-
-            let lineBuffer = '';
-            const handleData = (data: Buffer) => {
-                const text = data.toString('utf8');
-                lineBuffer += text;
-                let newlineIndex;
-                while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
-                    const line = lineBuffer.substring(0, newlineIndex + 1);
-                    lineBuffer = lineBuffer.substring(newlineIndex + 1);
+        let lineBuffer = '';
+        const handleData = (data: Buffer) => {
+            const text = data.toString('utf8');
+            lineBuffer += text;
+            let newlineIndex;
+            while ((newlineIndex = lineBuffer.indexOf('\n')) !== -1) {
+                const line = lineBuffer.substring(0, newlineIndex + 1);
+                lineBuffer = lineBuffer.substring(newlineIndex + 1);
+                
+                const match = line.match(/^##VSCODE_BEHAVE_EVENT:(.*)/);
+                if (match) {
+                    try {
+                        const parsed = JSON.parse(match[1]);
+                        if (onEvent) {
+                            onEvent({ version: 1, type: parsed.event, payload: parsed.data });
+                        }
+                    } catch (e) {
+                        // ignore malformed event
+                    }
+                } else {
                     onOutput(line.replace(/(?<!\r)\n/g, '\r\n'));
                 }
-            };
-
-            child.stdout?.on('data', handleData);
-            child.stderr?.on('data', handleData);
-
-            cancelDisposable = token.onCancellationRequested(() => {
-                if (child.pid) killProcessTree(child.pid);
-                safeResolve({ type: 'cancelled' });
-            });
-
-            if (timeoutSeconds > 0) {
-                timeoutHandle = setTimeout(() => {
-                    if (child.pid) killProcessTree(child.pid);
-                    onOutput(`\r\n\x1b[31m[Gherkin PowerTools] Execution timed out after ${timeoutSeconds} seconds.\x1b[0m\r\n`);
-                    safeResolve({ type: 'timeout', durationSeconds: timeoutSeconds });
-                }, timeoutSeconds * 1000);
             }
+        };
 
-            child.on('close', (code) => {
-                if (lineBuffer.length > 0) {
-                    onOutput(lineBuffer.replace(/(?<!\r)\n/g, '\r\n'));
-                }
-                if (!isResolved) {
-                    if (code === 0) {
-                        safeResolve({ type: 'success' });
-                    } else if (code !== null) {
-                        safeResolve({ type: 'failure', code });
-                    } else {
-                        safeResolve({ type: 'process_error', error: 'Process exited unexpectedly without exit code' });
-                    }
-                }
-            });
+        child.stdout?.on('data', handleData);
+        child.stderr?.on('data', handleData);
 
-            child.on('error', (err) => {
-                onOutput(`\r\n\x1b[31m[Gherkin PowerTools] Failed to start Behave: ${err.message}\x1b[0m\r\n`);
-                safeResolve({ type: 'launch_failure', error: err.message });
-            });
+        cancelDisposable = token.onCancellationRequested(() => {
+            if (child.pid) killProcessTree(child.pid);
+            safeResolve({ type: 'cancelled' });
         });
 
-        server.on('error', (err) => {
-            safeResolve({ type: 'protocol_failure', error: err.message });
+        if (timeoutSeconds > 0) {
+            timeoutHandle = setTimeout(() => {
+                if (child.pid) killProcessTree(child.pid);
+                onOutput(`\r\n\x1b[31m[Gherkin PowerTools] Execution timed out after ${timeoutSeconds} seconds.\x1b[0m\r\n`);
+                safeResolve({ type: 'timeout', durationSeconds: timeoutSeconds });
+            }, timeoutSeconds * 1000);
+        }
+
+        child.on('close', (code) => {
+            if (lineBuffer.length > 0) {
+                const match = lineBuffer.match(/^##VSCODE_BEHAVE_EVENT:(.*)/);
+                if (match) {
+                    try {
+                        const parsed = JSON.parse(match[1]);
+                        if (onEvent) {
+                            onEvent({ version: 1, type: parsed.event, payload: parsed.data });
+                        }
+                    } catch (e) {}
+                } else {
+                    onOutput(lineBuffer.replace(/(?<!\r)\n/g, '\r\n'));
+                }
+            }
+            if (!isResolved) {
+                if (code === 0) {
+                    safeResolve({ type: 'success' });
+                } else if (code !== null) {
+                    safeResolve({ type: 'failure', code });
+                } else {
+                    safeResolve({ type: 'process_error', error: 'Process exited unexpectedly without exit code' });
+                }
+            }
+        });
+
+        child.on('error', (err) => {
+            onOutput(`\r\n\x1b[31m[Gherkin PowerTools] Failed to start Behave: ${err.message}\x1b[0m\r\n`);
+            safeResolve({ type: 'launch_failure', error: err.message });
         });
 
         function cleanup() {
+            cancelDisposable?.dispose();
             if (timeoutHandle) clearTimeout(timeoutHandle);
-            if (cancelDisposable) cancelDisposable.dispose();
-            if (reader) reader.close();
-            server.close();
         }
     });
 }
