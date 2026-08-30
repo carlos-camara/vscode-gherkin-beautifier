@@ -212,7 +212,7 @@ These commands typically appear as CodeLens buttons above Scenarios/Features, or
 
 ### Debug Feature
 - **Identifier**: `gherkinPowerTools.debugFeature`
-- **Result**: Launches the Python debugger, attaching it to the Behave execution of the `.feature` file. Allows stopping at breakpoints in step definitions.
+- **Result**: Launches the Python debugger, attaching it to the Behave execution of the `.feature` file. The execution is routed through the `TestSelectionNormalizer` to guarantee deterministic document-line order and prevent duplicate overlaps. Allows stopping at breakpoints in step definitions.
 
 ### Debug Scenario
 - **Identifier**: `gherkinPowerTools.debugScenario`
@@ -220,4 +220,4 @@ These commands typically appear as CodeLens buttons above Scenarios/Features, or
 
 ### Edit Feature / Edit Scenario
 - **Identifiers**: `gherkinPowerTools.runFeatureWithArgs` / `gherkinPowerTools.runScenarioWithArgs`
-- **Result**: Interactively prompts for custom CLI arguments before running or debugging the target test.
+- **Result**: Interactively prompts for custom CLI arguments (e.g., `--no-capture` or `--tags=@wip`) before running or debugging the target test. The custom execution targeting bypasses standard `TestExplorer` configuration to provide granular debugging control.

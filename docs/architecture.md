@@ -35,6 +35,11 @@ To eliminate fragility caused by standard output corruption, this formatter esta
 It translates Python-side test results and the final **Context Snapshot** into strictly-typed NDJSON (Newline Delimited JSON) events.
 These `ProtocolEnvelope` payloads are flushed safely over the socket, enabling the Test Controller to seamlessly bridge real-time execution states and context variables into the VS Code UI without relying on fragile stdout parsing.
 
+### Context Snapshot Privacy Architecture
+Because the Behave `context` object often holds highly sensitive session tokens, passwords, or AWS credentials during E2E tests, the Context Snapshot feature employs a strict **Two-Tier Redaction Engine** locally in Python before any telemetry is flushed over TCP:
+1. **Key-Name Filtering**: Keys matching sensitive names (`password`, `token`, `secret`, `key`, `auth`, `cookie`, `session`, `credential`) are proactively stripped. This filter can be bypassed via configuration for specific expected keys.
+2. **Deep Regex Redaction**: All values—regardless of key name or bypass status—are recursively scanned using regex patterns. Any content matching structural secrets (e.g., Bearer tokens, AWS keys, database connection strings) is irreversibly masked as `[REDACTED]`.
+
 ### Secure Execution Gateway & Workspace Trust
 To mitigate command injection vulnerabilities and protect users from malicious workspaces, test execution runs through a **Secure Execution Gateway**:
 1. **Workspace Trust Integration**: Before any process is spawned, the extension verifies the environment using VS Code's native `workspace.isTrusted` API. Test execution is strictly blocked in untrusted workspaces.

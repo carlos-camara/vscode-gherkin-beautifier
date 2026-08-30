@@ -57,7 +57,14 @@ As Behave executes your scenarios in the background, Gherkin PowerTools receives
 </div>
 
 ### Final Context State (Context Snapshot)
-When a scenario finishes executing, Gherkin PowerTools automatically inspects the Behave `context` object and extracts all variables that were dynamically set during the run. This snapshot is formatted and injected directly into the **Test Results** output, allowing you to easily verify your test data state without needing to attach a debugger.
+When a scenario finishes executing, Gherkin PowerTools automatically inspects the Behave `context` object and extracts variables dynamically set during the run. This snapshot is formatted and injected directly into the **Test Results** output, allowing you to easily verify your test data state without attaching a debugger.
+
+**Privacy and Security Guardrails:**
+Because Behave context variables frequently contain sensitive testing credentials, Context Snapshot implements a strict privacy contract by default:
+- **Value Redaction:** Values resembling Bearer tokens, AWS keys, or URL credentials are automatically replaced with `[REDACTED]`.
+- **Key-Name Filtering:** Variables with names implying secrets (e.g., `context.password`, `context.api_token`) are automatically redacted.
+- **Resource Limits:** The snapshot collects a maximum of 20 keys, truncates values exceeding 200 characters, and strips ANSI escape sequences.
+- **Opt-in Exclusions:** You can explicitly allow specific sensitive keys to bypass the key-name filter (but not value-based redaction) using the `gherkinPowerTools.behave.contextSnapshot.allowedKeys` array in your `settings.json`.
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/carlos-camara/vscode-gherkin-powertools/main/assets/context-snapshot.gif" alt="Context Snapshot showing Behave variables in the Test Output" width="600" height="340" />

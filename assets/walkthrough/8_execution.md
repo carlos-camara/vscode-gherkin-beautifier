@@ -36,6 +36,15 @@ Live output streams to the integrated **Terminal** panel. After completion, each
 
 ---
 
+## Context Snapshot (Privacy Preserving)
+
+When your scenarios finish running, Gherkin PowerTools automatically intercepts the final Behave `context` variables and injects them directly into the **Test Results** output. 
+You can instantly see the exact data state of your test without launching a debugger. 
+- **Auto-Redaction**: Any keys containing sensitive names (like `password`, `token`) are stripped, and secrets (like AWS keys or Bearer tokens) are irreversibly redacted as `[REDACTED]` locally in Python before transmission.
+- **Customization**: You can bypass the key-name filter for specific expected variables via the `gherkinPowerTools.behave.contextSnapshot.allowedKeys` setting.
+
+---
+
 ## Debugging Tests
 
 Click **🐞** next to any item to launch a full VS Code debug session:

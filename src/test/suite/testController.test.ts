@@ -337,6 +337,7 @@ Feature: Error Feature
         await testControllerPrivate.parseTestsInFileContents(fileItem);
 
         const cp = require('child_process');
+
         const originalSpawn = cp.spawn;
         cp.spawn = () => {
             const EventEmitter = require('events');
@@ -400,18 +401,31 @@ Feature: Skip Feature
 
         const cp = require('child_process');
         const originalSpawn = cp.spawn;
-        cp.spawn = () => {
+        cp.spawn = (_executable: string, _args: string[], options: any) => {
             const EventEmitter = require('events');
+            const net = require('net');
             const child: any = new EventEmitter();
             child.stdout = new EventEmitter();
             child.stderr = new EventEmitter();
             child.kill = () => {};
 
             setTimeout(() => {
-                // Only process Scenario 1
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario", "data": {"line": 2, "name": "Scenario 1"}}\n'));
-                child.stdout.emit('data', Buffer.from('##VSCODE_BEHAVE_EVENT: {"event": "scenario_result", "data": {"status": "passed", "line": 2}}\n'));
-                child.emit('close', 0);
+                const port = parseInt(options.env.VSCODE_BEHAVE_PORT, 10);
+                const client = new net.Socket();
+                client.connect(port, '127.0.0.1', () => {
+                    const payloads = [
+                        JSON.stringify({ version: 1, type: "scenario", payload: { line: 2, name: "Scenario 1" } }),
+                        JSON.stringify({ version: 1, type: "scenario_result", payload: { status: "passed", line: 2 } }),
+                        JSON.stringify({ version: 1, type: "eof", payload: {} })
+                    ];
+                    for (const p of payloads) {
+                        client.write(Buffer.from(p + '\n'));
+                    }
+                    client.end();
+                });
+                client.on('close', () => {
+                    setTimeout(() => child.emit('close', 0), 10);
+                });
             }, 10);
 
             return child;

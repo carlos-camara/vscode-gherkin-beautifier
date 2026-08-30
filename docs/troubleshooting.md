@@ -162,6 +162,18 @@ If you need to point to a specific local Python virtual environment via an absol
 **Likely Causes:** The custom Formatter isn't emitting `step_start` events over the TCP socket, or the file is not currently focused.
 **Resolution:** Ensure your `behave` process has not overridden the custom NDJSON-over-TCP formatter, and verify that the `.feature` file you are running is currently open and active in the editor.
 
+## Test runs fail with Socket or Port Binding errors
+**Symptom:** Tests instantly crash with errors mentioning `ECONNREFUSED` or port binding failures when using the Test Explorer.
+**Likely Causes:** Your machine's local firewall or strict antivirus is blocking the internal bidirectional TCP socket that Gherkin PowerTools uses to receive NDJSON execution telemetry from Python.
+**Resolution:** Ensure that local loopback connections (`127.0.0.1`) are permitted. The extension dynamically selects a random free port on `127.0.0.1` for each test run to ensure strict isolation.
+
+## Context Snapshot is missing expected keys or shows `[REDACTED]`
+**Symptom:** The Context Snapshot injected into your test results omits variables you added to `context`, or variables you expect to see have their values replaced with `[REDACTED]`.
+**Likely Causes:** Context Snapshot enforces a strict Privacy Redaction Engine. Keys named like passwords or tokens are entirely stripped (Key-Name Filtering), and any values matching structural secrets (like AWS keys) are irreversibly redacted (Deep Regex Redaction).
+**Resolution:** 
+1. If the key was stripped because of its name, you can forcefully bypass the Key-Name filter by adding the exact key name to the `gherkinPowerTools.behave.contextSnapshot.allowedKeys` array in your `settings.json`.
+2. **Note:** Bypassing the Key-Name filter does *not* bypass Deep Regex Redaction. If the value itself looks like a secret, it will still be redacted.
+
 ## Syntax Errors cascade into massive false-positives
 **Symptom:** You missed a colon on a `Scenario`, and suddenly all steps below it have red underlines.
 **Likely Causes:** This was a known limitation of the AST parser in older versions.

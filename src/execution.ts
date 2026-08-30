@@ -451,7 +451,18 @@ export async function runBehaveForTestRun(
             const address = server.address() as net.AddressInfo;
             const port = address.port;
 
-            const env: NodeJS.ProcessEnv = { ...process.env, FORCE_COLOR: '1', BEHAVE_COLOR: 'always', VSCODE_BEHAVE_PORT: port.toString() };
+            const contextSnapshotConfig = vscode.workspace.getConfiguration('gherkinPowerTools.behave.contextSnapshot', uri);
+            const snapshotEnabled = contextSnapshotConfig.get<boolean>('enabled', true) ? 'true' : 'false';
+            const allowedKeys = contextSnapshotConfig.get<string[]>('allowedKeys', []).join(',');
+
+            const env: NodeJS.ProcessEnv = { 
+                ...process.env, 
+                FORCE_COLOR: '1', 
+                BEHAVE_COLOR: 'always', 
+                VSCODE_BEHAVE_PORT: port.toString(),
+                VSCODE_BEHAVE_CONTEXT_SNAPSHOT: snapshotEnabled,
+                VSCODE_BEHAVE_CONTEXT_ALLOWED_KEYS: allowedKeys
+            };
             if (env.PYTHONPATH) {
                 env.PYTHONPATH = `${assetsPath}${path.delimiter}${env.PYTHONPATH}`;
             } else {

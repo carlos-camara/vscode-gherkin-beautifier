@@ -43,6 +43,13 @@ Instead, use the `gherkinPowerTools.behave.localExecution` property within your 
 ### Remote Development (SSH, Dev Containers, WSL)
 Gherkin PowerTools is fully compatible with Remote Development extensions. All execution, file system access, and formatting happen locally inside the remote container/server, keeping source code and execution strictly bounded to the remote machine without proxying data back to the local host.
 
+### Context Snapshot Privacy & Redaction
+The **Context Snapshot** feature extracts variables dynamically set during a Behave test run to aid debugging. Because test contexts frequently hold credentials, API tokens, or customer data, the snapshot implements an aggressive privacy contract:
+- **Redaction by Key:** Any context attribute containing terms like `password`, `token`, `secret`, `key`, `auth`, `cookie`, `session`, `cert`, or `credential` is forcefully censored.
+- **Redaction by Value:** Even if the key is seemingly safe, string values that resemble Bearer tokens, URL credentials (e.g. `http://user:pass@host`), AWS access keys, or hexadecimal/base64 secrets are automatically replaced with `[REDACTED]`.
+- **Resource Limits:** The formatter imposes a hard limit of 20 keys, truncates values over 200 characters to prevent memory DOS, and safely strips ANSI escape sequences.
+If needed, developers can configure `gherkinPowerTools.behave.contextSnapshot.allowedKeys` to bypass the key-name filter (though value-based redaction remains active).
+
 ## 4. Local Storage Inventory
 
 Gherkin PowerTools uses local storage provided by VS Code to persist certain contextual and historical data. This data never leaves your machine.

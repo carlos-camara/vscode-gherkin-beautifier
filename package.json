@@ -211,6 +211,23 @@
           ],
           "markdownDescription": "Glob patterns **excluded** from step discovery. Always exclude virtual environments and dependency folders to prevent false IntelliSense matches and performance degradation.\n\nChanges take effect **immediately** — no restart required."
         },
+        "gherkinPowerTools.behave.contextSnapshot.enabled": {
+          "type": "boolean",
+          "order": 31.1,
+          "scope": "resource",
+          "default": true,
+          "markdownDescription": "Enable automatic capturing of Behave context variables for debugging. Sensitive data is automatically redacted, and snapshots are truncated to prevent UI slowdowns."
+        },
+        "gherkinPowerTools.behave.contextSnapshot.allowedKeys": {
+          "type": "array",
+          "order": 31.2,
+          "scope": "resource",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Specific context keys to always capture, bypassing the sensitive key-name filter (values are still redacted if they contain tokens)."
+        },
         "gherkinPowerTools.behave.execution": {
           "type": "object",
           "order": 32,

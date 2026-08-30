@@ -3,6 +3,7 @@ import sys
 import inspect
 import socket
 import os
+import re
 from behave.formatter.base import Formatter
 
 class VSCodeFormatter(Formatter):
@@ -79,7 +80,6 @@ class VSCodeFormatter(Formatter):
 
         if data["status"] in ["failed", "error", "hook_error", "undefined"]:
             if getattr(step, "location", None):
-                import os
                 filename = getattr(step.location, "filename", None)
                 if filename:
                     data["error_file"] = os.path.abspath(filename)
@@ -120,10 +120,6 @@ class VSCodeFormatter(Formatter):
                 self._sock.sendall(f"{payload}\n".encode("utf-8"))
             except Exception as e:
                 sys.stderr.write(f"VSCodeFormatter Failed to send event {event}: {e}\n")
-        else:
-            # Fallback to stdout if no socket is available (e.g. testing)
-            sys.stdout.write(f"\n##VSCODE_BEHAVE_EVENT:{json.dumps({'event': event, 'data': data})}\n")
-            sys.stdout.flush()
 
     def _get_context_from_stack(self):
         try:
@@ -139,9 +135,16 @@ class VSCodeFormatter(Formatter):
 
     def _build_context_snapshot(self):
         try:
+            enabled = os.environ.get("VSCODE_BEHAVE_CONTEXT_SNAPSHOT", "true").lower() == "true"
+            if not enabled:
+                return None
+
             ctx = getattr(self, 'scenario_context', None)
             if not ctx:
                 return None
+
+            allowed_keys_str = os.environ.get("VSCODE_BEHAVE_CONTEXT_ALLOWED_KEYS", "")
+            allowed_keys = set([k.strip() for k in allowed_keys_str.split(",") if k.strip()])
 
             snapshot = {}
             ignore_keys = {'feature', 'scenario', 'tags', 'active_outline', 'aborted', 'failed', 'text', 'table', 'stdout_capture', 'stderr_capture', 'log_capture', 'exc_traceback', 'execute_steps', 'FAIL_ON_CLEANUP_ERRORS', 'LAYER_NAMES', 'config', 'cleanup_errors', 'fail_on_cleanup_errors'}
@@ -156,14 +159,53 @@ class VSCodeFormatter(Formatter):
                     if isinstance(layer, dict):
                         keys.update(layer.keys())
 
-            for k in keys:
+            sensitive_key_pattern = re.compile(r'.*(password|secret|token|api_key|apikey|auth|credential|cert|key|session|cookie).*', re.IGNORECASE)
+            bearer_pattern = re.compile(r'Bearer\s+[A-Za-z0-9\-\._~\+\/]+=*', re.IGNORECASE)
+            aws_pattern = re.compile(r'AKIA[0-9A-Z]{16}')
+            url_cred_pattern = re.compile(r'(https?:\/\/)([^:\/\s]+:[^@\/\s]+)@')
+            ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
+            processed_keys = 0
+            MAX_KEYS = 20
+            MAX_VAL_LEN = 200
+
+            for k in sorted(list(keys)):
+                if processed_keys >= MAX_KEYS:
+                    snapshot["_warning"] = "[TRUNCATED: MAX KEYS REACHED]"
+                    break
+
                 if k.startswith('_') or k in ignore_keys or k.startswith('@'):
                     continue
+
+                processed_keys += 1
+                is_sensitive_key = bool(sensitive_key_pattern.match(k))
+                
+                # If it's a sensitive key and NOT in the allowed list, redact immediately
+                if is_sensitive_key and k not in allowed_keys:
+                    snapshot[k] = "[REDACTED]"
+                    continue
+
                 v = getattr(ctx, k, None)
+                
                 try:
-                    snapshot[k] = str(v)
+                    str_val = str(v)
                 except Exception:
-                    snapshot[k] = "<unserializable>"
+                    snapshot[k] = "[UNAVAILABLE: SERIALIZATION ERROR]"
+                    continue
+
+                if len(str_val) > MAX_VAL_LEN:
+                    str_val = str_val[:MAX_VAL_LEN] + "... [TRUNCATED]"
+
+                # Sanitize ANSI escapes and control characters
+                str_val = ansi_escape.sub('', str_val)
+
+                # Value-based redaction
+                str_val = bearer_pattern.sub('Bearer [REDACTED]', str_val)
+                str_val = aws_pattern.sub('AKIA[REDACTED]', str_val)
+                str_val = url_cred_pattern.sub(r'\1[REDACTED]@', str_val)
+
+                snapshot[k] = str_val
+
             return snapshot if snapshot else None
         except Exception:
             return None

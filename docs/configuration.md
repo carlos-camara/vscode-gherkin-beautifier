@@ -187,6 +187,16 @@ Core syntax errors cannot be suppressed.
 - **Type:** `array` of strings
 - **Default:** `["**/node_modules/**", "**/.venv/**", "**/venv/**", "**/env/**"]`
 
+### `gherkinPowerTools.behave.contextSnapshot.enabled`
+- **Purpose:** Enable automatic capturing of Behave context variables for debugging. Sensitive data is automatically redacted, and snapshots are truncated to prevent UI slowdowns.
+- **Type:** `boolean`
+- **Default:** `true`
+
+### `gherkinPowerTools.behave.contextSnapshot.allowedKeys`
+- **Purpose:** Specific context keys to always capture, bypassing the sensitive key-name filter (values are still redacted if they contain sensitive tokens like URLs or API keys).
+- **Type:** `array` of strings
+- **Default:** `[]`
+
 ### `gherkinPowerTools.behave.execution`
 - **Purpose:** Portable, shareable framework execution strategy for Behave. This setting specifies the base runner and arguments.
 - **Type:** `object` (with `executable` string and `arguments` array)
@@ -194,7 +204,7 @@ Core syntax errors cannot be suppressed.
 - **Example:** `{"executable": "poetry", "arguments": ["run", "behave"]}`
 
 ### `gherkinPowerTools.behave.localExecution`
-- **Purpose:** Absolute path to a local Behave executable or Python interpreter and its arguments. Overrides `behave.execution` completely. **Machine-specific override**, do not put in `.gherkin-powertoolsrc.json`.
+- **Purpose:** Strict machine-specific override for the Behave execution strategy. If provided, this strictly overrides `gherkinPowerTools.behave.execution`. This is a **machine-specific** setting and should preferably be set in User Settings to prevent absolute paths from being committed or synchronized across machines.
 - **Type:** `object` with `executable` (string) and `arguments` (array of strings)
 - **Default:** *None*
 - **Example:** `{"executable": "/home/user/.venv/bin/behave", "arguments": []}`
@@ -204,7 +214,7 @@ Core syntax errors cannot be suppressed.
 - **Type:** `string`
 - **Default:** *None*
 - **Example:** `"/home/user/.venv/bin/behave"`
-- **Deprecation Note:** This setting is deprecated because it causes semantically incorrect argument vectors. Please use `gherkinPowerTools.behave.localExecution` instead.
+- **Deprecation Note:** This setting is deprecated because it causes semantically incorrect argument vectors. Please use `gherkinPowerTools.behave.localExecution` instead. The extension heuristically migrates legacy values automatically.
 
 
 ### `gherkinPowerTools.behave.additionalArguments`
