@@ -37,7 +37,7 @@ jobs:
 
       - name: 🧹 Lint Codebase (Markdown, YAML, Actions)
         # v7
-        uses: super-linter/super-linter@34dfdddf86c8da9508e3c52eb27bd8ac98d5d8a6
+        uses: super-linter/super-linter@12150456a73e248bdc94d0794898f94e23127c88
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: main
