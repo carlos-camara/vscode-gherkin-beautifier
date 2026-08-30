@@ -38,7 +38,7 @@ The extension strictly honors VS Code's **Workspace Trust** API. Automated Behav
 
 ### Configuration Isolation (Machine-Specific Settings)
 If you require an absolute path to a Python interpreter or Behave executable, do **not** configure this in the shared `.vscode/settings.json` via `gherkinPowerTools.behave.execution.executable`.
-Instead, use the `gherkinPowerTools.behave.localExecutable` property within your VS Code User Settings. This ensures local paths are not committed to source control and protects the team from executing arbitrary paths defined by a malicious commit.
+Instead, use the `gherkinPowerTools.behave.localExecution` property within your VS Code User Settings. This ensures local paths are not committed to source control and protects the team from executing arbitrary paths defined by a malicious commit.
 
 ### Remote Development (SSH, Dev Containers, WSL)
 Gherkin PowerTools is fully compatible with Remote Development extensions. All execution, file system access, and formatting happen locally inside the remote container/server, keeping source code and execution strictly bounded to the remote machine without proxying data back to the local host.

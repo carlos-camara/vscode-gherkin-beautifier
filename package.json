@@ -2,7 +2,7 @@
   "name": "vscode-gherkin-powertools",
   "displayName": "Gherkin PowerTools - BDD & Python Behave Toolkit",
   "description": "Write, navigate, and debug BDD scenarios faster. The ultimate Gherkin and Python Behave toolkit for VS Code.",
-  "version": "1.8.6",
+  "version": "1.8.7",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -240,7 +240,29 @@
           "type": "string",
           "order": 33,
           "scope": "machine-overridable",
-          "markdownDescription": "Absolute path to a local Behave executable or Python interpreter. If provided, this strictly overrides the `executable` specified in `gherkinPowerTools.behave.execution`.\n\nThis is a **machine-specific** setting and should preferably be set in User Settings to prevent absolute paths from being committed or synchronized across machines.\n\n**Examples:** `\"C:\\\\Python39\\\\python.exe\"` · `\"/home/user/.venv/bin/behave\"`"
+          "markdownDescription": "Legacy absolute path to a local Behave executable or Python interpreter.",
+          "deprecationMessage": "This setting is deprecated because it causes semantically incorrect argument vectors. Please use `gherkinPowerTools.behave.localExecution` instead."
+        },
+        "gherkinPowerTools.behave.localExecution": {
+          "type": "object",
+          "order": 33,
+          "scope": "machine-overridable",
+          "properties": {
+            "executable": {
+              "type": "string",
+              "default": "behave",
+              "description": "The local executable or runner to invoke (e.g., 'behave', 'poetry', 'python')."
+            },
+            "arguments": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "Base arguments passed to the local executable (e.g., ['run', 'behave'] or ['-m', 'behave'])."
+            }
+          },
+          "markdownDescription": "Strict machine-specific override for the Behave execution strategy. If provided, this strictly overrides `gherkinPowerTools.behave.execution`.\n\nThis is a **machine-specific** setting and should preferably be set in User Settings to prevent absolute paths from being committed or synchronized across machines.\n\n**Examples:**\n- `{\"executable\": \"C:\\\\Python39\\\\python.exe\", \"arguments\": [\"-m\", \"behave\"]}`\n- `{\"executable\": \"/home/user/.venv/bin/behave\", \"arguments\": []}`"
         },
         "gherkinPowerTools.behave.additionalArguments": {
           "type": "array",
