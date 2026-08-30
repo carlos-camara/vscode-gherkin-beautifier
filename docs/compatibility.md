@@ -38,7 +38,12 @@ The advanced integrations (Go to Definition, Hover, Autocomplete, Step Generatio
 ## Python & Behave Requirements
 
 - **Python Versions:** Tested and Supported on Python 3.8 through 3.12.
-- **Behave Versions:** Tested and Supported on Behave 1.2.6.
+- **Behave Versions:** Tested and Supported on:
+  - Behave `1.2.6` (Official Stable)
+  - Behave `1.2.7.dev` (Upstream pre-release)
+  - Behave `1.3.3` (Community forks)
+  
+  *Note: The extension implements a **Graceful Degradation** fallback adapter. If internal Behave APIs change in newer versions or forks, core execution will continue flawlessly while gracefully degrading advanced UI telemetry (like Context Snapshots).*
 - **Python Extension:** Required **only** for Debugging features in the Test Explorer (`ms-python.python`).
 - **Behave Executable:** Required **only** for test execution from the Test Explorer (`pip install behave`). The extension can execute Behave via system PATH, Poetry, Pipenv, or explicit virtual environment paths.
 

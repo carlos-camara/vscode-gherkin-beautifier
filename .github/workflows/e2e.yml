@@ -26,12 +26,21 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        behave_version: ['behave==1.2.6', 'behave @ git+https://github.com/behave/behave']
     steps:
       - name: 🔍 Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: ⚙️ Setup and Build
         uses: ./.github/actions/setup-build
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install Behave Version
+        run: pip install "${{ matrix.behave_version }}"
 
       - name: 💾 Cache VS Code Test Binaries
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

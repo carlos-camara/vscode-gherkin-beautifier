@@ -220,4 +220,5 @@ These commands typically appear as CodeLens buttons above Scenarios/Features, or
 
 ### Edit Feature / Edit Scenario
 - **Identifiers**: `gherkinPowerTools.runFeatureWithArgs` / `gherkinPowerTools.runScenarioWithArgs`
-- **Result**: Interactively prompts for custom CLI arguments before running or debugging the target test.
+- **Where it appears**: Test Explorer Tree Node Context Menu (Right-click a Feature or Scenario).
+- **Result**: Interactively prompts for custom CLI arguments before running or debugging the specific target test node. Complements the global "Edit Behave args & Run" command (`gherkinPowerTools.testExplorerEditAndRun`).
