@@ -25,6 +25,8 @@ Here is a breakdown of the core modules located in the `src/` directory:
 - **`logger.ts`**: Native VS Code Output Channel for tracing.
 - **`hover.ts`**: Provides hover information such as function signatures, docstrings, and tag blast radius.
 - **`parser.ts`**: Handles AST parsing and caching of Gherkin documents.
+- **`protocol.ts`**: Provides the NDJSON-over-TCP protocol definition and schema validation for secure Behave execution events.
+- **`testController.ts`**: Implements the VS Code Test Explorer API, orchestrating the test tree, interactive execution, and connecting test runs to the TCP protocol.
 - **`dialect.ts`**: Provides i18n support by matching localized Gherkin keywords.
 - **`discovery.ts`**: Centralized service for Behave step-file discovery, configuration normalization, and reactive file watchers.
 - **`diagnostics.ts`**: Diagnostic engine (`Gherkin: Diagnose Workspace`) collecting system metrics, discovery stats, and redacting paths for safe troubleshooting.

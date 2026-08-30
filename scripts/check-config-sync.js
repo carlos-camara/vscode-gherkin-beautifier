@@ -107,6 +107,14 @@ const expectedSettings = [
     type: 'string',
     schemaType: null,
     default: undefined
+  },
+  {
+    key: 'gherkinPowerTools.behave.localExecution',
+    section: 'behave',
+    prop: 'localExecution', // Not in schema, handled specially
+    type: 'object',
+    schemaType: null,
+    default: undefined
   }
 ];
 
