@@ -20,10 +20,10 @@ class BehaveCompatibilityAdapter:
             ctx = getattr(formatter_instance, 'scenario_context', None)
             if not ctx:
                 return None
-            
+
             snapshot = {}
             ignore_keys = {'feature', 'scenario', 'tags', 'active_outline', 'aborted', 'failed', 'text', 'table', 'stdout_capture', 'stderr_capture', 'log_capture', 'exc_traceback', 'execute_steps', 'FAIL_ON_CLEANUP_ERRORS', 'LAYER_NAMES', 'config', 'cleanup_errors', 'fail_on_cleanup_errors'}
-            
+
             keys = set()
             if hasattr(ctx, '_root') and isinstance(ctx._root, dict):
                 keys.update(ctx._root.keys())

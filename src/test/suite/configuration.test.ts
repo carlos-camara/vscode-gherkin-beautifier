@@ -162,7 +162,7 @@ suite('ConfigurationService Test Suite', () => {
             behave: {
                 execution: { executable: 456, arguments: "not array" },
                 additionalArguments: "not an array",
-                localExecutable: "C:\\Python39\\python.exe"
+                localExecution: { executable: 123, arguments: "not array" }
             }
         }));
 
@@ -178,7 +178,7 @@ suite('ConfigurationService Test Suite', () => {
         assert.strictEqual(config.behave.execution.executable, 'behave');
         assert.deepStrictEqual(config.behave.execution.arguments, []);
         assert.deepStrictEqual(config.behave.additionalArguments, []);
-        assert.strictEqual(diagnostics.length, 6); // indentation, tags, and 4 for behave (execution.executable, execution.args, additionalArgs, localExecutable)
+        assert.strictEqual(diagnostics.length, 6); // indentation, tags, and 4 for behave (execution.executable, execution.args, additionalArgs, localExecution)
     });
 
     test('7. Handles unknown keys and unknown root sections gracefully', async () => {
@@ -332,7 +332,7 @@ suite('ConfigurationService Test Suite', () => {
         vscode.workspace.getConfiguration = originalGetConfig;
     });
 
-    test('14. localExecutable overrides execution.executable', async () => {
+    test('14. localExecution completely overrides portable execution', async () => {
         const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
         if (fs.existsSync(configPath)) {
             fs.unlinkSync(configPath);
@@ -343,7 +343,7 @@ suite('ConfigurationService Test Suite', () => {
             get: () => undefined,
             inspect: (key: string) => {
                 if (key === 'behave.execution') return { workspaceValue: { executable: 'poetry', arguments: ['run', 'behave'] } };
-                if (key === 'behave.localExecutable') return { globalValue: '/absolute/path/to/venv/bin/behave' };
+                if (key === 'behave.localExecution') return { globalValue: { executable: '/absolute/path/to/venv/bin/behave', arguments: [] } };
                 return undefined;
             }
         } as any);
@@ -352,7 +352,32 @@ suite('ConfigurationService Test Suite', () => {
         const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
 
         assert.strictEqual(config.behave.execution.executable, 'poetry');
-        assert.strictEqual(config.behave.localExecutable, '/absolute/path/to/venv/bin/behave');
+        assert.strictEqual(config.behave.localExecution?.executable, '/absolute/path/to/venv/bin/behave');
+        assert.deepStrictEqual(config.behave.localExecution?.arguments, []);
+
+        vscode.workspace.getConfiguration = originalGetConfig;
+    });
+
+    test('14b. localExecutable heuristic migration injects python args', async () => {
+        const configPath = path.join(workspacePath, '.gherkin-powertoolsrc.json');
+        if (fs.existsSync(configPath)) {
+            fs.unlinkSync(configPath);
+        }
+
+        const originalGetConfig = vscode.workspace.getConfiguration;
+        vscode.workspace.getConfiguration = () => ({
+            get: () => undefined,
+            inspect: (key: string) => {
+                if (key === 'behave.localExecutable') return { globalValue: 'C:\\Python39\\python.exe' };
+                return undefined;
+            }
+        } as any);
+
+        await configService.loadConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+        const config = configService.getConfiguration(vscode.workspace.workspaceFolders?.[0].uri);
+
+        assert.strictEqual(config.behave.localExecution?.executable, 'C:\\Python39\\python.exe');
+        assert.deepStrictEqual(config.behave.localExecution?.arguments, ['-m', 'behave']);
 
         vscode.workspace.getConfiguration = originalGetConfig;
     });

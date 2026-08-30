@@ -6,6 +6,9 @@ module.exports = defineConfig([
     label: 'unitTests',
     files: 'out/test/suite/**/*.test.js',
     version: '1.93.0',
+    download: {
+      timeout: 300000
+    },
     workspaceFolder: './',
     mocha: {
       ui: 'tdd',
@@ -27,6 +30,9 @@ module.exports = defineConfig([
     label: 'e2eTests',
     files: 'out/test/e2e/**/*.test.js',
     version: '1.93.0',
+    download: {
+      timeout: 300000
+    },
     workspaceFolder: './',
     mocha: {
       ui: 'tdd',

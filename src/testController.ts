@@ -3,15 +3,11 @@ import { astRepository } from './ast';
 import { featureDiscoveryService } from './featureDiscovery';
 import { logger } from './logger';
 import { ConfigurationService } from './configuration';
+import { TestSelectionNormalizer } from './testSelectionNormalizer';
 import { runBehaveForTestRun } from './execution';
 import * as path from 'path';
 import { WorkspaceEventBus } from './eventBus';
-
-/** Extracts the scenario line number from a TestItem ID of the form `uri#scenario:LINE` */
-function extractLineFromId(id: string): number | undefined {
-    const match = id.match(/#scenario:(\d+)$/);
-    return match ? parseInt(match[1], 10) : undefined;
-}
+import { TestIdentity } from './testIdentity';
 
 
 export class GherkinTestController {
@@ -164,7 +160,7 @@ export class GherkinTestController {
 
             const feature = docAST.feature;
             const featureItem = this.controller.createTestItem(
-                `${fileItem.uri.toString()}#feature`,
+                TestIdentity.createId(fileItem.uri, 'feature'),
                 feature.name || 'Unnamed Feature',
                 fileItem.uri
             );
@@ -182,7 +178,7 @@ export class GherkinTestController {
                     this.addScenario(featureItem, child.scenario, fileItem.uri);
                 } else if (child.rule) {
                     const ruleItem = this.controller.createTestItem(
-                        `${fileItem.uri.toString()}#rule:${child.rule.location.line}`,
+                        TestIdentity.createId(fileItem.uri, 'rule', child.rule.location.line),
                         child.rule.name || 'Unnamed Rule',
                         fileItem.uri
                     );
@@ -208,7 +204,7 @@ export class GherkinTestController {
         const isOutline = scenario.keyword?.trim().toLowerCase().includes('outline');
         
         const scenarioItem = this.controller.createTestItem(
-            `${uri.toString()}#scenario:${line}`,
+            TestIdentity.createId(uri, isOutline ? 'outline' : 'scenario', line),
             scenario.name || `Unnamed ${isOutline ? 'Outline' : 'Scenario'}`,
             uri
         );
@@ -234,7 +230,7 @@ export class GherkinTestController {
                     // Build a readable label using first two columns as preview
                     const preview = cellValues.slice(0, 2).map((v, i) => `${headerCells[i]}=${v}`).join(', ');
                     const exampleItem = this.controller.createTestItem(
-                        `${uri.toString()}#scenario:${rowLine}`,
+                        TestIdentity.createId(uri, 'row', rowLine),
                         preview || `Row ${rowLine}`,
                         uri
                     );
@@ -259,12 +255,8 @@ export class GherkinTestController {
 
         const run = mode !== 'debug' ? this.controller.createTestRun(request) : undefined;
 
-        const itemsToRun: vscode.TestItem[] = [];
-        if (request.include) {
-            itemsToRun.push(...request.include);
-        } else {
-            this.controller.items.forEach(item => itemsToRun.push(item));
-        }
+        const normalizer = new TestSelectionNormalizer();
+        const itemsToRun = normalizer.normalize(request, this.controller.items);
 
         // Recursively enqueue all children so the UI shows spinners
         const enqueueItem = (item: vscode.TestItem) => {
@@ -289,8 +281,8 @@ export class GherkinTestController {
 
         // Helper to find a child item by its line number
         const findItemByLine = (parent: vscode.TestItem, line: number): vscode.TestItem | undefined => {
-            const itemLine = extractLineFromId(parent.id);
-            if (itemLine === line) return parent;
+            const identity = TestIdentity.parse(parent.id);
+            if (identity.line === line) return parent;
             for (const [_, child] of parent.children) {
                 const found = findItemByLine(child, line);
                 if (found) return found;
@@ -308,22 +300,46 @@ export class GherkinTestController {
             return undefined;
         };
 
+        // Group into ExecutionTargets
+        const targetsByUri = new Map<string, { uri: vscode.Uri, runWholeFeature: boolean, lines: Set<number>, items: vscode.TestItem[] }>();
+
         for (const item of itemsToRun) {
-            if (token.isCancellationRequested) break;
             if (!item.uri) continue;
+            const uriStr = item.uri.toString();
+            if (!targetsByUri.has(uriStr)) {
+                targetsByUri.set(uriStr, { uri: item.uri, runWholeFeature: false, lines: new Set(), items: [] });
+            }
+            const target = targetsByUri.get(uriStr)!;
+            target.items.push(item);
 
-            const line = extractLineFromId(item.id);
-            run?.started(item);
+            const identity = TestIdentity.parse(item.id);
+            if (identity.type === 'feature') {
+                target.runWholeFeature = true;
+            } else if (identity.line !== undefined) {
+                target.lines.add(identity.line);
+            }
+        }
 
+        for (const target of targetsByUri.values()) {
+            if (token.isCancellationRequested) break;
+            
+            // For debug mode, we just run the first line (multiple lines in debug is messy)
             if (mode === 'debug') {
+                const firstItem = target.items[0];
+                const identity = TestIdentity.parse(firstItem.id);
                 await vscode.commands.executeCommand(
-                    line !== undefined ? 'gherkinPowerTools.debugScenario' : 'gherkinPowerTools.debugFeature',
-                    item.uri,
-                    line
+                    identity.line !== undefined ? 'gherkinPowerTools.debugScenario' : 'gherkinPowerTools.debugFeature',
+                    target.uri,
+                    identity.line
                 );
-            } else if (run) {
-                // Use Cyan (\x1b[36m) to make the "Running" text stand out in the console without looking like an error
-                run.appendOutput(`\r\n\x1b[36m▶ Running: ${item.label}\x1b[0m\r\n`, undefined, item);
+                continue;
+            }
+            
+            if (run) {
+                target.items.forEach(item => run.started(item));
+                
+                const labelList = target.items.map(i => i.label).join(', ');
+                run.appendOutput(`\r\n\x1b[36m▶ Running [${target.uri.fsPath}]: ${labelList}\x1b[0m\r\n`);
 
                 let capturedOutput = '';
                 let currentScenarioItem: vscode.TestItem | undefined;
@@ -335,22 +351,25 @@ export class GherkinTestController {
                 const processedItems = new Set<vscode.TestItem>();
 
                 const exitCode = await runBehaveForTestRun(
-                    item.uri,
-                    line,
+                    target.uri,
+                    target.runWholeFeature ? undefined : target.lines,
                     this.configService,
                     (text) => {
                         capturedOutput += text;
-                        run.appendOutput(text, undefined, currentScenarioItem || item);
+                        run.appendOutput(text, undefined, currentScenarioItem || target.items[0]);
                     },
                     token,
                     (event) => {
-                        if (event.event === 'scenario') {
+                        if (event.type === 'scenario') {
                             currentScenarioFailed = false;
                             currentScenarioDuration = 0;
                             currentScenarioErrorFile = undefined;
                             currentScenarioErrorLine = undefined;
                             currentScenarioErrorMessage = undefined;
-                            currentScenarioItem = findItemByLine(item, event.data.line) || (event.data.name ? findItemByName(item, event.data.name) : undefined);
+                            const rootItem = this.controller.items.get(target.uri.toString());
+                            if (rootItem) {
+                                currentScenarioItem = findItemByLine(rootItem, event.payload.line) || (event.payload.name ? findItemByName(rootItem, event.payload.name) : undefined);
+                            }
                             if (currentScenarioItem) {
                                 const childrenToRemove: string[] = [];
                                 currentScenarioItem.children.forEach(child => {
@@ -361,54 +380,54 @@ export class GherkinTestController {
                                 childrenToRemove.forEach(id => currentScenarioItem!.children.delete(id));
                                 run.started(currentScenarioItem);
                             }
-                        } else if (event.event === 'step_start') {
+                        } else if (event.type === 'step_start') {
                             if (currentScenarioItem && currentScenarioItem.uri) {
                                 const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === currentScenarioItem!.uri!.toString());
-                                if (editor && event.data.line) {
-                                    const line = event.data.line - 1;
+                                if (editor && event.payload.line) {
+                                    const line = event.payload.line - 1;
                                     const range = new vscode.Range(line, 0, line, 0);
                                     editor.setDecorations(this.activeStepDecoration, [range]);
                                 }
                             }
-                        } else if (event.event === 'step') {
+                        } else if (event.type === 'step') {
                             if (currentScenarioItem && currentScenarioItem.uri) {
                                 this.clearActiveStepDecoration(currentScenarioItem.uri);
                             }
-                            if (['failed', 'undefined', 'error'].includes(event.data.status)) {
+                            if (['failed', 'undefined', 'error'].includes(event.payload.status)) {
                                 currentScenarioFailed = true;
-                                if (event.data.error_file && event.data.error_line !== undefined) {
-                                    currentScenarioErrorFile = event.data.error_file;
-                                    currentScenarioErrorLine = event.data.error_line;
+                                if (event.payload.error_file && event.payload.error_line !== undefined) {
+                                    currentScenarioErrorFile = event.payload.error_file;
+                                    currentScenarioErrorLine = event.payload.error_line;
                                 }
-                                if (event.data.error_message) {
-                                    currentScenarioErrorMessage = event.data.error_message;
+                                if (event.payload.error_message) {
+                                    currentScenarioErrorMessage = event.payload.error_message;
                                 }
                             }
-                            if (event.data.duration) {
-                                currentScenarioDuration += event.data.duration;
+                            if (event.payload.duration) {
+                                currentScenarioDuration += event.payload.duration;
                             }
-                        } else if (event.event === 'scenario_result') {
-                            if (currentScenarioItem && extractLineFromId(currentScenarioItem.id) === event.data.line) {
+                        } else if (event.type === 'scenario_result') {
+                            if (currentScenarioItem && TestIdentity.parse(currentScenarioItem.id).line === event.payload.line) {
                                 processedItems.add(currentScenarioItem);
                                 
-                                if (event.data.context_snapshot) {
-                                    const keys = Object.keys(event.data.context_snapshot);
+                                if (event.payload.context_snapshot) {
+                                    const keys = Object.keys(event.payload.context_snapshot);
                                     if (keys.length > 0) {
                                         let snapshotOutput = '\r\n\x1b[35m--------------------------------------------------\x1b[0m\r\n';
                                         snapshotOutput += '\x1b[35mFINAL CONTEXT STATE (Context Snapshot)\x1b[0m\r\n';
                                         snapshotOutput += '\x1b[35m--------------------------------------------------\x1b[0m\r\n';
                                         for (const key of keys) {
-                                            snapshotOutput += `\x1b[34m• context.${key}\x1b[0m = ${event.data.context_snapshot[key]}\r\n`;
+                                            snapshotOutput += `\x1b[34m• context.${key}\x1b[0m = ${event.payload.context_snapshot[key]}\r\n`;
                                         }
                                         snapshotOutput += '\x1b[35m--------------------------------------------------\x1b[0m\r\n\r\n';
                                         run.appendOutput(snapshotOutput, undefined, currentScenarioItem);
                                     }
                                 }
 
-                                const isFailure = ['failed', 'error', 'hook_error'].includes(event.data.status) || currentScenarioFailed;
+                                const isFailure = ['failed', 'error', 'hook_error'].includes(event.payload.status) || currentScenarioFailed;
                                 if (isFailure) {
-                                    if (event.data.error_message) {
-                                        currentScenarioErrorMessage = event.data.error_message;
+                                    if (event.payload.error_message) {
+                                        currentScenarioErrorMessage = event.payload.error_message;
                                     }
                                     const rawMsg = currentScenarioErrorMessage || "Scenario failed";
                                     const msgText = rawMsg.split('\n').filter((line, index, arr) => index === 0 || line !== arr[index - 1]).join('\n');
@@ -443,7 +462,7 @@ export class GherkinTestController {
                                     } else {
                                         run.failed(currentScenarioItem, msg, currentScenarioDuration * 1000 || undefined);
                                     }
-                                } else if (event.data.status === 'skipped' || event.data.status === 'untested') {
+                                } else if (event.payload.status === 'skipped' || event.payload.status === 'untested') {
                                     run.skipped(currentScenarioItem);
                                 } else {
                                     run.passed(currentScenarioItem, currentScenarioDuration * 1000 || undefined);
@@ -458,18 +477,19 @@ export class GherkinTestController {
                 if (exitCode !== 0 && exitCode !== null && processedItems.size === 0) {
                     const cleanOutput = capturedOutput.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
                     const md = new vscode.MarkdownString(`**Behave exited with code ${exitCode}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
-                    run.failed(item, new vscode.TestMessage(md));
+                    target.items.forEach(item => run.failed(item, new vscode.TestMessage(md)));
                 } else if (exitCode !== null) {
-                    const markUnprocessed = (node: vscode.TestItem) => {
+                    const markUnprocessed = (node: vscode.TestItem, isTargeted: boolean = false) => {
+                        const targeted = isTargeted || target.items.includes(node);
                         if (node.children.size === 0) {
-                            if (!processedItems.has(node)) {
+                            if (!processedItems.has(node) && targeted) {
                                 run.skipped(node);
                             }
                         } else {
-                            node.children.forEach(markUnprocessed);
+                            node.children.forEach(child => markUnprocessed(child, targeted));
                         }
                     };
-                    markUnprocessed(item);
+                    target.items.forEach(item => markUnprocessed(item, true));
                 }
             }
         }
