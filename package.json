@@ -274,6 +274,12 @@
           "default": [],
           "markdownDescription": "Extra flags appended to **every** Behave invocation from the Test Explorer.\n\n**Examples:** `[\"--no-capture\"]` · `[\"-D\", \"env=staging\"]` · `[\"--format\", \"progress\"]`"
         },
+        "gherkinPowerTools.behave.executionTimeout": {
+          "type": "number",
+          "default": 0,
+          "markdownDescription": "Maximum execution time (in seconds) before forcibly terminating a Behave run. Set to `0` for infinite (disabled). Timeouts are automatically disabled during debugging.",
+          "scope": "resource"
+        },
         "gherkinPowerTools.analytics.historicalTrends.enabled": {
           "type": "boolean",
           "order": 40,

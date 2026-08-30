@@ -66,8 +66,12 @@ When a scenario finishes executing, Gherkin PowerTools automatically inspects th
 
 **Navigation:** Clicking on any Feature, Scenario, or Example row in the Test Explorer will intuitively navigate you directly to its definition in the `.feature` file.
 
-### Cancellation
-You can safely cancel a frozen or long-running execution by clicking the Stop button (Square icon) in the Test Explorer. The extension issues a forceful `SIGKILL` command to guarantee the underlying Python process terminates immediately.
+### Timeouts and Cancellation
+By default, tests have no execution time limit. If you have tests that may hang, you can configure a timeout in seconds using the `gherkinPowerTools.behave.executionTimeout` setting. If an execution exceeds this limit, Gherkin PowerTools automatically issues a forceful `SIGKILL` process-tree cleanup to guarantee no orphaned or zombie Python processes remain.
+
+You can also safely cancel a frozen or long-running execution at any time by clicking the Stop button (Square icon) in the Test Explorer, which performs the same safe process-tree cleanup.
+
+Importantly, if a test is cancelled or times out, it is correctly reported in the Test Explorer as an **execution error (infrastructure failure)**, rather than a test assertion failure. Timeouts are automatically bypassed during debugging sessions so you can inspect breakpoints without being interrupted.
 
 ---
 

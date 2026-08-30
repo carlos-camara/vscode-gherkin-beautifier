@@ -212,6 +212,12 @@ Core syntax errors cannot be suppressed.
 - **Type:** `array` of strings
 - **Default:** `[]`
 
+### `gherkinPowerTools.behave.executionTimeout`
+- **Purpose:** Controls the maximum allowed duration (in seconds) for Behave test executions. If a test run exceeds this duration, the entire process tree is forcefully terminated. Setting this to `0` disables the timeout. Note: This timeout is automatically bypassed during debug sessions to allow unhurried breakpoint inspection.
+- **Type:** `number`
+- **Default:** `0`
+- **Example:** `300` (5 minutes)
+
 ---
 
 ## Analytics

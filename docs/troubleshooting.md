@@ -131,6 +131,12 @@ Wait a few seconds for the lazy-initialization to complete. If it still doesn't 
 1. Click the "Restricted Mode" banner in the bottom status bar and select "Trust Workspace & Install" to enable test execution.
 2. Ensure you have explicitly opened the root folder containing the `.feature` file via **File > Open Folder...**. The extension strictly prevents execution on external files to protect your root disk from arbitrary runs.
 
+## Test execution times out or appears frozen
+**Symptom:** You run a test and it eventually fails with an "Execution timed out" error, or the execution seems to hang indefinitely without updating the active step.
+**Likely Causes:** Your tests genuinely take longer than the configured timeout (e.g., E2E tests containing `sleep()` or waiting on network requests).
+**Resolution:** By default, executions do not timeout. If a timeout occurs, adjust the `gherkinPowerTools.behave.executionTimeout` setting in your `settings.json` to a higher value (in seconds), or set it to `0` to disable the timeout completely.
+*Note: Timeouts are automatically bypassed during active debugging sessions.*
+
 ## Run fails (Behave executable is not found)
 **Symptom:** You click "Play" in the Test Explorer, but the test immediately fails with a "Command not found" or "behave is not recognized" error in the output.
 **Likely Causes:** `behave` is not installed, or your virtual environment is not active in the shell that VS Code spawns.

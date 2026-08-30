@@ -350,7 +350,7 @@ export class GherkinTestController {
                 let currentScenarioErrorMessage: string | undefined;
                 const processedItems = new Set<vscode.TestItem>();
 
-                const exitCode = await runBehaveForTestRun(
+                const outcome = await runBehaveForTestRun(
                     target.uri,
                     target.runWholeFeature ? undefined : target.lines,
                     this.configService,
@@ -474,11 +474,18 @@ export class GherkinTestController {
                     }
                 );
 
-                if (exitCode !== 0 && exitCode !== null && processedItems.size === 0) {
+                if (outcome.type === 'failure' && processedItems.size === 0) {
                     const cleanOutput = capturedOutput.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-                    const md = new vscode.MarkdownString(`**Behave exited with code ${exitCode}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
+                    const md = new vscode.MarkdownString(`**Behave exited with code ${outcome.code}.**\n\n\`\`\`text\n${cleanOutput}\n\`\`\``);
                     target.items.forEach(item => run.failed(item, new vscode.TestMessage(md)));
-                } else if (exitCode !== null) {
+                } else if (outcome.type === 'launch_failure' || outcome.type === 'process_error' || outcome.type === 'protocol_failure') {
+                    const errorMsg = outcome.type === 'launch_failure' ? outcome.error : 
+                                     outcome.type === 'process_error' ? `Process crashed: ${outcome.error}` : 
+                                     `Protocol error: ${outcome.error}`;
+                    target.items.forEach(item => run.errored(item, new vscode.TestMessage(errorMsg)));
+                } else if (outcome.type === 'timeout') {
+                    target.items.forEach(item => run.errored(item, new vscode.TestMessage(`Execution timed out after ${outcome.durationSeconds} seconds.`)));
+                } else if (outcome.type !== 'cancelled') {
                     const markUnprocessed = (node: vscode.TestItem, isTargeted: boolean = false) => {
                         const targeted = isTargeted || target.items.includes(node);
                         if (node.children.size === 0) {
