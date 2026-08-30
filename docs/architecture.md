@@ -48,7 +48,9 @@ VS Code's `TestRunRequest` can contain complex overlapping inclusion and exclusi
 To prevent redundant child process executions and ensure mathematically correct test selection, the extension utilizes a dedicated `TestSelectionNormalizer` driven by a canonical `TestIdentity` abstraction.
 1. **URI-Based TestIdentity:** Every test item node receives a deterministic query-string based ID (e.g., `file:///path/to/feature.feature?type=scenario&line=15`) that resolves unambiguously without fragment collisions.
 2. **Top-Down Tree Traversal:** The normalizer walks the Test Explorer hierarchy from the requested root elements.
-3. **Deep Exclusion Pruning & Structural Decomposition:** If a node is included but contains explicitly excluded descendants, the layer dynamically decomposes the parent node into its non-excluded siblings. Critically, because Behave cannot execute abstract structural nodes like `Rule` or `Scenario Outline` independently by their declared line numbers, the normalizer seamlessly unpacks these nodes into their runnable leaf descendants (individual scenarios or example rows), preventing the parent process from indiscriminately running the whole block.
+3. **Deep Exclusion Pruning & Structural Decomposition:** If a node is included but contains explicitly excluded descendants, the layer dynamically decomposes the parent node into its non-excluded siblings.
+   Critically, because Behave cannot execute abstract structural nodes like `Rule` or `Scenario Outline` independently by their declared line numbers, the normalizer seamlessly unpacks these nodes into their runnable leaf descendants (individual scenarios or example rows).
+   This prevents the parent process from indiscriminately running the whole block.
 4. **Duplicate Prevention:** By normalizing overlapping includes, the layer prevents tests from being executed multiple times simultaneously.
 5. **Deterministic Ordering:** The normalizer guarantees that tests are enqueued in strict document-line order (lexicographically by URI and ascending by line number), matching exactly how they appear in the `.feature` file regardless of the order they were selected in the UI.
 

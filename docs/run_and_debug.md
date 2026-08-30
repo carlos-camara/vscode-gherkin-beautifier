@@ -27,7 +27,8 @@ You can run your tests at any level of granularity:
 - **Run Scenario:** Click the Play button next to a single Scenario.
 - **Run Example Row:** Click the Play button next to a single row inside a Scenario Outline.
 
-The execution engine uses a **Test Selection Normalization Layer** to ensure that tests run deterministically (top-down in the order they appear in the file). Because Behave cannot independently run structural nodes like `Rule` or `Scenario Outline` using their declared line numbers, the normalizer seamlessly decomposes these abstract nodes into their specific runnable descendants (e.g., individual `Scenario` or Example `Row` lines).
+The execution engine uses a **Test Selection Normalization Layer** to ensure that tests run deterministically (top-down in the order they appear in the file).
+Because Behave cannot independently run structural nodes like `Rule` or `Scenario Outline` using their declared line numbers, the normalizer seamlessly decomposes these abstract nodes into their specific runnable descendants (e.g., individual `Scenario` or Example `Row` lines).
 
 Additionally, if you trigger a run that includes overlapping parents and children (e.g., you click "Run" on a Feature but specifically "Exclude" one Scenario inside it), the normalizer strictly enforces your exclusions, preventing duplicate runs and ensuring the execution perfectly mirrors the visual Test Explorer state.
 
